@@ -16,7 +16,6 @@ using AI.ProfilePhotoMaker.API.Services.Payments;
 using AI.ProfilePhotoMaker.API.Services.Notifications;
 using AI.ProfilePhotoMaker.API.Services.Security;
 using AspNetCoreRateLimit;
-// using AI.ProfilePhotoMaker.API.Services.Monitoring; // Removed monitoring dependency
 using AI.ProfilePhotoMaker.API.Middleware;
 using AI.ProfilePhotoMaker.API.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -33,7 +32,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Options;
-// NOTE: Microsoft.AspNetCore.TestHost removed to prevent production container crashes
 
 // Handle command-line arguments for migration and upload operations
 // Skip in Testing environment to avoid interference with test setup
@@ -103,9 +101,6 @@ if (args.Length > 0 && !isTestingEnvironment)
 // Create the application using the standard pattern that WebApplicationFactory expects
 var builder = WebApplication.CreateBuilder(args);
 
-// NOTE: TestServer configuration removed to prevent production container crashes
-// Test projects should configure TestServer via WebApplicationFactory instead
-
 // Load environment variables from .env file if present
 LoadEnvironmentVariables(builder.Environment);
 
@@ -131,11 +126,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
                               Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto |
                               Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost;
-    options.KnownNetworks.Clear();
+    options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 
     // Restrict forwarded host values to known application hosts to prevent host header injection.
-    // Note: ForwardedHeadersOptions.AllowedHosts supports wildcard patterns.
     var allowedHosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "*.aiprofilephotomaker.com"
@@ -162,31 +156,16 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     // Trust development proxy
     options.KnownProxies.Add(System.Net.IPAddress.Parse("127.0.0.1"));
 
-    // Trust Azure Container Apps load balancer - clear known networks to trust all proxies
+    // Trust Azure Container Apps load balancer
     if (!builder.Environment.IsDevelopment())
     {
-        // In production (Azure Container Apps), trust all networks since we're behind their load balancer
         options.ForwardLimit = null;
     }
 });
 
-// Data protection configuration is handled in the storage services section below
-
-// Add session services for OAuth state management (required for both Development and Production)
+// Core infrastructure services
 builder.Services.AddMemoryCache();
 builder.Services.AddDistributedMemoryCache();
-builder.Services.AddSession(options =>
-{
-    options.IdleTimeout = TimeSpan.FromMinutes(30);
-    options.Cookie.HttpOnly = true;
-    options.Cookie.IsEssential = true;
-    options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None; // Allow cross-site for OAuth
-    options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
-    // Set domain for production to allow cross-subdomain sharing
-    options.Cookie.Domain = builder.Environment.IsDevelopment() ? null : ".aiprofilephotomaker.com";
-});
-
-// Add environment configuration with validation
 builder.Services.AddEnvironmentConfiguration();
 builder.Services.AddOptions();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
@@ -195,73 +174,16 @@ builder.Services.Configure<IpRateLimitPolicies>(builder.Configuration.GetSection
 builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
-builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
-builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection(StripeOptions.SectionName));
-builder.Services.Configure<RetentionPolicyBackgroundServiceOptions>(
-    builder.Configuration.GetSection(RetentionPolicyBackgroundServiceOptions.SectionName));
-builder.Services.Configure<RetentionNotificationOptions>(
-    builder.Configuration.GetSection(RetentionNotificationOptions.SectionName));
-builder.Services.Configure<AbandonedUploadOptions>(
-    builder.Configuration.GetSection(AbandonedUploadOptions.SectionName));
-builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+// Payment, Stripe, and options configuration
+builder.Services.AddPaymentServices(builder.Configuration);
 
-builder.Services.PostConfigure<StripeOptions>(options =>
-{
-    if (string.IsNullOrWhiteSpace(options.PublishableKey))
-    {
-        options.PublishableKey = Environment.GetEnvironmentVariable(EnvironmentConfiguration.STRIPE_PUBLISHABLE_KEY) ?? string.Empty;
-    }
-
-    if (string.IsNullOrWhiteSpace(options.SecretKey))
-    {
-        options.SecretKey = Environment.GetEnvironmentVariable(EnvironmentConfiguration.STRIPE_SECRET_KEY) ?? string.Empty;
-    }
-
-    if (string.IsNullOrWhiteSpace(options.WebhookSecret))
-    {
-        options.WebhookSecret = Environment.GetEnvironmentVariable(EnvironmentConfiguration.STRIPE_WEBHOOK_SECRET) ?? string.Empty;
-    }
-
-    options.PublishableKey = options.PublishableKey?.Trim() ?? string.Empty;
-    options.SecretKey = options.SecretKey?.Trim() ?? string.Empty;
-    options.WebhookSecret = options.WebhookSecret?.Trim() ?? string.Empty;
-});
-
-builder.Services.Configure<PaymentSimulationOptions>(builder.Configuration.GetSection(PaymentSimulationOptions.SectionName));
-
-builder.Services.AddSingleton(provider =>
-{
-    var stripeOptions = provider.GetRequiredService<IOptions<StripeOptions>>().Value;
-    var appInfo = new Stripe.AppInfo
-    {
-        Name = "AI Profile Photo Maker API",
-        Version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "1.0.0",
-        Url = "https://github.com/alanwsmith/AI.ProfilePhotoMaker"
-    };
-
-    Stripe.StripeConfiguration.AppInfo = appInfo;
-    var secretKey = AI.ProfilePhotoMaker.API.Services.Payments.StripeClientFactory.GetSafeSecretKey(stripeOptions.SecretKey);
-    Stripe.StripeConfiguration.ApiKey = secretKey;
-
-    return AI.ProfilePhotoMaker.API.Services.Payments.StripeClientFactory.Create(secretKey);
-});
-
-builder.Services.AddScoped<IStripePaymentService, StripePaymentService>();
-builder.Services.AddScoped<IStripeWebhookService, StripeWebhookService>();
-// Email notifications (registered via HttpClient below)
-builder.Services.AddScoped<IPendingGenerationService, PendingGenerationService>();
-
-builder.Services.Configure<LegacyCompatibilityOptions>(builder.Configuration.GetSection(LegacyCompatibilityOptions.SectionName));
-
-// Configure database services
+// Database services
 if (builder.Environment.IsEnvironment("Testing") || builder.Environment.IsEnvironment("LocalDev"))
 {
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
     {
         options.UseInMemoryDatabase($"LocalDb_{Guid.NewGuid()}");
     });
-
-    // No database/migration health checks in Testing or LocalDev
     builder.Services.AddHealthChecks();
 }
 else
@@ -270,121 +192,11 @@ else
     builder.Services.AddDatabaseConfiguration(builder.Configuration);
 }
 
-// Add Identity
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
+// Identity and authentication
+builder.Services.AddIdentityServices();
+builder.Services.AddAuthenticationServices(builder.Configuration, builder.Environment);
 
-// Add SignInManager
-builder.Services.AddScoped<SignInManager<ApplicationUser>>();
-
-// Configure Identity options
-builder.Services.Configure<IdentityOptions>(options =>
-{
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireNonAlphanumeric = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequiredLength = 8;
-    options.Password.RequiredUniqueChars = 1;
-    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-    options.Lockout.MaxFailedAccessAttempts = 5;
-    options.Lockout.AllowedForNewUsers = true;
-    options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
-    options.User.RequireUniqueEmail = true;
-});
-
-// Only add Google OAuth if properly configured
-var configClientId = builder.Configuration["Authentication:Google:ClientId"];
-var configClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
-var envClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") ?? builder.Configuration["GOOGLE_CLIENT_ID"];
-var envClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") ?? builder.Configuration["GOOGLE_CLIENT_SECRET"];
-bool IsPlaceholder(string? v) => !string.IsNullOrWhiteSpace(v) && (v.StartsWith("REPLACE_WITH_", StringComparison.OrdinalIgnoreCase) || v.Contains("STORED_IN_USER_SECRETS", StringComparison.OrdinalIgnoreCase) || v.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase) || v.StartsWith("your_", StringComparison.OrdinalIgnoreCase));
-var googleClientId = !string.IsNullOrWhiteSpace(envClientId) ? envClientId : (IsPlaceholder(configClientId) ? null : configClientId);
-var googleClientSecret = !string.IsNullOrWhiteSpace(envClientSecret) ? envClientSecret : (IsPlaceholder(configClientSecret) ? null : configClientSecret);
-
-// Add JWT Authentication with Cookie support for OAuth
-var authBuilder = builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultSignInScheme = Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme;
-    })
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/login";
-        options.LogoutPath = "/logout";
-        options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
-        options.SlidingExpiration = true;
-        options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.SaveToken = true;
-        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
-        options.TokenValidationParameters = new TokenValidationParameters()
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:ValidAudience"],
-            ValidIssuer = builder.Configuration["Jwt:ValidIssuer"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"] ?? string.Empty))
-        };
-        var cookieName = builder.Configuration["Authentication:TokenCookieName"] ?? "AuthToken";
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                // If no Authorization header, try JWT from HttpOnly cookie
-                if (!context.Request.Headers.ContainsKey("Authorization") &&
-                    context.Request.Cookies.TryGetValue(cookieName, out var jwt) &&
-                    !string.IsNullOrWhiteSpace(jwt))
-                {
-                    context.Token = jwt;
-                }
-                return Task.CompletedTask;
-            },
-            OnChallenge = context =>
-            {
-                context.HandleResponse();
-                context.Response.StatusCode = 401;
-                context.Response.ContentType = "application/json";
-                var response = new { success = false, error = new { code = "Unauthorized", message = "Authentication required. Please provide a valid JWT token." } };
-                return context.Response.WriteAsJsonAsync(response);
-            },
-            OnAuthenticationFailed = context =>
-            {
-                if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
-                {
-                    context.Response.Headers.Append("Token-Expired", "true");
-                }
-                return Task.CompletedTask;
-            }
-        };
-    });
-
-if (!string.IsNullOrEmpty(googleClientId) && !string.IsNullOrEmpty(googleClientSecret))
-{
-    authBuilder.AddGoogle(options =>
-    {
-        options.ClientId = googleClientId;
-        options.ClientSecret = googleClientSecret;
-        options.CallbackPath = "/signin-google";
-        options.SaveTokens = true;
-        options.Scope.Add("email");
-        options.Scope.Add("profile");
-    });
-}
-
-// Validate JWT Secret
-var jwtSecret = builder.Configuration["Jwt:Secret"];
-if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
-{
-    Console.WriteLine("Warning: JWT Secret is not configured or is not long enough. Please configure a secret of at least 32 characters in your application settings.");
-}
-
-// Register the Services
+// Application services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddResponseCompression(options =>
 {
@@ -401,152 +213,37 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, 
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService, AI.ProfilePhotoMaker.API.Services.UserContextService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.StartupDiagnosticsHostedService>();
 
-// Register Replicate SDK (skip in mock mode)
-var enableReplicateMock = (Environment.GetEnvironmentVariable("ENABLE_REPLICATE_MOCK") ?? string.Empty)
-    .Equals("true", StringComparison.OrdinalIgnoreCase);
-if (!enableReplicateMock)
-{
-    builder.Services.AddSingleton<Replicate.ReplicateApi>(provider =>
-    {
-        var configuration = provider.GetRequiredService<IConfiguration>();
-        var envToken = (Environment.GetEnvironmentVariable(EnvironmentConfiguration.REPLICATE_API_TOKEN) ?? string.Empty).Trim();
-        var cfgToken = (configuration["Replicate:ApiToken"] ?? string.Empty).Trim();
-        var apiToken = !string.IsNullOrWhiteSpace(envToken) ? envToken : cfgToken;
-        if (string.IsNullOrEmpty(apiToken))
-        {
-            throw new InvalidOperationException("Replicate API token not configured");
-        }
-        return new Replicate.ReplicateApi(apiToken);
-    });
-}
+// Replicate API services (with mock mode support)
+builder.Services.AddReplicateServices(builder.Configuration);
 
-// Register Replicate services with optional mock
-if (enableReplicateMock)
-{
-    builder.Services.AddScoped<IReplicateApiClient, MockReplicateApiClient>();
-    // Skip ModelDiscoveryService in mock mode since it needs ReplicateApi
-    Console.WriteLine("Mock mode enabled - skipping ModelDiscoveryService registration");
-}
-else
-{
-    builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>(client =>
-    {
-        // Set 2-minute timeout for Replicate API calls to prevent UI hanging
-        client.Timeout = TimeSpan.FromMinutes(2);
-    });
+// Storage and data protection
+builder.Services.AddStorageServices(builder.Configuration, builder.Environment);
 
-    // Register OpenAI Image Generation Service with HttpClient
-    builder.Services.AddHttpClient<OpenAIImageGenerationService>(client =>
-    {
-        client.Timeout = TimeSpan.FromMinutes(5);
-    });
-
-    // Configure robustness service with options
-    builder.Services.Configure<ModelDiscoveryRobustnessOptions>(options =>
-    {
-        options.MaxRetryAttempts = 3;
-        options.BaseRetryDelayMs = 1000;
-        options.MaxRetryDelayMs = 10000;
-        options.CircuitBreakerFailureThreshold = 5;
-        options.CircuitBreakerTimeoutMs = 60000;
-    });
-
-    builder.Services.AddSingleton<ModelDiscoveryRobustnessService>();
-    builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryService, AI.ProfilePhotoMaker.API.Services.ModelDiscoveryService>();
-}
-
-builder.Services.AddScoped<IWebhookUrlResolver, WebhookUrlResolver>();
-builder.Services.AddHttpClient<WebhookUrlResolver>();
-builder.Services.AddHttpClient<IImageDownloadService, ImageDownloadService>();
-builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
-
-// Register Storage Services - choose between Local or Azure Blob Storage
-var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorage") ?? builder.Configuration["AzureStorage:ConnectionString"];
-if (!string.IsNullOrEmpty(azureStorageConnectionString))
-{
-    builder.Services.AddSingleton<BlobServiceClient>(_ => new BlobServiceClient(azureStorageConnectionString));
-    builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
-}
-else
-{
-    builder.Services.AddScoped<IStorageService, LocalStorageService>();
-}
-
-var dpBuilder = builder.Services.AddDataProtection()
-    .SetApplicationName("AIProfilePhotoMaker");
-
-if (!builder.Environment.IsDevelopment()
-    && !builder.Environment.IsEnvironment("Testing")
-    && !builder.Environment.IsEnvironment("LocalDev")
-    && !string.IsNullOrEmpty(azureStorageConnectionString))
-{
-    // Persist Data Protection keys to Azure Blob so cookies survive pod/revision restarts
-    var dpContainer = new BlobContainerClient(azureStorageConnectionString, "dataprotection");
-    try
-    {
-        // Ensure the container exists so DataProtection can persist keys on first run
-        dpContainer.CreateIfNotExists();
-        Console.WriteLine("[DataProtection] Ensured blob container 'dataprotection' exists");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[DataProtection] Warning: failed to ensure container exists: {ex.Message}");
-        // Continue; if container truly doesn't exist and cannot be created due to perms,
-        // app will still start but cookie protection may fail until container is provisioned.
-    }
-
-    var dpBlob = dpContainer.GetBlobClient("keys.xml");
-    dpBuilder.PersistKeysToAzureBlobStorage(dpBlob);
-}
-else
-{
-    // In Development, prefer local keys to avoid auth/login hanging if Azurite is misconfigured/unreachable.
-    // (Can be overridden by setting DataProtection:PersistKeysToAzureBlob=true.)
-    var persistToAzureBlobInDev = builder.Configuration.GetValue("DataProtection:PersistKeysToAzureBlob", false);
-    if (persistToAzureBlobInDev && !string.IsNullOrEmpty(azureStorageConnectionString))
-    {
-        var dpBlob = new BlobContainerClient(azureStorageConnectionString, "dataprotection")
-            .GetBlobClient("keys.xml");
-        dpBuilder.PersistKeysToAzureBlobStorage(dpBlob);
-    }
-    else
-    {
-        dpBuilder.PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")));
-    }
-}
-builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Storage.StoragePathResolver>();
-
+// Additional application services
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ICreditPackageService, AI.ProfilePhotoMaker.API.Services.CreditPackageService>();
-// Payment service removed - YAGNI principle (was never used by any controllers)
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IHealthCheckService, AI.ProfilePhotoMaker.API.Services.Health.HealthCheckService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDatabaseHealthService, AI.ProfilePhotoMaker.API.Services.Health.DatabaseHealthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IStorageHealthService, AI.ProfilePhotoMaker.API.Services.Health.StorageHealthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDependencyHealthService, AI.ProfilePhotoMaker.API.Services.Health.DependencyHealthService>();
-
-// builder.Services.AddPerformanceMonitoring(builder.Configuration); // Removed monitoring service
 builder.Services.AddScoped<IAsyncFileService, AsyncFileService>();
 builder.Services.AddScoped<IAsyncZipService, AsyncZipService>();
 
-// Email notifications (supports SMTP or Postmark API)
+// Email and verification services (via HttpClient)
 builder.Services.AddHttpClient<IEmailNotificationService, EmailNotificationService>();
 builder.Services.AddHttpClient<ITurnstileVerificationService, TurnstileVerificationService>();
 
 builder.Services.AddDeploymentValidation(builder.Configuration);
 builder.Services.ConfigureDeploymentValidation(builder.Configuration, builder.Environment);
 
-// Add training polling services
+// Background services
 builder.Services.AddScoped<ITrainingPollingService, TrainingPollingService>();
 builder.Services.AddHostedService<TrainingPollingBackgroundService>();
-
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
-// ModelExpirationBackgroundService removed - YAGNI principle (was doing nothing but logging)
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.AbandonedUploadBackgroundService>();
 
-// Model sync health monitoring - removed dependency
-// builder.Services.AddModelSyncHealthMonitoring();
-
+// API behavior configuration
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
@@ -578,15 +275,12 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     };
 });
 
+// Controllers, SignalR, Session
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
-
-// Add SignalR for real-time prediction updates
 builder.Services.AddSignalR();
-
-// Configure Session cookie for cross-site usage (frontend and API are on different subdomains)
 builder.Services.AddSession(options =>
 {
     options.Cookie.Name = "AIPM.Session";
@@ -594,77 +288,17 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
     options.Cookie.SameSite = SameSiteMode.None;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.Domain = builder.Environment.IsDevelopment() ? null : ".aiprofilephotomaker.com";
     options.IdleTimeout = TimeSpan.FromHours(12);
 });
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "AIProfileMaker", Version = "v1" });
-    c.OperationFilter<FileUploadOperationFilter>();
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            new string[] {}
-        }
-    });
-});
+// Swagger/OpenAPI
+builder.Services.AddSwaggerServices();
 
-var v1FrontendUrl = builder.Configuration["AppBaseUrl"] ?? "https://aiprofilemaker-web-v1.eastus.azurecontainerapps.io";
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("V1Production", corsBuilder =>
-    {
-        var allowedOrigins = new List<string>
-        {
-            "https://aiprofilephotomaker.com",
-            "https://aiprofilephotomaker.com",
-            "https://test.profilephotomaker.com"
-        };
-        var envCorsOrigins = builder.Configuration["CORS_ALLOWED_ORIGINS"] ?? Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
-        if (!string.IsNullOrEmpty(envCorsOrigins))
-        {
-            var envOrigins = envCorsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(o => o.Trim()).Where(o => !string.IsNullOrEmpty(o));
-            allowedOrigins.AddRange(envOrigins);
-        }
-        if (!string.IsNullOrEmpty(v1FrontendUrl))
-        {
-            allowedOrigins.Add(v1FrontendUrl);
-        }
-        allowedOrigins.Add("https://aiprofilemaker-web-v1.eastus.azurecontainerapps.io");
-        allowedOrigins.Add("https://aipm-web-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io");
-        var finalOrigins = allowedOrigins.Distinct().ToArray();
-        corsBuilder.WithOrigins(finalOrigins).AllowAnyMethod().AllowAnyHeader().AllowCredentials().SetPreflightMaxAge(TimeSpan.FromMinutes(10));
-    });
-    options.AddPolicy("AllowDevelopment", corsBuilder =>
-    {
-        corsBuilder.WithOrigins(
-            "http://localhost:4200",
-            "https://localhost:4200",
-            "https://clear-anteater-usually.ngrok-free.app"
-        ).AllowAnyMethod().AllowAnyHeader().AllowCredentials();
-    });
-    options.AddPolicy("DebugAllowAll", corsBuilder =>
-    {
-        corsBuilder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
-    });
-});
+// CORS policies
+builder.Services.AddCorsServices(builder.Configuration);
+
+// ── Build the application ──────────────────────────────────────────────
 
 var app = builder.Build();
 
@@ -719,74 +353,10 @@ _ = Task.Run(async () =>
     }
 });
 
-app.UseForwardedHeaders();
-app.UseResponseCompression();
-if (app.Environment.IsDevelopment())
-{
-    app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.EnhancedStorageProxyMiddleware>();
-}
-// Inject JWT from secure cookie into Authorization header if present
-app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.JwtCookieAuthMiddleware>();
-// Optional: serve images via API proxy (supports private blob containers)
-if (app.Configuration.GetValue<bool>("Storage:ProxyBlobRequests"))
-{
-    app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.EnhancedStorageProxyMiddleware>();
-}
+// Configure middleware pipeline (forwarded headers, auth, CORS, rate limiting, etc.)
+app.UseMiddlewarePipeline();
 
-app.Use(async (context, next) =>
-{
-    var blockSearchEngines = app.Configuration.GetValue<bool>("SearchEngineBlocking:Enabled", true);
-    if (blockSearchEngines && !app.Environment.IsDevelopment())
-    {
-        context.Response.Headers.Append("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet");
-    }
-    await next();
-});
-
-app.UseSession();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "AIProfileMaker v1"));
-}
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
-
-var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "V1Production";
-app.Logger.LogInformation($"🌐 CORS Policy Selected: {corsPolicy} (Environment: {app.Environment.EnvironmentName})");
-if (app.Environment.IsDevelopment())
-{
-    app.Use(async (context, next) =>
-    {
-        var isOptionsRequest = context.Request.Method == "OPTIONS";
-        var hasOrigin = context.Request.Headers.ContainsKey("Origin");
-        if (isOptionsRequest || hasOrigin)
-        {
-            app.Logger.LogDebug($"🌐 CORS Request: {context.Request.Method} {context.Request.Path} | Origin: {context.Request.Headers.Origin} | Environment: {app.Environment.EnvironmentName}");
-        }
-        await next();
-        if (isOptionsRequest || hasOrigin)
-        {
-            var responseHeaders = string.Join(", ", context.Response.Headers.Where(h => h.Key.StartsWith("Access-Control")).Select(h => $"{h.Key}: {h.Value}"));
-            app.Logger.LogDebug($"🌐 CORS Response Headers: {(string.IsNullOrEmpty(responseHeaders) ? "NONE" : responseHeaders)}");
-        }
-    });
-}
-app.UseCors(corsPolicy);
-if (!app.Environment.IsDevelopment())
-{
-    app.UseIpRateLimiting();
-}
-// app.UsePerformanceMonitoring(); // Removed monitoring middleware
-app.UseAuthentication();
-app.UseAuthorization();
-
-// Map health endpoints for liveness/readiness checks
-app.UseHealthCheckEndpoints();
-
+// Dev-only blob proxy endpoints
 if (app.Environment.IsDevelopment())
 {
     app.Map("/blob-proxy", blobApp =>
@@ -863,8 +433,6 @@ if (app.Environment.IsDevelopment())
 }
 
 // Map controllers BEFORE MapFallback to ensure API routes take precedence
-// Dedicated storage health endpoint so deployment validators can confirm
-// we are wired to Azure Blob Storage rather than the local emulator.
 app.MapGet("/api/health/storage", async (IHealthCheckService healthChecks) =>
     Results.Json(await healthChecks.GetStorageHealthAsync()))
     .AllowAnonymous()
@@ -890,14 +458,11 @@ if (Directory.Exists(angularPath))
     {
         var path = context.Request.Path.Value?.ToLower();
 
-        // CRITICAL FIX: Let API requests pass through to controllers and authentication middleware
-        // Don't handle API requests in fallback - they should be handled by MapControllers
         if (path?.StartsWith("/api/") == true ||
             path?.StartsWith("/devstoreaccount1/") == true ||
             path?.StartsWith("/signin-") == true ||
             path?.StartsWith("/swagger") == true)
         {
-            // Return 404 for unmatched API routes instead of completing the request
             context.Response.StatusCode = 404;
             return context.Response.WriteAsync("API endpoint not found");
         }
@@ -929,18 +494,13 @@ static bool IsMigrationCommand(string command)
     };
 }
 
-// IsUploadCommand removed with upload functionality
-
-// Method signatures for validation functions - these would need to be implemented
 static async Task ValidateWebhookConfigurationAsync(WebApplication app)
 {
-    // Implementation would go here
     await Task.CompletedTask;
 }
 
 static async Task ValidateReplicateConfigurationAsync(WebApplication app)
 {
-    // Implementation would go here
     await Task.CompletedTask;
 }
 

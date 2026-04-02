@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   sql-server:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -69,8 +67,8 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
       # Email (SMTP or API providers, optional for local testing)
       Email__Enabled: ${Email__Enabled:-false}
-      Email__Username: ${Email__Username}
-      Email__Password: ${Email__Password}
+      Email__Username: ${Email__Username:-}
+      Email__Password: ${Email__Password:-}
       Email__FromEmail: ${Email__FromEmail:-no-reply@aiprofilephotomaker.com}
       Email__FromName: ${Email__FromName:-AI Profile Photo Maker}
       Email__SmtpHost: ${Email__SmtpHost:-}

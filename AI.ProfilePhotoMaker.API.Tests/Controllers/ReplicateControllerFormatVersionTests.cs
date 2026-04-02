@@ -1,74 +1,28 @@
 using Xunit;
 using FluentAssertions;
-using System.Reflection;
-using AI.ProfilePhotoMaker.API.Controllers;
-using Moq;
+using AI.ProfilePhotoMaker.API.Controllers.Helpers;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using AI.ProfilePhotoMaker.API.Services;
-using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
-using AI.ProfilePhotoMaker.API.Services.Security;
-using AI.ProfilePhotoMaker.API.Tests.Infrastructure;
-using AI.ProfilePhotoMaker.API.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Tests.Controllers;
 
 /// <summary>
-/// Tests for the FormatModelVersion helper method in ReplicateController
+/// Tests for the FormatModelVersion helper method
 /// </summary>
 public class ReplicateControllerFormatVersionTests
 {
-    /// <summary>
-    /// Build a ReplicateController instance with minimal dependencies for reflection tests
-    /// </summary>
-    private static ReplicateController CreateController(string owner = "alanw707")
+    private static IConfiguration CreateConfiguration(string owner = "alanw707")
     {
-        var client = new Mock<IReplicateApiClient>(MockBehavior.Strict).Object;
-        var basic = new Mock<IBasicTierService>(MockBehavior.Strict).Object;
-        var userManager = UserManagerMockFactory.Create().Object;
-
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}")
-            .Options;
-        var db = new ApplicationDbContext(options);
-
-        var config = new ConfigurationBuilder()
+        return new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Replicate:Owner"] = owner
             })
             .Build();
-
-        var logger = new Mock<ILogger<ReplicateController>>().Object;
-        var pending = new Mock<IPendingGenerationService>().Object;
-        var storage = new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object;
-        var turnstile = new Mock<ITurnstileVerificationService>(MockBehavior.Loose);
-        turnstile
-            .Setup(s => s.VerifyAsync(It.IsAny<string?>(), It.IsAny<string?>()))
-            .ReturnsAsync(true);
-
-        return new ReplicateController(client, basic, userManager, db, config, logger, pending, storage, turnstile.Object);
     }
 
-    /// <summary>
-    /// Helper to call the private instance FormatModelVersion via reflection
-    /// </summary>
     private static string FormatModelVersion(string replicateModelId, string trainedModelVersion)
     {
-        var controller = CreateController();
-        var method = typeof(ReplicateController).GetMethod(
-            name: "FormatModelVersion",
-            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
-            binder: null,
-            types: new[] { typeof(string), typeof(string) },
-            modifiers: null);
-
-        if (method == null)
-            throw new InvalidOperationException("FormatModelVersion method not found");
-
-        var result = method.Invoke(controller, new object[] { replicateModelId, trainedModelVersion });
-        return (string)result!;
+        return ReplicateHelpers.FormatModelVersion(replicateModelId, trainedModelVersion, CreateConfiguration());
     }
 
     [Theory]

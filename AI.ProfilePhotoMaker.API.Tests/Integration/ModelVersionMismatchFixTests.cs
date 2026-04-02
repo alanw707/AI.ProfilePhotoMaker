@@ -1,17 +1,12 @@
 using AI.ProfilePhotoMaker.API.Models;
-using AI.ProfilePhotoMaker.API.Controllers;
+using AI.ProfilePhotoMaker.API.Controllers.Helpers;
 using AI.ProfilePhotoMaker.API.Tests.Integration;
 using AI.ProfilePhotoMaker.API.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using AI.ProfilePhotoMaker.API.Services;
-using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
-using AI.ProfilePhotoMaker.API.Services.Security;
 using AI.ProfilePhotoMaker.API.Tests.Infrastructure;
-using Moq;
 
 namespace AI.ProfilePhotoMaker.API.Tests.Integration;
 
@@ -25,6 +20,16 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
     public ModelVersionMismatchFixTests(CustomWebApplicationFactory factory)
     {
         _factory = factory;
+    }
+
+    private static IConfiguration CreateConfiguration()
+    {
+        return new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "Replicate:Owner", "alanw707" }
+            })
+            .Build();
     }
 
     [Fact]
@@ -48,31 +53,12 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
         dbContext.ModelCreationRequests.Add(modelRequest);
         await dbContext.SaveChangesAsync();
 
-        // Act - Verify FormatModelVersion constructs correct format using instance reflection
-        var controller = new ReplicateController(
-            scope.ServiceProvider.GetRequiredService<IReplicateApiClient>(),
-            scope.ServiceProvider.GetRequiredService<IBasicTierService>(),
-            UserManagerMockFactory.Create().Object,
-            dbContext,
-            scope.ServiceProvider.GetRequiredService<IConfiguration>(),
-            scope.ServiceProvider.GetRequiredService<ILogger<ReplicateController>>(),
-            new Mock<IPendingGenerationService>().Object,
-            new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object,
-            new Mock<ITurnstileVerificationService>(MockBehavior.Loose).Object
-        );
-
-        var formatMethod = typeof(ReplicateController).GetMethod(
-            name: "FormatModelVersion",
-            bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            binder: null,
-            types: new[] { typeof(string), typeof(string) },
-            modifiers: null);
-
-        var result = (string)formatMethod!.Invoke(controller, new object[]
-        {
+        // Act - Verify FormatModelVersion constructs correct format
+        var configuration = CreateConfiguration();
+        var result = ReplicateHelpers.FormatModelVersion(
             modelRequest.ReplicateModelId!,
-            modelRequest.TrainedModelVersion!
-        })!;
+            modelRequest.TrainedModelVersion!,
+            configuration);
 
         // Assert
         result.Should().Be("alanw707/test-model-version-fix:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
@@ -92,32 +78,13 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
     public void FormatModelVersion_WithLegacyOwnerPrefixData_ShouldStillWork()
     {
         // Test backward compatibility with existing data that might have owner prefix
-        using var scopeLegacy = _factory.Services.CreateScope();
-        var spLegacy = scopeLegacy.ServiceProvider;
-        var controller = new ReplicateController(
-            spLegacy.GetRequiredService<IReplicateApiClient>(),
-            spLegacy.GetRequiredService<IBasicTierService>(),
-            UserManagerMockFactory.Create().Object,
-            spLegacy.GetRequiredService<ApplicationDbContext>(),
-            spLegacy.GetRequiredService<IConfiguration>(),
-            spLegacy.GetRequiredService<ILogger<ReplicateController>>(),
-            new Mock<IPendingGenerationService>().Object,
-            new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object,
-            new Mock<ITurnstileVerificationService>(MockBehavior.Loose).Object
-        );
-        var formatMethod = typeof(ReplicateController).GetMethod(
-            name: "FormatModelVersion",
-            bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            binder: null,
-            types: new[] { typeof(string), typeof(string) },
-            modifiers: null);
+        var configuration = CreateConfiguration();
 
         // Test with legacy data that has owner prefix (should still work)
-        var result = (string)formatMethod!.Invoke(controller, new object[]
-        {
+        var result = ReplicateHelpers.FormatModelVersion(
             "alanw707/legacy-model-with-prefix",  // Legacy format with owner prefix
-            "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd"
-        })!;
+            "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd",
+            configuration);
 
         result.Should().Be("alanw707/legacy-model-with-prefix:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd");
     }
@@ -126,31 +93,12 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
     public void FormatModelVersion_WithNewCleanData_ShouldConstructCorrectFormat()
     {
         // Test with new clean data (no owner prefix)
-        using var scopeClean = _factory.Services.CreateScope();
-        var spClean = scopeClean.ServiceProvider;
-        var controllerClean = new ReplicateController(
-            spClean.GetRequiredService<IReplicateApiClient>(),
-            spClean.GetRequiredService<IBasicTierService>(),
-            UserManagerMockFactory.Create().Object,
-            spClean.GetRequiredService<ApplicationDbContext>(),
-            spClean.GetRequiredService<IConfiguration>(),
-            spClean.GetRequiredService<ILogger<ReplicateController>>(),
-            new Mock<IPendingGenerationService>().Object,
-            new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object,
-            new Mock<ITurnstileVerificationService>(MockBehavior.Loose).Object
-        );
-        var formatMethodClean = typeof(ReplicateController).GetMethod(
-            name: "FormatModelVersion",
-            bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            binder: null,
-            types: new[] { typeof(string), typeof(string) },
-            modifiers: null);
+        var configuration = CreateConfiguration();
 
-        var result = (string)formatMethodClean!.Invoke(controllerClean, new object[]
-        {
+        var result = ReplicateHelpers.FormatModelVersion(
             "clean-model-no-prefix",  // New format without owner prefix
-            "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321"
-        })!;
+            "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
+            configuration);
 
         result.Should().Be("alanw707/clean-model-no-prefix:fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321");
     }
