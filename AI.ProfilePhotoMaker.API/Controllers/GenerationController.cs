@@ -51,8 +51,11 @@ public class GenerationController : ControllerBase
     [Route("~/api/replicate/generate")]
     public async Task<IActionResult> GenerateImages([FromBody] GenerateImagesRequestDto dto)
     {
+        var sanitizedRequestedModelVersion = LoggingSanitizer.SanitizeId(dto.TrainedModelVersion);
+        var sanitizedRequestedUserId = LoggingSanitizer.SanitizeId(dto.UserId);
+        var sanitizedRequestedStyle = LoggingSanitizer.Sanitize(dto.Style, 64);
         _logger.LogInformation("Generation request received: TrainedModelVersion='{TrainedModelVersion}', UserId='{UserId}', Style='{Style}'",
-            dto.TrainedModelVersion, dto.UserId, dto.Style);
+            sanitizedRequestedModelVersion, sanitizedRequestedUserId, sanitizedRequestedStyle);
 
         if (!ModelState.IsValid)
             return BadRequest(new { success = false, error = new { code = "InvalidModel", message = "Invalid input." } });
@@ -308,8 +311,13 @@ public class GenerationController : ControllerBase
     [Route("~/api/replicate/generate/batch")]
     public async Task<IActionResult> GenerateBatchImages([FromBody] GenerateBatchImagesRequestDto dto)
     {
+        var sanitizedRequestedModelVersion = LoggingSanitizer.SanitizeId(dto.TrainedModelVersion);
+        var sanitizedRequestedUserId = LoggingSanitizer.SanitizeId(dto.UserId);
+        var sanitizedRequestedStyles = dto.Styles == null
+            ? LoggingSanitizer.Sanitize(null)
+            : string.Join(", ", dto.Styles.Select(style => LoggingSanitizer.Sanitize(style, 64)));
         _logger.LogInformation("Batch generation request received: TrainedModelVersion='{TrainedModelVersion}', UserId='{UserId}', Styles=[{Styles}], NumOutputsPerStyle={NumOutputsPerStyle}",
-            dto.TrainedModelVersion, dto.UserId, string.Join(", ", dto.Styles), dto.NumOutputsPerStyle);
+            sanitizedRequestedModelVersion, sanitizedRequestedUserId, sanitizedRequestedStyles, dto.NumOutputsPerStyle);
 
         if (!ModelState.IsValid)
             return BadRequest(new { success = false, error = new { code = "InvalidModel", message = "Invalid input." } });
