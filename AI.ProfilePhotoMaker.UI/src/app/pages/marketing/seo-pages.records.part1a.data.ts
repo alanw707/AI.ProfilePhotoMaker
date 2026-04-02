@@ -26,7 +26,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       secondaryCtaHref: '/examples',
     },
     highlights: [
-      { value: 'At least 10', label: 'Minimum selfies' },
+      { value: 'At least 5', label: 'Minimum selfies' },
       { value: 'Minutes', label: 'Typical delivery' },
       { value: '20+', label: 'Styles available' },
     ],
@@ -36,7 +36,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
         title: 'Three simple steps',
         items: [
           {
-            title: 'Upload at least 10 clear selfies',
+            title: 'Upload at least 5 clear selfies',
             description:
               'Front-facing shots with variety in angles and lighting help the model learn your features accurately.',
           },
@@ -408,7 +408,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
         title: 'How it works',
         items: [
           {
-            title: 'Upload at least 10 clear selfies',
+            title: 'Upload at least 5 clear selfies',
             description: 'Use varied angles and lighting for stronger face consistency.',
           },
           {
@@ -427,7 +427,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
         items: [
           {
             question: 'How many photos should I upload?',
-            answer: 'We recommend at least 10 clear selfies with varied angles and lighting.',
+            answer: 'We recommend at least 5 clear selfies with varied angles and lighting.',
           },
           {
             question: 'How fast are results?',

@@ -350,13 +350,13 @@ public class ProfileController : ControllerBase
             ModelTrainedAt = latestModel?.CompletedAt,
             TotalUploadedImages = uploadedImages.Count,
             LatestZipFile = zipFiles.OrderByDescending(f => System.IO.File.GetCreationTime(f)).FirstOrDefault(),
-            CanStartTraining = uploadedImages.Count >= 10, // Minimum 10 images for training
+            CanStartTraining = uploadedImages.Count >= 5, // Minimum 5 images for training
             Status = uploadedImages.Count switch
             {
                 0 => "No images uploaded",
-                < 10 => $"Need at least 10 images (currently {uploadedImages.Count})",
-                >= 10 when !hasTrainedModel => "Ready for training",
-                >= 10 when hasTrainedModel => "Model trained - ready for generation",
+                < 5 => $"Need at least 5 images (currently {uploadedImages.Count})",
+                >= 5 when !hasTrainedModel => "Ready for training",
+                >= 5 when hasTrainedModel => "Model trained - ready for generation",
                 _ => "Unknown status"
             }
         });

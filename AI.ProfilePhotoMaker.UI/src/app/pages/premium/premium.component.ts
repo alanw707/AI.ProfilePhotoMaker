@@ -100,7 +100,7 @@ import { NavigationService } from '../../services/navigation.service';
                   <div class="step-number">1</div>
                   <div class="step-content">
                     <h3>Upload Photos</h3>
-                    <p>Upload 10-20 high-quality selfies for the best AI training results</p>
+                    <p>Upload 5-15 high-quality selfies for the best AI training results</p>
                   </div>
                 </div>
                 <div class="step-item">

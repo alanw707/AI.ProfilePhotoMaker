@@ -140,26 +140,26 @@
             class="progress-fill"
             [style.width.%]="(uploadedImageThumbnails.length / 20) * 100"
             [ngClass]="{
-              'progress-red': uploadedImageThumbnails.length < 10,
-              'progress-yellow': uploadedImageThumbnails.length >= 10 && uploadedImageThumbnails.length < 15,
-              'progress-green': uploadedImageThumbnails.length >= 15,
+              'progress-red': uploadedImageThumbnails.length < 5,
+              'progress-yellow': uploadedImageThumbnails.length >= 5 && uploadedImageThumbnails.length < 10,
+              'progress-green': uploadedImageThumbnails.length >= 10,
             }"></div>
 
           <!-- Milestone markers -->
-          <div class="milestone-marker" style="left: 50%" title="10 images - Minimum required">
+          <div class="milestone-marker" style="left: 33%" title="5 images - Minimum required">
+            <div class="marker-line"></div>
+            <span class="marker-label">5</span>
+          </div>
+          <div class="milestone-marker" style="left: 67%" title="10 images - Recommended">
             <div class="marker-line"></div>
             <span class="marker-label">10</span>
-          </div>
-          <div class="milestone-marker" style="left: 75%" title="15 images - Recommended">
-            <div class="marker-line"></div>
-            <span class="marker-label">15</span>
           </div>
         </div>
       </div>
 
       <div class="progress-status">
         <!-- Encouraging message when minimum met -->
-        <div class="progress-encouragement" *ngIf="uploadedImageThumbnails.length >= 10">
+        <div class="progress-encouragement" *ngIf="uploadedImageThumbnails.length >= 5">
           <span class="encouragement-text">🎉 Great start! You've met the minimum requirement</span>
         </div>
 
@@ -167,26 +167,26 @@
           <span
             class="status-indicator"
             [ngClass]="{
-              'status-complete': uploadedImageThumbnails.length >= 10,
-              'status-incomplete': uploadedImageThumbnails.length < 10,
+              'status-complete': uploadedImageThumbnails.length >= 5,
+              'status-incomplete': uploadedImageThumbnails.length < 5,
             }">
-            {{ uploadedImageThumbnails.length >= 10 ? '✅' : '⭕' }}
-            <strong>10 minimum</strong>
-            {{ uploadedImageThumbnails.length >= 10 ? '(achieved!)' : '(required)' }}
+            {{ uploadedImageThumbnails.length >= 5 ? '✅' : '⭕' }}
+            <strong>5 minimum</strong>
+            {{ uploadedImageThumbnails.length >= 5 ? '(achieved!)' : '(required)' }}
           </span>
           <span
             class="status-indicator"
             [ngClass]="{
-              'status-complete': uploadedImageThumbnails.length >= 15,
-              'status-working': uploadedImageThumbnails.length >= 10 && uploadedImageThumbnails.length < 15,
-              'status-future': uploadedImageThumbnails.length < 10,
+              'status-complete': uploadedImageThumbnails.length >= 10,
+              'status-working': uploadedImageThumbnails.length >= 5 && uploadedImageThumbnails.length < 10,
+              'status-future': uploadedImageThumbnails.length < 5,
             }">
-            {{ uploadedImageThumbnails.length >= 15 ? '✅' : uploadedImageThumbnails.length >= 10 ? '🟡' : '⚪' }}
-            <strong>15 recommended</strong>
+            {{ uploadedImageThumbnails.length >= 10 ? '✅' : uploadedImageThumbnails.length >= 5 ? '🟡' : '⚪' }}
+            <strong>10 recommended</strong>
             {{
-              uploadedImageThumbnails.length >= 15
+              uploadedImageThumbnails.length >= 10
                 ? '(achieved!)'
-                : uploadedImageThumbnails.length >= 10
+                : uploadedImageThumbnails.length >= 5
                   ? '(working toward)'
                   : '(future goal)'
             }}

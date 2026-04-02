@@ -1,25 +1,25 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Marketing selfie count copy', () => {
-  test('how-it-works uses at least 10 copy', async ({ page }) => {
+  test('how-it-works uses at least 5 copy', async ({ page }) => {
     await page.goto('/how-it-works');
 
-    await expect(page.getByText('Upload at least 10 clear selfies')).toBeVisible();
+    await expect(page.getByText('Upload at least 5 clear selfies')).toBeVisible();
 
     const recommendedHighlight = page.locator('.highlight', { hasText: 'Recommended selfies' });
-    await expect(recommendedHighlight.locator('.highlight-value')).toHaveText('At least 10');
+    await expect(recommendedHighlight.locator('.highlight-value')).toHaveText('At least 5');
   });
 
-  test('ai-headshot-generator uses at least 10 copy', async ({ page }) => {
+  test('ai-headshot-generator uses at least 5 copy', async ({ page }) => {
     await page.goto('/ai-headshot-generator');
 
     await expect(
-      page.getByText('Provide at least 10 clear images to train a personalized model.')
+      page.getByText('Provide at least 5 clear images to train a personalized model.')
     ).toBeVisible();
     const faqItem = page.locator('details', { hasText: 'How many photos should I upload?' });
     await faqItem.locator('summary').click();
     await expect(
-      faqItem.getByText('We recommend at least 10 clear selfies with varied angles and lighting.')
+      faqItem.getByText('We recommend at least 5 clear selfies with varied angles and lighting.')
     ).toBeVisible();
   });
 });

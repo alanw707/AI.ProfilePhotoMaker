@@ -2,7 +2,7 @@
 > Generate studio-quality AI headshots from selfies in minutes.
 
 ## Overview
-AI Profile Photo Maker helps people create professional headshots using AI. Upload 10-20 selfies (front-facing plus slight angles), select a style, and receive high-resolution portraits suitable for LinkedIn, resumes, company bios, and professional profiles. No in-person photo shoot required.
+AI Profile Photo Maker helps people create professional headshots using AI. Upload 5-15 selfies (front-facing plus slight angles), select a style, and receive high-resolution portraits suitable for LinkedIn, resumes, company bios, and professional profiles. No in-person photo shoot required.
 
 ## What We Do
 - Turn casual selfies into polished, studio-quality headshots
@@ -18,7 +18,7 @@ AI Profile Photo Maker helps people create professional headshots using AI. Uplo
 - Anyone who wants upgraded dating or social media profile photos
 
 ## How It Works (Detailed)
-1. **Upload photos**: Provide 10-20 clear selfies with varied angles, good lighting, and neutral backgrounds when possible.
+1. **Upload photos**: Provide 5-15 clear selfies with varied angles, good lighting, and neutral backgrounds when possible.
 2. **Model training**: The system learns your facial features to personalize outputs.
 3. **Choose styles**: Select from professional presets (corporate, casual, creative, industry-specific).
 4. **Generate headshots**: The AI produces multiple options with consistent lighting and composition.
@@ -68,7 +68,7 @@ Full details: https://aiprofilephotomaker.com/pricing
   - FAQs, support guidance, and troubleshooting.
 
 ## FAQ (Highlights)
-- **How many photos should I upload?** 10-20 clear selfies with a mix of angles and lighting.
+- **How many photos should I upload?** 5-15 clear selfies with a mix of angles and lighting.
 - **What kinds of photos work best?** Front-facing selfies with good light, minimal obstructions, and natural expressions.
 - **How long does it take?** Generation time varies by plan and demand; priority options are available.
 - **Can I use these for LinkedIn and resumes?** Yes—outputs are designed for professional profiles.

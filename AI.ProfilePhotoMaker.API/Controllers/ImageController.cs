@@ -808,9 +808,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var uploadsPrefix = _pathResolver.GetDirectoryPrefix(StorageType.Upload, userId);
                 var imageFiles = await _storageService.ListFilesAsync(uploadsPrefix);
 
-                if (imageFiles.Count < 10)
+                if (imageFiles.Count < 5)
                 {
-                    Logger.LogWarning("User {UserId} has insufficient images for training ZIP ({Count}/10 required)",
+                    Logger.LogWarning("User {UserId} has insufficient images for training ZIP ({Count}/5 required)",
                         userId, imageFiles.Count);
                     return null;
                 }
@@ -821,9 +821,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     allowedExtensions.Contains(Path.GetExtension(file).ToLowerInvariant())
                 ).ToList();
 
-                if (validImages.Count < 10)
+                if (validImages.Count < 5)
                 {
-                    Logger.LogWarning("User {UserId} has insufficient valid images for training ZIP ({Count}/10 required)",
+                    Logger.LogWarning("User {UserId} has insufficient valid images for training ZIP ({Count}/5 required)",
                         userId, validImages.Count);
                     return null;
                 }
@@ -910,10 +910,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 if (string.IsNullOrEmpty(zipPath))
                 {
                     // Check specific reasons for failure
-                    if (uploadedImages.Count < 10)
+                    if (uploadedImages.Count < 5)
                     {
                         return ErrorResponse("InsufficientImages",
-                            $"Need at least 10 images for training (currently {uploadedImages.Count})");
+                            $"Need at least 5 images for training (currently {uploadedImages.Count})");
                     }
 
                     return ErrorResponse("ZipCreationFailed",
