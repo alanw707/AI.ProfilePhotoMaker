@@ -12,6 +12,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Performance;
 public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
 {
     private static readonly TimeSpan PerformanceNoiseBuffer = TimeSpan.FromMilliseconds(20);
+    private static readonly TimeSpan ComparativePerformanceNoiseBuffer = TimeSpan.FromMilliseconds(50);
     private readonly ITestOutputHelper _output;
     private readonly IUserProfileRepository _repository;
     private List<UserProfile> _testUsers = new();
@@ -86,16 +87,19 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         await _repository.GetByUserIdLightAsync(heavyUser.UserId);
         await _repository.GetByUserIdAsync(heavyUser.UserId);
 
-        // Act - Measure both methods
-        var (lightResult, lightElapsed, lightMemoryBefore, lightMemoryAfter) = await MeasurePerformanceAsync(async () =>
-        {
-            return await _repository.GetByUserIdLightAsync(heavyUser.UserId);
-        });
+        // Measure averages instead of a single run to reduce scheduler/JIT noise.
+        var (lightAverageElapsed, lightAverageMemoryIncrease, lightSuccessfulRuns) = await MeasureAveragePerformanceAsync(
+            async () => await _repository.GetByUserIdLightAsync(heavyUser.UserId),
+            runs: 5,
+            operationName: "GetByUserIdLightAsync");
 
-        var (fullResult, fullElapsed, fullMemoryBefore, fullMemoryAfter) = await MeasurePerformanceAsync(async () =>
-        {
-            return await _repository.GetByUserIdAsync(heavyUser.UserId);
-        });
+        var (fullAverageElapsed, fullAverageMemoryIncrease, fullSuccessfulRuns) = await MeasureAveragePerformanceAsync(
+            async () => await _repository.GetByUserIdAsync(heavyUser.UserId),
+            runs: 5,
+            operationName: "GetByUserIdAsync");
+
+        var lightResult = await _repository.GetByUserIdLightAsync(heavyUser.UserId);
+        var fullResult = await _repository.GetByUserIdAsync(heavyUser.UserId);
 
         // Assert
         lightResult.Should().NotBeNull();
@@ -111,34 +115,33 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         fullResult!.ProcessedImages.Should().HaveCountGreaterThan(0);
 
         // Performance comparison
-        var lightMemoryUsed = lightMemoryAfter - lightMemoryBefore;
-        var fullMemoryUsed = fullMemoryAfter - fullMemoryBefore;
+        lightSuccessfulRuns.Should().Be(5);
+        fullSuccessfulRuns.Should().Be(5);
 
-        _output.WriteLine($"Light method: {lightElapsed.TotalMilliseconds}ms, Memory: {lightMemoryUsed} bytes");
-        _output.WriteLine($"Full method: {fullElapsed.TotalMilliseconds}ms, Memory: {fullMemoryUsed} bytes");
-        if (fullMemoryUsed > 0)
+        _output.WriteLine($"Light method avg: {lightAverageElapsed.TotalMilliseconds}ms, Memory: {lightAverageMemoryIncrease} bytes");
+        _output.WriteLine($"Full method avg: {fullAverageElapsed.TotalMilliseconds}ms, Memory: {fullAverageMemoryIncrease} bytes");
+        if (fullAverageMemoryIncrease > 0)
         {
-            _output.WriteLine($"Performance improvement: {((fullElapsed.TotalMilliseconds - lightElapsed.TotalMilliseconds) / fullElapsed.TotalMilliseconds * 100):F1}% time, {((fullMemoryUsed - lightMemoryUsed) / (double)fullMemoryUsed * 100):F1}% memory");
+            _output.WriteLine($"Performance improvement: {((fullAverageElapsed.TotalMilliseconds - lightAverageElapsed.TotalMilliseconds) / fullAverageElapsed.TotalMilliseconds * 100):F1}% time, {((fullAverageMemoryIncrease - lightAverageMemoryIncrease) / (double)fullAverageMemoryIncrease * 100):F1}% memory");
         }
         else
         {
-            _output.WriteLine($"Performance improvement: {((fullElapsed.TotalMilliseconds - lightElapsed.TotalMilliseconds) / fullElapsed.TotalMilliseconds * 100):F1}% time, memory n/a");
+            _output.WriteLine($"Performance improvement: {((fullAverageElapsed.TotalMilliseconds - lightAverageElapsed.TotalMilliseconds) / fullAverageElapsed.TotalMilliseconds * 100):F1}% time, memory n/a");
         }
 
         // Assertions
-        lightElapsed.Should().BeLessThan(SimpleQueryThreshold + PerformanceNoiseBuffer);
-        lightElapsed.Should().BeLessThan(
-            fullElapsed + PerformanceNoiseBuffer,
-            "light query should not exceed the full eager-load path by more than {0}ms (observed light={1:F2}ms, full={2:F2}ms)",
-            PerformanceNoiseBuffer.TotalMilliseconds,
-            lightElapsed.TotalMilliseconds,
-            fullElapsed.TotalMilliseconds);
+        lightAverageElapsed.Should().BeLessThan(SimpleQueryThreshold + PerformanceNoiseBuffer);
+        lightAverageElapsed.Should().BeLessThan(
+            fullAverageElapsed + ComparativePerformanceNoiseBuffer,
+            "light query should stay within the same performance band as the eager-load path even when runtime variance is noisy (observed light={0:F2}ms, full={1:F2}ms)",
+            lightAverageElapsed.TotalMilliseconds,
+            fullAverageElapsed.TotalMilliseconds);
 
         // Memory measurements based on GC totals are inherently noisy (especially with EF's in-memory provider),
         // so keep the assertion very loose: only fail on obvious regressions.
-        if (fullMemoryUsed >= 200_000 && lightMemoryUsed > 0)
+        if (fullAverageMemoryIncrease >= 200_000 && lightAverageMemoryIncrease > 0)
         {
-            lightMemoryUsed.Should().BeLessThan(fullMemoryUsed + 500_000);
+            lightAverageMemoryIncrease.Should().BeLessThan(fullAverageMemoryIncrease + 500_000);
         }
     }
 

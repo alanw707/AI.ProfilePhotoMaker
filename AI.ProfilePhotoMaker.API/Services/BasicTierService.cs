@@ -1,9 +1,6 @@
-using System.Linq.Expressions;
-using System.Reflection;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
 
 namespace AI.ProfilePhotoMaker.API.Services;
 
@@ -14,35 +11,10 @@ public class BasicTierService : IBasicTierService
     private const int WeeklyCredits = 5; // Weekly top-up amount (unchanged)
     private const int SignupCredits = 25; // Free trial: 15 (train) + 5x2 (2 headshots)
     private const int DaysInWeek = 7;
-    private static readonly MethodInfo? ExecuteUpdateAsyncMethod = typeof(RelationalQueryableExtensions)
-        .GetMethods(BindingFlags.Public | BindingFlags.Static)
-        .FirstOrDefault(method => method.Name == "ExecuteUpdateAsync" && method.GetParameters().Length == 3);
-
     public BasicTierService(ApplicationDbContext context, ILogger<BasicTierService> logger)
     {
         _context = context;
         _logger = logger;
-    }
-
-    private static Task<int>? ExecuteUpdateAsyncIfAvailable<T>(
-        IQueryable<T> query,
-        Expression<Func<SetPropertyCalls<T>, SetPropertyCalls<T>>> updateExpression,
-        CancellationToken cancellationToken)
-    {
-        if (ExecuteUpdateAsyncMethod == null)
-        {
-            return null;
-        }
-
-        try
-        {
-            var method = ExecuteUpdateAsyncMethod.MakeGenericMethod(typeof(T));
-            return method.Invoke(null, new object?[] { query, updateExpression, cancellationToken }) as Task<int>;
-        }
-        catch (TargetInvocationException)
-        {
-            return null;
-        }
     }
 
     public async Task<bool> HasAvailableCreditsAsync(string userId)
@@ -124,66 +96,13 @@ public class BasicTierService : IBasicTierService
 
         var updatedAt = DateTime.UtcNow;
         var newCredits = totalAvailableCredits - creditCost;
-        var rowsAffected = 0;
-        int? persistedCredits = null;
-
-        var useExecuteUpdate = _context.Database.IsRelational();
-        if (useExecuteUpdate)
-        {
-            var updateExpression = (Expression<Func<SetPropertyCalls<UserProfile>, SetPropertyCalls<UserProfile>>>)(updates => updates
-                .SetProperty(p => p.Credits, p => p.Credits - creditCost)
-                .SetProperty(p => p.UpdatedAt, updatedAt));
-
-            var executeUpdateTask = ExecuteUpdateAsyncIfAvailable(
-                _context.UserProfiles.Where(p => p.UserId == userId && p.Credits >= creditCost),
-                updateExpression,
-                cancellationToken);
-
-            if (executeUpdateTask == null)
-            {
-                _logger.LogWarning("ExecuteUpdateAsync not available; falling back to tracked update for user {UserId}", userId);
-                useExecuteUpdate = false;
-            }
-            else
-            {
-                try
-                {
-                    rowsAffected = await executeUpdateTask;
-                    if (rowsAffected == 1)
-                    {
-                        persistedCredits = await _context.UserProfiles
-                            .Where(p => p.UserId == userId)
-                            .Select(p => (int?)p.Credits)
-                            .FirstOrDefaultAsync();
-                        profile.Credits = persistedCredits ?? newCredits;
-                        profile.UpdatedAt = updatedAt;
-                        _context.Entry(profile).State = EntityState.Unchanged;
-                    }
-                }
-                catch (NotSupportedException ex)
-                {
-                    _logger.LogWarning(ex, "ExecuteUpdateAsync not supported; falling back to tracked update for user {UserId}", userId);
-                    useExecuteUpdate = false;
-                }
-            }
-        }
-
-        if (!useExecuteUpdate)
-        {
-            profile.Credits = newCredits;
-            profile.UpdatedAt = updatedAt;
-            rowsAffected = await _context.SaveChangesAsync(cancellationToken);
-            persistedCredits = profile.Credits;
-        }
+        profile.Credits = newCredits;
+        profile.UpdatedAt = updatedAt;
+        var rowsAffected = await _context.SaveChangesAsync(cancellationToken);
+        var persistedCredits = profile.Credits;
 
         if (rowsAffected != 1)
         {
-            if (useExecuteUpdate)
-            {
-                _logger.LogWarning("Failed to deduct credits for user {UserId} due to insufficient balance or concurrent update", userId);
-                return CreditConsumptionResult.Failed(action, "insufficient_credits", correlationId);
-            }
-
             _logger.LogError("Failed to persist credit deduction for user {UserId}. Rows affected: {RowsAffected}", userId, rowsAffected);
             return CreditConsumptionResult.Failed(action, "credit_persistence_failed", correlationId);
         }
@@ -193,7 +112,7 @@ public class BasicTierService : IBasicTierService
         {
             details = $"{details}; correlationId={correlationId}";
         }
-        var remainingCredits = persistedCredits ?? newCredits;
+        var remainingCredits = persistedCredits;
         await LogUsageAsync(userId, action, details, creditCost, remainingCredits);
 
         _logger.LogInformation("User {UserId} consumed {Credits} credits for {Action}. Remaining: {Remaining}",
