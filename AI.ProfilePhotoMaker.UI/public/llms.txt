@@ -2,7 +2,7 @@
 > Generate studio-quality AI headshots from selfies in minutes.
 
 ## What We Do
-AI Profile Photo Maker transforms 10-20 casual selfie photos into professional headshots using AI. Upload your photos (front-facing + slight angles), choose a style, and get studio-quality results — no photographer needed.
+AI Profile Photo Maker transforms 5-15 casual selfie photos into professional headshots using AI. Upload your photos (front-facing + slight angles), choose a style, and get studio-quality results — no photographer needed.
 
 ## Who It's For
 - Job seekers needing LinkedIn/resume headshots
@@ -11,7 +11,7 @@ AI Profile Photo Maker transforms 10-20 casual selfie photos into professional h
 - Anyone wanting better dating profile or social media photos
 
 ## How It Works
-1. Upload 10-20 photos (front-facing, good lighting, slight angle variety)
+1. Upload 5-15 photos (front-facing, good lighting, slight angle variety)
 2. AI trains a custom model on your features
 3. Choose from professional styles (corporate, casual, creative, etc.)
 4. Download high-resolution headshots
