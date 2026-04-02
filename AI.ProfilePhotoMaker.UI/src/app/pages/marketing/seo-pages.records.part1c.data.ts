@@ -268,7 +268,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
           {
             label: 'Workflow',
             values: [
-              'Upload at least 10 photos, pick styles, download fast',
+              'Upload at least 5 photos, pick styles, download fast',
               'Upload photos, select attire/backgrounds, download',
             ],
           },
@@ -379,7 +379,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
           {
             label: 'Setup steps',
             values: [
-              'Upload at least 10 photos, select styles, download results',
+              'Upload at least 5 photos, select styles, download results',
               'Upload photos, choose style options, download favorites',
             ],
           },
@@ -582,7 +582,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
         title: 'How it works',
         items: [
           {
-            title: 'Upload 10–20 clear selfies',
+            title: 'Upload 5–15 clear selfies',
             description:
               'Front-facing shots with variety in angles and lighting help the AI model learn your features accurately.',
           },
@@ -615,7 +615,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
           {
             question: 'How many photos should I upload?',
             answer:
-              'We recommend 10–20 clear selfies with varied angles and lighting for the best results.',
+              'We recommend 5–15 clear selfies with varied angles and lighting for the best results.',
           },
           {
             question: 'Will the headshots look like me?',

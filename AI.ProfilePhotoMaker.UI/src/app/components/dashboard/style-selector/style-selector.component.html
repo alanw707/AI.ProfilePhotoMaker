@@ -177,7 +177,7 @@
     *ngIf="!isTrainingStarted && !isTraining && !isGenerating"
     (click)="onStartTraining()"
     [disabled]="
-      isProcessingTraining || isModelTraining || (!isModelReady && uploadedImageCount < 10) || !hasEnoughCredits
+      isProcessingTraining || isModelTraining || (!isModelReady && uploadedImageCount < 5) || !hasEnoughCredits
     ">
     <div class="btn-content">
       <div class="btn-icon" *ngIf="!isModelTraining">🚀</div>
@@ -244,14 +244,14 @@
   <p>Select at least one style above to proceed with training</p>
 </div>
 
-<div class="training-note" *ngIf="selectedStyles > 0 && uploadedImageCount < 10 && !isModelReady">
+<div class="training-note" *ngIf="selectedStyles > 0 && uploadedImageCount < 5 && !isModelReady">
   <div class="note-icon">📸</div>
-  <p>Upload at least 10 images to enable training (currently: {{ uploadedImageCount }})</p>
+  <p>Upload at least 5 images to enable training (currently: {{ uploadedImageCount }})</p>
 </div>
 
 <div
   class="training-note insufficient-credits"
-  *ngIf="selectedStyles > 0 && uploadedImageCount >= 10 && !hasEnoughCredits">
+  *ngIf="selectedStyles > 0 && uploadedImageCount >= 5 && !hasEnoughCredits">
   <div class="note-icon">💳</div>
   <p>
     Insufficient credits. You need

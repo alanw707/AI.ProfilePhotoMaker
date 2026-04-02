@@ -281,7 +281,7 @@ public class UserProfileRepository : IUserProfileRepository
 
     /// <summary>
     /// OPTIMIZED: Check if user has minimum number of original uploads
-    /// Perfect for training requirements (e.g., minimum 10 images)
+    /// Perfect for training requirements (e.g., minimum 5 images)
     /// </summary>
     public async Task<bool> HasOriginalUploadsAsync(string userId, int minimumCount = 1)
     {

@@ -358,7 +358,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     setTimeout(() => {
       const thumbnails = this.stateService.getState().uploadedImageThumbnails;
-      if (thumbnails.length >= 10) {
+      if (thumbnails.length >= 5) {
         this.currentStep = 2;
         this._cdr.detectChanges();
       }

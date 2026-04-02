@@ -1689,7 +1689,7 @@ export class WorkflowOrchestrationService {
       return {
         title: 'Training Preparation Failed',
         message:
-          'Unable to prepare your images for training. Please ensure you have uploaded at least 10 clear photos and try again.',
+          'Unable to prepare your images for training. Please ensure you have uploaded at least 5 clear photos and try again.',
         category: 'training_preparation',
       };
     }

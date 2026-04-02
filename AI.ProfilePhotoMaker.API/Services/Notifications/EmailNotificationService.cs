@@ -133,7 +133,7 @@ public class EmailNotificationService : IEmailNotificationService
         var body = $@"<p style=""margin:0 0 16px;""><strong>{greeting}</strong></p>
                       <p style=""margin:0 0 16px;"">Thanks for joining. You're all set to start creating professional photos.</p>
                       <ul style=""margin:0 0 16px; padding-left:20px;"">
-                        <li>Upload selfies in Headshot Studio (10+ for best results)</li>
+                        <li>Upload selfies in Headshot Studio (5+ for best results)</li>
                         <li>Generate headshots and download your favorites</li>
                         <li>Use Photo Transform for quick enhancements</li>
                       </ul>
@@ -151,7 +151,7 @@ public class EmailNotificationService : IEmailNotificationService
 
         var body = $@"<p style=""margin:0 0 16px;""><strong>{greeting}</strong></p>
                       <p style=""margin:0 0 16px;"">You created your account but haven't uploaded photos yet — that's the only step left to get your professional headshots.</p>
-                      <p style=""margin:0 0 16px;"">No studio. No photographer. No awkward posing. Just upload 10–20 selfies from your phone and our AI will do the rest.</p>
+                      <p style=""margin:0 0 16px;"">No studio. No photographer. No awkward posing. Just upload 5–15 selfies from your phone and our AI will do the rest.</p>
                       <p style=""margin:0 0 16px;""><strong>What makes good photos?</strong></p>
                       <ul style=""margin:0 0 16px; padding-left:20px;"">
                         <li>Front-facing selfies with your face clearly visible</li>

@@ -125,7 +125,7 @@ public class ModelStatusController : ControllerBase
             .Where(i => i.Style == ImageConstants.OriginalStyle)
             .Count();
 
-        var canStartTraining = totalUploadedImages >= 10;
+        var canStartTraining = totalUploadedImages >= 5;
 
         var latestTrainedModel = await _context.ModelCreationRequests
             .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
@@ -201,7 +201,7 @@ public class ModelStatusController : ControllerBase
             response.StatusCode = UnifiedModelStatusCode.NotStarted;
             response.Reason = totalUploadedImages == 0
                 ? "No images uploaded"
-                : $"Need at least 10 images (currently {totalUploadedImages})";
+                : $"Need at least 5 images (currently {totalUploadedImages})";
         }
         else
         {
