@@ -131,14 +131,14 @@
     <div class="upload-progress-section">
       <div class="progress-header">
         <h5>📈 Upload Progress</h5>
-        <span class="progress-count">{{ uploadedImageThumbnails.length }} / 20 images</span>
+        <span class="progress-count">{{ uploadedImageThumbnails.length }} / 15 images</span>
       </div>
 
       <div class="progress-bar-container">
         <div class="progress-bar">
           <div
             class="progress-fill"
-            [style.width.%]="(uploadedImageThumbnails.length / 20) * 100"
+            [style.width.%]="(uploadedImageThumbnails.length / 15) * 100"
             [ngClass]="{
               'progress-red': uploadedImageThumbnails.length < 5,
               'progress-yellow': uploadedImageThumbnails.length >= 5 && uploadedImageThumbnails.length < 10,
@@ -153,6 +153,10 @@
           <div class="milestone-marker" style="left: 67%" title="10 images - Recommended">
             <div class="marker-line"></div>
             <span class="marker-label">10</span>
+          </div>
+          <div class="milestone-marker" style="left: 100%" title="15 images - Best results">
+            <div class="marker-line"></div>
+            <span class="marker-label">15</span>
           </div>
         </div>
       </div>
@@ -194,16 +198,16 @@
           <span
             class="status-indicator"
             [ngClass]="{
-              'status-complete': uploadedImageThumbnails.length >= 20,
-              'status-working': uploadedImageThumbnails.length >= 15 && uploadedImageThumbnails.length < 20,
-              'status-future': uploadedImageThumbnails.length < 15,
+              'status-complete': uploadedImageThumbnails.length >= 15,
+              'status-working': uploadedImageThumbnails.length >= 10 && uploadedImageThumbnails.length < 15,
+              'status-future': uploadedImageThumbnails.length < 10,
             }">
-            {{ uploadedImageThumbnails.length >= 20 ? '✅' : uploadedImageThumbnails.length >= 15 ? '🟡' : '⚪' }}
-            <strong>20 for best results</strong>
+            {{ uploadedImageThumbnails.length >= 15 ? '✅' : uploadedImageThumbnails.length >= 10 ? '🟡' : '⚪' }}
+            <strong>15 for best results</strong>
             {{
-              uploadedImageThumbnails.length >= 20
+              uploadedImageThumbnails.length >= 15
                 ? '(achieved!)'
-                : uploadedImageThumbnails.length >= 15
+                : uploadedImageThumbnails.length >= 10
                   ? '(almost there!)'
                   : '(future goal)'
             }}
