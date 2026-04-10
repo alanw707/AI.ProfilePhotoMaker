@@ -470,6 +470,9 @@ public class AbandonedUploadBackgroundServiceTests
             NudgeCalls.Add(new NudgeCall(userId, email, firstName));
             return Task.CompletedTask;
         }
+
+        public Task<bool> SendMarketingEmailAsync(string userId, string email, string subject, string htmlBody, string unsubscribeUrl) => Task.FromResult(true);
+        public string RenderMarketingEmailPreview(string subject, string htmlBody) => htmlBody;
     }
 
     private sealed record NudgeCall(string UserId, string? Email, string? FirstName);

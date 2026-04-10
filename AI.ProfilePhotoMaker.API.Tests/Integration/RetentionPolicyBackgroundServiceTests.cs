@@ -490,6 +490,8 @@ public class RetentionPolicyBackgroundServiceTests
         }
 
         public Task SendAbandonedUploadNudgeAsync(string userId, string? email, string? firstName = null) => Task.CompletedTask;
+        public Task<bool> SendMarketingEmailAsync(string userId, string email, string subject, string htmlBody, string unsubscribeUrl) => Task.FromResult(true);
+        public string RenderMarketingEmailPreview(string subject, string htmlBody) => htmlBody;
     }
 
     private sealed record RetentionWarningCall(
