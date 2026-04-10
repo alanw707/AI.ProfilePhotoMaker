@@ -1,9 +1,9 @@
 # Simple .NET 10 API Dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS base
 WORKDIR /app
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
 WORKDIR /src
 COPY ["AI.ProfilePhotoMaker.API.csproj", "."]
 RUN dotnet restore "AI.ProfilePhotoMaker.API.csproj"
