@@ -110,10 +110,12 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
           this.campaigns = res.campaigns;
           this.totalCount = res.totalCount;
           this.isLoading = false;
+          this._cdr.detectChanges();
         },
         error: () => {
           this.error = 'Failed to load campaigns. Please refresh to try again.';
           this.isLoading = false;
+          this._cdr.detectChanges();
         },
       });
   }
@@ -180,10 +182,12 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
           this.view = 'list';
           this.loadCampaigns();
           this.success = `Campaign "${campaign.name}" created.`;
+          this._cdr.detectChanges();
         },
         error: err => {
           this.error = err?.error?.error?.message || 'Failed to create campaign.';
           this.isSaving = false;
+          this._cdr.detectChanges();
         },
       });
   }
@@ -202,10 +206,12 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
           this.scheduleDate = c.scheduledAt ? c.scheduledAt.slice(0, 16) : '';
           this.view = 'detail';
           this.isLoading = false;
+          this._cdr.detectChanges();
         },
         error: () => {
           this.error = 'Failed to load campaign. Please refresh to try again.';
           this.isLoading = false;
+          this._cdr.detectChanges();
         },
       });
   }
@@ -223,10 +229,12 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
           this.success = 'Campaign scheduled.';
           this.isSaving = false;
           this.openDetail(this.selectedCampaign!.id);
+          this._cdr.detectChanges();
         },
         error: err => {
           this.error = err?.error?.error?.message || 'Failed to schedule.';
           this.isSaving = false;
+          this._cdr.detectChanges();
         },
       });
   }
@@ -244,10 +252,12 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
           } else {
             this.loadCampaigns();
           }
+          this._cdr.detectChanges();
         },
         error: err => {
           this.error = err?.error?.error?.message || 'Failed to cancel.';
           this.confirmCancelId = null;
+          this._cdr.detectChanges();
         },
       });
   }
@@ -261,9 +271,11 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
           this.success = `Duplicated as "${copy.name}".`;
           this.loadCampaigns();
           this.view = 'list';
+          this._cdr.detectChanges();
         },
         error: () => {
           this.error = 'Failed to duplicate campaign.';
+          this._cdr.detectChanges();
         },
       });
   }
@@ -280,10 +292,12 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
         next: () => {
           this.success = `Test email sent to ${this.testEmail}.`;
           this.isSaving = false;
+          this._cdr.detectChanges();
         },
         error: err => {
           this.error = err?.error?.error?.message || 'Failed to send test.';
           this.isSaving = false;
+          this._cdr.detectChanges();
         },
       });
   }
@@ -306,10 +320,12 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
           this.logTotal = res.totalCount;
           this.view = 'logs';
           this.isLoading = false;
+          this._cdr.detectChanges();
         },
         error: () => {
           this.error = 'Failed to load logs.';
           this.isLoading = false;
+          this._cdr.detectChanges();
         },
       });
   }
