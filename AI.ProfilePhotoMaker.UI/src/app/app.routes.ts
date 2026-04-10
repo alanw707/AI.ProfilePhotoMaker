@@ -212,7 +212,7 @@ export const routes: Routes = [
   },
   {
     path: 'reviews',
-    canActivate: [() => inject(Router).createUrlTree(['/'], { fragment: 'testimonials' })],
+    redirectTo: '/',
     pathMatch: 'full',
   },
   {

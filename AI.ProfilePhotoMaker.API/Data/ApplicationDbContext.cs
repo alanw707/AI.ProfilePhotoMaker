@@ -447,6 +447,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
             entity.Property(e => e.Subject).HasMaxLength(300).IsRequired();
             entity.Property(e => e.SegmentFilter).HasMaxLength(50).IsRequired();
+            entity.HasIndex(e => e.CreatedAt).HasDatabaseName("IX_MarketingCampaigns_CreatedAt");
         });
 
         builder.Entity<MarketingEmailLog>(entity =>
