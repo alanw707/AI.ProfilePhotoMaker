@@ -126,7 +126,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
                               Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto |
                               Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost;
-    options.KnownIPNetworks.Clear();
+#pragma warning disable ASPDEPR005 // KnownNetworks renamed to KnownIPNetworks in GA; preview SDK lacks the new name
+    options.KnownNetworks.Clear();
+#pragma warning restore ASPDEPR005
     options.KnownProxies.Clear();
 
     // Restrict forwarded host values to known application hosts to prevent host header injection.
