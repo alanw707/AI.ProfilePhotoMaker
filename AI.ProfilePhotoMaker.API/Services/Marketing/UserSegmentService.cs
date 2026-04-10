@@ -43,25 +43,30 @@ public class UserSegmentService : IUserSegmentService
             // Signed up + verified, never uploaded a single selfie
             SegmentFilters.NoUploads =>
                 from u in baseQuery
-                where !_db.Set<ProcessedImage>()
-                    .Any(i => i.UserProfile.UserId == u.Id && i.IsOriginalUpload)
+                where !_db.UserProfiles
+                    .Any(up => up.UserId == u.Id &&
+                               up.ProcessedImages.Any(i => i.IsOriginalUpload))
                 select u,
 
             // Uploaded 1–4 selfies (previously blocked at 10-photo minimum, now eligible)
             SegmentFilters.StuckUnderMinimum =>
                 from u in baseQuery
-                let uploadCount = _db.Set<ProcessedImage>()
-                    .Count(i => i.UserProfile.UserId == u.Id && i.IsOriginalUpload)
+                let uploadCount = _db.UserProfiles
+                    .Where(up => up.UserId == u.Id)
+                    .SelectMany(up => up.ProcessedImages.Where(i => i.IsOriginalUpload))
+                    .Count()
                 where uploadCount >= 1 && uploadCount <= 4
                 select u,
 
             // 5+ uploads but never started training
             SegmentFilters.HasUploadsNoModel =>
                 from u in baseQuery
-                let uploadCount = _db.Set<ProcessedImage>()
-                    .Count(i => i.UserProfile.UserId == u.Id && i.IsOriginalUpload)
+                let uploadCount = _db.UserProfiles
+                    .Where(up => up.UserId == u.Id)
+                    .SelectMany(up => up.ProcessedImages.Where(i => i.IsOriginalUpload))
+                    .Count()
                 where uploadCount >= 5
-                    && !_db.Set<ModelCreationRequest>().Any(m =>
+                    && !_db.ModelCreationRequests.Any(m =>
                         m.UserId == u.Id
                         && (m.Status == ModelCreationStatus.Ready
                             || m.Status == ModelCreationStatus.Creating
@@ -72,10 +77,10 @@ public class UserSegmentService : IUserSegmentService
             SegmentFilters.Inactive30d =>
                 from u in baseQuery
                 let cutoff = DateTime.UtcNow.AddDays(-30)
-                where _db.Set<ProcessedImage>()
-                          .Any(i => i.UserProfile.UserId == u.Id && i.IsOriginalUpload)
-                      && !_db.Set<UsageLog>()
-                          .Any(l => l.UserId == u.Id && l.CreatedAt >= cutoff)
+                where _db.UserProfiles
+                          .Any(up => up.UserId == u.Id &&
+                                     up.ProcessedImages.Any(i => i.IsOriginalUpload))
+                      && !_db.UsageLogs.Any(l => l.UserId == u.Id && l.CreatedAt >= cutoff)
                 select u,
 
             // All verified, non-opted-out users
