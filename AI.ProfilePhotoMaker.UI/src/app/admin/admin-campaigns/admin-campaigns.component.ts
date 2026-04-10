@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, timeout } from 'rxjs/operators';
 import {
   MarketingService,
   CampaignDto,
@@ -101,7 +101,7 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
     this.error = null;
     this._marketing
       .getCampaigns(this.page, this.pageSize)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(timeout(12000), takeUntil(this.destroy$))
       .subscribe({
         next: res => {
           this.campaigns = res.campaigns;
@@ -109,7 +109,7 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
           this.isLoading = false;
         },
         error: () => {
-          this.error = 'Failed to load campaigns.';
+          this.error = 'Failed to load campaigns. Please refresh to try again.';
           this.isLoading = false;
         },
       });
@@ -132,7 +132,9 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
   }
 
   previewSegmentCount(): void {
-    if (!this.model.segmentFilter) {return;}
+    if (!this.model.segmentFilter) {
+      return;
+    }
     this.segmentCounting = true;
     this._marketing
       .previewSegment(this.model.segmentFilter)
@@ -183,7 +185,7 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
     this.error = null;
     this._marketing
       .getCampaign(id)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(timeout(12000), takeUntil(this.destroy$))
       .subscribe({
         next: c => {
           this.selectedCampaign = c;
@@ -192,14 +194,16 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
           this.isLoading = false;
         },
         error: () => {
-          this.error = 'Failed to load campaign.';
+          this.error = 'Failed to load campaign. Please refresh to try again.';
           this.isLoading = false;
         },
       });
   }
 
   scheduleCampaign(): void {
-    if (!this.selectedCampaign || !this.scheduleDate) {return;}
+    if (!this.selectedCampaign || !this.scheduleDate) {
+      return;
+    }
     this.isSaving = true;
     this._marketing
       .scheduleCampaign(this.selectedCampaign.id, new Date(this.scheduleDate).toISOString())
@@ -225,8 +229,11 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
         next: () => {
           this.confirmCancelId = null;
           this.success = 'Campaign cancelled.';
-          if (this.view === 'detail') {this.openDetail(id);}
-          else {this.loadCampaigns();}
+          if (this.view === 'detail') {
+            this.openDetail(id);
+          } else {
+            this.loadCampaigns();
+          }
         },
         error: err => {
           this.error = err?.error?.error?.message || 'Failed to cancel.';
@@ -252,7 +259,9 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
   }
 
   sendTest(): void {
-    if (!this.selectedCampaign || !this.testEmail) {return;}
+    if (!this.selectedCampaign || !this.testEmail) {
+      return;
+    }
     this.isSaving = true;
     this._marketing
       .sendTest(this.selectedCampaign.id, this.testEmail)
