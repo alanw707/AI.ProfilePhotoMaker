@@ -1,0 +1,38 @@
+<div class="unsub-shell">
+  <div class="unsub-card">
+    <div class="unsub-brand">AI Profile Photo Maker</div>
+
+    <ng-container [ngSwitch]="state">
+      <div *ngSwitchCase="'loading'" class="unsub-body loading-state">
+        <p>Processing your request…</p>
+      </div>
+
+      <div *ngSwitchCase="'success'" class="unsub-body">
+        <div class="unsub-icon success-icon">✓</div>
+        <h1>You've been unsubscribed</h1>
+        <p>
+          We've removed you from our marketing emails. You'll still receive important account emails like receipts and
+          security alerts.
+        </p>
+        <a routerLink="/" class="unsub-cta">Back to home</a>
+      </div>
+
+      <div *ngSwitchCase="'invalid'" class="unsub-body">
+        <div class="unsub-icon error-icon">!</div>
+        <h1>Invalid link</h1>
+        <p>
+          This unsubscribe link is missing or malformed. If you'd like to opt out, you can update your preferences from
+          your account settings.
+        </p>
+        <a routerLink="/" class="unsub-cta">Go home</a>
+      </div>
+
+      <div *ngSwitchCase="'error'" class="unsub-body">
+        <div class="unsub-icon error-icon">!</div>
+        <h1>Something went wrong</h1>
+        <p>We couldn't process your request. Please try again or contact support if the issue persists.</p>
+        <a routerLink="/" class="unsub-cta">Go home</a>
+      </div>
+    </ng-container>
+  </div>
+</div>

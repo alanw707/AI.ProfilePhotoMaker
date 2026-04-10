@@ -1,0 +1,265 @@
+<section class="admin-shell">
+  <header class="admin-header">
+    <div>
+      <p class="admin-kicker">Marketing</p>
+      <h1>Email Campaigns</h1>
+      <p class="admin-subtitle">Create, schedule, and track targeted marketing email campaigns.</p>
+    </div>
+    <button *ngIf="view === 'list'" class="btn btn-primary" (click)="showCreate()">+ New Campaign</button>
+    <button *ngIf="view !== 'list'" class="btn btn-ghost" (click)="backToList()">← Back</button>
+  </header>
+
+  <nav class="admin-nav">
+    <a routerLink="/admin/dashboard" routerLinkActive="is-active">Overview</a>
+    <a routerLink="/admin/users" routerLinkActive="is-active">Users</a>
+    <a routerLink="/admin/coupons" routerLinkActive="is-active">Coupons</a>
+    <a routerLink="/admin/audit-log" routerLinkActive="is-active">Audit Log</a>
+    <a routerLink="/admin/campaigns" routerLinkActive="is-active">Campaigns</a>
+  </nav>
+
+  <!-- Feedback -->
+  <div *ngIf="error" class="error-text" role="alert">{{ error }}</div>
+  <div *ngIf="success" class="success-text" role="status">{{ success }}</div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="empty-state"><p>Loading…</p></div>
+
+  <!-- ─── LIST VIEW ────────────────────────────────────────── -->
+  <ng-container *ngIf="view === 'list' && !isLoading">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Segment</th>
+            <th>Status</th>
+            <th>Scheduled</th>
+            <th>Recipients</th>
+            <th>Sent / Failed</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of campaigns">
+            <td>
+              <strong>{{ c.name }}</strong>
+            </td>
+            <td class="mono-text">{{ c.segmentFilter }}</td>
+            <td>
+              <span class="pill" [ngClass]="statusPillClass(c.status)">{{ c.status }}</span>
+            </td>
+            <td>{{ c.scheduledAt ? (c.scheduledAt | date: 'MMM d, y HH:mm') : '—' }}</td>
+            <td>{{ c.recipientCount | number }}</td>
+            <td>{{ c.sentCount | number }} / {{ c.failedCount | number }}</td>
+            <td>{{ c.createdAt | date: 'MMM d' }}</td>
+            <td>
+              <div class="action-row">
+                <button class="btn btn-ghost btn-sm" (click)="openDetail(c.id)">Edit</button>
+                <button class="btn btn-ghost btn-sm" (click)="openPreview(c.id)">Preview</button>
+                <button class="btn btn-ghost btn-sm" (click)="openLogs(c.id)">Logs</button>
+                <button class="btn btn-ghost btn-sm" (click)="duplicateCampaign(c.id)">Dup</button>
+                <button *ngIf="canCancel(c.status)" class="btn btn-danger btn-sm" (click)="confirmCancelId = c.id">
+                  Cancel
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="campaigns.length === 0">
+            <td colspan="8" class="empty-state">No campaigns yet. Create your first one.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pager" *ngIf="totalCount > pageSize">
+      <button class="btn btn-ghost btn-sm" (click)="prevPage()" [disabled]="page === 1">← Prev</button>
+      <span>Page {{ page }} of {{ totalPages }} ({{ totalCount | number }} campaigns)</span>
+      <button class="btn btn-ghost btn-sm" (click)="nextPage()" [disabled]="page === totalPages">Next →</button>
+    </div>
+
+    <!-- Confirm cancel -->
+    <section class="admin-panel danger-panel" *ngIf="confirmCancelId">
+      <h2>Cancel Campaign?</h2>
+      <p class="form-subtitle">This will move the campaign back to Cancelled state. You can reschedule it later.</p>
+      <div class="action-row">
+        <button class="btn btn-danger" (click)="cancelCampaign(confirmCancelId!)">Confirm Cancel</button>
+        <button class="btn btn-ghost" (click)="confirmCancelId = null">Never mind</button>
+      </div>
+    </section>
+  </ng-container>
+
+  <!-- ─── CREATE VIEW ──────────────────────────────────────── -->
+  <ng-container *ngIf="view === 'create'">
+    <section class="admin-panel">
+      <h2>New Campaign</h2>
+
+      <div class="field-grid">
+        <div class="field-group">
+          <label for="c-name">Internal Name</label>
+          <input id="c-name" [(ngModel)]="model.name" placeholder="5 Selfie Launch — No Uploads" />
+        </div>
+
+        <div class="field-group">
+          <label for="c-segment">Segment</label>
+          <select id="c-segment" [(ngModel)]="model.segmentFilter" (change)="segmentCount = null">
+            <option *ngFor="let s of segmentOptions" [value]="s.value">{{ s.label }}</option>
+          </select>
+        </div>
+
+        <div class="field-group field-span-2">
+          <label for="c-subject">Subject Line</label>
+          <input id="c-subject" [(ngModel)]="model.subject" />
+        </div>
+
+        <div class="field-group field-span-2">
+          <label for="c-body">HTML Body</label>
+          <textarea id="c-body" [(ngModel)]="model.htmlBody" rows="12" class="body-textarea"></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="c-scheduled">Schedule At (optional)</label>
+          <input id="c-scheduled" type="datetime-local" [(ngModel)]="model.scheduledAt" />
+        </div>
+
+        <div class="field-group segment-preview-group">
+          <p class="field-label">Recipient Estimate</p>
+          <div class="action-row">
+            <button class="btn btn-ghost btn-sm" (click)="previewSegmentCount()" [disabled]="segmentCounting">
+              {{ segmentCounting ? 'Counting…' : 'Count recipients' }}
+            </button>
+            <span *ngIf="segmentCount !== null" class="pill pill-credit">~{{ segmentCount | number }} recipients</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-row" style="margin-top: 1rem">
+        <button class="btn btn-primary" (click)="createCampaign()" [disabled]="isSaving">
+          {{ isSaving ? 'Saving…' : 'Create Campaign' }}
+        </button>
+        <button class="btn btn-ghost" (click)="backToList()">Cancel</button>
+      </div>
+    </section>
+  </ng-container>
+
+  <!-- ─── DETAIL VIEW ──────────────────────────────────────── -->
+  <ng-container *ngIf="view === 'detail' && selectedCampaign && !isLoading">
+    <section class="admin-panel">
+      <div class="detail-header">
+        <div>
+          <h2>{{ selectedCampaign.name }}</h2>
+          <span class="pill" [ngClass]="statusPillClass(selectedCampaign.status)">{{ selectedCampaign.status }}</span>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-ghost btn-sm" (click)="openPreview(selectedCampaign.id)">Preview Email</button>
+          <button class="btn btn-ghost btn-sm" (click)="openLogs(selectedCampaign.id)">View Logs</button>
+          <button class="btn btn-ghost btn-sm" (click)="duplicateCampaign(selectedCampaign.id)">Duplicate</button>
+        </div>
+      </div>
+
+      <dl class="detail-grid">
+        <dt>Subject</dt>
+        <dd>{{ selectedCampaign.subject }}</dd>
+        <dt>Segment</dt>
+        <dd class="mono-text">{{ selectedCampaign.segmentFilter }}</dd>
+        <dt>Recipients</dt>
+        <dd>{{ selectedCampaign.recipientCount | number }}</dd>
+        <dt>Sent</dt>
+        <dd>{{ selectedCampaign.sentCount | number }}</dd>
+        <dt>Failed</dt>
+        <dd>{{ selectedCampaign.failedCount | number }}</dd>
+        <dt>Scheduled</dt>
+        <dd>{{ selectedCampaign.scheduledAt ? (selectedCampaign.scheduledAt | date: 'medium') : '—' }}</dd>
+        <dt>Started</dt>
+        <dd>{{ selectedCampaign.startedAt ? (selectedCampaign.startedAt | date: 'medium') : '—' }}</dd>
+        <dt>Completed</dt>
+        <dd>{{ selectedCampaign.completedAt ? (selectedCampaign.completedAt | date: 'medium') : '—' }}</dd>
+      </dl>
+    </section>
+
+    <!-- Schedule -->
+    <section class="admin-panel" *ngIf="canSchedule(selectedCampaign)">
+      <h2>Schedule Send</h2>
+      <div class="field-grid">
+        <div class="field-group">
+          <label for="sched-at">Send At</label>
+          <input id="sched-at" type="datetime-local" [(ngModel)]="scheduleDate" />
+        </div>
+      </div>
+      <div class="action-row" style="margin-top: 0.8rem">
+        <button class="btn btn-primary" (click)="scheduleCampaign()" [disabled]="isSaving || !scheduleDate">
+          {{ isSaving ? 'Scheduling…' : 'Schedule Campaign' }}
+        </button>
+      </div>
+    </section>
+
+    <!-- Test send -->
+    <section class="admin-panel">
+      <h2>Send Test Email</h2>
+      <div class="field-grid">
+        <div class="field-group">
+          <label for="test-email">Recipient Email</label>
+          <input id="test-email" type="email" [(ngModel)]="testEmail" placeholder="you@example.com" />
+        </div>
+      </div>
+      <div class="action-row" style="margin-top: 0.8rem">
+        <button class="btn btn-ghost" (click)="sendTest()" [disabled]="isSaving || !testEmail">
+          {{ isSaving ? 'Sending…' : 'Send Test' }}
+        </button>
+      </div>
+    </section>
+
+    <!-- Cancel -->
+    <section class="admin-panel danger-panel" *ngIf="canCancel(selectedCampaign.status)">
+      <h2>Cancel Campaign</h2>
+      <p class="form-subtitle">Move this campaign to Cancelled. You can reschedule it later.</p>
+      <div class="action-row">
+        <button class="btn btn-danger" (click)="confirmCancelId = selectedCampaign!.id" [disabled]="isSaving">
+          Cancel Campaign
+        </button>
+      </div>
+    </section>
+
+    <!-- Confirm cancel -->
+    <section class="admin-panel danger-panel" *ngIf="confirmCancelId === selectedCampaign.id">
+      <h2>Confirm Cancellation</h2>
+      <div class="action-row">
+        <button class="btn btn-danger" (click)="cancelCampaign(selectedCampaign.id)">Confirm</button>
+        <button class="btn btn-ghost" (click)="confirmCancelId = null">Never mind</button>
+      </div>
+    </section>
+  </ng-container>
+
+  <!-- ─── LOGS VIEW ────────────────────────────────────────── -->
+  <ng-container *ngIf="view === 'logs' && !isLoading">
+    <section class="admin-panel">
+      <h2>Delivery Logs</h2>
+      <p class="form-subtitle">Showing {{ logs.length | number }} of {{ logTotal | number }} entries.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Sent At</th>
+              <th>Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of logs">
+              <td class="mono-text">{{ l.email }}</td>
+              <td>
+                <span class="pill" [ngClass]="logStatusPillClass(l.status)">{{ l.status }}</span>
+              </td>
+              <td>{{ l.sentAt ? (l.sentAt | date: 'MMM d HH:mm') : '—' }}</td>
+              <td class="error-text">{{ l.errorMessage || '' }}</td>
+            </tr>
+            <tr *ngIf="logs.length === 0">
+              <td colspan="4" class="empty-state">No log entries yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </ng-container>
+</section>

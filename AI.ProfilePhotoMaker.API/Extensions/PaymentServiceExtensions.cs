@@ -1,5 +1,6 @@
 using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Services;
+using AI.ProfilePhotoMaker.API.Services.Marketing;
 using AI.ProfilePhotoMaker.API.Services.Payments;
 using Microsoft.Extensions.Options;
 
@@ -68,6 +69,11 @@ public static class PaymentServiceExtensions
         services.AddScoped<IPendingGenerationService, PendingGenerationService>();
 
         services.Configure<LegacyCompatibilityOptions>(configuration.GetSection(LegacyCompatibilityOptions.SectionName));
+
+        // Marketing email services
+        services.Configure<MarketingEmailOptions>(configuration.GetSection(MarketingEmailOptions.SectionName));
+        services.AddScoped<IUserSegmentService, UserSegmentService>();
+        services.AddScoped<IMarketingEmailService, MarketingEmailService>();
 
         return services;
     }

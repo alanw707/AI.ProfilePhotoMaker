@@ -570,7 +570,24 @@ export const routes: Routes = [
           ),
         title: 'Audit Log',
       },
+      {
+        path: 'campaigns',
+        loadComponent: () =>
+          import('./admin/admin-campaigns/admin-campaigns.component').then(
+            m => m.AdminCampaignsComponent
+          ),
+        title: 'Email Campaigns',
+      },
     ],
+  },
+
+  // Unsubscribe page (linked from marketing emails)
+  {
+    path: 'unsubscribe',
+    loadComponent: () =>
+      import('./pages/unsubscribe/unsubscribe.component').then(m => m.UnsubscribeComponent),
+    title: 'Unsubscribe - AI Profile Photo Maker',
+    data: { hideNavigation: true },
   },
 
   // 404 and Wildcard - Must be last
