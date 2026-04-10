@@ -241,6 +241,44 @@ public class EmailNotificationService : IEmailNotificationService
             replyToEmail: userEmail);
     }
 
+    public async Task<bool> SendMarketingEmailAsync(
+        string userId,
+        string email,
+        string subject,
+        string htmlBody,
+        string unsubscribeUrl)
+    {
+        if (!_options.Enabled) return false;
+
+        var safeUnsubscribeUrl = WebUtility.HtmlEncode(unsubscribeUrl);
+        var bodyWithFooter = htmlBody + $@"
+<p style=""margin:24px 0 0; font-size:13px; color:#64748b;"">
+  You're receiving this because you signed up for AI Profile Photo Maker.
+  <a href=""{safeUnsubscribeUrl}"" style=""color:#64748b; text-decoration:underline;"">Unsubscribe</a> from marketing emails.
+</p>";
+
+        try
+        {
+            await SendEmailAsync(email, subject, bodyWithFooter, "marketing", userId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed to send marketing email for user {UserId}: {Reason}", Sid(userId), S(ex.Message));
+            return false;
+        }
+    }
+
+    public string RenderMarketingEmailPreview(string subject, string htmlBody)
+    {
+        var bodyWithFooter = htmlBody + @"
+<p style=""margin:24px 0 0; font-size:13px; color:#64748b;"">
+  You're receiving this because you signed up for AI Profile Photo Maker.
+  <a href=""#"" style=""color:#64748b; text-decoration:underline;"">Unsubscribe</a> from marketing emails.
+</p>";
+        return WrapEmail(subject, bodyWithFooter);
+    }
+
     private Task SendEmailAsync(string? toEmail, string subject, string htmlBody, string template, string? userId = null)
     {
         return SendEmailAsync(toEmail, subject, htmlBody, template, userId, replyToEmail: null, replyToName: null);

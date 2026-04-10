@@ -242,6 +242,7 @@ builder.Services.AddHostedService<TrainingPollingBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.AbandonedUploadBackgroundService>();
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.Marketing.MarketingEmailBackgroundService>();
 
 // API behavior configuration
 builder.Services.Configure<ApiBehaviorOptions>(options =>

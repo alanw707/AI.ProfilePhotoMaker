@@ -49,4 +49,10 @@ public class EmailOptions
     public string? SupportToEmail { get; set; }
 
     public string? SupportToName { get; set; }
+
+    /// <summary>
+    /// Shared secret sent by Postmark in the Authorization header for webhook callbacks.
+    /// Configure Postmark to send: Authorization: Bearer {value}
+    /// </summary>
+    public string? PostmarkWebhookSecret { get; set; }
 }

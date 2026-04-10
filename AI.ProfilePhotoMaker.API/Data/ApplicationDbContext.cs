@@ -44,6 +44,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Coupon> Coupons { get; set; }
     public virtual DbSet<CouponRedemption> CouponRedemptions { get; set; }
 
+    // Marketing
+    public virtual DbSet<MarketingCampaign> MarketingCampaigns { get; set; }
+    public virtual DbSet<MarketingEmailLog> MarketingEmailLogs { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -63,6 +67,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         ConfigureRetentionDeletionWarningLogRelationships(builder);
         ConfigureAbandonedUploadNudgeLogRelationships(builder);
         ConfigurePredictionRelationships(builder);
+        ConfigureMarketingRelationships(builder);
 
         // Configure indexes for performance - ENHANCED FOR OPTIMIZATION
         ConfigurePerformanceIndexes(builder);
@@ -432,6 +437,35 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<CouponRedemption>()
             .Property(r => r.FinalPrice)
             .HasPrecision(10, 2);
+    }
+
+    private void ConfigureMarketingRelationships(ModelBuilder builder)
+    {
+        builder.Entity<MarketingCampaign>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Subject).HasMaxLength(300).IsRequired();
+            entity.Property(e => e.SegmentFilter).HasMaxLength(50).IsRequired();
+        });
+
+        builder.Entity<MarketingEmailLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).HasMaxLength(450).IsRequired();
+            entity.Property(e => e.Email).HasMaxLength(256).IsRequired();
+            entity.HasOne(e => e.Campaign)
+                  .WithMany()
+                  .HasForeignKey(e => e.CampaignId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => e.CampaignId).HasDatabaseName("IX_MarketingEmailLogs_CampaignId");
+            entity.HasIndex(e => e.UserId).HasDatabaseName("IX_MarketingEmailLogs_UserId");
+            entity.HasIndex(e => e.Status).HasDatabaseName("IX_MarketingEmailLogs_Status");
+            // Unique constraint: one log entry per user per campaign
+            entity.HasIndex(e => new { e.CampaignId, e.UserId })
+                  .IsUnique()
+                  .HasDatabaseName("UX_MarketingEmailLogs_CampaignId_UserId");
+        });
     }
 
     private void SeedCreditPackages(ModelBuilder builder)
