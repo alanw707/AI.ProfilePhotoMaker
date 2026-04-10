@@ -241,15 +241,13 @@ public class EmailNotificationService : IEmailNotificationService
             replyToEmail: userEmail);
     }
 
-    public async Task<bool> SendMarketingEmailAsync(
+    public async Task<EmailSendResult> SendMarketingEmailAsync(
         string userId,
         string email,
         string subject,
         string htmlBody,
         string unsubscribeUrl)
     {
-        if (!_options.Enabled) return false;
-
         var safeUnsubscribeUrl = WebUtility.HtmlEncode(unsubscribeUrl);
         var bodyWithFooter = htmlBody + $@"
 <p style=""margin:24px 0 0; font-size:13px; color:#64748b;"">
@@ -259,13 +257,12 @@ public class EmailNotificationService : IEmailNotificationService
 
         try
         {
-            await SendEmailAsync(email, subject, bodyWithFooter, "marketing", userId);
-            return true;
+            return await SendEmailWithResultAsync(email, subject, bodyWithFooter, "marketing", userId);
         }
         catch (Exception ex)
         {
             _logger.LogWarning("Failed to send marketing email for user {UserId}: {Reason}", Sid(userId), S(ex.Message));
-            return false;
+            return new EmailSendResult(false);
         }
     }
 
@@ -293,16 +290,28 @@ public class EmailNotificationService : IEmailNotificationService
         string? replyToEmail,
         string? replyToName = null)
     {
+        await SendEmailWithResultAsync(toEmail, subject, htmlBody, template, userId, replyToEmail, replyToName);
+    }
+
+    private async Task<EmailSendResult> SendEmailWithResultAsync(
+        string? toEmail,
+        string subject,
+        string htmlBody,
+        string template,
+        string? userId,
+        string? replyToEmail = null,
+        string? replyToName = null)
+    {
         if (!_options.Enabled)
         {
             _logger.LogDebug("Email disabled; skipping {Template} for user {UserId}", template, Sid(userId));
-            return;
+            return new EmailSendResult(false);
         }
 
         if (string.IsNullOrWhiteSpace(toEmail))
         {
             _logger.LogInformation("Skipping email {Template} - missing recipient for user {UserId}", template, Sid(userId));
-            return;
+            return new EmailSendResult(false);
         }
 
         var hasPostmarkToken = HasUsablePostmarkToken(_options.PostmarkServerToken);
@@ -317,7 +326,7 @@ public class EmailNotificationService : IEmailNotificationService
         if (string.IsNullOrWhiteSpace(_options.FromEmail))
         {
             _logger.LogWarning("Email not configured (missing FromEmail); cannot send {Template}", template);
-            return;
+            return new EmailSendResult(false);
         }
 
         var useApi = _options.UseApi && hasPostmarkToken;
@@ -330,15 +339,13 @@ public class EmailNotificationService : IEmailNotificationService
         }
         if (useApi)
         {
-            await SendEmailViaPostmarkAsync(toEmail, subject, wrappedHtml, textBody, template, userId, replyToEmail, replyToName);
-            return;
+            return await SendEmailViaPostmarkAsync(toEmail, subject, wrappedHtml, textBody, template, userId, replyToEmail, replyToName);
         }
 
         var canSmtp = !string.IsNullOrWhiteSpace(_options.SmtpHost);
         if (canSmtp)
         {
-            await SendEmailViaSmtpAsync(toEmail, subject, wrappedHtml, textBody, template, userId, replyToEmail, replyToName);
-            return;
+            return await SendEmailViaSmtpAsync(toEmail, subject, wrappedHtml, textBody, template, userId, replyToEmail, replyToName);
         }
 
         _logger.LogWarning("No email delivery path available (UseApi={UseApi}, PostmarkTokenSet={PostmarkTokenSet}, SmtpHost={SmtpHost}) for {Template}",
@@ -346,9 +353,10 @@ public class EmailNotificationService : IEmailNotificationService
             hasPostmarkToken,
             S(_options.SmtpHost),
             template);
+        return new EmailSendResult(false);
     }
 
-    private async Task SendEmailViaPostmarkAsync(
+    private async Task<EmailSendResult> SendEmailViaPostmarkAsync(
         string toEmail,
         string subject,
         string htmlBody,
@@ -405,19 +413,21 @@ public class EmailNotificationService : IEmailNotificationService
                 {
                     _logger.LogInformation("Sent {Template} email via Postmark API to {Recipient} for user {UserId}", template, S(toEmail), Sid(userId));
                 }
+
+                return new EmailSendResult(true, messageId);
             }
-            else
-            {
-                _logger.LogWarning("Failed Postmark API email send {Template} for user {UserId}. Status {Status}: {Body}", template, Sid(userId), response.StatusCode, S(body));
-            }
+
+            _logger.LogWarning("Failed Postmark API email send {Template} for user {UserId}. Status {Status}: {Body}", template, Sid(userId), response.StatusCode, S(body));
+            return new EmailSendResult(false);
         }
         catch (Exception ex)
         {
             _logger.LogWarning("Failed Postmark API email send {Template} for user {UserId}: {Reason}", template, Sid(userId), S(ex.Message));
+            return new EmailSendResult(false);
         }
     }
 
-    private async Task SendEmailViaSmtpAsync(
+    private async Task<EmailSendResult> SendEmailViaSmtpAsync(
         string toEmail,
         string subject,
         string htmlBody,
@@ -463,10 +473,12 @@ public class EmailNotificationService : IEmailNotificationService
         {
             await client.SendMailAsync(mail);
             _logger.LogInformation("Sent {Template} email via SMTP to {Recipient} for user {UserId}", template, S(toEmail), Sid(userId));
+            return new EmailSendResult(true);
         }
         catch (Exception ex)
         {
             _logger.LogWarning("Failed SMTP email send {Template} for user {UserId}: {Reason}", template, Sid(userId), S(ex.Message));
+            return new EmailSendResult(false);
         }
     }
 

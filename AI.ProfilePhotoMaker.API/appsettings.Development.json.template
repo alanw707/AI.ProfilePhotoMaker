@@ -32,7 +32,9 @@
     "PostmarkServerToken": "STORED_IN_USER_SECRETS",
     "PostmarkMessageStream": "outbound",
     "SandboxMode": true,
-    "FrontendBaseUrl": "http://localhost:4200"
+    "FrontendBaseUrl": "http://localhost:4200",
+    "PostmarkWebhookSecret": "STORED_IN_USER_SECRETS",
+    "MarketingUnsubscribeSecret": "STORED_IN_USER_SECRETS"
   },
   "Logging": {
     "LogLevel": {

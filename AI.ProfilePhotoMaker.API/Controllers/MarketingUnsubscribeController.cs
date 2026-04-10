@@ -1,6 +1,8 @@
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Services.Marketing;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
@@ -29,19 +31,18 @@ public class MarketingUnsubscribeController : BaseController
         if (string.IsNullOrWhiteSpace(token))
             return ValidationError("Missing unsubscribe token");
 
-        string userId;
-        try
-        {
-            var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(token));
-            userId = decoded.Split(':')[0];
-        }
-        catch
-        {
-            return ValidationError("Invalid unsubscribe token");
-        }
+        var signingSecret = MarketingUnsubscribeTokenService.ResolveSigningSecret(GetEmailOptions());
+
+        var userId = token == "test"
+            ? "test"
+            : signingSecret != null && MarketingUnsubscribeTokenService.TryReadUserId(token, signingSecret, out var parsedUserId)
+                ? parsedUserId
+                : string.Empty;
 
         if (string.IsNullOrWhiteSpace(userId) || userId == "test")
-            return SuccessResponse(new { unsubscribed = true });
+            return token == "test"
+                ? SuccessResponse(new { unsubscribed = true })
+                : ValidationError("Invalid unsubscribe token");
 
         var user = await _db.Users.FindAsync(userId);
         if (user == null) return NotFoundResponse("User");
@@ -95,5 +96,12 @@ public class MarketingUnsubscribeController : BaseController
         await _db.SaveChangesAsync();
 
         return SuccessResponse(new { resubscribed = true });
+    }
+
+    private Configuration.EmailOptions GetEmailOptions()
+    {
+        return HttpContext.RequestServices
+            .GetRequiredService<Microsoft.Extensions.Options.IOptions<Configuration.EmailOptions>>()
+            .Value;
     }
 }

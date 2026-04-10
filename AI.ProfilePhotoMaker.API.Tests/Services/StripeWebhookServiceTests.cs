@@ -528,7 +528,7 @@ public class StripeWebhookServiceTests
         public Task SendWelcomeAsync(string userId, string? email, string? firstName = null) => Task.CompletedTask;
         public Task SendRetentionDeletionWarningAsync(string userId, string? email, int imageCount, DateTime deletionDate, int daysUntilDeletion) => Task.CompletedTask;
         public Task SendAbandonedUploadNudgeAsync(string userId, string? email, string? firstName = null) => Task.CompletedTask;
-        public Task<bool> SendMarketingEmailAsync(string userId, string email, string subject, string htmlBody, string unsubscribeUrl) => Task.FromResult(true);
+        public Task<EmailSendResult> SendMarketingEmailAsync(string userId, string email, string subject, string htmlBody, string unsubscribeUrl) => Task.FromResult(new EmailSendResult(true));
         public string RenderMarketingEmailPreview(string subject, string htmlBody) => htmlBody;
     }
 

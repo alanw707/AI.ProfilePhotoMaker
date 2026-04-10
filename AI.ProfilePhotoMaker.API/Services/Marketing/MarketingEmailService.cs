@@ -148,13 +148,17 @@ public class MarketingEmailService : IMarketingEmailService
         var campaign = await _db.MarketingCampaigns.FindAsync(campaignId)
             ?? throw new KeyNotFoundException($"Campaign {campaignId} not found");
 
-        var unsubscribeUrl = $"{_emailOptions.FrontendBaseUrl}/unsubscribe?token=test";
-        await _emailService.SendMarketingEmailAsync(
+        var result = await _emailService.SendMarketingEmailAsync(
             userId: "test",
             email: testEmail,
             subject: $"[TEST] {campaign.Subject}",
             htmlBody: campaign.HtmlBody,
-            unsubscribeUrl: unsubscribeUrl);
+            unsubscribeUrl: BuildUnsubscribeUrl("test", campaignId));
+
+        if (!result.Success)
+        {
+            throw new InvalidOperationException("Test email send failed");
+        }
     }
 
     public async Task ExecuteCampaignAsync(Guid campaignId, CancellationToken cancellationToken = default)
@@ -187,36 +191,52 @@ public class MarketingEmailService : IMarketingEmailService
                 {
                     if (cancellationToken.IsCancellationRequested) break;
 
-                    // Skip if already sent in this campaign
-                    var alreadySent = await _db.MarketingEmailLogs.AnyAsync(
+                    var log = await _db.MarketingEmailLogs.SingleOrDefaultAsync(
                         l => l.CampaignId == campaignId && l.UserId == userId, cancellationToken);
-                    if (alreadySent) continue;
 
-                    var log = new MarketingEmailLog
+                    if (log is { Status: MarketingEmailStatus.Sent or MarketingEmailStatus.Bounced or MarketingEmailStatus.Unsubscribed })
                     {
-                        CampaignId = campaignId,
-                        UserId = userId,
-                        Email = email,
-                        Status = MarketingEmailStatus.Pending,
-                        CreatedAt = DateTime.UtcNow,
-                    };
-                    _db.MarketingEmailLogs.Add(log);
+                        continue;
+                    }
+
+                    if (log == null)
+                    {
+                        log = new MarketingEmailLog
+                        {
+                            CampaignId = campaignId,
+                            UserId = userId,
+                            Email = email,
+                            Status = MarketingEmailStatus.Pending,
+                            CreatedAt = DateTime.UtcNow,
+                        };
+                        _db.MarketingEmailLogs.Add(log);
+                    }
+                    else
+                    {
+                        log.Email = email;
+                        log.PostmarkMessageId = null;
+                        log.Status = MarketingEmailStatus.Pending;
+                        log.ErrorMessage = null;
+                        log.SentAt = null;
+                    }
+
                     await _db.SaveChangesAsync(cancellationToken);
 
-                    var unsubscribeToken = Convert.ToBase64String(
-                        System.Text.Encoding.UTF8.GetBytes($"{userId}:{campaignId}"));
-                    var unsubscribeUrl = $"{_emailOptions.FrontendBaseUrl}/unsubscribe?token={Uri.EscapeDataString(unsubscribeToken)}";
+                    var unsubscribeUrl = BuildUnsubscribeUrl(userId, campaignId);
 
-                    var success = await _emailService.SendMarketingEmailAsync(
+                    var result = await _emailService.SendMarketingEmailAsync(
                         userId, email, campaign.Subject, campaign.HtmlBody, unsubscribeUrl);
 
-                    log.Status = success ? MarketingEmailStatus.Sent : MarketingEmailStatus.Failed;
-                    log.SentAt = success ? DateTime.UtcNow : null;
-                    if (!success) log.ErrorMessage = "Send failed";
+                    log.PostmarkMessageId = result.Success ? result.ProviderMessageId : null;
+                    log.Status = result.Success ? MarketingEmailStatus.Sent : MarketingEmailStatus.Failed;
+                    log.SentAt = result.Success ? DateTime.UtcNow : null;
+                    if (!result.Success) log.ErrorMessage = "Send failed";
                     await _db.SaveChangesAsync(cancellationToken);
 
-                    if (success) sent++; else failed++;
+                    if (result.Success) sent++; else failed++;
                 }
+
+                cancellationToken.ThrowIfCancellationRequested();
 
                 if (recipients.Count < _marketingOptions.BatchSize) break;
                 page++;
@@ -238,7 +258,8 @@ public class MarketingEmailService : IMarketingEmailService
         catch (OperationCanceledException)
         {
             _logger.LogWarning("Campaign {CampaignId} execution was cancelled", campaignId);
-            // Leave status as Sending so background service can resume or admin can retry
+            campaign.Status = CampaignStatus.Scheduled;
+            await _db.SaveChangesAsync();
             throw;
         }
         catch (Exception ex)
@@ -268,5 +289,24 @@ public class MarketingEmailService : IMarketingEmailService
             ?? throw new KeyNotFoundException($"Campaign {campaignId} not found");
 
         return await _segmentService.GetSegmentUsersAsync(campaign.SegmentFilter, page, pageSize);
+    }
+
+    private string BuildUnsubscribeUrl(string userId, Guid campaignId)
+    {
+        var baseUrl = _emailOptions.FrontendBaseUrl?.TrimEnd('/');
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            throw new InvalidOperationException("Email.FrontendBaseUrl is not configured");
+        }
+
+        var token = userId == "test"
+            ? "test"
+            : MarketingUnsubscribeTokenService.CreateToken(
+                userId,
+                campaignId,
+                MarketingUnsubscribeTokenService.ResolveSigningSecret(_emailOptions)
+                    ?? throw new InvalidOperationException("Marketing unsubscribe signing secret is not configured"));
+
+        return $"{baseUrl}/unsubscribe?token={Uri.EscapeDataString(token)}";
     }
 }

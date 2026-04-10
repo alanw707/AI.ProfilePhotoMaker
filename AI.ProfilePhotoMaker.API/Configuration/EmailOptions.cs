@@ -55,4 +55,10 @@ public class EmailOptions
     /// Configure Postmark to send: Authorization: Bearer {value}
     /// </summary>
     public string? PostmarkWebhookSecret { get; set; }
+
+    /// <summary>
+    /// Secret used to sign marketing unsubscribe tokens.
+    /// If omitted, the app falls back to PostmarkWebhookSecret, then PostmarkServerToken.
+    /// </summary>
+    public string? MarketingUnsubscribeSecret { get; set; }
 }

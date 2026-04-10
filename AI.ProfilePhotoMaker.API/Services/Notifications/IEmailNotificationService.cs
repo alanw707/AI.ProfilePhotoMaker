@@ -13,6 +13,6 @@ public interface IEmailNotificationService
     Task SendWelcomeAsync(string userId, string? email, string? firstName = null);
     Task SendRetentionDeletionWarningAsync(string userId, string? email, int imageCount, DateTime deletionDate, int daysUntilDeletion);
     Task SendAbandonedUploadNudgeAsync(string userId, string? email, string? firstName = null);
-    Task<bool> SendMarketingEmailAsync(string userId, string email, string subject, string htmlBody, string unsubscribeUrl);
+    Task<EmailSendResult> SendMarketingEmailAsync(string userId, string email, string subject, string htmlBody, string unsubscribeUrl);
     string RenderMarketingEmailPreview(string subject, string htmlBody);
 }

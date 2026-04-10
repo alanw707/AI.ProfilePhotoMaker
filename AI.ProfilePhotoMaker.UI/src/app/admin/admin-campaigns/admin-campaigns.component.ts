@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, NgZone, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -85,7 +85,7 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
 
   constructor(
     private _marketing: MarketingService,
-    private _cdr: ChangeDetectorRef
+    private _zone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -107,15 +107,17 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
       .pipe(timeout(12000), takeUntil(this.destroy$))
       .subscribe({
         next: res => {
-          this.campaigns = res.campaigns;
-          this.totalCount = res.totalCount;
-          this.isLoading = false;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.campaigns = res.campaigns;
+            this.totalCount = res.totalCount;
+            this.isLoading = false;
+          });
         },
         error: () => {
-          this.error = 'Failed to load campaigns. Please refresh to try again.';
-          this.isLoading = false;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.error = 'Failed to load campaigns. Please refresh to try again.';
+            this.isLoading = false;
+          });
         },
       });
   }
@@ -147,17 +149,21 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
         timeout(12000),
         takeUntil(this.destroy$),
         finalize(() => {
-          this.segmentCounting = false;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.segmentCounting = false;
+          });
         })
       )
       .subscribe({
         next: res => {
-          this.segmentCount = res.count;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.segmentCount = res.count;
+          });
         },
         error: () => {
-          this.error = 'Segment count timed out or failed. Please try again.';
+          this.runInZone(() => {
+            this.error = 'Segment count timed out or failed. Please try again.';
+          });
         },
       });
   }
@@ -178,16 +184,18 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: campaign => {
-          this.isSaving = false;
-          this.view = 'list';
-          this.loadCampaigns();
-          this.success = `Campaign "${campaign.name}" created.`;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.isSaving = false;
+            this.view = 'list';
+            this.loadCampaigns();
+            this.success = `Campaign "${campaign.name}" created.`;
+          });
         },
         error: err => {
-          this.error = err?.error?.error?.message || 'Failed to create campaign.';
-          this.isSaving = false;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.error = err?.error?.error?.message || 'Failed to create campaign.';
+            this.isSaving = false;
+          });
         },
       });
   }
@@ -202,16 +210,18 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
       .pipe(timeout(12000), takeUntil(this.destroy$))
       .subscribe({
         next: c => {
-          this.selectedCampaign = c;
-          this.scheduleDate = c.scheduledAt ? c.scheduledAt.slice(0, 16) : '';
-          this.view = 'detail';
-          this.isLoading = false;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.selectedCampaign = c;
+            this.scheduleDate = c.scheduledAt ? c.scheduledAt.slice(0, 16) : '';
+            this.view = 'detail';
+            this.isLoading = false;
+          });
         },
         error: () => {
-          this.error = 'Failed to load campaign. Please refresh to try again.';
-          this.isLoading = false;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.error = 'Failed to load campaign. Please refresh to try again.';
+            this.isLoading = false;
+          });
         },
       });
   }
@@ -226,15 +236,17 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.success = 'Campaign scheduled.';
-          this.isSaving = false;
-          this.openDetail(this.selectedCampaign!.id);
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.success = 'Campaign scheduled.';
+            this.isSaving = false;
+            this.openDetail(this.selectedCampaign!.id);
+          });
         },
         error: err => {
-          this.error = err?.error?.error?.message || 'Failed to schedule.';
-          this.isSaving = false;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.error = err?.error?.error?.message || 'Failed to schedule.';
+            this.isSaving = false;
+          });
         },
       });
   }
@@ -245,19 +257,21 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.confirmCancelId = null;
-          this.success = 'Campaign cancelled.';
-          if (this.view === 'detail') {
-            this.openDetail(id);
-          } else {
-            this.loadCampaigns();
-          }
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.confirmCancelId = null;
+            this.success = 'Campaign cancelled.';
+            if (this.view === 'detail') {
+              this.openDetail(id);
+            } else {
+              this.loadCampaigns();
+            }
+          });
         },
         error: err => {
-          this.error = err?.error?.error?.message || 'Failed to cancel.';
-          this.confirmCancelId = null;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.error = err?.error?.error?.message || 'Failed to cancel.';
+            this.confirmCancelId = null;
+          });
         },
       });
   }
@@ -268,14 +282,16 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: copy => {
-          this.success = `Duplicated as "${copy.name}".`;
-          this.loadCampaigns();
-          this.view = 'list';
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.success = `Duplicated as "${copy.name}".`;
+            this.loadCampaigns();
+            this.view = 'list';
+          });
         },
         error: () => {
-          this.error = 'Failed to duplicate campaign.';
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.error = 'Failed to duplicate campaign.';
+          });
         },
       });
   }
@@ -290,14 +306,16 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.success = `Test email sent to ${this.testEmail}.`;
-          this.isSaving = false;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.success = `Test email sent to ${this.testEmail}.`;
+            this.isSaving = false;
+          });
         },
         error: err => {
-          this.error = err?.error?.error?.message || 'Failed to send test.';
-          this.isSaving = false;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.error = err?.error?.error?.message || 'Failed to send test.';
+            this.isSaving = false;
+          });
         },
       });
   }
@@ -316,16 +334,18 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: res => {
-          this.logs = res.logs;
-          this.logTotal = res.totalCount;
-          this.view = 'logs';
-          this.isLoading = false;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.logs = res.logs;
+            this.logTotal = res.totalCount;
+            this.view = 'logs';
+            this.isLoading = false;
+          });
         },
         error: () => {
-          this.error = 'Failed to load logs.';
-          this.isLoading = false;
-          this._cdr.detectChanges();
+          this.runInZone(() => {
+            this.error = 'Failed to load logs.';
+            this.isLoading = false;
+          });
         },
       });
   }
@@ -388,5 +408,9 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
 
   canCancel(status: string): boolean {
     return status === 'Draft' || status === 'Scheduled';
+  }
+
+  private runInZone(action: () => void): void {
+    this._zone.run(action);
   }
 }

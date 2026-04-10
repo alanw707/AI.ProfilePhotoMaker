@@ -471,7 +471,7 @@ public class AbandonedUploadBackgroundServiceTests
             return Task.CompletedTask;
         }
 
-        public Task<bool> SendMarketingEmailAsync(string userId, string email, string subject, string htmlBody, string unsubscribeUrl) => Task.FromResult(true);
+        public Task<EmailSendResult> SendMarketingEmailAsync(string userId, string email, string subject, string htmlBody, string unsubscribeUrl) => Task.FromResult(new EmailSendResult(true));
         public string RenderMarketingEmailPreview(string subject, string htmlBody) => htmlBody;
     }
 

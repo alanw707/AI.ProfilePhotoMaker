@@ -87,9 +87,7 @@ export class MarketingService extends BaseHttpService {
   }
 
   updateCampaign(id: string, req: UpdateCampaignRequest): Observable<CampaignDetailDto> {
-    return this.http.patch<CampaignDetailDto>(this.buildApiUrl(`admin/campaigns/${id}`), req, {
-      withCredentials: true,
-    });
+    return this.patch<CampaignDetailDto>(`admin/campaigns/${id}`, req, { withCredentials: true });
   }
 
   scheduleCampaign(id: string, scheduledAt: string): Observable<{ scheduled: boolean }> {

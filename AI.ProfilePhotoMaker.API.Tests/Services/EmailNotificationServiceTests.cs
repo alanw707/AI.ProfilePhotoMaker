@@ -138,8 +138,77 @@ public class EmailNotificationServiceTests
         Assert.Contains("February 1, 2030", root.GetProperty("HtmlBody").GetString());
     }
 
+    [Fact]
+    public async Task SendMarketingEmailAsync_ReturnsFailure_WhenPostmarkReturnsError()
+    {
+        var handler = new CapturingHandler(HttpStatusCode.BadRequest, "{\"ErrorCode\":300,\"Message\":\"bad request\"}");
+        var httpClient = new HttpClient(handler);
+        var options = Options.Create(new EmailOptions
+        {
+            Enabled = true,
+            UseApi = true,
+            PostmarkServerToken = "test-token",
+            FromEmail = "no-reply@aiprofilephotomaker.com",
+            FromName = "AI Profile Photo Maker",
+            FrontendBaseUrl = "https://aiprofilephotomaker.com",
+            SandboxMode = false
+        });
+        var configuration = new ConfigurationBuilder().Build();
+        var logger = new LoggerFactory().CreateLogger<EmailNotificationService>();
+        var service = new EmailNotificationService(options, logger, httpClient, configuration);
+
+        var result = await service.SendMarketingEmailAsync(
+            "user-1",
+            "test@example.com",
+            "Subject",
+            "<p>Hello</p>",
+            "https://aiprofilephotomaker.com/unsubscribe?token=test");
+
+        Assert.False(result.Success);
+        Assert.Null(result.ProviderMessageId);
+    }
+
+    [Fact]
+    public async Task SendMarketingEmailAsync_ReturnsPostmarkMessageId_WhenSendSucceeds()
+    {
+        var handler = new CapturingHandler(HttpStatusCode.OK, "{\"MessageID\":\"postmark-message-123\"}");
+        var httpClient = new HttpClient(handler);
+        var options = Options.Create(new EmailOptions
+        {
+            Enabled = true,
+            UseApi = true,
+            PostmarkServerToken = "test-token",
+            FromEmail = "no-reply@aiprofilephotomaker.com",
+            FromName = "AI Profile Photo Maker",
+            FrontendBaseUrl = "https://aiprofilephotomaker.com",
+            SandboxMode = false
+        });
+        var configuration = new ConfigurationBuilder().Build();
+        var logger = new LoggerFactory().CreateLogger<EmailNotificationService>();
+        var service = new EmailNotificationService(options, logger, httpClient, configuration);
+
+        var result = await service.SendMarketingEmailAsync(
+            "user-1",
+            "test@example.com",
+            "Subject",
+            "<p>Hello</p>",
+            "https://aiprofilephotomaker.com/unsubscribe?token=test");
+
+        Assert.True(result.Success);
+        Assert.Equal("postmark-message-123", result.ProviderMessageId);
+    }
+
     private sealed class CapturingHandler : HttpMessageHandler
     {
+        private readonly HttpStatusCode _statusCode;
+        private readonly string _responseBody;
+
+        public CapturingHandler(HttpStatusCode statusCode = HttpStatusCode.OK, string responseBody = "{\"MessageID\":\"test-message-id\"}")
+        {
+            _statusCode = statusCode;
+            _responseBody = responseBody;
+        }
+
         public HttpRequestMessage? LastRequest { get; private set; }
         public string? LastBody { get; private set; }
 
@@ -151,9 +220,9 @@ public class EmailNotificationServiceTests
                 LastBody = await request.Content.ReadAsStringAsync(cancellationToken);
             }
 
-            return new HttpResponseMessage(HttpStatusCode.OK)
+            return new HttpResponseMessage(_statusCode)
             {
-                Content = new StringContent("{\"MessageID\":\"test-message-id\"}")
+                Content = new StringContent(_responseBody)
             };
         }
     }

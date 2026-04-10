@@ -455,11 +455,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).HasMaxLength(450).IsRequired();
             entity.Property(e => e.Email).HasMaxLength(256).IsRequired();
+            entity.Property(e => e.PostmarkMessageId).HasMaxLength(128);
             entity.HasOne(e => e.Campaign)
                   .WithMany()
                   .HasForeignKey(e => e.CampaignId)
                   .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => e.CampaignId).HasDatabaseName("IX_MarketingEmailLogs_CampaignId");
+            entity.HasIndex(e => e.PostmarkMessageId).HasDatabaseName("IX_MarketingEmailLogs_PostmarkMessageId");
             entity.HasIndex(e => e.UserId).HasDatabaseName("IX_MarketingEmailLogs_UserId");
             entity.HasIndex(e => e.Status).HasDatabaseName("IX_MarketingEmailLogs_Status");
             // Unique constraint: one log entry per user per campaign

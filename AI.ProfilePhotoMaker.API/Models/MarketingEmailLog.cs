@@ -7,6 +7,7 @@ public class MarketingEmailLog
     public MarketingCampaign Campaign { get; set; } = null!;
     public string UserId { get; set; } = null!;
     public string Email { get; set; } = null!;
+    public string? PostmarkMessageId { get; set; }
     public MarketingEmailStatus Status { get; set; } = MarketingEmailStatus.Pending;
     public string? ErrorMessage { get; set; }
     public DateTime? SentAt { get; set; }
