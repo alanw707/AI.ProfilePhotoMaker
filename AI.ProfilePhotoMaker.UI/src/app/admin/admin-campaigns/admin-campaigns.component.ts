@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil, timeout } from 'rxjs/operators';
+import { finalize, takeUntil, timeout } from 'rxjs/operators';
 import {
   MarketingService,
   CampaignDto,
@@ -138,14 +138,16 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
     this.segmentCounting = true;
     this._marketing
       .previewSegment(this.model.segmentFilter)
-      .pipe(timeout(12000), takeUntil(this.destroy$))
+      .pipe(
+        timeout(12000),
+        takeUntil(this.destroy$),
+        finalize(() => (this.segmentCounting = false))
+      )
       .subscribe({
         next: res => {
           this.segmentCount = res.count;
-          this.segmentCounting = false;
         },
         error: () => {
-          this.segmentCounting = false;
           this.error = 'Segment count timed out or failed. Please try again.';
         },
       });
