@@ -38,15 +38,17 @@ public class UserSegmentService : IUserSegmentService
         var baseQuery = _db.Users
             .Where(u => u.EmailConfirmed && !u.MarketingOptOut && u.Email != null);
 
-        // Pre-compute upload counts per user as an IQueryable (not materialized).
-        // EF Core composes this into each downstream query as a single subquery/join
-        // instead of a correlated COUNT per user row.
-        var uploadsByUser = _db.UserProfiles
-            .Select(up => new
-            {
-                up.UserId,
-                UploadCount = up.ProcessedImages.Count(i => i.IsOriginalUpload)
-            });
+        // Single-pass GROUP BY on ProcessedImages — avoids correlated COUNT subquery.
+        // Uses existing index IX_ProcessedImages_UserProfileId_IsOriginalUpload.
+        var uploadsByUser = _db.ProcessedImages
+            .Where(pi => pi.IsOriginalUpload)
+            .Join(
+                _db.UserProfiles,
+                pi => pi.UserProfileId,
+                up => up.Id,
+                (pi, up) => up.UserId)
+            .GroupBy(userId => userId)
+            .Select(g => new { UserId = g.Key, UploadCount = g.Count() });
 
         switch (segmentFilter)
         {

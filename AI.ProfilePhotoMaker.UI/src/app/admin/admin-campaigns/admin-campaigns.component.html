@@ -21,11 +21,11 @@
   <div *ngIf="error" class="error-text" role="alert">{{ error }}</div>
   <div *ngIf="success" class="success-text" role="status">{{ success }}</div>
 
-  <!-- Loading -->
-  <div *ngIf="isLoading" class="empty-state"><p>Loading…</p></div>
+  <!-- Loading (detail/logs views only — list view shows inline) -->
+  <div *ngIf="isLoading && view !== 'list'" class="empty-state"><p>Loading…</p></div>
 
   <!-- ─── LIST VIEW ────────────────────────────────────────── -->
-  <ng-container *ngIf="view === 'list' && !isLoading">
+  <ng-container *ngIf="view === 'list'">
     <div class="table-wrap">
       <table>
         <thead>
