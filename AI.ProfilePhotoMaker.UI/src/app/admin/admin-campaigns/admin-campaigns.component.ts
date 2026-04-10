@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -83,7 +83,10 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  constructor(private _marketing: MarketingService) {}
+  constructor(
+    private _marketing: MarketingService,
+    private _cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.loadCampaigns();
@@ -141,11 +144,15 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
       .pipe(
         timeout(12000),
         takeUntil(this.destroy$),
-        finalize(() => (this.segmentCounting = false))
+        finalize(() => {
+          this.segmentCounting = false;
+          this._cdr.detectChanges();
+        })
       )
       .subscribe({
         next: res => {
           this.segmentCount = res.count;
+          this._cdr.detectChanges();
         },
         error: () => {
           this.error = 'Segment count timed out or failed. Please try again.';
