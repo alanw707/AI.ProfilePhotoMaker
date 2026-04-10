@@ -38,55 +38,70 @@ public class UserSegmentService : IUserSegmentService
         var baseQuery = _db.Users
             .Where(u => u.EmailConfirmed && !u.MarketingOptOut && u.Email != null);
 
-        return segmentFilter switch
+        // Pre-compute upload counts per user as an IQueryable (not materialized).
+        // EF Core composes this into each downstream query as a single subquery/join
+        // instead of a correlated COUNT per user row.
+        var uploadsByUser = _db.UserProfiles
+            .Select(up => new
+            {
+                up.UserId,
+                UploadCount = up.ProcessedImages.Count(i => i.IsOriginalUpload)
+            });
+
+        switch (segmentFilter)
         {
             // Signed up + verified, never uploaded a single selfie
-            SegmentFilters.NoUploads =>
-                from u in baseQuery
-                where !_db.UserProfiles
-                    .Any(up => up.UserId == u.Id &&
-                               up.ProcessedImages.Any(i => i.IsOriginalUpload))
-                select u,
+            case SegmentFilters.NoUploads:
+            {
+                var usersWithUploads = uploadsByUser
+                    .Where(x => x.UploadCount > 0)
+                    .Select(x => x.UserId);
+                return baseQuery.Where(u => !usersWithUploads.Contains(u.Id));
+            }
 
             // Uploaded 1–4 selfies (previously blocked at 10-photo minimum, now eligible)
-            SegmentFilters.StuckUnderMinimum =>
-                from u in baseQuery
-                let uploadCount = _db.UserProfiles
-                    .Where(up => up.UserId == u.Id)
-                    .SelectMany(up => up.ProcessedImages.Where(i => i.IsOriginalUpload))
-                    .Count()
-                where uploadCount >= 1 && uploadCount <= 4
-                select u,
+            case SegmentFilters.StuckUnderMinimum:
+            {
+                var eligibleIds = uploadsByUser
+                    .Where(x => x.UploadCount >= 1 && x.UploadCount <= 4)
+                    .Select(x => x.UserId);
+                return baseQuery.Where(u => eligibleIds.Contains(u.Id));
+            }
 
             // 5+ uploads but never started training
-            SegmentFilters.HasUploadsNoModel =>
-                from u in baseQuery
-                let uploadCount = _db.UserProfiles
-                    .Where(up => up.UserId == u.Id)
-                    .SelectMany(up => up.ProcessedImages.Where(i => i.IsOriginalUpload))
-                    .Count()
-                where uploadCount >= 5
-                    && !_db.ModelCreationRequests.Any(m =>
-                        m.UserId == u.Id
-                        && (m.Status == ModelCreationStatus.Ready
-                            || m.Status == ModelCreationStatus.Creating
-                            || m.Status == ModelCreationStatus.Pending))
-                select u,
+            case SegmentFilters.HasUploadsNoModel:
+            {
+                var withUploads = uploadsByUser
+                    .Where(x => x.UploadCount >= 5)
+                    .Select(x => x.UserId);
+                var withModel = _db.ModelCreationRequests
+                    .Where(m => m.Status == ModelCreationStatus.Ready
+                             || m.Status == ModelCreationStatus.Creating
+                             || m.Status == ModelCreationStatus.Pending)
+                    .Select(m => m.UserId);
+                return baseQuery.Where(u => withUploads.Contains(u.Id) && !withModel.Contains(u.Id));
+            }
 
             // Has uploads but no activity in the last 30 days
-            SegmentFilters.Inactive30d =>
-                from u in baseQuery
-                let cutoff = DateTime.UtcNow.AddDays(-30)
-                where _db.UserProfiles
-                          .Any(up => up.UserId == u.Id &&
-                                     up.ProcessedImages.Any(i => i.IsOriginalUpload))
-                      && !_db.UsageLogs.Any(l => l.UserId == u.Id && l.CreatedAt >= cutoff)
-                select u,
+            case SegmentFilters.Inactive30d:
+            {
+                var cutoff = DateTime.UtcNow.AddDays(-30);
+                var usersWithUploads = uploadsByUser
+                    .Where(x => x.UploadCount > 0)
+                    .Select(x => x.UserId);
+                var recentlyActive = _db.UsageLogs
+                    .Where(l => l.CreatedAt >= cutoff)
+                    .Select(l => l.UserId);
+                return baseQuery.Where(u => usersWithUploads.Contains(u.Id)
+                                         && !recentlyActive.Contains(u.Id));
+            }
 
             // All verified, non-opted-out users
-            SegmentFilters.AllVerified => baseQuery,
+            case SegmentFilters.AllVerified:
+                return baseQuery;
 
-            _ => throw new ArgumentException($"Unknown segment filter: {segmentFilter}")
-        };
+            default:
+                throw new ArgumentException($"Unknown segment filter: {segmentFilter}");
+        }
     }
 }

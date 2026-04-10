@@ -138,7 +138,7 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
     this.segmentCounting = true;
     this._marketing
       .previewSegment(this.model.segmentFilter)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(timeout(12000), takeUntil(this.destroy$))
       .subscribe({
         next: res => {
           this.segmentCount = res.count;
@@ -146,6 +146,7 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
         },
         error: () => {
           this.segmentCounting = false;
+          this.error = 'Segment count timed out or failed. Please try again.';
         },
       });
   }
