@@ -115,8 +115,12 @@ AGENTS.md
 .cursor/
 .cursorrules
 .kiro/
+.kilocode/
+.kilocodemodes
 .roo/
 .serena/
+.agents/
+.github/skills/
 
 # BMAD planning artifacts (keep local only)
 _bmad/
@@ -142,6 +146,7 @@ memory-bank/
 **/results/*.json
 e2e-*.png
 inspection-*.png
+admin-campaigns-*.png
 monitor-*.sh
 test-*.sh
 AI.ProfilePhotoMaker.API/tests/playwright/screenshots/
@@ -245,4 +250,23 @@ deployment-secrets.env
 !/_bmad-output/
 !/_bmad-output/implementation-artifacts/
 !/_bmad-output/implementation-artifacts/**
+
+# Local-only BMAD scratch specs
+/_bmad-output/implementation-artifacts/tech-spec-before-after-photo-expansion-testimonials.md
+/_bmad-output/implementation-artifacts/tech-spec-dotnet10-upgrade-cleanup.md
+
+# Local screenshot/mockup artifacts
+/app-premium-404.png
+/campaigns-final.png
+/campaigns-list-loaded.png
+/campaigns-list-local-test.png
+/dashboard-0-credits-state.png
+/dashboard-full.png
+/dashboard-state.png
+/dashboard-zero-credits.png
+/landing-dark-full.png
+/landing-light-theme.png
+/out-of-credits-modal-preview.png
+/verified-modal-open.png
+/verified-pricing-after-modal-cta.png
 appsettings.Local.json

@@ -44,6 +44,8 @@ type View = 'list' | 'create' | 'detail' | 'logs';
 export class AdminCampaignsComponent implements OnInit, OnDestroy {
   view: View = 'list';
   campaigns: CampaignDto[] = [];
+  hasLoadedCampaigns = false;
+  isListLoading = false;
   totalCount = 0;
   page = 1;
   pageSize = 20;
@@ -72,6 +74,7 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
   isSaving = false;
   error: string | null = null;
   success: string | null = null;
+  private readonly segmentCountCache: Record<string, number> = {};
 
   readonly segmentOptions = [
     { value: 'no-uploads', label: 'No Uploads — verified, never uploaded' },
@@ -100,7 +103,7 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
   // ── LIST ───────────────────────────────────────────────────────────────────
 
   loadCampaigns(): void {
-    this.isLoading = true;
+    this.isListLoading = true;
     this.error = null;
     this._marketing
       .getCampaigns(this.page, this.pageSize)
@@ -110,13 +113,15 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
           this.runInZone(() => {
             this.campaigns = res.campaigns;
             this.totalCount = res.totalCount;
-            this.isLoading = false;
+            this.hasLoadedCampaigns = true;
+            this.isListLoading = false;
           });
         },
         error: () => {
           this.runInZone(() => {
             this.error = 'Failed to load campaigns. Please refresh to try again.';
-            this.isLoading = false;
+            this.hasLoadedCampaigns = true;
+            this.isListLoading = false;
           });
         },
       });
@@ -136,12 +141,20 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
     this.segmentCount = null;
     this.error = null;
     this.success = null;
+    this.testEmail = '';
   }
 
   previewSegmentCount(): void {
     if (!this.model.segmentFilter) {
       return;
     }
+
+    const cachedCount = this.segmentCountCache[this.model.segmentFilter];
+    if (cachedCount !== undefined) {
+      this.segmentCount = cachedCount;
+      return;
+    }
+
     this.segmentCounting = true;
     this._marketing
       .previewSegment(this.model.segmentFilter)
@@ -157,6 +170,7 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: res => {
           this.runInZone(() => {
+            this.segmentCountCache[res.segmentFilter] = res.count;
             this.segmentCount = res.count;
           });
         },
@@ -186,9 +200,13 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
         next: campaign => {
           this.runInZone(() => {
             this.isSaving = false;
-            this.view = 'list';
-            this.loadCampaigns();
             this.success = `Campaign "${campaign.name}" created.`;
+            this.selectedCampaign = campaign;
+            this.scheduleDate = campaign.scheduledAt ? campaign.scheduledAt.slice(0, 16) : '';
+            this.testEmail = '';
+            this.confirmCancelId = null;
+            this.view = 'detail';
+            this.loadCampaigns();
           });
         },
         error: err => {
@@ -203,8 +221,12 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
   // ── DETAIL ─────────────────────────────────────────────────────────────────
 
   openDetail(id: string): void {
+    this.view = 'detail';
     this.isLoading = true;
     this.error = null;
+    this.selectedCampaign = null;
+    this.confirmCancelId = null;
+    this.testEmail = '';
     this._marketing
       .getCampaign(id)
       .pipe(timeout(12000), takeUntil(this.destroy$))
@@ -213,7 +235,6 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
           this.runInZone(() => {
             this.selectedCampaign = c;
             this.scheduleDate = c.scheduledAt ? c.scheduledAt.slice(0, 16) : '';
-            this.view = 'detail';
             this.isLoading = false;
           });
         },
@@ -239,6 +260,7 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
           this.runInZone(() => {
             this.success = 'Campaign scheduled.';
             this.isSaving = false;
+            this.loadCampaigns();
             this.openDetail(this.selectedCampaign!.id);
           });
         },
@@ -261,6 +283,7 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
             this.confirmCancelId = null;
             this.success = 'Campaign cancelled.';
             if (this.view === 'detail') {
+              this.loadCampaigns();
               this.openDetail(id);
             } else {
               this.loadCampaigns();
@@ -327,7 +350,10 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
   // ── LOGS ───────────────────────────────────────────────────────────────────
 
   openLogs(id: string): void {
+    this.view = 'logs';
     this.isLoading = true;
+    this.error = null;
+    this.logs = [];
     this.logPage = 1;
     this._marketing
       .getLogs(id, this.logPage)
@@ -337,7 +363,6 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
           this.runInZone(() => {
             this.logs = res.logs;
             this.logTotal = res.totalCount;
-            this.view = 'logs';
             this.isLoading = false;
           });
         },
@@ -352,12 +377,19 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
 
   // ── HELPERS ────────────────────────────────────────────────────────────────
 
-  backToList(): void {
+  backToList(forceReload = false): void {
     this.view = 'list';
     this.selectedCampaign = null;
+    this.logs = [];
+    this.confirmCancelId = null;
+    this.isLoading = false;
     this.error = null;
     this.success = null;
-    this.loadCampaigns();
+    this.testEmail = '';
+
+    if (forceReload || !this.hasLoadedCampaigns) {
+      this.loadCampaigns();
+    }
   }
 
   get totalPages(): number {

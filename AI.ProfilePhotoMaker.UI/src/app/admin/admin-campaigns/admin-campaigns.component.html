@@ -26,6 +26,8 @@
 
   <!-- ─── LIST VIEW ────────────────────────────────────────── -->
   <ng-container *ngIf="view === 'list'">
+    <p *ngIf="isListLoading" class="form-subtitle">Loading campaigns…</p>
+
     <div class="table-wrap">
       <table>
         <thead>
@@ -65,7 +67,10 @@
               </div>
             </td>
           </tr>
-          <tr *ngIf="campaigns.length === 0">
+          <tr *ngIf="isListLoading && campaigns.length === 0">
+            <td colspan="8" class="empty-state">Loading campaigns…</td>
+          </tr>
+          <tr *ngIf="!isListLoading && hasLoadedCampaigns && campaigns.length === 0">
             <td colspan="8" class="empty-state">No campaigns yet. Create your first one.</td>
           </tr>
         </tbody>
@@ -227,6 +232,12 @@
         <button class="btn btn-danger" (click)="cancelCampaign(selectedCampaign.id)">Confirm</button>
         <button class="btn btn-ghost" (click)="confirmCancelId = null">Never mind</button>
       </div>
+    </section>
+  </ng-container>
+
+  <ng-container *ngIf="view === 'detail' && !selectedCampaign && !isLoading">
+    <section class="admin-panel empty-state">
+      <p>{{ error || 'Campaign details are unavailable right now.' }}</p>
     </section>
   </ng-container>
 
