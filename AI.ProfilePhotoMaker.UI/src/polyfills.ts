@@ -10,12 +10,6 @@
 // eslint-disable-next-line @typescript-eslint/naming-convention
 (window as unknown as { __Zone_disable_on_property: boolean }).__Zone_disable_on_property = true;
 
-// Disable zone.js patching for XMLHttpRequest
-// This prevents violations when face-api.js downloads model files from CDN
-// eslint-disable-next-line @typescript-eslint/naming-convention
-(window as unknown as { __Zone_disable_XMLHttpRequest: boolean }).__Zone_disable_XMLHttpRequest =
-  true;
-
 // Disable zone.js patching for custom elements (additional safety)
 // eslint-disable-next-line @typescript-eslint/naming-convention
 (window as unknown as { __Zone_disable_customElements: boolean }).__Zone_disable_customElements =
