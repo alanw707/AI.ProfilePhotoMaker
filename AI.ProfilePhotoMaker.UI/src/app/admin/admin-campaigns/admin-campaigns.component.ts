@@ -1,4 +1,4 @@
-import { Component, NgZone, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -88,7 +88,8 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
 
   constructor(
     private _marketing: MarketingService,
-    private _zone: NgZone
+    private _zone: NgZone,
+    private _cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -443,6 +444,9 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
   }
 
   private runInZone(action: () => void): void {
-    this._zone.run(action);
+    this._zone.run(() => {
+      action();
+      this._cdr.detectChanges();
+    });
   }
 }
