@@ -6,16 +6,32 @@
   <main class="gallery-main">
     <div class="gallery-content">
       <!-- Page Header -->
-      <section class="page-header">
-        <h2>Photo Transform</h2>
-        <p>
-          Transform your photo with AI — background cleanup, lighting fixes, and creative styles for social or
-          professional use.
-        </p>
+      <section class="page-header hero-panel">
+        <div class="hero-copy">
+          <span class="eyebrow">AI photo studio</span>
+          <h2>
+            {{
+              isHeadshotMvpEnabled
+                ? 'Create a platform-ready profile photo'
+                : 'Transform your photo with a polished creative workflow'
+            }}
+          </h2>
+          <p *ngIf="isHeadshotMvpEnabled">
+            Upload once, score quality, choose a portrait style, then generate an instant professional headshot.
+          </p>
+          <p *ngIf="!isHeadshotMvpEnabled">
+            Choose from visual workflows with clear previews for background cleanup, social polish, and creative styles.
+          </p>
+        </div>
+        <div class="hero-preview-strip" aria-hidden="true">
+          <img src="assets/marketing/before-after/linkedin-after.jpg" alt="" />
+          <img src="assets/marketing/before-after/executive-after.jpg" alt="" />
+          <img src="assets/marketing/before-after/set-3-after.png" alt="" />
+        </div>
       </section>
 
       <!-- Internal Credits Display -->
-      <section class="credits-section">
+      <section class="credits-section" *ngIf="!isHeadshotMvpEnabled">
         <div class="credits-card" *ngIf="userCreditStatus && !isLoadingCredits">
           <div class="credits-icon">⚡</div>
           <div class="credits-content">
@@ -70,7 +86,7 @@
           (drop)="onDrop($event)"
           [class.drag-over]="isDragOver">
           <div class="upload-icon">📷</div>
-          <h4>Upload a photo to transform</h4>
+          <h4>{{ isHeadshotMvpEnabled ? 'Upload one photo to score' : 'Upload a photo to transform' }}</h4>
           <p>Drag & drop or click to select • JPG, PNG, WebP • Max 7MB</p>
           <input
             type="file"
@@ -84,75 +100,150 @@
       <!-- Selected File Preview -->
       <section class="file-preview-section" *ngIf="selectedFile && !isProcessing">
         <div class="file-preview">
-          <img [src]="imagePreview" alt="Selected image" class="preview-image" />
+          <div class="preview-image-frame">
+            <img [src]="imagePreview" alt="Selected image" class="preview-image" />
+            <div class="score-loading-overlay" *ngIf="isProfilePhotoScoreVisible && isScoringPhoto" aria-live="polite">
+              <div class="mini-spinner" aria-hidden="true"></div>
+              <span>Scoring photo quality…</span>
+            </div>
+          </div>
           <div class="file-info">
             <h4>{{ selectedFile.name }}</h4>
             <p>{{ selectedFile.size | number }} bytes</p>
             <button class="btn btn-secondary" (click)="removeFile()">Choose Different Photo</button>
           </div>
+          <div class="photo-score-summary" *ngIf="isProfilePhotoScoreVisible">
+            <span class="summary-label">Photo score</span>
+            <div class="summary-loading" *ngIf="isScoringPhoto">Scoring photo…</div>
+            <div class="summary-score" *ngIf="profileScore && !isScoringPhoto">
+              <strong>{{ profileScore.overallScore }}/100</strong>
+              <span>{{ profileScore.ratingLabel }}</span>
+            </div>
+            <p *ngIf="profileScore && !isScoringPhoto">{{ profileScore.guidance }}</p>
+          </div>
         </div>
 
-        <!-- Enhancement Options -->
-        <div class="enhancement-options">
-          <h3>Transform Options</h3>
-          <div class="options-grid">
-            <!-- Replicate Enhancement Options (1 credit) -->
-            <label class="option-card" [class.selected]="enhancementType === 'background'">
-              <input type="radio" name="enhancement" value="background" [(ngModel)]="enhancementType" />
-              <div class="option-content">
-                <div class="option-icon">🖼️</div>
-                <div class="option-text">
-                  <h4>Background Remover</h4>
-                  <p>Remove/replace background with professional backdrop (1 credit)</p>
-                </div>
-              </div>
-            </label>
-
-            <label class="option-card" [class.selected]="enhancementType === 'social'">
-              <input type="radio" name="enhancement" value="social" [(ngModel)]="enhancementType" />
-              <div class="option-content">
-                <div class="option-icon">📱</div>
-                <div class="option-text">
-                  <h4>Social Media</h4>
-                  <p>Perfect for Instagram, bright and engaging (1 credit)</p>
-                </div>
-              </div>
-            </label>
-
-            <label class="option-card" [class.selected]="enhancementType === 'cartoon'">
-              <input type="radio" name="enhancement" value="cartoon" [(ngModel)]="enhancementType" />
-              <div class="option-content">
-                <div class="option-icon">🎨</div>
-                <div class="option-text">
-                  <h4>Cartoon Mode</h4>
-                  <p>Fun animated style transformation (1 credit)</p>
-                </div>
-              </div>
-            </label>
-
-            <!-- OpenAI Enhancement Options (1 credit) -->
-            <label class="option-card" [class.selected]="enhancementType === 'chibi'">
-              <input type="radio" name="enhancement" value="chibi" [(ngModel)]="enhancementType" />
-              <div class="option-content">
-                <div class="option-icon">🌸</div>
-                <div class="option-text">
-                  <h4>Chibi Style</h4>
-                  <p>Super cute anime style with oversized head and tiny body (1 credit)</p>
-                </div>
-              </div>
-            </label>
-
-            <label class="option-card" [class.selected]="enhancementType === 'pixar_3d'">
-              <input type="radio" name="enhancement" value="pixar_3d" [(ngModel)]="enhancementType" />
-              <div class="option-content">
-                <div class="option-icon">🎬</div>
-                <div class="option-text">
-                  <h4>Pixar 3D</h4>
-                  <p>Professional 3D animation style with cinematic quality (1 credit)</p>
-                </div>
-              </div>
-            </label>
+        <section class="score-section" *ngIf="isProfilePhotoScoreVisible || areOutcomePackagesVisible">
+          <div class="credits-card loading-card" *ngIf="isProfilePhotoScoreVisible && isScoringPhoto">
+            <div class="credits-icon">🎯</div>
+            <div class="credits-content">
+              <h3>Scoring photo...</h3>
+              <p>Checking resolution, lighting, sharpness, framing, and platform fit.</p>
+            </div>
           </div>
+
+          <div class="credits-card score-card" *ngIf="isProfilePhotoScoreVisible && profileScore && !isScoringPhoto">
+            <div class="score-ring" [style.--score]="profileScore.overallScore">
+              <span>{{ profileScore.overallScore }}</span>
+              <small>/100</small>
+            </div>
+            <div class="credits-content score-content">
+              <span class="section-kicker">Photo score</span>
+              <h3>{{ profileScore.ratingLabel }}</h3>
+              <p>{{ profileScore.guidance }}</p>
+              <div class="score-grid">
+                <div class="score-item" *ngFor="let subscore of profileScore.subscores">
+                  <div class="score-item-header">
+                    <span>{{ subscore.label }}</span>
+                    <strong>{{ subscore.score }}/100</strong>
+                  </div>
+                  <div class="score-bar" aria-hidden="true">
+                    <span [style.width.%]="subscore.score"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Enhancement Options -->
+        <div class="enhancement-options portrait-style-panel">
+          <div class="section-heading">
+            <span class="section-kicker">Step 2</span>
+            <h3>{{ isHeadshotMvpEnabled ? 'Choose your portrait style' : 'Transform Options' }}</h3>
+            <p *ngIf="isHeadshotMvpEnabled">
+              Pick the look you want. Each style uses the active prompt library and generates instantly without model
+              training.
+            </p>
+          </div>
+
+          <ng-container *ngIf="isHeadshotMvpEnabled; else creativeWorkflowOptions">
+            <div class="style-tabs" role="tablist" aria-label="Portrait style groups">
+              <button
+                type="button"
+                class="style-tab"
+                *ngIf="hasPortraitStyleGroup('recommended')"
+                [class.active]="selectedStyleGroup === 'recommended'"
+                (click)="setStyleGroup('recommended')">
+                Recommended
+              </button>
+              <button
+                type="button"
+                class="style-tab"
+                *ngIf="hasPortraitStyleGroup('more')"
+                [class.active]="selectedStyleGroup === 'more'"
+                (click)="setStyleGroup('more')">
+                More styles
+              </button>
+              <button
+                type="button"
+                class="style-tab"
+                *ngIf="hasPortraitStyleGroup('fun')"
+                [class.active]="selectedStyleGroup === 'fun'"
+                (click)="setStyleGroup('fun')">
+                Fun
+              </button>
+            </div>
+
+            <div class="style-loading" *ngIf="isLoadingPortraitStyles">Loading portrait styles…</div>
+            <div class="style-loading error" *ngIf="!isLoadingPortraitStyles && portraitStyleError">
+              {{ portraitStyleError }}
+            </div>
+
+            <div
+              class="options-grid workflow-grid portrait-style-grid"
+              *ngIf="!isLoadingPortraitStyles && getVisiblePortraitStyles().length">
+              <button
+                class="option-card workflow-card portrait-style-card"
+                type="button"
+                [class.selected]="selectedPortraitStyle?.key === option.key"
+                *ngFor="let option of getVisiblePortraitStyles()"
+                (click)="selectPortraitStyle(option)">
+                <img
+                  [src]="option.previewUrl"
+                  [alt]="option.name + ' portrait style preview'"
+                  class="workflow-preview"
+                  loading="lazy" />
+                <div class="option-content">
+                  <div class="option-text">
+                    <span>{{ option.badgeLabel }}</span>
+                    <h4>{{ option.name }}</h4>
+                    <p>{{ option.description }}</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </ng-container>
+
+          <ng-template #creativeWorkflowOptions>
+            <div class="options-grid workflow-grid">
+              <label
+                class="option-card workflow-card"
+                [class.selected]="enhancementType === option.value"
+                *ngFor="let option of workflowOptions"
+                [hidden]="!isWorkflowOptionVisible(option)">
+                <input type="radio" name="enhancement" [value]="option.value" [(ngModel)]="enhancementType" />
+                <img [src]="option.image" [alt]="option.title + ' preview'" class="workflow-preview" loading="lazy" />
+                <div class="option-content">
+                  <div class="option-text">
+                    <span>{{ option.subtitle }}</span>
+                    <h4>{{ option.title }}</h4>
+                    <p>{{ option.description }}</p>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </ng-template>
 
           <app-turnstile
             *ngIf="turnstileSiteKey && isEmailConfirmed"
@@ -181,19 +272,38 @@
             </p>
           </div>
 
-          <button
-            class="btn btn-primary enhance-btn"
-            type="button"
-            (click)="startEnhancement()"
-            [disabled]="!isEmailConfirmed || !canStartEnhancement()">
-            <span *ngIf="!isEmailConfirmed">Verify Email to Continue</span>
-            <span *ngIf="isEmailConfirmed && hasEnoughCredits()">
-              Transform Photo ({{ getRequiredCredits() }} credit{{ getRequiredCredits() > 1 ? 's' : '' }})
-            </span>
-            <span *ngIf="isEmailConfirmed && !hasEnoughCredits()">
-              Not Enough Credits ({{ getRequiredCredits() }} required)
-            </span>
-          </button>
+          <div class="action-footer">
+            <div class="action-summary">
+              <strong>
+                {{ isHeadshotMvpEnabled ? selectedPortraitStyle?.name || 'Portrait style' : 'Creative transform' }}
+              </strong>
+              <span>{{ isHeadshotMvpEnabled ? getSelectedPackageStatus() : '1 credit workflow' }}</span>
+            </div>
+            <label class="action-package-select" *ngIf="isHeadshotMvpEnabled && areOutcomePackagesVisible">
+              <span>Package</span>
+              <select [(ngModel)]="selectedPackageCode" class="form-control compact-control">
+                <option
+                  *ngFor="let option of packageOptions"
+                  [value]="option.code"
+                  [disabled]="!isPackageOptionAvailable(option.code)">
+                  {{ option.name }}{{ isPackageOptionAvailable(option.code) ? '' : ' (locked)' }}
+                </option>
+              </select>
+            </label>
+            <button
+              class="btn btn-primary enhance-btn"
+              type="button"
+              (click)="startEnhancement()"
+              [disabled]="!isEmailConfirmed || !canStartEnhancement()">
+              <span *ngIf="!isEmailConfirmed">Verify Email to Continue</span>
+              <span *ngIf="isEmailConfirmed && canStartEnhancement()">
+                {{ isHeadshotMvpEnabled ? 'Generate headshot' : 'Transform Photo' }}
+              </span>
+              <span *ngIf="isEmailConfirmed && !canStartEnhancement()">
+                {{ isHeadshotMvpEnabled ? 'Package Entitlement Needed' : 'Package Needed' }}
+              </span>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -201,8 +311,8 @@
       <section class="processing-section" *ngIf="isProcessing">
         <div class="processing-card">
           <div class="processing-spinner"></div>
-          <h3>Transforming Your Photo</h3>
-          <p>AI is working its magic... This usually takes 30-60 seconds.</p>
+          <h3>{{ isHeadshotMvpEnabled ? 'Creating Your Profile Photo' : 'Transforming Your Photo' }}</h3>
+          <p>AI is working carefully... This usually takes 30-60 seconds.</p>
           <div class="processing-progress">
             <div class="progress-bar" [style.width.%]="processingProgress"></div>
           </div>
@@ -212,7 +322,7 @@
 
       <!-- Results Section -->
       <section class="results-section" *ngIf="enhancedImage">
-        <h3>Transform Complete!</h3>
+        <h3>{{ isHeadshotMvpEnabled ? 'Candidate Ready' : 'Transform Complete!' }}</h3>
         <div class="retention-info">
           <small class="text-muted">
             📅 Your enhanced photo will be available for 30 days. You can delete your data anytime in account settings.
@@ -220,18 +330,195 @@
         </div>
         <div class="before-after">
           <div class="comparison-item">
-            <h4>Before</h4>
+            <span class="comparison-label">Before</span>
             <img [src]="imagePreview" alt="Original" class="comparison-image" />
           </div>
-          <div class="comparison-arrow">→</div>
-          <div class="comparison-item">
-            <h4>After</h4>
-            <img [src]="enhancedImage.url" alt="Enhanced" class="comparison-image" />
+          <div class="comparison-arrow" aria-hidden="true">→</div>
+          <div class="comparison-item after-item">
+            <span class="comparison-label">After</span>
+            <div class="comparison-image-frame after-preview-frame" *ngIf="!enhancedImage.loadFailed">
+              <img
+                [src]="enhancedImage.displayUrl"
+                alt="Enhanced candidate"
+                class="comparison-image"
+                (error)="onEnhancedImageError()"
+                [ngStyle]="isHeadshotMvpEnabled ? getAdjustedImageStyle() : null" />
+            </div>
+            <div class="image-fallback" *ngIf="enhancedImage.loadFailed">
+              <div class="fallback-icon">🖼️</div>
+              <strong>Preview unavailable</strong>
+              <span>Your generated photo was saved. Use download or regenerate if the preview stays blank.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="enhancement-options" *ngIf="isProfileWorkflowEnabled">
+          <h3>Best Shot Selector</h3>
+          <div class="retention-details" *ngIf="generatedCandidates.length > 1">
+            <button
+              class="retention-item"
+              type="button"
+              *ngFor="let candidate of generatedCandidates; let i = index"
+              (click)="selectCandidate(candidate)">
+              <span class="data-type">
+                {{ i === 0 && candidate.recommendationScore ? 'Best shot' : 'Candidate ' + (i + 1) }}
+              </span>
+              <span class="retention-period">
+                {{
+                  candidate.recommendationScore
+                    ? candidate.recommendationScore + '/100 role fit'
+                    : candidate.score
+                      ? candidate.score.overallScore + '/100'
+                      : 'Scoring...'
+                }}
+              </span>
+            </button>
+          </div>
+          <div class="credits-card">
+            <div class="credits-icon">🏆</div>
+            <div class="credits-content">
+              <h3>Recommended candidate</h3>
+              <p *ngIf="isProfilePhotoScoreVisible && isScoringGeneratedPhoto">Scoring generated candidate...</p>
+              <p *ngIf="isProfilePhotoScoreVisible && !isScoringGeneratedPhoto && generatedScore">
+                Candidate score: {{ generatedScore.overallScore }}/100 — {{ generatedScore.ratingLabel }}.
+                {{ getRecommendedCandidateReason() }}
+                <span *ngIf="getScoreDelta() !== null">
+                  Score delta: {{ getScoreDelta()! >= 0 ? '+' : '' }}{{ getScoreDelta() }} points.
+                </span>
+              </p>
+              <p *ngIf="!isScoringGeneratedPhoto && !generatedScore">
+                This first candidate is ready for review. Starter and Pro packages expand this into 3 or 9 ranked
+                candidates.
+              </p>
+            </div>
+          </div>
+
+          <div class="adjustment-workspace">
+            <div class="adjustment-preview-card">
+              <span class="section-kicker">Live preview</span>
+              <div class="adjustment-preview-frame">
+                <img
+                  *ngIf="!enhancedImage.loadFailed"
+                  [src]="enhancedImage.displayUrl"
+                  alt="Live adjusted enhanced candidate"
+                  class="comparison-image"
+                  (error)="onEnhancedImageError()"
+                  [ngStyle]="getAdjustedImageStyle()" />
+              </div>
+              <p>Use crop sliders while the edited photo stays visible.</p>
+            </div>
+
+            <div class="adjustment-controls-card">
+              <h3>Photo Adjustment</h3>
+              <div class="retention-details adjustment-controls">
+                <label class="retention-item adjustment-control">
+                  <span class="data-type">Zoom</span>
+                  <span class="retention-period">
+                    <input type="range" min="80" max="160" [(ngModel)]="adjustmentZoom" />
+                    {{ adjustmentZoom }}%
+                  </span>
+                </label>
+                <label class="retention-item adjustment-control">
+                  <span class="data-type">Rotate</span>
+                  <span class="retention-period">
+                    <input type="range" min="-8" max="8" [(ngModel)]="adjustmentRotate" />
+                    {{ adjustmentRotate }}°
+                  </span>
+                </label>
+                <label class="retention-item adjustment-control">
+                  <span class="data-type">Crop left/right</span>
+                  <span class="retention-period">
+                    <input type="range" min="-30" max="30" [(ngModel)]="cropOffsetX" />
+                    {{ cropOffsetX }}%
+                  </span>
+                </label>
+                <label class="retention-item adjustment-control">
+                  <span class="data-type">Crop up/down</span>
+                  <span class="retention-period">
+                    <input type="range" min="-30" max="30" [(ngModel)]="cropOffsetY" />
+                    {{ cropOffsetY }}%
+                  </span>
+                </label>
+                <label class="retention-item adjustment-control">
+                  <span class="data-type">Brightness</span>
+                  <span class="retention-period">
+                    <input type="range" min="70" max="130" [(ngModel)]="adjustmentBrightness" />
+                    {{ adjustmentBrightness }}%
+                  </span>
+                </label>
+                <label class="retention-item adjustment-control">
+                  <span class="data-type">Contrast</span>
+                  <span class="retention-period">
+                    <input type="range" min="70" max="130" [(ngModel)]="adjustmentContrast" />
+                    {{ adjustmentContrast }}%
+                  </span>
+                </label>
+                <label class="retention-item adjustment-control">
+                  <span class="data-type">Sharpness</span>
+                  <span class="retention-period">
+                    <input type="range" min="80" max="130" [(ngModel)]="adjustmentSharpness" />
+                    {{ adjustmentSharpness }}%
+                  </span>
+                </label>
+              </div>
+              <button class="btn btn-secondary" type="button" (click)="resetAdjustments()">Reset Adjustments</button>
+            </div>
+          </div>
+
+          <ng-container *ngIf="arePremiumAugmentationsVisible">
+            <h3>Premium Augmentation Add-ons</h3>
+            <div class="key-features">
+              <button
+                class="btn btn-secondary"
+                type="button"
+                *ngFor="let augmentation of premiumAugmentations"
+                (click)="applyPremiumAugmentation(augmentation.type)"
+                [disabled]="!canApplyPremiumAugmentation()">
+                ✨ Apply {{ augmentation.label }}
+              </button>
+            </div>
+          </ng-container>
+
+          <h3 *ngIf="selectedPackageCode !== 'free_preview'">Choose Platform Exports</h3>
+          <p *ngIf="selectedPackageCode === 'free_preview'">
+            Free Preview does not include the platform export kit. Unlock Starter or Pro to download a package.
+          </p>
+          <div class="retention-details" *ngIf="selectedPackageCode !== 'free_preview'">
+            <label class="retention-item" *ngFor="let option of exportOptions">
+              <span class="data-type">
+                <input
+                  type="checkbox"
+                  [checked]="isExportSelected(option.code)"
+                  (change)="toggleExport(option.code, $any($event.target).checked)" />
+                {{ option.label }}
+              </span>
+              <span class="retention-period">
+                {{ option.width || 'original' }}{{ option.width ? '×' + option.height : '' }}
+              </span>
+            </label>
           </div>
         </div>
 
         <div class="result-actions">
-          <button class="btn btn-primary" (click)="downloadEnhanced()">
+          <button
+            class="btn btn-primary"
+            *ngIf="isProfileWorkflowEnabled && selectedPackageCode !== 'free_preview'"
+            (click)="downloadPackage()"
+            [disabled]="isDownloadingPackage">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15"
+                stroke="currentColor"
+                stroke-width="2" />
+              <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" />
+              <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" />
+            </svg>
+            {{ isDownloadingPackage ? 'Preparing Package...' : 'Download Package' }}
+          </button>
+          <button
+            class="btn btn-primary"
+            *ngIf="!isProfileWorkflowEnabled || selectedPackageCode === 'free_preview'"
+            (click)="downloadEnhanced()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path
                 d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15"
@@ -262,7 +549,7 @@
               <path d="M7 3V8H15" stroke="currentColor" stroke-width="2" />
             </svg>
             <div class="spinner" *ngIf="isSaving"></div>
-            {{ isSaving ? 'Saving...' : 'Save to Gallery' }}
+            {{ isSaving ? 'Saving...' : 'Save to Workspace' }}
           </button>
           <div class="save-success" *ngIf="isSaved && saveSuccessMessage">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -274,6 +561,13 @@
             </svg>
             {{ saveSuccessMessage }}
           </div>
+          <button
+            class="btn btn-secondary"
+            type="button"
+            (click)="startEnhancement()"
+            [disabled]="!canStartEnhancement()">
+            Regenerate
+          </button>
           <button class="btn btn-outline" (click)="enhanceAnother()">Enhance Another Photo</button>
         </div>
       </section>

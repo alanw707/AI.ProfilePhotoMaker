@@ -2,10 +2,15 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { FaceDetectionService } from './face-detection.service';
 import { FaceValidationResult } from '../interfaces/service.interfaces';
-import { QualityCheckError, QualityCheckResult, SelectedFileWithQuality, UploadProgress } from '../models/dashboard.types';
+import {
+  QualityCheckError,
+  QualityCheckResult,
+  SelectedFileWithQuality,
+  UploadProgress,
+} from '../models/workspace.types';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class FileUploadManagerService {
   private uploadProgressSubject = new BehaviorSubject<UploadProgress>({ percentage: 0 });
@@ -23,17 +28,17 @@ export class FileUploadManagerService {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      
+
       // Update progress
       this.uploadProgressSubject.next({
         percentage: Math.round((i / files.length) * 50), // 50% for processing
         currentFile: file.name,
-        totalFiles: files.length
+        totalFiles: files.length,
       });
 
       try {
         const qualityResult = await this.validateFile(file);
-        
+
         if (qualityResult.errors.length === 0) {
           validFiles.push(file);
         } else {
@@ -43,7 +48,7 @@ export class FileUploadManagerService {
             errors: qualityResult.errors,
             warnings: qualityResult.warnings,
             faceValidation: qualityResult.faceValidation,
-            qualityScore: qualityResult.qualityScore
+            qualityScore: qualityResult.qualityScore,
           });
         }
 
@@ -52,20 +57,25 @@ export class FileUploadManagerService {
         errorFiles.push({
           fileName: file.name,
           file,
-          errors: [`Failed to process file: ${error}`]
+          errors: [`Failed to process file: ${error}`],
         });
       }
     }
 
     this.selectedFilesSubject.next(selectedFiles);
-    
+
     // Complete processing
     this.uploadProgressSubject.next({
       percentage: 100,
-      completed: true
+      completed: true,
     });
 
-    return { validFiles, invalidFiles: errorFiles.map(e => e.file), errors: errorFiles, totalProcessed: files.length };
+    return {
+      validFiles,
+      invalidFiles: errorFiles.map(e => e.file),
+      errors: errorFiles,
+      totalProcessed: files.length,
+    };
   }
 
   private async validateFile(file: File): Promise<SelectedFileWithQuality> {
@@ -77,7 +87,8 @@ export class FileUploadManagerService {
       errors.push('File must be an image');
     }
 
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+    if (file.size > 10 * 1024 * 1024) {
+      // 10MB limit
       errors.push('File size must be less than 10MB');
     }
 
@@ -107,7 +118,6 @@ export class FileUploadManagerService {
       if (qualityScore && qualityScore.breakdown.lighting < 60) {
         warnings.push('Lighting could be improved for better results');
       }
-
     } catch {
       warnings.push('Could not analyze image quality');
     }
@@ -119,7 +129,7 @@ export class FileUploadManagerService {
       errors,
       warnings,
       isValid: errors.length === 0,
-      showDetails: false
+      showDetails: false,
     };
   }
 
@@ -135,9 +145,7 @@ export class FileUploadManagerService {
   }
 
   getValidFiles(): File[] {
-    return this.selectedFilesSubject.value
-      .filter(f => f.isValid)
-      .map(f => f.file);
+    return this.selectedFilesSubject.value.filter(f => f.isValid).map(f => f.file);
   }
 
   hasValidFiles(): boolean {

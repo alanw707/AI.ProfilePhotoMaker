@@ -12,8 +12,8 @@ This list covers third-party service providers that process user data on our beh
 
 | Provider | Service | Purpose | Data Categories | Notes / Links |
 | --- | --- | --- | --- | --- |
-| Replicate | Model training and image generation | Train custom models and generate images | Uploaded photos, prompts, model metadata | https://replicate.com/privacy ; https://replicate.com/docs/topics/predictions/data-retention |
-| OpenAI | Photo enhancement (select styles) | Image enhancement using gpt-image-1 | Uploaded photos, prompts, output images | https://openai.com/policies/privacy-policy |
+| OpenAI | Instant headshot generation and photo enhancement | Generate professional headshots and enhanced images using configured GPT Image model | Uploaded photos, prompts, output images | https://openai.com/policies/privacy-policy |
+| Replicate | Optional/advanced model training and image generation | Train custom models and generate larger styled photo packs | Uploaded photos, prompts, model metadata | https://replicate.com/privacy ; https://replicate.com/docs/topics/predictions/data-retention |
 | Stripe | Payments | Credit package payments and billing | Payment metadata, email, transaction IDs | https://stripe.com/privacy |
 | Google | OAuth login (optional) | Authenticate users who choose Google sign-in | Email, name, OAuth profile ID | https://policies.google.com/privacy |
 | Microsoft Azure (optional) | Hosting and blob storage | API hosting and image storage if configured | Account data, images, logs | https://azure.microsoft.com/legal/privacy |

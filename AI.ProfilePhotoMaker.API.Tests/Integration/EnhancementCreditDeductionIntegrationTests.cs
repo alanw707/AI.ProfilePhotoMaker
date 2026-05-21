@@ -43,6 +43,87 @@ public class EnhancementCreditDeductionIntegrationTests : IClassFixture<CustomWe
     }
 
     [Fact]
+    public async Task OpenAiEnhancement_WithStoragePath_Succeeds_Deducts_One_Credit_WithoutHttpDownload()
+    {
+        await SeedUserAsync(credits: 5);
+        var handler = _factory.Services.GetRequiredService<FakeOpenAiHttpMessageHandler>();
+        handler.Reset();
+        var client = _factory.CreateAuthenticatedClient();
+
+        var response = await client.PostAsJsonAsync("/api/enhancement/enhance", new
+        {
+            imageStoragePath = "testing/enhanced/test-user-1/source.png",
+            imageUrl = "https://example.com/openai-success.png",
+            enhancementType = "headshot",
+            turnstileToken = "test"
+        });
+
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            throw new Exception($"OpenAI enhancement with storage path failed with {response.StatusCode}: {errorContent}");
+        }
+
+        Assert.Equal(0, handler.SourceImageGetCount);
+
+        var profile = await GetProfileAsync();
+        Assert.Equal(4, profile.Credits);
+    }
+
+    [Fact]
+    public async Task OpenAiEnhancement_MissingSource_ReturnsBadRequest()
+    {
+        await SeedUserAsync(credits: 5);
+        var client = _factory.CreateAuthenticatedClient();
+
+        var response = await client.PostAsJsonAsync("/api/enhancement/enhance", new
+        {
+            enhancementType = "headshot",
+            turnstileToken = "test"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task OpenAiEnhancement_InvalidStoragePath_ReturnsBadRequest_WithoutDeductingCredits()
+    {
+        await SeedUserAsync(credits: 5);
+        var client = _factory.CreateAuthenticatedClient();
+
+        var response = await client.PostAsJsonAsync("/api/enhancement/enhance", new
+        {
+            imageStoragePath = "testing/uploads/test-user-1/source.png",
+            enhancementType = "headshot",
+            turnstileToken = "test"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var profile = await GetProfileAsync();
+        Assert.Equal(5, profile.Credits);
+    }
+
+    [Fact]
+    public async Task OpenAiEnhancement_CrossUserStoragePath_ReturnsBadRequest_WithoutDeductingCredits()
+    {
+        await SeedUserAsync(credits: 5);
+        var client = _factory.CreateAuthenticatedClient();
+
+        var response = await client.PostAsJsonAsync("/api/enhancement/enhance", new
+        {
+            imageStoragePath = "testing/enhanced/other-user/source.png",
+            enhancementType = "headshot",
+            turnstileToken = "test"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var profile = await GetProfileAsync();
+        Assert.Equal(5, profile.Credits);
+    }
+
+    [Fact]
     public async Task OpenAiEnhancement_Failure_Refunds_Credits()
     {
         await SeedUserAsync(credits: 5);
@@ -62,14 +143,14 @@ public class EnhancementCreditDeductionIntegrationTests : IClassFixture<CustomWe
     }
 
     [Fact]
-    public async Task ReplicateEnhancement_Succeeds_Deducts_One_Credit()
+    public async Task LegacyReplicateEnhancementRoute_UsesOpenAi_Deducts_One_Credit()
     {
         await SeedUserAsync(credits: 5);
         var client = _factory.CreateAuthenticatedClient();
 
         var response = await client.PostAsJsonAsync("/api/replicate/enhance", new
         {
-            imageUrl = "https://example.com/replicate-enhance.png",
+            imageUrl = FakeOpenAiHttpMessageHandler.SuccessImageUrl,
             enhancementType = "professional",
             turnstileToken = "test"
         });
@@ -77,7 +158,7 @@ public class EnhancementCreditDeductionIntegrationTests : IClassFixture<CustomWe
         if (response.StatusCode != HttpStatusCode.OK)
         {
             var errorContent = await response.Content.ReadAsStringAsync();
-            throw new Exception($"Replicate enhancement failed with {response.StatusCode}: {errorContent}");
+            throw new Exception($"Legacy enhancement route failed with {response.StatusCode}: {errorContent}");
         }
 
         var profile = await GetProfileAsync();

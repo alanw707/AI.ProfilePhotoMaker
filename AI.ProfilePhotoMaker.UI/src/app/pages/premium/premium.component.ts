@@ -26,27 +26,26 @@ import { NavigationService } from '../../services/navigation.service';
           <!-- Hero Section -->
           <section class="hero-section">
             <div class="hero-content content-container">
-              <h1>AI Headshot Pricing Plans</h1>
+              <h1>Profile Photo Packages</h1>
               <p class="hero-subtitle">
-                Create stunning, personalized profile photos with our advanced AI technology. Train
-                your own custom model for unlimited professional results.
+                Get your best professional profile photo from one upload: score it, generate focused
+                candidates, choose the best shot, refine it, and download platform-ready exports.
               </p>
 
               <div class="features-grid">
                 <div class="feature-item">
                   <div class="feature-icon">🎯</div>
-                  <h3>Custom AI Training</h3>
+                  <h3>Profile Photo Score</h3>
                   <p>
-                    Train a personalized AI model with your photos for authentic, professional
-                    results
+                    Understand what is working before you buy, then see how much your final photo
+                    improves.
                   </p>
                 </div>
                 <div class="feature-item">
                   <div class="feature-icon">⚡</div>
-                  <h3>Multiple Styles</h3>
+                  <h3>Best Shot Selector</h3>
                   <p>
-                    Generate photos in various professional styles - corporate, creative, casual,
-                    and more
+                    Generate a focused candidate set and get guidance on which image is strongest.
                   </p>
                 </div>
                 <div class="feature-item">
@@ -59,16 +58,17 @@ import { NavigationService } from '../../services/navigation.service';
                 </div>
                 <div class="feature-item">
                   <div class="feature-icon">📸</div>
-                  <h3>High Quality</h3>
+                  <h3>Platform Export Kit</h3>
                   <p>
-                    Professional-grade images perfect for LinkedIn, resumes, and business profiles
+                    Download user-selected crops for LinkedIn, Gmail, Slack, GitHub, resumes, and
+                    websites.
                   </p>
                 </div>
               </div>
             </div>
           </section>
 
-          <!-- Credit Packages Section -->
+          <!-- Outcome Packages Section -->
           <section id="packages-section" class="packages-section">
             <div class="content-container">
               <p class="text-center text-sm text-gray-600 mb-6">
@@ -92,36 +92,38 @@ import { NavigationService } from '../../services/navigation.service';
             <div class="content-container">
               <div class="section-header">
                 <h2>How It Works</h2>
-                <p>Get professional AI photos in just 4 simple steps</p>
+                <p>Get a ready-to-use professional profile photo package in four steps</p>
               </div>
 
               <div class="steps-grid">
                 <div class="step-item">
                   <div class="step-number">1</div>
                   <div class="step-content">
-                    <h3>Upload Photos</h3>
-                    <p>Upload 5-15 high-quality selfies for the best AI training results</p>
+                    <h3>Upload One Photo</h3>
+                    <p>Start with one clear photo or an existing professional headshot.</p>
                   </div>
                 </div>
                 <div class="step-item">
                   <div class="step-number">2</div>
                   <div class="step-content">
-                    <h3>Select Styles</h3>
-                    <p>Choose from professional, creative, casual, and formal photo styles</p>
+                    <h3>Score and Choose Role</h3>
+                    <p>See profile-photo readiness and pick the role you want to optimize for.</p>
                   </div>
                 </div>
                 <div class="step-item">
                   <div class="step-number">3</div>
                   <div class="step-content">
-                    <h3>AI Training</h3>
-                    <p>Our AI trains a custom model with your photos (15-25 minutes)</p>
+                    <h3>Generate Candidates</h3>
+                    <p>Create a focused set of candidates and pick the best shot.</p>
                   </div>
                 </div>
                 <div class="step-item">
                   <div class="step-number">4</div>
                   <div class="step-content">
-                    <h3>Download Photos</h3>
-                    <p>Get your professional AI-generated photos ready for use</p>
+                    <h3>Download Package</h3>
+                    <p>
+                      Choose platform exports and download a ready-to-use profile photo package.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -136,15 +138,13 @@ import { NavigationService } from '../../services/navigation.service';
             <div class="content-container">
               <div class="existing-package-card">
                 <div class="package-status">
-                  <h3>🎯 You Have Credits Available!</h3>
+                  <h3>🎯 You Have Profile Photo Capacity Available!</h3>
                   <div class="status-details">
-                    <span class="package-name">Credit Balance</span>
-                    <span class="credits-remaining"
-                      >{{ userCreditStatus.credits }} credits available</span
-                    >
+                    <span class="package-name">Internal balance active</span>
+                    <span class="credits-remaining">Ready to create or refine profile photos</span>
                   </div>
                 </div>
-                <button class="btn btn-primary" routerLink="/app/dashboard">
+                <button class="btn btn-primary" routerLink="/app/enhance">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2" />
                     <rect
@@ -249,12 +249,12 @@ export class PremiumComponent implements OnInit, OnDestroy {
     this.userCreditStatus = creditStatus;
 
     this.notificationService.success(
-      'Credits Purchased!',
-      'Credits added to your account! You can now use premium features like model training and styled generation.'
+      'Package Unlocked!',
+      'Your profile photo package is ready. Start from the workspace to score, generate, and export your best shot.'
     );
 
-    // Redirect to dashboard to start the workflow
-    this.router.navigate(['/app/dashboard']);
+    // Redirect to Photo Workspace to start the workflow
+    this.router.navigate(['/app/enhance']);
   }
 
   ngOnDestroy(): void {
@@ -276,7 +276,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
     this.meta.updateTag({
       name: 'description',
       content:
-        'Compare AI headshot pricing plans. Choose the best package for LinkedIn-ready photos, custom AI training, and high-quality professional headshots.',
+        'Compare AI headshot pricing plans. Choose the best package for instant LinkedIn-ready photos, optional advanced styles, and high-quality professional headshots.',
     });
     this.meta.updateTag({
       name: 'keywords',
@@ -292,7 +292,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
     this.meta.updateTag({
       property: 'og:description',
       content:
-        'Choose a plan for professional AI headshots with custom AI training, premium styles, and high-resolution downloads.',
+        'Choose a plan for instant professional AI headshots, premium styles, and high-resolution downloads.',
     });
     this.meta.updateTag({ property: 'og:type', content: 'product' });
     this.meta.updateTag({ property: 'og:url', content: canonicalUrl });
@@ -314,7 +314,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
     });
     this.meta.updateTag({
       name: 'twitter:description',
-      content: 'Compare AI headshot pricing plans with custom model training and premium styles.',
+      content: 'Compare AI headshot pricing plans with instant generation and premium styles.',
     });
     this.meta.updateTag({
       name: 'twitter:image',
@@ -332,7 +332,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
       '@type': 'Product',
       name: 'AI Headshot Packages',
       description:
-        'AI headshot pricing plans with custom model training and professional-quality downloads.',
+        'AI headshot pricing plans with instant generation and professional-quality downloads.',
       image: 'https://aiprofilephotomaker.com/assets/og-image.png?v=3',
       url: canonicalUrl,
       brand: {

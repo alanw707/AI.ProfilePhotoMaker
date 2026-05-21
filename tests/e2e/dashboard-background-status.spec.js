@@ -1,7 +1,7 @@
 /**
  * Dashboard Background Status (Local)
  *
- * Validates that /app/dashboard surfaces persistent progress/status when a job is running,
+ * Validates that /app/enhance surfaces persistent progress/status when a job is running,
  * including after navigating away and back ("Continue in Background" flow).
  *
  * This spec intentionally stubs /api/model-status to avoid calling Replicate.
@@ -32,8 +32,8 @@ async function login(page) {
   await page.fill('input#email', config.email);
   await page.fill('input#password', config.password);
   await page.click('button[type="submit"]');
-  await page.waitForURL('**/app/dashboard', { timeout: 30000 });
-  await expect(page.locator('.dashboard-container')).toBeVisible({ timeout: 15000 });
+  await page.waitForURL('**/app/enhance', { timeout: 30000 });
+  await expect(page.locator('.gallery-page-container')).toBeVisible({ timeout: 15000 });
 }
 
 function interceptModelStatus(page, handler) {
@@ -98,8 +98,8 @@ test.describe('Dashboard background status banner', () => {
     await page.waitForURL('**/app/gallery', { timeout: 15000 });
 
     const statusResponse2 = page.waitForResponse(res => statusUrlRegex.test(res.url()) && res.status() === 200);
-    await page.goto(`${config.baseUrl}/app/dashboard`);
-    await page.waitForURL('**/app/dashboard', { timeout: 15000 });
+    await page.goto(`${config.baseUrl}/app/enhance`);
+    await page.waitForURL('**/app/enhance', { timeout: 15000 });
     await statusResponse2;
 
     await expect(banner).toBeVisible({ timeout: 15000 });
@@ -150,8 +150,8 @@ test.describe('Dashboard background status banner', () => {
     await page.waitForURL('**/app/settings', { timeout: 15000 });
 
     const statusResponse2 = page.waitForResponse(res => statusUrlRegex.test(res.url()) && res.status() === 200);
-    await page.goto(`${config.baseUrl}/app/dashboard`);
-    await page.waitForURL('**/app/dashboard', { timeout: 15000 });
+    await page.goto(`${config.baseUrl}/app/enhance`);
+    await page.waitForURL('**/app/enhance', { timeout: 15000 });
     await statusResponse2;
 
     await expect(banner).toBeVisible({ timeout: 15000 });

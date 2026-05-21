@@ -15,6 +15,8 @@ namespace AI.ProfilePhotoMaker.API.Tests.Unit;
 
 public class ReplicateApiClientNegativePromptTests
 {
+    private static readonly string TestReplicateApiToken = new('R', 40);
+
     [Fact]
     public async Task GenerateImagesAsync_IncludesNegativePromptFromStyleTemplate()
     {
@@ -45,7 +47,7 @@ public class ReplicateApiClientNegativePromptTests
             });
 
         var configurationMock = new Mock<IConfiguration>();
-        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns("test-token");
+        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns(TestReplicateApiToken);
 
         var webhookResolver = new Mock<IWebhookUrlResolver>();
         webhookResolver
@@ -150,7 +152,7 @@ public class ReplicateApiClientNegativePromptTests
             });
 
         var configurationMock = new Mock<IConfiguration>();
-        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns("test-token");
+        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns(TestReplicateApiToken);
 
         var webhookResolver = new Mock<IWebhookUrlResolver>();
         webhookResolver
@@ -241,7 +243,7 @@ public class ReplicateApiClientNegativePromptTests
             });
 
         var configurationMock = new Mock<IConfiguration>();
-        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns("test-token");
+        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns(TestReplicateApiToken);
 
         var webhookResolver = new Mock<IWebhookUrlResolver>();
         webhookResolver
@@ -338,7 +340,7 @@ public class ReplicateApiClientNegativePromptTests
             });
 
         var configurationMock = new Mock<IConfiguration>();
-        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns("test-token");
+        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns(TestReplicateApiToken);
 
         var webhookResolver = new Mock<IWebhookUrlResolver>();
         webhookResolver

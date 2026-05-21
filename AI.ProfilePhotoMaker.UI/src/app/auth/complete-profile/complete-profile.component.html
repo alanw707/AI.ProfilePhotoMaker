@@ -129,19 +129,16 @@
           formControlName="ethnicity"
           class="appearance-none relative block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white bg-white dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors">
           <option value="">Select your ethnicity</option>
-          <option value="Asian">Asian</option>
-          <option value="Black or African American">Black or African American</option>
-          <option value="Hispanic or Latino">Hispanic or Latino</option>
-          <option value="Native American">Native American</option>
-          <option value="Pacific Islander">Pacific Islander</option>
-          <option value="White">White</option>
-          <option value="Mixed">Mixed</option>
-          <option value="Other">Other</option>
-          <option value="Prefer not to say">Prefer not to say</option>
+          <option *ngFor="let option of ethnicityOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
         </select>
         <div *ngIf="shouldShowEthnicityError()" class="mt-1 text-sm text-red-600 dark:text-red-400">
           <span *ngIf="f['ethnicity'].errors?.['required']">Ethnicity is required</span>
         </div>
+        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          Self-identified only. We use this to personalize prompts and never infer it from your photos.
+        </p>
       </div>
 
       <!-- Age Confirmation -->
@@ -156,7 +153,8 @@
             I confirm that I am at least 13 years old and have read the
             <a routerLink="/legal/children-privacy" class="text-indigo-600 hover:text-indigo-500 underline">
               Children's Privacy Policy
-            </a>.
+            </a>
+            .
           </label>
         </div>
         <div *ngIf="shouldShowAgeError()" class="mt-1 text-sm text-red-600 dark:text-red-400">

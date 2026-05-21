@@ -123,7 +123,7 @@ describe('LandingComponent styles grid', () => {
     component.getStarted();
 
     expect(navigation.navigateTo).toHaveBeenCalledWith('/auth/register', {
-      queryParams: { returnUrl: '/app/dashboard' },
+      queryParams: { returnUrl: '/app/enhance' },
     });
     expect(navigation.goToDashboard).not.toHaveBeenCalled();
   });

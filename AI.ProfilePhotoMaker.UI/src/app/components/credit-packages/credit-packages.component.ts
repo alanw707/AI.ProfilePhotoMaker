@@ -30,6 +30,10 @@ import {
   PaymentMethodCreateParams,
 } from '@stripe/stripe-js';
 import { RouterModule } from '@angular/router';
+import {
+  OutcomePackageDefinition,
+  ProfileWorkflowService,
+} from '../../services/profile-workflow.service';
 
 interface BillingDetailsForm {
   name: string;
@@ -102,6 +106,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
 
   constructor(
     private _creditService: CreditService,
+    private _profileWorkflowService: ProfileWorkflowService,
     private _authService: AuthService,
     private _notificationService: NotificationService,
     private _themeService: ThemeService,
@@ -148,8 +153,8 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   loadPackages(): void {
     this.isLoadingPackages = true;
 
-    this._creditService.getCreditPackages().subscribe({
-      next: response => this._handlePackagesResponse(response),
+    this._profileWorkflowService.getOutcomePackages().subscribe({
+      next: response => this._handleOutcomePackagesResponse(response),
       error: error => this._handlePackagesError(error),
       complete: () => {
         this.isLoadingPackages = false;
@@ -158,17 +163,19 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     });
   }
 
-  private _handlePackagesResponse(response: {
+  private _handleOutcomePackagesResponse(response: {
     success?: boolean;
-    data?: unknown;
+    data?: OutcomePackageDefinition[];
     error?: unknown;
   }): void {
     if (response?.success) {
-      this.packages = Array.isArray(response.data) ? response.data : [];
+      this.packages = Array.isArray(response.data)
+        ? response.data.map(pkg => this._mapOutcomePackage(pkg))
+        : [];
       if (this.packages.length === 0) {
         this._notificationService.warning(
           'No Packages Available',
-          'No credit packages are currently available.'
+          'No profile photo packages are currently available.'
         );
       }
     } else {
@@ -176,9 +183,30 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       this.packages = [];
       this._notificationService.error(
         'Failed to Load Packages',
-        (response?.error as any)?.message || 'Unable to load credit packages.'
+        (response?.error as any)?.message || 'Unable to load profile photo packages.'
       );
     }
+  }
+
+  private _mapOutcomePackage(pkg: OutcomePackageDefinition): CreditPackage {
+    return {
+      id: pkg.internalCreditPackageId || 0,
+      name: pkg.name,
+      credits: 0,
+      bonusCredits: 0,
+      totalCredits: 0,
+      price: pkg.price,
+      description: pkg.description,
+      displayOrder: pkg.displayOrder,
+      outcomeCode: pkg.code,
+      internalCreditPackageId: pkg.internalCreditPackageId,
+      includedCandidateCount: pkg.includedCandidateCount,
+      includedRefinementCount: pkg.includedRefinementCount,
+      includedPremiumAugmentationCount: pkg.includedPremiumAugmentationCount,
+      includesPlatformExportKit: pkg.includesPlatformExportKit,
+      includesScoreDelta: pkg.includesScoreDelta,
+      highlights: pkg.highlights,
+    };
   }
 
   private _handlePackagesError(error: {
@@ -272,6 +300,14 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     this.isPurchasing = false;
     this.isAwaitingWebhookConfirmation = false;
     this._clearPendingPaymentWatch();
+
+    if (!pkg.internalCreditPackageId) {
+      this._notificationService.info(
+        'Free Preview',
+        'Create your profile photo score from the workspace to start for free.'
+      );
+      return;
+    }
 
     if (this._shouldUsePaymentSimulation()) {
       this.isPurchasing = true;

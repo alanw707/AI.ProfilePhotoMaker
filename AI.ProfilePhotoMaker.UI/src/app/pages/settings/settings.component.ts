@@ -7,12 +7,16 @@ import { HeaderNavigationComponent } from '../../shared/header-navigation/header
 import { ProfileService, UserProfile } from '../../services/profile.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { NotificationService } from '../../services/notification.service';
-import { DashboardCoordinatorService } from '../../services/dashboard-coordinator.service';
+import { WorkspaceStateService } from '../../services/workspace-state.service';
 import { CookieConsentService } from '../../services/cookie-consent.service';
 import { AccountInfoComponent } from '../../components/settings/account-info/account-info.component';
 import { CreditManagementComponent } from '../../components/settings/credit-management/credit-management.component';
 import { firstValueFrom, timeout, Subscription, TimeoutError } from 'rxjs';
 import { filter } from 'rxjs/operators';
+import {
+  ETHNICITY_OPTIONS_WITH_LEGACY_GENERIC_ASIAN,
+  normalizeEthnicityValue,
+} from '../../shared/constants/ethnicity-options';
 
 interface DataStats {
   inputPhotos: number;
@@ -41,6 +45,7 @@ type DeletionType = 'photos' | 'model' | 'all' | 'account';
 export class SettingsComponent implements OnInit, OnDestroy {
   // Constants
   readonly MAX_PHOTOS_LIMIT = 200;
+  readonly ethnicityOptions = ETHNICITY_OPTIONS_WITH_LEGACY_GENERIC_ASIAN;
 
   // User Info
   userProfile: UserProfile | null = null;
@@ -95,7 +100,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     private profileService: ProfileService,
     private fileUploadService: FileUploadService,
     private notificationService: NotificationService,
-    private dashboardStateService: DashboardCoordinatorService,
+    private workspaceStateService: WorkspaceStateService,
     private cookieConsentService: CookieConsentService,
     private cdr: ChangeDetectorRef
   ) {}
@@ -334,7 +339,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
           lastName,
         });
 
-        this.notificationService.success('Profile Updated', 'Your profile information has been saved.');
+        this.notificationService.success(
+          'Profile Updated',
+          'Your profile information has been saved.'
+        );
         this.showEditProfileModal = false;
       } else {
         throw new Error(response?.error?.message || 'Failed to update profile');
@@ -346,7 +354,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
           'Profile update is taking too long. Please try again.'
         );
       } else {
-        this.notificationService.error('Update Failed', 'Failed to update your profile. Please try again.');
+        this.notificationService.error(
+          'Update Failed',
+          'Failed to update your profile. Please try again.'
+        );
       }
       console.error('Profile update failed:', error);
     } finally {
@@ -394,58 +405,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   private mapEthnicityToSelectValue(value?: string): string {
-    const normalized = this.normalizeSelectValue(value);
-    if (!normalized) {
-      return '';
-    }
-
-    const lower = normalized.toLowerCase();
-    const compact = lower.replace(/[_\s]+/g, '-');
-
-    const allowed = [
-      'asian',
-      'black',
-      'hispanic',
-      'white',
-      'native-american',
-      'pacific-islander',
-      'mixed',
-      'other',
-      'prefer-not-to-say',
-    ];
-    if (allowed.includes(compact)) {
-      return compact;
-    }
-
-    if (lower.includes('prefer') && lower.includes('not') && lower.includes('say')) {
-      return 'prefer-not-to-say';
-    }
-    if (lower.includes('asian')) {
-      return 'asian';
-    }
-    if (lower.includes('black') || lower.includes('african')) {
-      return 'black';
-    }
-    if (lower.includes('hispanic') || lower.includes('latino')) {
-      return 'hispanic';
-    }
-    if (lower.includes('white') || lower.includes('caucasian')) {
-      return 'white';
-    }
-    if (lower.includes('native')) {
-      return 'native-american';
-    }
-    if (lower.includes('pacific')) {
-      return 'pacific-islander';
-    }
-    if (lower.includes('mixed') || lower.includes('multiracial')) {
-      return 'mixed';
-    }
-    if (lower === 'other') {
-      return 'other';
-    }
-
-    return '';
+    return normalizeEthnicityValue(value, true);
   }
 
   // Data Management Methods
@@ -713,8 +673,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   // Credit Management Methods
   loadCreditInfo() {
-    // Subscribe to dashboard state for credit information with proper cleanup
-    const subscription = this.dashboardStateService.state$.subscribe(state => {
+    // Subscribe to Photo Workspace state for credit information with proper cleanup
+    const subscription = this.workspaceStateService.state$.subscribe(state => {
       this.creditsInfo = state.creditsInfo;
       this.userCreditStatus = state.userCreditStatus;
     });
@@ -723,7 +683,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.subscriptions.push(subscription);
 
     // Load initial credit data
-    this.dashboardStateService.loadInitialDashboardData();
+    this.workspaceStateService.loadInitialWorkspaceData();
   }
 
   // Async versions for proper loading state management
@@ -780,13 +740,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
   async loadCreditInfoAsync(): Promise<void> {
     try {
       const statePromise = firstValueFrom(
-        this.dashboardStateService.state$.pipe(
+        this.workspaceStateService.state$.pipe(
           filter(state => !!state.userCreditStatus || !!state.creditsInfo),
           timeout({ first: 8000 })
         )
       );
 
-      await this.dashboardStateService.loadBasicDataForSettings();
+      await this.workspaceStateService.loadBasicDataForSettings();
 
       const state = await statePromise;
 

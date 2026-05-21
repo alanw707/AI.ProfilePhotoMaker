@@ -78,7 +78,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             {
                 Category = "Bug",
                 Message = "When I try to generate images, it fails intermittently.",
-                PageUrl = "https://example.test/app/dashboard",
+                PageUrl = "https://example.test/app/enhance",
                 UserAgent = "TestAgent/1.0",
             });
 

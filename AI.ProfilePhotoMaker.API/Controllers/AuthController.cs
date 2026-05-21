@@ -498,7 +498,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         [HttpGet("google-oauth-url")]
-        public IActionResult GetGoogleOAuthUrl(string returnUrl = "/app/dashboard")
+        public IActionResult GetGoogleOAuthUrl(string returnUrl = "/app/enhance")
         {
             var (clientId, _) = GetGoogleClientSettings();
             if (string.IsNullOrEmpty(clientId))
@@ -545,7 +545,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         [HttpGet("external-login/{provider}")]
-        public IActionResult ExternalLogin(string provider, string returnUrl = "/app/dashboard", bool ageConfirmed = false)
+        public IActionResult ExternalLogin(string provider, string returnUrl = "/app/enhance", bool ageConfirmed = false)
         {
             if (!ageConfirmed)
             {
@@ -1083,13 +1083,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(returnUrl))
             {
-                return "/app/dashboard";
+                return "/app/enhance";
             }
 
             // Prevent open-redirects and unexpected protocol/host injection.
             if (!Url.IsLocalUrl(returnUrl))
             {
-                return "/app/dashboard";
+                return "/app/enhance";
             }
 
             // Url.IsLocalUrl also allows "~/" which isn't useful for our SPA routing.
@@ -1098,7 +1098,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return "/" + returnUrl[2..];
             }
 
-            return returnUrl.StartsWith("/", StringComparison.Ordinal) ? returnUrl : "/app/dashboard";
+            return returnUrl.StartsWith("/", StringComparison.Ordinal) ? returnUrl : "/app/enhance";
         }
 
         private (string state, string nonce) CreateOAuthState(string returnUrl)
@@ -1119,7 +1119,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
         private bool TryReadOAuthState(string? state, out string returnUrl, out string nonce, out string errorCode)
         {
-            returnUrl = "/app/dashboard";
+            returnUrl = "/app/enhance";
             nonce = string.Empty;
             errorCode = "invalid_state";
 
@@ -1239,7 +1239,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
     public class OAuthStatePayload
     {
-        public string ReturnUrl { get; set; } = "/app/dashboard";
+        public string ReturnUrl { get; set; } = "/app/enhance";
         public long IssuedAtUtc { get; set; }
         public long ExpiresAtUtc { get; set; }
         public string Nonce { get; set; } = string.Empty;

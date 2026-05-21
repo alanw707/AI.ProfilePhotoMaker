@@ -11,7 +11,7 @@ test.describe('Authentication Profile Completion Flow', () => {
       firstName: 'Test',
       lastName: 'User',
       gender: 'Male',
-      ethnicity: 'Asian'
+      ethnicity: 'South Asian'
     }
   };
 
@@ -43,8 +43,8 @@ test.describe('Authentication Profile Completion Flow', () => {
     // Submit registration
     await page.click('[data-testid="submit"], button[type="submit"], .submit-button');
 
-    // Should redirect to dashboard without profile completion step
-    await expect(page).toHaveURL(/\/app\/dashboard/, { timeout: 10000 });
+    // Should redirect to Photo Workspace without profile completion step
+    await expect(page).toHaveURL(/\/app\/app/enhance/, { timeout: 10000 });
     
     console.log('✅ Email registration completed successfully with full profile data');
   });
@@ -83,7 +83,7 @@ test.describe('Authentication Profile Completion Flow', () => {
     });
 
     // Try to access dashboard directly (simulating OAuth callback)
-    await page.goto(`${testConfig.frontendUrl}/app/dashboard`);
+    await page.goto(`${testConfig.frontendUrl}/app/enhance`);
     
     // Should redirect to profile completion page
     await expect(page).toHaveURL(/\/auth\/complete-profile/, { timeout: 10000 });
@@ -158,8 +158,8 @@ test.describe('Authentication Profile Completion Flow', () => {
     // Submit profile completion
     await page.click('button[type="submit"]');
     
-    // Should redirect to dashboard after completion
-    await expect(page).toHaveURL(/\/app\/dashboard/, { timeout: 10000 });
+    // Should redirect to Photo Workspace after completion
+    await expect(page).toHaveURL(/\/app\/app/enhance/, { timeout: 10000 });
     
     console.log('✅ Profile completion form submitted successfully');
   });
@@ -222,10 +222,10 @@ test.describe('Authentication Profile Completion Flow', () => {
     });
 
     // Try to access dashboard
-    await page.goto(`${testConfig.frontendUrl}/app/dashboard`);
+    await page.goto(`${testConfig.frontendUrl}/app/enhance`);
     
     // Should NOT redirect to profile completion
-    await expect(page).toHaveURL(/\/app\/dashboard/);
+    await expect(page).toHaveURL(/\/app\/app/enhance/);
     await expect(page).not.toHaveURL(/\/auth\/complete-profile/);
     
     // Try accessing other protected routes
@@ -282,7 +282,7 @@ test.describe('Authentication Profile Completion Flow', () => {
     });
 
     // Step 1: OAuth user tries to access dashboard
-    await page.goto(`${testConfig.frontendUrl}/app/dashboard`);
+    await page.goto(`${testConfig.frontendUrl}/app/enhance`);
     
     // Step 2: Should redirect to profile completion
     await expect(page).toHaveURL(/\/auth\/complete-profile/, { timeout: 10000 });
@@ -292,8 +292,8 @@ test.describe('Authentication Profile Completion Flow', () => {
     await page.selectOption('#ethnicity', 'Hispanic or Latino');
     await page.click('button[type="submit"]');
     
-    // Step 4: Should redirect to dashboard after completion
-    await expect(page).toHaveURL(/\/app\/dashboard/, { timeout: 10000 });
+    // Step 4: Should redirect to Photo Workspace after completion
+    await expect(page).toHaveURL(/\/app\/app/enhance/, { timeout: 10000 });
     
     // Step 5: Subsequent access should work without profile completion
     await page.goto(`${testConfig.frontendUrl}/app/gallery`);

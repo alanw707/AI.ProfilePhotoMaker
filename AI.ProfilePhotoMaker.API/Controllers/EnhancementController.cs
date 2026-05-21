@@ -15,7 +15,7 @@ using System.Security.Claims;
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
 /// <summary>
-/// Controller for OpenAI DALL-E 3 photo enhancement
+/// Controller for OpenAI GPT Image photo enhancement
 /// </summary>
 [Route("api/[controller]")]
 [ApiController]
@@ -26,10 +26,13 @@ public class EnhancementController : ControllerBase
     private readonly IBasicTierService _basicTierService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _dbContext;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<EnhancementController> _logger;
     private readonly IWebHostEnvironment _environment;
     private readonly HttpClient _httpClient;
     private readonly IStorageService _storageService;
+    private readonly IOutcomePackageService? _outcomePackageService;
+    private readonly StoragePathResolver _pathResolver;
     private readonly ITurnstileVerificationService _turnstile;
 
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
@@ -45,16 +48,21 @@ public class EnhancementController : ControllerBase
         IWebHostEnvironment environment,
         HttpClient httpClient,
         IStorageService storageService,
-        ITurnstileVerificationService turnstile)
+        StoragePathResolver pathResolver,
+        ITurnstileVerificationService turnstile,
+        IOutcomePackageService? outcomePackageService = null)
     {
         _openAIService = openAIService;
         _basicTierService = basicTierService;
         _userManager = userManager;
         _dbContext = dbContext;
+        _configuration = configuration;
         _logger = logger;
         _environment = environment;
         _httpClient = httpClient;
         _storageService = storageService;
+        _outcomePackageService = outcomePackageService;
+        _pathResolver = pathResolver;
         _turnstile = turnstile;
 
         // Configure HttpClient for OpenAI API health checks
@@ -126,10 +134,11 @@ public class EnhancementController : ControllerBase
     }
 
     /// <summary>
-    /// Enhances a user's uploaded photo using OpenAI DALL-E 3
-    /// Provides creative anime-style and 3D transformations
+    /// Enhances a user's uploaded photo using OpenAI GPT Image.
+    /// Provides professional cleanup and creative transformations.
     /// </summary>
     [HttpPost("enhance")]
+    [Route("~/api/replicate/enhance")]
     public async Task<IActionResult> EnhancePhoto([FromBody] EnhancePhotoRequestDto dto)
     {
         CreditConsumptionResult? creditConsumptionResult = null;
@@ -182,6 +191,12 @@ public class EnhancementController : ControllerBase
 
         try
         {
+            var validationError = ValidateEnhancementRequestForUser(dto, userId);
+            if (validationError != null)
+            {
+                return validationError;
+            }
+
             var turnstileOk = await _turnstile.VerifyAsync(dto.TurnstileToken, HttpContext?.Connection?.RemoteIpAddress?.ToString());
             if (!turnstileOk)
             {
@@ -198,9 +213,41 @@ public class EnhancementController : ControllerBase
 
             _logger.LogInformation("Starting OpenAI photo enhancement for user {UserId} with style {EnhancementType}", Sid(userId), S(dto.EnhancementType));
 
-            // Normalize image URL so the API can fetch it in all dev setups
-            dto.ImageUrl = await NormalizeImageUrlForServerAccessAsync(dto.ImageUrl);
-            _logger.LogInformation("Enhancement source image URL normalized to: {ImageUrl}", S(dto.ImageUrl));
+            var isPremiumAugmentation = IsPremiumAugmentation(dto.EnhancementType);
+            var isProfessionalRefinement = IsProfessionalRefinement(dto.EnhancementType);
+            if (isPremiumAugmentation && _outcomePackageService != null && !await HasPremiumAugmentationAllowanceAsync(userId))
+            {
+                return StatusCode(402, new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "PremiumAugmentationEntitlementRequired",
+                        message = "Unlock a Pro Package or add-on before applying premium augmentations."
+                    }
+                });
+            }
+
+            if (isProfessionalRefinement && _outcomePackageService != null && !await HasRefinementAllowanceAsync(userId))
+            {
+                return StatusCode(402, new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "RefinementEntitlementRequired",
+                        message = "Unlock a Starter or Pro Package before applying guided refinements."
+                    }
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.ImageStoragePath) && !string.IsNullOrWhiteSpace(dto.ImageUrl))
+            {
+                // Legacy fallback only. New enhancement uploads use ImageStoragePath so the server
+                // reads directly from storage instead of re-downloading through public/proxy URLs.
+                dto.ImageUrl = await NormalizeImageUrlForServerAccessAsync(dto.ImageUrl);
+                _logger.LogInformation("Enhancement source image URL normalized to: {ImageUrl}", S(dto.ImageUrl));
+            }
 
             // Check credit availability (enhancement costs 1 credit)
             var requiredCredits = CreditCostConfig.GetCreditCost("photo_enhancement");
@@ -259,7 +306,19 @@ public class EnhancementController : ControllerBase
 
             // Call OpenAI service to get base64 image data
             var base64ImageData = await _openAIService.EnhancePhotoQualityAsync(dto);
+            if (isPremiumAugmentation && _outcomePackageService != null && !await _outcomePackageService.ConsumePremiumAugmentationAsync(userId, HttpContext?.RequestAborted ?? CancellationToken.None))
+            {
+                await HandleEnhancementRefundAsync(userId, creditConsumptionResult, "premium augmentation entitlement race", "Premium augmentation allowance was no longer available after generation.");
+                return StatusCode(409, new { success = false, error = new { code = "PremiumAugmentationEntitlementUnavailable", message = "Premium augmentation allowance was already used. Your credit was refunded." } });
+            }
 
+            if (isProfessionalRefinement && _outcomePackageService != null && !await _outcomePackageService.ConsumeRefinementAsync(userId, HttpContext?.RequestAborted ?? CancellationToken.None))
+            {
+                await HandleEnhancementRefundAsync(userId, creditConsumptionResult, "refinement entitlement race", "Refinement allowance was no longer available after generation.");
+                return StatusCode(409, new { success = false, error = new { code = "RefinementEntitlementUnavailable", message = "Refinement allowance was already used. Your credit was refunded." } });
+            }
+
+            var storedResult = await SaveEnhancementResultAsync(base64ImageData, dto, userId, HttpContext?.RequestAborted ?? CancellationToken.None);
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
             _logger.LogInformation("OpenAI photo enhancement completed successfully for user {UserId}", Sid(userId));
@@ -280,7 +339,9 @@ public class EnhancementController : ControllerBase
                     dataUrl = base64ImageData, // Frontend expects this field name and base64 format
                     creditsRemaining = remainingCredits,
                     enhancementType = dto.EnhancementType ?? "professional",
-                    provider = "OpenAI"
+                    provider = "OpenAI",
+                    processedImageId = storedResult.ProcessedImageId,
+                    storagePath = storedResult.StoragePath
                 },
                 error = (object?)null
             });
@@ -399,6 +460,144 @@ public class EnhancementController : ControllerBase
                 }
             });
         }
+    }
+
+    private async Task<bool> HasPremiumAugmentationAllowanceAsync(string userId)
+    {
+        if (_outcomePackageService == null) return true;
+        var entitlements = await _outcomePackageService.GetUserEntitlementsAsync(userId, HttpContext?.RequestAborted ?? CancellationToken.None);
+        return entitlements.Any(e => string.Equals(e.Status, "Active", StringComparison.OrdinalIgnoreCase) && e.RemainingPremiumAugmentations > 0);
+    }
+
+    private async Task<bool> HasRefinementAllowanceAsync(string userId)
+    {
+        if (_outcomePackageService == null) return true;
+        var entitlements = await _outcomePackageService.GetUserEntitlementsAsync(userId, HttpContext?.RequestAborted ?? CancellationToken.None);
+        return entitlements.Any(e => string.Equals(e.Status, "Active", StringComparison.OrdinalIgnoreCase) && e.RemainingRefinements > 0);
+    }
+
+    private async Task<(int ProcessedImageId, string StoragePath)> SaveEnhancementResultAsync(string dataUrl, EnhancePhotoRequestDto dto, string userId, CancellationToken cancellationToken)
+    {
+        var bytes = DecodeImageDataUrl(dataUrl);
+        var fileName = $"enhancement-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}.png";
+        await using var stream = new MemoryStream(bytes);
+        var storedPath = await _storageService.SaveImageAsync(stream, fileName, userId, "enhanced");
+        var profile = await _dbContext.UserProfiles.SingleAsync(p => p.UserId == userId, cancellationToken);
+        var processedImage = new ProcessedImage
+        {
+            OriginalImageUrl = dto.ImageStoragePath ?? dto.ImageUrl ?? string.Empty,
+            ProcessedImageUrl = storedPath,
+            Style = dto.EnhancementType ?? "professional",
+            UserProfileId = profile.Id,
+            CreatedAt = DateTime.UtcNow,
+            IsGenerated = true,
+            IsOriginalUpload = false,
+            Provider = "OpenAI",
+            ProviderModel = _configuration["OpenAI:ImageModel"] ?? "gpt-image-2",
+            GenerationMode = IsPremiumAugmentation(dto.EnhancementType) ? "premium_augmentation" : "photo_refinement",
+            PromptVersion = "enhancement-v1",
+            CreditCost = CreditCostConfig.GetCreditCost("photo_enhancement"),
+            GenerationStatus = "succeeded",
+            CorrelationId = $"photo_enhancement:{Guid.NewGuid()}"
+        };
+        processedImage.SetScheduledDeletionDate();
+        _dbContext.ProcessedImages.Add(processedImage);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return (processedImage.Id, storedPath);
+    }
+
+    private static byte[] DecodeImageDataUrl(string dataUrl)
+    {
+        var commaIndex = dataUrl.IndexOf(',');
+        var payload = commaIndex >= 0 ? dataUrl[(commaIndex + 1)..] : dataUrl;
+        return Convert.FromBase64String(payload);
+    }
+
+    private static bool IsPremiumAugmentation(string? enhancementType)
+    {
+        var normalized = (enhancementType ?? string.Empty).Trim().ToLowerInvariant();
+        return normalized is "relighting" or "professional_polish" or "outfit_upgrade" or "background_upgrade";
+    }
+
+    private static bool IsProfessionalRefinement(string? enhancementType)
+    {
+        var normalized = (enhancementType ?? string.Empty).Trim().ToLowerInvariant();
+        return normalized is "headshot_linkedin" or "headshot_creator" or "headshot_office" or "headshot_studio";
+    }
+
+    private IActionResult? ValidateEnhancementRequestForUser(EnhancePhotoRequestDto dto, string userId)
+    {
+        var enhancementType = dto.EnhancementType ?? "professional";
+        if (string.Equals(enhancementType, "headshot", StringComparison.OrdinalIgnoreCase) &&
+            !IsOpenAIHeadshotMvpEnabled())
+        {
+            return BadRequest(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "FeatureDisabled",
+                    message = "Headshot enhancement is not enabled."
+                }
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.ImageStoragePath))
+        {
+            return null;
+        }
+
+        var storagePath = dto.ImageStoragePath.Trim();
+        string decodedPath;
+        try
+        {
+            decodedPath = Uri.UnescapeDataString(storagePath);
+        }
+        catch
+        {
+            return InvalidStoragePathResponse();
+        }
+
+        if (!string.Equals(storagePath, decodedPath, StringComparison.Ordinal) ||
+            Uri.TryCreate(storagePath, UriKind.Absolute, out _) ||
+            storagePath.Contains('\\') ||
+            storagePath.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(p => p == "." || p == ".."))
+        {
+            return InvalidStoragePathResponse();
+        }
+
+        var expectedPrefix = _pathResolver.GetDirectoryPrefix(StorageType.Enhanced, userId);
+        if (!storagePath.StartsWith(expectedPrefix, StringComparison.Ordinal) ||
+            storagePath.Length <= expectedPrefix.Length)
+        {
+            _logger.LogWarning(
+                "Rejected enhancement storage path for user {UserId}. Path={StoragePath}, ExpectedPrefix={ExpectedPrefix}",
+                Sid(userId),
+                S(storagePath),
+                S(expectedPrefix));
+            return InvalidStoragePathResponse();
+        }
+
+        return null;
+    }
+
+    private bool IsOpenAIHeadshotMvpEnabled()
+    {
+        var configured = _configuration.GetValue<bool?>("Features:OpenAIHeadshotMvp");
+        return configured ?? !_environment.IsProduction();
+    }
+
+    private IActionResult InvalidStoragePathResponse()
+    {
+        return BadRequest(new
+        {
+            success = false,
+            error = new
+            {
+                code = "InvalidStoragePath",
+                message = "Invalid enhancement image source."
+            }
+        });
     }
 
     /// <summary>

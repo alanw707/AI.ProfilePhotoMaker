@@ -111,7 +111,7 @@ export class LoginComponent implements OnInit {
   }
 
   private _setReturnUrlFromParams(params: Record<string, string>): void {
-    this.returnUrl = params['returnUrl'] || '/app/dashboard';
+    this.returnUrl = params['returnUrl'] || '/app/enhance';
   }
 
   private _handleDirectTokenParams(params: Record<string, string>): boolean {

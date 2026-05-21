@@ -172,8 +172,8 @@ async function login(page) {
     console.warn('Dev confirm email failed:', confirmResponse.status());
   }
 
-  await page.goto(buildAppUrl('/app/dashboard'));
-  await expect(page.locator('.dashboard-container')).toBeVisible({ timeout: 15000 });
+  await page.goto(buildAppUrl('/app/enhance'));
+  await expect(page.locator('.gallery-page-container')).toBeVisible({ timeout: 15000 });
 }
 
 test.describe('UI navigation smoke - public', () => {
@@ -304,10 +304,10 @@ test.describe('UI navigation smoke - authenticated', () => {
     await expect(page.getByRole('heading', { name: /support/i })).toBeVisible({ timeout: 15000 });
 
     await Promise.all([
-      page.waitForURL('**/app/dashboard', { timeout: 15000 }),
+      page.waitForURL('**/app/enhance', { timeout: 15000 }),
       page.getByRole('link', { name: /headshot studio/i }).click(),
     ]);
-    await expect(page.locator('.dashboard-container')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.gallery-page-container')).toBeVisible({ timeout: 15000 });
   });
 
   test('enhancement CTAs route authenticated users to enhance', async ({ page }) => {

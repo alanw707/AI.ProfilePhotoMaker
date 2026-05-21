@@ -22,7 +22,7 @@ We collect the following categories of information:
 
 ## 3. How We Use Information
 We use your information to:
-- Provide the service (upload, training, generation, enhancement, and delivery of results).
+- Provide the service (upload, instant headshot generation, optional training, generation, enhancement, and delivery of results).
 - Authenticate users and secure accounts.
 - Process payments and manage credits.
 - Maintain service reliability, security, and fraud prevention.
@@ -41,7 +41,7 @@ We process user photos to create AI-generated profile images. In some jurisdicti
 
 ## 6. Sharing and Third Parties
 We share data with service providers that help us run the service, including:
-- AI model providers (Replicate; OpenAI for select enhancements).
+- AI model providers (OpenAI for instant headshot generation and select enhancements; Replicate for optional/advanced custom model training and styled generation).
 - Payment processor (Stripe).
 - OAuth provider (Google, if you sign in with Google).
 - Hosting and storage providers (local storage or cloud storage, if configured).

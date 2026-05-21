@@ -151,7 +151,7 @@ export class MarketingHeaderComponent implements OnInit, OnDestroy {
   }
 
   navigateToDashboard(): void {
-    void this.router.navigate(['/app/dashboard']);
+    void this.router.navigate(['/app/enhance']);
     this.closeAllMenus();
   }
 

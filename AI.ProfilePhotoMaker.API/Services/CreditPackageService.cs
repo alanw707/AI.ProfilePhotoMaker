@@ -15,6 +15,7 @@ public class CreditPackageService : ICreditPackageService
     private readonly ApplicationDbContext _context;
     private readonly IBasicTierService _basicTierService;
     private readonly ILogger<CreditPackageService> _logger;
+    private readonly IOutcomePackageService? _outcomePackageService;
     private readonly StripeOptions _stripeOptions;
     private readonly PaymentSimulationOptions _simulationOptions;
     private readonly StripeClient? _stripeClient;
@@ -25,11 +26,13 @@ public class CreditPackageService : ICreditPackageService
         ILogger<CreditPackageService> logger,
         IOptions<StripeOptions> stripeOptions,
         IOptions<PaymentSimulationOptions> paymentSimulationOptions,
-        StripeClient? stripeClient = null)
+        StripeClient? stripeClient = null,
+        IOutcomePackageService? outcomePackageService = null)
     {
         _context = context;
         _basicTierService = basicTierService;
         _logger = logger;
+        _outcomePackageService = outcomePackageService;
         _stripeOptions = stripeOptions.Value;
         _simulationOptions = paymentSimulationOptions.Value;
         _stripeClient = stripeClient;
@@ -236,6 +239,14 @@ public class CreditPackageService : ICreditPackageService
         }
 
         await _context.SaveChangesAsync();
+
+        if (creditsAdded)
+        {
+            if (_outcomePackageService != null)
+            {
+                await _outcomePackageService.GrantEntitlementForCreditPackageAsync(userId, package.Id, paymentTransactionId);
+            }
+        }
 
         purchase.Package = package;
         return purchase;

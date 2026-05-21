@@ -13,12 +13,13 @@ export const routes: Routes = [
     path: '',
     loadComponent: () => import('./pages/landing/landing.component').then(m => m.LandingComponent),
     pathMatch: 'full',
-    title: 'AI Profile Photo Maker - Professional Headshots with AI',
+    title: 'AI Profile Photo Maker - Score, Improve, and Export Your Best Profile Photo',
     data: {
       meta: {
         description:
-          'Transform your casual photos into professional headshots with AI. Perfect for LinkedIn, dating apps, and social media.',
-        keywords: 'AI profile photo, professional headshot, LinkedIn photo, AI photo enhancement',
+          'Score, improve, and export a LinkedIn-ready professional profile photo from one upload.',
+        keywords:
+          'AI profile photo score, professional headshot package, LinkedIn photo export, profile photo workflow',
       },
     },
   },
@@ -101,18 +102,8 @@ export const routes: Routes = [
     children: [
       {
         path: '',
-        redirectTo: 'dashboard',
+        redirectTo: 'enhance',
         pathMatch: 'full',
-      },
-      {
-        path: 'dashboard',
-        loadComponent: () =>
-          import('./dashboard/dashboard.component').then(m => m.DashboardComponent),
-        title: 'Dashboard - AI Profile Photo Maker',
-        data: {
-          breadcrumb: 'Dashboard',
-          hideNavigation: false,
-        },
       },
       {
         path: 'enhance',
@@ -120,9 +111,9 @@ export const routes: Routes = [
           import('./components/photo-enhancement/photo-enhancement.component').then(
             m => m.PhotoEnhancementComponent
           ),
-        title: 'Enhance Photos - AI Profile Photo Maker',
+        title: 'Photo Workspace - AI Profile Photo Maker',
         data: {
-          breadcrumb: 'Enhance Photos',
+          breadcrumb: 'Photo Workspace',
           hideNavigation: false,
         },
       },
@@ -130,9 +121,9 @@ export const routes: Routes = [
         path: 'gallery',
         loadComponent: () =>
           import('./pages/gallery/gallery.component').then(m => m.GalleryComponent),
-        title: 'Photo Gallery - AI Profile Photo Maker',
+        title: 'Photo Workspace Gallery - AI Profile Photo Maker',
         data: {
-          breadcrumb: 'Gallery',
+          breadcrumb: 'Photo Workspace',
           hideNavigation: false,
         },
       },
@@ -169,11 +160,10 @@ export const routes: Routes = [
         queryParams.forEach((value, key) => {
           params[key] = value;
         });
-        return router.navigate(['/app/dashboard'], { queryParams: params });
+        return router.navigate(['/app/enhance'], { queryParams: params });
       },
     ],
     pathMatch: 'full',
-    loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent),
   },
   {
     path: 'enhance',

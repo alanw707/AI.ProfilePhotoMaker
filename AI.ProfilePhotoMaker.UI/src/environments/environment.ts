@@ -13,6 +13,13 @@ export const environment = {
     cors: true,
     enableImageValidation: true, // Enable validation to test auto-repair
     enableReplicateCredits: false, // Disable Replicate API when TestController is disabled
+    openAIHeadshotMvp: true,
+    profilePhotoWorkflowOverhaul: true,
+    outcomePackagesVisible: true,
+    profilePhotoScoreVisible: true,
+    creativeStylePackVisible: true,
+    premiumAugmentationsVisible: true,
+    replicateTrainingFlowVisible: true,
 
     // Granular Logging Controls (Development - Reduced Noise)
     logging: {

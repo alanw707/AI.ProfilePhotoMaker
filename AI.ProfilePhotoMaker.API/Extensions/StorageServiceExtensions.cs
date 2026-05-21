@@ -15,9 +15,16 @@ public static class StorageServiceExtensions
     /// </summary>
     public static IServiceCollection AddStorageServices(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
-        // Register Storage Services - choose between Local or Azure Blob Storage
+        // Register Storage Services - choose between Local or Azure Blob Storage.
+        // Local development should default to local filesystem even when .env contains
+        // Azure credentials for other scripts; otherwise generated-image proxy URLs can
+        // point at localhost while blobs are written to production storage.
         var azureStorageConnectionString = configuration.GetConnectionString("AzureStorage") ?? configuration["AzureStorage:ConnectionString"];
-        if (!string.IsNullOrEmpty(azureStorageConnectionString))
+        var useAzureBlobInDevelopment = configuration.GetValue("Storage:UseAzureBlobInDevelopment", false);
+        var shouldUseAzureBlob = !string.IsNullOrEmpty(azureStorageConnectionString)
+            && (!environment.IsDevelopment() || useAzureBlobInDevelopment);
+
+        if (shouldUseAzureBlob)
         {
             services.AddSingleton<BlobServiceClient>(_ => new BlobServiceClient(azureStorageConnectionString));
             services.AddScoped<IStorageService, AzureBlobStorageService>();

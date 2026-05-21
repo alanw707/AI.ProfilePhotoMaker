@@ -79,7 +79,7 @@ export const seoPagesPart3: Record<string, SeoPageContent> = {
     ],
     cta: {
       title: 'Ready for a professional nursing headshot?',
-      description: 'Upload your selfies and get directory-ready headshots in minutes.',
+      description: 'Upload one clear photo and get a directory-ready headshot instantly.',
       label: 'Create My Nurse Headshot',
       href: '/pricing',
     },

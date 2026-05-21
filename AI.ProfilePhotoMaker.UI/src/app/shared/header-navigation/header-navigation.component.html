@@ -67,7 +67,7 @@
         Packages
       </a>
       <a
-        routerLink="/app/dashboard"
+        routerLink="/app/enhance"
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
         class="nav-link"
@@ -78,14 +78,7 @@
           <rect x="13" y="12" width="8" height="9" stroke="currentColor" stroke-width="2" />
           <rect x="3" y="16" width="7" height="5" stroke="currentColor" stroke-width="2" />
         </svg>
-        Headshot Studio
-      </a>
-      <a routerLink="/app/enhance" routerLinkActive="active" class="nav-link" (click)="closeMobileMenu()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
-          <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2" />
-        </svg>
-        Photo Transform
+        Photo Workspace
       </a>
       <a routerLink="/app/gallery" routerLinkActive="active" class="nav-link" (click)="closeMobileMenu()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -93,7 +86,7 @@
           <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2" />
           <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" />
         </svg>
-        Gallery
+        My Photos
       </a>
       <a
         *ngIf="isAuthenticated"

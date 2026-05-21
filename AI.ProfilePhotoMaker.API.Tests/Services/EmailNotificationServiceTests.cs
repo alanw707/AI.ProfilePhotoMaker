@@ -15,6 +15,8 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services;
 
 public class EmailNotificationServiceTests
 {
+    private static readonly string TestPostmarkServerToken = new('P', 32);
+
     [Fact]
     public async Task SendWelcomeAsync_UsesPostmarkApiWithTextBody()
     {
@@ -24,7 +26,7 @@ public class EmailNotificationServiceTests
         {
             Enabled = true,
             UseApi = true,
-            PostmarkServerToken = "test-token",
+            PostmarkServerToken = TestPostmarkServerToken,
             PostmarkMessageStream = "outbound",
             FromEmail = "no-reply@aiprofilephotomaker.com",
             FromName = "AI Profile Photo Maker",
@@ -55,7 +57,7 @@ public class EmailNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendWelcomeAsync_SkipsPostmarkWhenTokenIsPlaceholder()
+    public async Task SendWelcomeAsync_SkipsPostmarkWhenTokenIsMissing()
     {
         var handler = new CapturingHandler();
         var httpClient = new HttpClient(handler);
@@ -63,7 +65,7 @@ public class EmailNotificationServiceTests
         {
             Enabled = true,
             UseApi = true,
-            PostmarkServerToken = "REPLACE_WITH_POSTMARK_SERVER_TOKEN",
+            PostmarkServerToken = string.Empty,
             FromEmail = "no-reply@aiprofilephotomaker.com",
             FromName = "AI Profile Photo Maker",
             FrontendBaseUrl = "https://aiprofilephotomaker.com",
@@ -87,7 +89,7 @@ public class EmailNotificationServiceTests
         {
             Enabled = true,
             UseApi = true,
-            PostmarkServerToken = "test-token",
+            PostmarkServerToken = TestPostmarkServerToken,
             PostmarkMessageStream = "outbound",
             FromEmail = "no-reply@aiprofilephotomaker.com",
             FromName = "AI Profile Photo Maker",
@@ -117,7 +119,7 @@ public class EmailNotificationServiceTests
         {
             Enabled = true,
             UseApi = true,
-            PostmarkServerToken = "test-token",
+            PostmarkServerToken = TestPostmarkServerToken,
             PostmarkMessageStream = "outbound",
             FromEmail = "no-reply@aiprofilephotomaker.com",
             FromName = "AI Profile Photo Maker",
@@ -147,7 +149,7 @@ public class EmailNotificationServiceTests
         {
             Enabled = true,
             UseApi = true,
-            PostmarkServerToken = "test-token",
+            PostmarkServerToken = TestPostmarkServerToken,
             FromEmail = "no-reply@aiprofilephotomaker.com",
             FromName = "AI Profile Photo Maker",
             FrontendBaseUrl = "https://aiprofilephotomaker.com",
@@ -177,7 +179,7 @@ public class EmailNotificationServiceTests
         {
             Enabled = true,
             UseApi = true,
-            PostmarkServerToken = "test-token",
+            PostmarkServerToken = TestPostmarkServerToken,
             FromEmail = "no-reply@aiprofilephotomaker.com",
             FromName = "AI Profile Photo Maker",
             FrontendBaseUrl = "https://aiprofilephotomaker.com",

@@ -234,6 +234,11 @@ public class CreditController : BaseController
                 Cost = CreditCostConfig.PhotoEnhancement,
                 Description = "Enhance photos using AI professional editing"
             },
+            InstantHeadshotGeneration = new
+            {
+                Cost = CreditCostConfig.InstantHeadshotGeneration,
+                Description = "Generate an instant professional headshot from one uploaded photo"
+            },
             ModelTraining = new
             {
                 Cost = CreditCostConfig.ModelTraining,

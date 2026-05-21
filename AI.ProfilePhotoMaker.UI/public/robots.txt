@@ -7,7 +7,6 @@ Disallow: /api/
 Disallow: /app/
 Disallow: /auth/
 Disallow: /admin/
-Disallow: /dashboard/
 Disallow: /enhance/
 Disallow: /gallery/
 Disallow: /settings/
@@ -31,7 +30,6 @@ Disallow: /api/
 Disallow: /app/
 Disallow: /auth/
 Disallow: /admin/
-Disallow: /dashboard/
 
 User-agent: Google-Extended
 Allow: /
@@ -54,7 +52,6 @@ Disallow: /api/
 Disallow: /app/
 Disallow: /auth/
 Disallow: /admin/
-Disallow: /dashboard/
 
 User-agent: apple-ml-research
 Allow: /
@@ -62,7 +59,6 @@ Disallow: /api/
 Disallow: /app/
 Disallow: /auth/
 Disallow: /admin/
-Disallow: /dashboard/
 
 User-agent: Bytespider
 Disallow: /

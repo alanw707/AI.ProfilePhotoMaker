@@ -4,7 +4,7 @@
       "url": [
         "http://localhost:4200",
         "http://localhost:4200/auth/login", 
-        "http://localhost:4200/dashboard"
+        "http://localhost:4200/app/enhance"
       ],
       "startServerCommand": "npm start",
       "startServerReadyPattern": "Local:",

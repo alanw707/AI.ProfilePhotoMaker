@@ -489,7 +489,7 @@ public class RetentionPolicyBackgroundServiceTests
             return Task.CompletedTask;
         }
 
-        public Task SendAbandonedUploadNudgeAsync(string userId, string? email, string? firstName = null) => Task.CompletedTask;
+        public Task SendAbandonedUploadNudgeAsync(string userId, string? email, string? firstName = null, int uploadedCount = 0, int minimumRequiredUploads = 5) => Task.CompletedTask;
         public Task<EmailSendResult> SendMarketingEmailAsync(string userId, string email, string subject, string htmlBody, string unsubscribeUrl) => Task.FromResult(new EmailSendResult(true));
         public string RenderMarketingEmailPreview(string subject, string htmlBody) => htmlBody;
     }

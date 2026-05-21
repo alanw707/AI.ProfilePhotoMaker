@@ -17,7 +17,7 @@ export interface FilterControls {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GalleryFilterControlsComponent {
-  @Input() title = 'Photo Gallery';
+  @Input() title = 'Photo Workspace';
   @Input() filterType = 'generated';
   @Input() viewMode: 'grid' | 'list' = 'grid';
   @Input() pageSize = 12;

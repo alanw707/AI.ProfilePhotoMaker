@@ -109,19 +109,14 @@
             class="form-control"
             [class.is-invalid]="f['ethnicity'].invalid && f['ethnicity'].touched">
             <option value="">Select Ethnicity</option>
-            <option value="asian">Asian</option>
-            <option value="black">Black/African American</option>
-            <option value="hispanic">Hispanic/Latino</option>
-            <option value="white">White/Caucasian</option>
-            <option value="native-american">Native American</option>
-            <option value="pacific-islander">Pacific Islander</option>
-            <option value="mixed">Mixed/Multiracial</option>
-            <option value="other">Other</option>
-            <option value="prefer-not-to-say">Prefer not to say</option>
+            <option *ngFor="let option of ethnicityOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
           </select>
           <div *ngIf="shouldShowEthnicityError()" class="invalid-feedback">
             <div *ngIf="f['ethnicity'].errors?.['required']">Ethnicity is required</div>
           </div>
+          <small class="form-text text-muted">Self-identified. We do not infer this from your photos.</small>
         </div>
       </div>
 

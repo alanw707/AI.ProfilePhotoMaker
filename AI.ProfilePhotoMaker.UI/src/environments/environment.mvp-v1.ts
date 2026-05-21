@@ -13,6 +13,13 @@ export const environment = {
     cors: true,
     enableImageValidation: true,
     enableReplicateCredits: true,
+    openAIHeadshotMvp: false,
+    profilePhotoWorkflowOverhaul: false,
+    outcomePackagesVisible: false,
+    profilePhotoScoreVisible: false,
+    creativeStylePackVisible: true,
+    premiumAugmentationsVisible: false,
+    replicateTrainingFlowVisible: true,
 
     // Granular Logging Controls (Production - Minimal Noise)
     logging: {

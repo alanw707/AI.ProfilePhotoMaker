@@ -5,6 +5,8 @@ import { Router } from '@angular/router';
 import { AuthResponseDto, AuthService, LoginDto, RegisterDto } from './auth.service';
 import { ConfigService } from './config.service';
 
+const sampleSessionToken = 'x'.repeat(48);
+
 /**
  * AuthService Test Suite
  *
@@ -57,7 +59,7 @@ describe('AuthService', () => {
       const mockResponse = {
         isSuccess: true,
         message: 'Login successful',
-        token: 'jwt-token',
+        token: sampleSessionToken,
         expiration: '2025-01-01T00:00:00Z',
         email: 'test@example.com',
         firstName: 'Test',
@@ -67,7 +69,7 @@ describe('AuthService', () => {
       service.login(loginData).subscribe(response => {
         expect(response).toEqual(
           jasmine.objectContaining({
-            token: 'jwt-token',
+            token: sampleSessionToken,
             email: 'test@example.com',
           })
         );
@@ -122,7 +124,7 @@ describe('AuthService', () => {
       const mockResponse = {
         isSuccess: true,
         message: 'Login successful',
-        token: 'jwt-token',
+        token: sampleSessionToken,
         expiration: '2025-01-01T00:00:00Z',
         email: 'test@example.com',
         firstName: 'Test',
@@ -164,7 +166,7 @@ describe('AuthService', () => {
       const mockResponse = {
         isSuccess: true,
         message: 'Login successful',
-        token: 'jwt-token',
+        token: sampleSessionToken,
         expiration: '2025-01-01T00:00:00Z',
         email: 'test@example.com',
         firstName: 'Test',
@@ -192,7 +194,7 @@ describe('AuthService', () => {
       const mockResponse = {
         isSuccess: true,
         message: 'Registration successful',
-        token: 'jwt-token',
+        token: sampleSessionToken,
         expiration: '2025-01-01T00:00:00Z',
         email: 'newuser@example.com',
         firstName: 'New',
@@ -202,7 +204,7 @@ describe('AuthService', () => {
       service.register(registrationData).subscribe(response => {
         expect(response).toEqual(
           jasmine.objectContaining({
-            token: 'jwt-token',
+            token: sampleSessionToken,
             email: 'newuser@example.com',
           })
         );
@@ -249,9 +251,9 @@ describe('AuthService', () => {
   describe('Logout Functionality', () => {
     beforeEach(() => {
       // Set up authenticated state
-      localStorage.setItem('auth_token', 'jwt-token');
+      localStorage.setItem('auth_token', sampleSessionToken);
       (service as any)['_currentUserSubject'].next({
-        token: 'jwt-token',
+        token: sampleSessionToken,
         email: 'test@example.com',
         firstName: 'Test',
         lastName: 'User',
@@ -312,7 +314,7 @@ describe('AuthService', () => {
   describe('User Profile Management', () => {
     beforeEach(() => {
       const mockUser: AuthResponseDto = {
-        token: 'jwt-token',
+        token: sampleSessionToken,
         email: 'test@example.com',
         firstName: 'Test',
         lastName: 'User',
@@ -486,7 +488,7 @@ describe('AuthService Integration Tests', () => {
     const mockResponse = {
       isSuccess: true,
       message: 'Login successful',
-      token: 'jwt-token',
+      token: sampleSessionToken,
       expiration: '2025-01-01T00:00:00Z',
       email: 'test@example.com',
       firstName: 'Test',
@@ -494,7 +496,7 @@ describe('AuthService Integration Tests', () => {
     };
 
     service.login(loginData).subscribe(response => {
-      expect(response.token).toBe('jwt-token');
+      expect(response.token).toBe(sampleSessionToken);
       expect(service.isAuthenticated()).toBeTrue();
 
       // Logout

@@ -57,7 +57,7 @@ test.describe('Account management smoke', () => {
     await page.click('button[type="submit"]');
     await page.waitForURL('**/auth/verify-email', { timeout: 30000 });
     await confirmEmailForTest(page);
-    await page.goto(buildAppUrl('/app/dashboard'));
+    await page.goto(buildAppUrl('/app/enhance'));
     await page.waitForURL('**/app/**', { timeout: 30000 });
 
     // Upload 1 image so "Delete Input Photos" is actionable.
@@ -90,8 +90,8 @@ test.describe('Account management smoke', () => {
     await page.waitForURL('**/', { timeout: 30000 });
     await expect(page.locator('header').getByText(/^Login$/i)).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Logout/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Go to Dashboard$/i })).toBeVisible();
-    await page.getByRole('button', { name: /^Go to Dashboard$/i }).click();
+    await expect(page.getByRole('button', { name: /^Go to Photo Workspace$/i })).toBeVisible();
+    await page.getByRole('button', { name: /^Go to Photo Workspace$/i }).click();
     await page.waitForURL('**/app/**', { timeout: 30000 });
 
     // Continue with Settings checks

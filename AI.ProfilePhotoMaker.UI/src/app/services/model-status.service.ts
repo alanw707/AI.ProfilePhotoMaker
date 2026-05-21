@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { UnifiedModelStatusCode } from './file-upload.service';
-import { ModelStatus, ModelStatusHelper } from '../models/dashboard.types';
+import { ModelStatus, ModelStatusHelper } from '../models/workspace.types';
 
 /**
  * Centralized model status validation service

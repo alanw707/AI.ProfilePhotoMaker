@@ -1,12 +1,49 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
 
+interface RuntimeClientFeatures {
+  openAIHeadshotMvp?: boolean;
+  profilePhotoWorkflowOverhaul?: boolean;
+  outcomePackagesVisible?: boolean;
+  profilePhotoScoreVisible?: boolean;
+  creativeStylePackVisible?: boolean;
+  premiumAugmentationsVisible?: boolean;
+  replicateTrainingFlowVisible?: boolean;
+}
+
+interface RuntimeClientConfig {
+  features?: RuntimeClientFeatures;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class ConfigService {
-  // Simple configuration service for ngrok/proxy setup
-  // All API calls go through the same domain via proxy
+  private runtimeClientConfig: RuntimeClientConfig | null = null;
+
+  async loadClientConfiguration(): Promise<void> {
+    if (typeof window === 'undefined' || typeof fetch === 'undefined') {
+      return;
+    }
+
+    try {
+      const response = await fetch(this.buildEndpointUrl('/config/client'), {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const payload = (await response.json()) as { success?: boolean; data?: RuntimeClientConfig };
+      if (payload.success && payload.data) {
+        this.runtimeClientConfig = payload.data;
+      }
+    } catch (error) {
+      console.warn('Runtime client configuration unavailable; using build-time defaults.', error);
+    }
+  }
 
   get baseUrl(): string {
     return environment.apiUrl || '/api';
@@ -280,5 +317,48 @@ export class ConfigService {
     return environment.features?.enableImageValidation ?? true;
   }
 
-  // Auto-repair feature flag getters removed; UI no longer triggers repair.
+  get isOpenAIHeadshotMvpEnabled(): boolean {
+    return this.getFeatureFlag('openAIHeadshotMvp', !environment.production);
+  }
+
+  get isProfilePhotoWorkflowOverhaulEnabled(): boolean {
+    return this.getFeatureFlag('profilePhotoWorkflowOverhaul', this.isOpenAIHeadshotMvpEnabled);
+  }
+
+  get areOutcomePackagesVisible(): boolean {
+    return this.getFeatureFlag(
+      'outcomePackagesVisible',
+      this.isProfilePhotoWorkflowOverhaulEnabled
+    );
+  }
+
+  get isProfilePhotoScoreVisible(): boolean {
+    return this.getFeatureFlag(
+      'profilePhotoScoreVisible',
+      this.isProfilePhotoWorkflowOverhaulEnabled
+    );
+  }
+
+  get isCreativeStylePackVisible(): boolean {
+    return this.getFeatureFlag('creativeStylePackVisible', true);
+  }
+
+  get arePremiumAugmentationsVisible(): boolean {
+    return this.getFeatureFlag(
+      'premiumAugmentationsVisible',
+      this.isProfilePhotoWorkflowOverhaulEnabled
+    );
+  }
+
+  get isReplicateTrainingFlowVisible(): boolean {
+    return this.getFeatureFlag('replicateTrainingFlowVisible', true);
+  }
+
+  private getFeatureFlag(feature: keyof RuntimeClientFeatures, defaultValue: boolean): boolean {
+    return (
+      this.runtimeClientConfig?.features?.[feature] ??
+      environment.features?.[feature] ??
+      defaultValue
+    );
+  }
 }

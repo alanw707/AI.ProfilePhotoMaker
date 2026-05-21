@@ -40,6 +40,3 @@ Use `https://aiprofilephotomaker.com` as the primary SEO domain.
 - Confirm canonicals via page source.
 - Validate schema with Rich Results Test.
 - Re-crawl `/` and `/pricing` after deploy.
-
-## References
-- Research file: `_bmad-output/planning-artifacts/research/market-ai-headshot-launch-seo-competitors-research-2025-12-25.md`

@@ -9,7 +9,7 @@ export class CacheManagerService implements ICacheManagerService {
   private lastRequestTimes = new Map<string, number>();
 
   // Cache duration constants
-  static readonly DASHBOARD_CACHE_DURATION_MS = 30000; // 30 seconds
+  static readonly WORKSPACE_CACHE_DURATION_MS = 30000; // 30 seconds
   static readonly HTTP_CACHE_DURATION_MS = 60000; // 60 seconds
   static readonly LOAD_DEBOUNCE_MS = 1000; // 1 second
 

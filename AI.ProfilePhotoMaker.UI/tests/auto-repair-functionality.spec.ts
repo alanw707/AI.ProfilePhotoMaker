@@ -26,7 +26,7 @@ test.describe('Auto-Repair Functionality Tests', () => {
       }
     });
 
-    await page.goto(BASE_URL + '/app/dashboard');
+    await page.goto(BASE_URL + '/app/enhance');
     await page.waitForLoadState('domcontentloaded');
   });
 

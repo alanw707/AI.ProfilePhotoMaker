@@ -10,20 +10,45 @@ namespace AI.ProfilePhotoMaker.API.Tests.Unit;
 
 public class AzureBlobStorageServiceTests
 {
-    private AzureBlobStorageService CreateService()
+    private AzureBlobStorageService CreateService(Dictionary<string, string?>? overrides = null)
     {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
+        var settings = new Dictionary<string, string?>
+        {
+            { "AzureStorage:ConnectionString", "UseDevelopmentStorage=true" },
+            { "AzureStorage:ContainerName", "profile-images" },
+        };
+
+        if (overrides != null)
+        {
+            foreach (var (key, value) in overrides)
             {
-                { "AzureStorage:ConnectionString", "UseDevelopmentStorage=true" },
-                { "AzureStorage:ContainerName", "profile-images" },
-            })
+                settings[key] = value;
+            }
+        }
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(settings)
             .Build();
 
         var logger = new Mock<ILogger<AzureBlobStorageService>>();
         var blobClient = new BlobServiceClient("UseDevelopmentStorage=true");
 
         return new AzureBlobStorageService(blobClient, config, logger.Object);
+    }
+
+    [Fact]
+    public void GetImageUrl_WhenProxyEnabled_UsesExternalApiBaseUrlForApiHostedImageProxy()
+    {
+        var svc = CreateService(new Dictionary<string, string?>
+        {
+            ["Storage:ProxyBlobRequests"] = "true",
+            ["AppBaseUrl"] = "https://aiprofilephotomaker.com",
+            ["ExternalApiBaseUrl"] = "https://api.aiprofilephotomaker.com"
+        });
+
+        var url = svc.GetImageUrl("generated/user-1/headshot.png");
+
+        Assert.Equal("https://api.aiprofilephotomaker.com/profile-images/generated/user-1/headshot.png", url);
     }
 
     [Theory]

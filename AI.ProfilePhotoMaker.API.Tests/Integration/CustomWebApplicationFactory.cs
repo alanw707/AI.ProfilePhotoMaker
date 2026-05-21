@@ -52,6 +52,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("RUNNING_IN_TESTS", "true");
         Environment.SetEnvironmentVariable("ENABLE_REPLICATE_MOCK", "false");
         Environment.SetEnvironmentVariable("JWT_SECRET", new string('X', 40));
+        Environment.SetEnvironmentVariable("Jwt__Secret", new string('X', 40));
         Environment.SetEnvironmentVariable("REPLICATE_API_TOKEN", "r8_dummy_token_abcdefghijklmnopqrstuvwxyz");
         Environment.SetEnvironmentVariable("REPLICATE_WEBHOOK_SECRET", "whsec_dummy_secret_123456");
         Environment.SetEnvironmentVariable("STRIPE_SECRET_KEY", "sk_test_1234567890");
@@ -59,6 +60,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("GOOGLE_CLIENT_SECRET", "GOCSPX-dummy-secret-1234567890");
         Environment.SetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING", "UseDevelopmentStorage=true");
         Environment.SetEnvironmentVariable("OPENAI__ApiKey", "test-openai-key");
+        Environment.SetEnvironmentVariable("Features__OpenAIHeadshotMvp", "true");
 
         return Host.CreateDefaultBuilder()
             .ConfigureWebHostDefaults(webBuilder =>
@@ -169,6 +171,18 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 sp.GetRequiredService<IConfiguration>(),
                 sp.GetRequiredService<ILogger<OpenAIImageGenerationService>>(),
                 sp.GetRequiredService<IStorageService>()));
+        services.AddScoped<IOutcomePackageService, OutcomePackageService>();
+        services.AddScoped<IHeadshotGenerationProvider, OpenAIHeadshotGenerationProvider>();
+        services.AddScoped<IHeadshotGenerationService>(sp => new HeadshotGenerationService(
+            sp.GetRequiredService<ApplicationDbContext>(),
+            sp.GetRequiredService<IBasicTierService>(),
+            sp.GetRequiredService<IHeadshotGenerationProvider>(),
+            sp.GetRequiredService<IStorageService>(),
+            sp.GetRequiredService<StoragePathResolver>(),
+            sp.GetRequiredService<IHttpClientFactory>(),
+            sp.GetRequiredService<IConfiguration>(),
+            sp.GetRequiredService<ILogger<HeadshotGenerationService>>(),
+            sp.GetRequiredService<IOutcomePackageService>()));
 
         // Add mock Replicate services
         services.AddScoped<IReplicateApiClient, MockReplicateApiClient>();
@@ -307,7 +321,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         public Task SendEmailVerificationAsync(string userId, string? email, string encodedToken) => Task.CompletedTask;
         public Task SendWelcomeAsync(string userId, string? email, string? firstName = null) => Task.CompletedTask;
         public Task SendRetentionDeletionWarningAsync(string userId, string? email, int imageCount, DateTime deletionDate, int daysUntilDeletion) => Task.CompletedTask;
-        public Task SendAbandonedUploadNudgeAsync(string userId, string? email, string? firstName = null) => Task.CompletedTask;
+        public Task SendAbandonedUploadNudgeAsync(string userId, string? email, string? firstName = null, int uploadedCount = 0, int minimumRequiredUploads = 5) => Task.CompletedTask;
         public Task<EmailSendResult> SendMarketingEmailAsync(string userId, string email, string subject, string htmlBody, string unsubscribeUrl) => Task.FromResult(new EmailSendResult(true));
         public string RenderMarketingEmailPreview(string subject, string htmlBody) => htmlBody;
     }
@@ -321,7 +335,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             => Task.FromResult(storagePath);
 
         public Task<Stream?> GetImageAsync(string storagePath)
-            => Task.FromResult<Stream?>(new MemoryStream());
+            => Task.FromResult<Stream?>(new MemoryStream(FakeOpenAiHttpMessageHandler.SamplePngBytes));
 
         public Task<bool> DeleteImageAsync(string storagePath) => Task.FromResult(true);
 

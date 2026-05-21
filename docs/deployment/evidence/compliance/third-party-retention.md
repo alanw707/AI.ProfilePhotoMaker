@@ -12,8 +12,8 @@ Status: Not doing (provider confirmation skipped); relying on public docs.
 - Captured: 2025-12-23T20:53:46Z
 
 ## 1. Providers in scope
-- Replicate (model training and image generation)
-- OpenAI (photo enhancement)
+- OpenAI (instant headshot generation and photo enhancement)
+- Replicate (optional/advanced model training and image generation)
 
 ## 2. Replicate retention (predictions)
 Source: https://replicate.com/docs/topics/predictions/data-retention
@@ -41,15 +41,15 @@ Open items:
 - Decision: provider confirmation skipped; rely on public docs and privacy policy language until a future update.
 - Inquiry drafts kept on file but not being sent: `docs/deployment/evidence/compliance/replicate-retention-inquiry.md`, `docs/deployment/evidence/compliance/openai-retention-inquiry.md`.
 
-## 3. OpenAI retention (image enhancement)
+## 3. OpenAI retention (instant headshot generation and image enhancement)
 Source: https://platform.openai.com/docs/guides/your-data
 
 - Default API data retention is generally up to 30 days for abuse monitoring (per OpenAI data controls).
-- Image generation endpoints (including gpt-image-1) do not store application state; Zero Data Retention is available for gpt-image-1.
+- Image generation endpoints do not store application state; Zero Data Retention availability for the configured image model (`gpt-image-2`) should be validated against the account's OpenAI data controls.
 - Image inputs may be retained for manual review if CSAM detection triggers.
 
 Open items:
-- Confirm OpenAI data controls for gpt-image-1 within our account tier (ZDR eligibility and configuration).
+- Confirm OpenAI data controls for `gpt-image-2` within our account tier (ZDR eligibility and configuration).
 - Capture an official OpenAI data controls reference for evidence (page access blocked in this environment).
 
 ## 4. Alignment actions

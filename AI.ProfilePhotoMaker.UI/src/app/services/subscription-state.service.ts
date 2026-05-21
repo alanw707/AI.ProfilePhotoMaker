@@ -16,7 +16,7 @@ export interface SubscriptionState {
 
 /**
  * Service responsible for managing subscription, credits, and premium workflow state
- * Extracted from DashboardStateService for better separation of concerns
+ * Extracted from WorkspaceStateService for better separation of concerns
  */
 @Injectable({
   providedIn: 'root',
@@ -165,7 +165,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
         this.setCachedData(
           this.creditsCacheKey,
           { userCreditStatus, totalCredits },
-          CacheManagerService.DASHBOARD_CACHE_DURATION_MS
+          CacheManagerService.WORKSPACE_CACHE_DURATION_MS
         );
       }
 

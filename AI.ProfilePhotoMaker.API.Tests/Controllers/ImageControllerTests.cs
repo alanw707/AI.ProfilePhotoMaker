@@ -139,7 +139,22 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             var processedImages = new List<ProcessedImage>
             {
                 new ProcessedImage { Id = 1, Style = "Original", CreatedAt = DateTime.UtcNow, IsGenerated = false, IsOriginalUpload = true, OriginalImageUrl = "/uploads/1.jpg", ProcessedImageUrl = "/uploads/1.jpg" },
-                new ProcessedImage { Id = 2, Style = "Styled", CreatedAt = DateTime.UtcNow, IsGenerated = true, IsOriginalUpload = false, ProcessedImageUrl = "/generated/2.jpg" }
+                new ProcessedImage
+                {
+                    Id = 2,
+                    Style = "Styled",
+                    CreatedAt = DateTime.UtcNow,
+                    IsGenerated = true,
+                    IsOriginalUpload = false,
+                    ProcessedImageUrl = "/generated/2.jpg",
+                    Provider = "openai",
+                    ProviderModel = "gpt-image-2",
+                    GenerationMode = "instant_headshot",
+                    PromptVersion = "openai-headshot-v1",
+                    CorrelationId = "instant_headshot_generation:abc123",
+                    CreditCost = 1,
+                    GenerationStatus = "succeeded"
+                }
             };
             var profile = new UserProfile { UserId = userId, ProcessedImages = processedImages };
             _mockUserProfileRepository.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync(profile);
@@ -158,6 +173,20 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             result.Should().BeOfType<OkObjectResult>();
             var okResult = result as OkObjectResult;
             okResult?.Value.Should().NotBeNull();
+            if (okResult?.Value is not null)
+            {
+                var json = JsonSerializer.Serialize(okResult.Value);
+                var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+                dict.Should().NotBeNull();
+                var generatedImage = dict!["data"].GetProperty("images").EnumerateArray().First();
+                generatedImage.GetProperty("provider").GetString().Should().Be("openai");
+                generatedImage.GetProperty("providerModel").GetString().Should().Be("gpt-image-2");
+                generatedImage.GetProperty("generationMode").GetString().Should().Be("instant_headshot");
+                generatedImage.GetProperty("promptVersion").GetString().Should().Be("openai-headshot-v1");
+                generatedImage.GetProperty("correlationId").GetString().Should().Be("instant_headshot_generation:abc123");
+                generatedImage.GetProperty("creditCost").GetInt32().Should().Be(1);
+                generatedImage.GetProperty("generationStatus").GetString().Should().Be("succeeded");
+            }
         }
 
         [Fact]

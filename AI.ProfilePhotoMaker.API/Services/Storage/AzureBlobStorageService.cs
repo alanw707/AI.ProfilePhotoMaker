@@ -258,9 +258,14 @@ public class AzureBlobStorageService : BaseStorageService
         var proxyEnabled = bool.TryParse(Configuration["Storage:ProxyBlobRequests"], out var flag) && flag;
         if (proxyEnabled)
         {
-            var appBaseUrl = Configuration["AppBaseUrl"]?.TrimEnd('/') ?? "https://localhost:5001";
+            var apiBaseUrl = Configuration["ExternalApiBaseUrl"]?.TrimEnd('/');
+            if (string.IsNullOrWhiteSpace(apiBaseUrl))
+            {
+                apiBaseUrl = Configuration["AppBaseUrl"]?.TrimEnd('/') ?? "https://localhost:5001";
+            }
+
             var proxyPath = "/profile-images/" + storagePath.TrimStart('/');
-            var proxiedUrl = appBaseUrl + proxyPath;
+            var proxiedUrl = apiBaseUrl + proxyPath;
             Logger.LogDebug("GetImageUrl (Proxy Enabled): {Url}", proxiedUrl);
             return proxiedUrl;
         }

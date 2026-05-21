@@ -65,6 +65,9 @@ Operational procedures, API documentation, and system management.
 - **Plan & Backlog**: `docs/development/PROJECT_PLAN.md`, `docs/development/DEVELOPMENT_BACKLOG.md`
 - **Launch Readiness**: `docs/deployment/LAUNCH_READINESS_CHECKLIST.md`, `docs/deployment/GO_NO_GO_SUMMARY.md`
 - **Operations & API**: `docs/operations/API_REFERENCE.md`, `docs/operations/OPERATIONAL_RUNBOOK.md`, `docs/operations/CREDIT_SYSTEM.md`
+- **OpenAI Image API Confirmation**: `docs/openai-images-2-api-confirmation.md`
+- **OpenAI Pivot Worktree Scope**: `docs/openai-images-2-pivot-worktree-scope.md`
+- **OpenAI Pivot QA Evidence**: `docs/openai-images-2-pivot-qa-evidence.md`
 
 ---
 
@@ -167,7 +170,7 @@ The AI Profile Photo Maker is a full-stack web application that uses AI to gener
 - **Credit-Based System**: Flexible pricing with free tier and premium packages
 - **Self-Healing Gallery**: Automatic repair of database-filesystem inconsistencies
 - **Photo Enhancement**: One-click photo improvement using AI
-  - See: [OpenAI Enhancement (gpt-image-1)](./OPENAI-ENHANCEMENT.md)
+  - See: [OpenAI Enhancement and Instant Headshot Generation (gpt-image-2)](./OPENAI-ENHANCEMENT.md)
 - **OAuth Integration**: Google sign-in support
 
 ### Architecture Highlights

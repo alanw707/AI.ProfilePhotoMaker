@@ -20,7 +20,21 @@ fi
 
 if [[ -n ${DEV_ENV_FILE:-} ]]; then
   echo "ℹ️  Using env file: ${DEV_ENV_FILE}" | tee -a "$LOG_FILE"
+  # dotnet run does not read .env files by itself. Export local URL/storage
+  # overrides so generated image URLs point at the local API, not production.
+  set -a
+  # shellcheck disable=SC1090
+  source "$DEV_ENV_FILE"
+  set +a
 fi
+
+# Local dev should exercise the MVP/profile workflow unless explicitly disabled.
+export Features__OpenAIHeadshotMvp="${Features__OpenAIHeadshotMvp:-true}"
+export Features__ProfilePhotoWorkflowOverhaul="${Features__ProfilePhotoWorkflowOverhaul:-true}"
+export Features__OutcomePackagesVisible="${Features__OutcomePackagesVisible:-true}"
+export Features__ProfilePhotoScoreVisible="${Features__ProfilePhotoScoreVisible:-true}"
+export Features__PremiumAugmentationsVisible="${Features__PremiumAugmentationsVisible:-true}"
+export Features__ReplicateTrainingFlowVisible="${Features__ReplicateTrainingFlowVisible:-false}"
 
 cd "$API_DIR"
 echo "Starting API from: $API_DIR (ASPNETCORE_ENVIRONMENT=$ASPNETCORE_ENVIRONMENT)"

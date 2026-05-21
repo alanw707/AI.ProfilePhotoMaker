@@ -12,6 +12,7 @@ namespace AI.ProfilePhotoMaker.API.Services;
 
 public class AbandonedUploadBackgroundService : BackgroundService
 {
+    private const int MinimumUploadsToTrain = 5;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<AbandonedUploadBackgroundService> _logger;
     private readonly AbandonedUploadOptions _options;
@@ -109,13 +110,15 @@ public class AbandonedUploadBackgroundService : BackgroundService
         var graceCutoff = now.Subtract(_options.GracePeriod);
         var maxAgeCutoff = now.Subtract(_options.MaxAge);
 
-        var candidates = await dbContext.UserProfiles
+        var noUploadCandidates = (await dbContext.UserProfiles
             .AsNoTracking()
             .Where(profile =>
                 profile.CreatedAt >= maxAgeCutoff &&
                 profile.CreatedAt < graceCutoff &&
                 !dbContext.ProcessedImages.Any(img => img.UserProfileId == profile.Id && img.IsOriginalUpload) &&
-                !dbContext.AbandonedUploadNudgeLogs.Any(log => log.UserId == profile.UserId))
+                !dbContext.AbandonedUploadNudgeLogs.Any(log =>
+                    log.UserId == profile.UserId &&
+                    log.NudgeType == AbandonedUploadNudgeTypes.NoUploads))
             .Join(
                 dbContext.Users.AsNoTracking(),
                 profile => profile.UserId,
@@ -126,8 +129,61 @@ public class AbandonedUploadBackgroundService : BackgroundService
                     user.Email,
                     user.FirstName,
                 })
-            .Where(x => !string.IsNullOrWhiteSpace(x.Email))
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken))
+            .Where(candidate => !string.IsNullOrWhiteSpace(candidate.Email))
+            .Select(candidate => new AbandonedUploadCandidate(
+                candidate.UserId,
+                candidate.Email,
+                candidate.FirstName,
+                0,
+                AbandonedUploadNudgeTypes.NoUploads))
+            .ToList();
+
+        var partialUploadCandidates = (await dbContext.ProcessedImages
+            .AsNoTracking()
+            .Where(img => img.IsOriginalUpload)
+            .GroupBy(img => img.UserProfileId)
+            .Select(group => new { UserProfileId = group.Key, UploadCount = group.Count() })
+            .Where(group => group.UploadCount >= 1 && group.UploadCount < MinimumUploadsToTrain)
+            .Join(
+                dbContext.UserProfiles.AsNoTracking().Where(profile =>
+                    profile.CreatedAt >= maxAgeCutoff &&
+                    profile.CreatedAt < graceCutoff &&
+                    !dbContext.AbandonedUploadNudgeLogs.Any(log =>
+                        log.UserId == profile.UserId &&
+                        log.NudgeType == AbandonedUploadNudgeTypes.PartialUploads)),
+                uploads => uploads.UserProfileId,
+                profile => profile.Id,
+                (uploads, profile) => new
+                {
+                    profile.UserId,
+                    uploads.UploadCount
+                })
+            .Join(
+                dbContext.Users.AsNoTracking(),
+                candidate => candidate.UserId,
+                user => user.Id,
+                (candidate, user) => new
+                {
+                    candidate.UserId,
+                    candidate.UploadCount,
+                    user.Email,
+                    user.FirstName,
+                })
+            .ToListAsync(cancellationToken))
+            .Where(candidate => !string.IsNullOrWhiteSpace(candidate.Email))
+            .Select(candidate => new AbandonedUploadCandidate(
+                candidate.UserId,
+                candidate.Email,
+                candidate.FirstName,
+                candidate.UploadCount,
+                AbandonedUploadNudgeTypes.PartialUploads))
+            .ToList();
+
+        var candidates = noUploadCandidates
+            .Concat(partialUploadCandidates)
+            .OrderBy(candidate => candidate.UserId)
+            .ToList();
 
         if (candidates.Count == 0)
         {
@@ -147,7 +203,10 @@ public class AbandonedUploadBackgroundService : BackgroundService
             {
                 var alreadySent = await dbContext.AbandonedUploadNudgeLogs
                     .AsNoTracking()
-                    .AnyAsync(log => log.UserId == candidate.UserId, cancellationToken);
+                    .AnyAsync(log =>
+                        log.UserId == candidate.UserId &&
+                        log.NudgeType == candidate.NudgeType,
+                        cancellationToken);
 
                 if (alreadySent)
                 {
@@ -155,11 +214,17 @@ public class AbandonedUploadBackgroundService : BackgroundService
                     continue;
                 }
 
-                await emailService.SendAbandonedUploadNudgeAsync(candidate.UserId, candidate.Email, candidate.FirstName);
+                await emailService.SendAbandonedUploadNudgeAsync(
+                    candidate.UserId,
+                    candidate.Email,
+                    candidate.FirstName,
+                    candidate.UploadedCount,
+                    MinimumUploadsToTrain);
 
                 dbContext.AbandonedUploadNudgeLogs.Add(new AbandonedUploadNudgeLog
                 {
                     UserId = candidate.UserId,
+                    NudgeType = candidate.NudgeType,
                     SentAtUtc = now,
                 });
 
@@ -195,4 +260,11 @@ public class AbandonedUploadBackgroundService : BackgroundService
 
         return false;
     }
+
+    private sealed record AbandonedUploadCandidate(
+        string UserId,
+        string? Email,
+        string? FirstName,
+        int UploadedCount,
+        string NudgeType);
 }

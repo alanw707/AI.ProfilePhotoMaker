@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { DEFAULT_MODEL_STATUS_CONFIG } from '../models/model-status.types';
 
 export interface ImageThumbnail {
   id?: string;
@@ -11,6 +12,7 @@ export interface ImageThumbnail {
   providedIn: 'root',
 })
 export class WorkflowStepService {
+  private readonly _minImagesForTraining = DEFAULT_MODEL_STATUS_CONFIG.minImagesForTraining;
   // Service doesn't need constructor - Angular will provide singleton instance
 
   /**
@@ -29,13 +31,14 @@ export class WorkflowStepService {
     generatedPhotosCount: number,
     currentStep: number
   ): string {
-    const hasUploadedImages = uploadedImages > 0 || uploadedImageThumbnails.length > 0;
+    const totalUploadedImages = Math.max(uploadedImages, uploadedImageThumbnails.length);
+    const hasEnoughImagesToTrain = totalUploadedImages >= this._minImagesForTraining;
 
     switch (step) {
       case 1:
-        return this._getStep1Status(hasUploadedImages, currentStep);
+        return this._getStep1Status(hasEnoughImagesToTrain, currentStep);
       case 2:
-        return this._getStep2Status(hasUploadedImages, generatedPhotosCount);
+        return this._getStep2Status(hasEnoughImagesToTrain, generatedPhotosCount);
       case 3:
         return this._getStep3Status(generatedPhotosCount);
       default:
@@ -43,15 +46,15 @@ export class WorkflowStepService {
     }
   }
 
-  private _getStep1Status(hasUploadedImages: boolean, currentStep: number): string {
-    if (hasUploadedImages) {
+  private _getStep1Status(hasEnoughImagesToTrain: boolean, currentStep: number): string {
+    if (hasEnoughImagesToTrain) {
       return 'completed';
     }
     return currentStep === 1 ? 'active' : 'pending';
   }
 
-  private _getStep2Status(hasUploadedImages: boolean, generatedPhotosCount: number): string {
-    if (hasUploadedImages && generatedPhotosCount === 0) {
+  private _getStep2Status(hasEnoughImagesToTrain: boolean, generatedPhotosCount: number): string {
+    if (hasEnoughImagesToTrain && generatedPhotosCount === 0) {
       return 'active';
     }
     return generatedPhotosCount > 0 ? 'completed' : 'pending';
@@ -115,7 +118,9 @@ export class WorkflowStepService {
     generatedPhotosCount: number,
     currentStep: number
   ): number {
-    if ((uploadedImages > 0 || uploadedImageThumbnails.length > 0) && currentStep === 1) {
+    const totalUploadedImages = Math.max(uploadedImages, uploadedImageThumbnails.length);
+
+    if (totalUploadedImages >= this._minImagesForTraining && currentStep === 1) {
       return 2;
     }
     if (generatedPhotosCount > 0 && currentStep === 2) {

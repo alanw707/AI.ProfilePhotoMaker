@@ -11,6 +11,9 @@ public class AbandonedUploadNudgeLog
     /// <summary>The ASP.NET Identity user ID.</summary>
     public string UserId { get; set; } = string.Empty;
 
+    /// <summary>The abandoned-upload state this nudge covered.</summary>
+    public string NudgeType { get; set; } = AbandonedUploadNudgeTypes.NoUploads;
+
     /// <summary>UTC timestamp when the nudge email was sent.</summary>
     public DateTime SentAtUtc { get; set; }
 }

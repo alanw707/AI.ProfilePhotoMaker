@@ -87,7 +87,7 @@ export class VerifyEmailComponent implements OnInit {
             void this._router.navigate(['/auth/login'], {
               queryParams: {
                 message: 'Please sign in to continue.',
-                returnUrl: '/app/dashboard',
+                returnUrl: '/app/enhance',
               },
             });
             return;
@@ -133,7 +133,7 @@ export class VerifyEmailComponent implements OnInit {
             void this._router.navigate(['/auth/login'], {
               queryParams: {
                 message: 'Please sign in to continue.',
-                returnUrl: '/app/dashboard',
+                returnUrl: '/app/enhance',
               },
             });
             return;
@@ -185,7 +185,7 @@ export class VerifyEmailComponent implements OnInit {
   }
 
   continue(): void {
-    const redirectUrl = sessionStorage.getItem('redirectUrl') || '/app/dashboard';
+    const redirectUrl = sessionStorage.getItem('redirectUrl') || '/app/enhance';
     sessionStorage.removeItem('redirectUrl');
     void this._router.navigateByUrl(redirectUrl);
   }

@@ -8,7 +8,7 @@
       <!-- Page Header -->
       <section class="page-header">
         <div class="breadcrumb">
-          <a routerLink="/app/dashboard" class="breadcrumb-link">Dashboard</a>
+          <a routerLink="/app/enhance" class="breadcrumb-link">Photo Workspace</a>
           <span class="breadcrumb-separator">/</span>
           <span class="breadcrumb-current">Account Settings</span>
         </div>
@@ -53,7 +53,7 @@
                 <div class="stat-content">
                   <h3>{{ dataStats.inputPhotos }}</h3>
                   <p>Input Photos</p>
-                  <small>Original selfies uploaded for training</small>
+                  <small>Original photos uploaded for training</small>
                 </div>
               </div>
               <div class="stat-card">
@@ -90,32 +90,33 @@
               <div class="policy-content">
                 <div class="policy-item">
                   <div class="policy-icon">📁</div>
-                <div class="policy-text">
-                  <strong>Input Photos:</strong>
+                  <div class="policy-text">
+                    <strong>Input Photos:</strong>
                     Retained up to 30 days after upload unless you delete them sooner
+                  </div>
                 </div>
-              </div>
-              <div class="policy-item">
-                <div class="policy-icon">⏰</div>
-                <div class="policy-text">
-                  <strong>Generated Photos:</strong>
+                <div class="policy-item">
+                  <div class="policy-icon">⏰</div>
+                  <div class="policy-text">
+                    <strong>Generated Photos:</strong>
                     Retained up to 30 days after creation unless you delete them sooner
+                  </div>
                 </div>
-              </div>
-              <div class="policy-item">
-                <div class="policy-icon">🧠</div>
-                <div class="policy-text">
-                  <strong>AI Models:</strong>
-                    Retained while your headshot images remain available; deleted after they expire or if you delete the model or account
+                <div class="policy-item">
+                  <div class="policy-icon">🧠</div>
+                  <div class="policy-text">
+                    <strong>AI Models:</strong>
+                    Retained while your headshot images remain available; deleted after they expire or if you delete the
+                    model or account
+                  </div>
                 </div>
-              </div>
-              <div class="policy-item">
-                <div class="policy-icon">📊</div>
-                <div class="policy-text">
-                  <strong>Usage Logs:</strong>
+                <div class="policy-item">
+                  <div class="policy-icon">📊</div>
+                  <div class="policy-text">
+                    <strong>Usage Logs:</strong>
                     Retained for billing and analytics as needed; deleted when you delete your account
+                  </div>
                 </div>
-              </div>
                 <div class="policy-item">
                   <div class="policy-icon">📸</div>
                   <div class="policy-text">
@@ -139,13 +140,9 @@
               <div class="action-item">
                 <div class="action-info">
                   <h4>Contact Support</h4>
-                  <p>
-                    Send us a message from your account so we can follow up and fix issues quickly.
-                  </p>
+                  <p>Send us a message from your account so we can follow up and fix issues quickly.</p>
                 </div>
-                <button class="btn btn-secondary" type="button" (click)="goToSupport()">
-                  Contact Support
-                </button>
+                <button class="btn btn-secondary" type="button" (click)="goToSupport()">Contact Support</button>
               </div>
             </div>
           </div>
@@ -174,8 +171,8 @@
                 <div class="action-info">
                   <h4>Delete Input Photos</h4>
                   <p>
-                    Remove all original photos you've uploaded for training. This will free up storage space but prevent
-                    future AI model training or retraining.
+                    Remove all original photos you've uploaded for advanced custom photoshoot packs. This will free up
+                    storage space but prevent future advanced pack preparation.
                   </p>
                 </div>
                 <button
@@ -418,7 +415,7 @@
     <form class="profile-edit-form" (ngSubmit)="saveProfile()">
       <div class="modal-body profile-edit-body">
         <p class="profile-edit-subtitle">
-          Update your name and optional details. We use this to personalize your results.
+          Update your name and optional details. Ethnicity is self-identified and never inferred from your photos.
         </p>
 
         <div class="form-row">
@@ -477,22 +474,14 @@
               class="form-control"
               [disabled]="isUpdatingProfile">
               <option value="">Select Ethnicity</option>
-              <option value="asian">Asian</option>
-              <option value="black">Black/African American</option>
-              <option value="hispanic">Hispanic/Latino</option>
-              <option value="white">White/Caucasian</option>
-              <option value="native-american">Native American</option>
-              <option value="pacific-islander">Pacific Islander</option>
-              <option value="mixed">Mixed/Multiracial</option>
-              <option value="other">Other</option>
-              <option value="prefer-not-to-say">Prefer not to say</option>
+              <option *ngFor="let option of ethnicityOptions" [value]="option.value">
+                {{ option.label }}
+              </option>
             </select>
           </div>
         </div>
 
-        <p class="profile-edit-hint">
-          Note: First and last name are required and limited to 50 characters.
-        </p>
+        <p class="profile-edit-hint">Note: First and last name are required and limited to 50 characters.</p>
       </div>
 
       <div class="modal-footer">

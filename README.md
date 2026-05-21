@@ -37,7 +37,7 @@ A full-stack SaaS platform that generates professional headshots from user-uploa
                  +-------------+
 ```
 
-**Frontend** -- Angular SPA handling auth, onboarding, style selection, dashboard, and gallery management with client-side face detection (face-api.js).
+**Frontend** -- Angular SPA handling auth, onboarding, style selection, Photo Workspace, and gallery management with client-side face detection (face-api.js).
 
 **Backend** -- ASP.NET Core API with thin controllers, service-layer business logic, async background jobs, webhook handlers, and health checks. Structured logging via Serilog.
 

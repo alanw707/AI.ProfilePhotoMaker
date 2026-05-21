@@ -13,7 +13,7 @@ Standalone Angular configuration using `app.config.ts` and route-driven pages/co
 
 ## Routing
 Key routes (non-exhaustive):
-- 404, app, auth, complete-profile, confirm-email, cookies, dashboard, enhance, examples, faq, features, gallery, help, home, legal, login, packages, pricing, privacy, register, settings, signup, support, terms, verify-email
+- 404, app, auth, complete-profile, confirm-email, cookies, workspace, enhance, examples, faq, features, gallery, help, home, legal, login, packages, pricing, privacy, register, settings, signup, support, terms, verify-email
 
 ## API Integration
 - Production API base: `https://api.aiprofilephotomaker.com/api`

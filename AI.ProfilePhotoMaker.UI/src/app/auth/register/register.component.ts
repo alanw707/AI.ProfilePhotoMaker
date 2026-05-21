@@ -19,6 +19,7 @@ import { ConfigService } from '../../services/config.service';
 import { TurnstileComponent } from '../../shared/turnstile/turnstile.component';
 import { finalize } from 'rxjs';
 import { IntentTrackingService } from '../../services/intent-tracking.service';
+import { ETHNICITY_OPTIONS } from '../../shared/constants/ethnicity-options';
 
 @Component({
   selector: 'app-register',
@@ -30,6 +31,7 @@ import { IntentTrackingService } from '../../services/intent-tracking.service';
 })
 export class RegisterComponent implements OnInit {
   @ViewChild(TurnstileComponent) turnstile?: TurnstileComponent;
+  readonly ethnicityOptions = ETHNICITY_OPTIONS;
   registerForm: FormGroup;
   loading = false;
   error = '';
@@ -273,7 +275,7 @@ export class RegisterComponent implements OnInit {
 
     // Use consistent OAuth base URL method for registration
     const oauthBaseUrl = this._configService.getOAuthBaseUrl();
-    const fullReturnUrl = `${this._configService.frontendBaseUrl}/app/dashboard`;
+    const fullReturnUrl = `${this._configService.frontendBaseUrl}/app/enhance`;
     const query = new URLSearchParams({
       returnUrl: fullReturnUrl,
       ageConfirmed: 'true',

@@ -94,6 +94,16 @@ load_user_secrets_env() {
       echo "ℹ️  Loaded Authentication:Google:ClientSecret from user-secrets"
     fi
   fi
+
+  if [[ -z ${OPENAI_API_KEY:-} ]]; then
+    local value
+    value=$(get_user_secret 'OpenAI:ApiKey' "$secrets")
+    value=$(sanitize_secret_value "$value")
+    if [[ -n $value ]]; then
+      export OPENAI_API_KEY="$value"
+      echo "ℹ️  Loaded OpenAI:ApiKey from user-secrets"
+    fi
+  fi
 }
 
 yaml_quote() {
@@ -127,7 +137,6 @@ write_docker_override() {
   tmp_file="$(mktemp)"
 
   {
-    printf "version: '3.8'\n\n"
     printf "services:\n"
     printf "  api:\n"
     printf "    environment:\n"
@@ -146,6 +155,14 @@ write_docker_override() {
       printf "      APP_BASE_URL: %s\n" "$(yaml_quote "$APP_BASE_URL")"
     fi
 
+    if [[ -n ${JWT_SECRET:-} ]]; then
+      printf "      JWT_SECRET: %s\n" "$(yaml_quote "$JWT_SECRET")"
+      printf "      Jwt__Secret: %s\n" "$(yaml_quote "$JWT_SECRET")"
+    fi
+
+    printf "      Jwt__ValidAudience: %s\n" "$(yaml_quote "${JWT_VALID_AUDIENCE:-http://localhost:4200}")"
+    printf "      Jwt__ValidIssuer: %s\n" "$(yaml_quote "${JWT_VALID_ISSUER:-http://localhost:5032}")"
+
     if [[ -n ${REPLICATE_API_TOKEN:-} ]]; then
       printf "      REPLICATE_API_TOKEN: %s\n" "$(yaml_quote "$REPLICATE_API_TOKEN")"
       printf "      Replicate__ApiToken: %s\n" "$(yaml_quote "$REPLICATE_API_TOKEN")"
@@ -163,6 +180,14 @@ write_docker_override() {
     if [[ -n ${GOOGLE_CLIENT_SECRET:-} ]]; then
       printf "      GOOGLE_CLIENT_SECRET: %s\n" "$(yaml_quote "$GOOGLE_CLIENT_SECRET")"
     fi
+
+    if [[ -n ${OPENAI_API_KEY:-} ]]; then
+      printf "      OPENAI_API_KEY: %s\n" "$(yaml_quote "$OPENAI_API_KEY")"
+      printf "      OpenAI__ApiKey: %s\n" "$(yaml_quote "$OPENAI_API_KEY")"
+    fi
+
+    printf "      OpenAI__ImageModel: %s\n" "$(yaml_quote "${OPENAI_IMAGE_MODEL:-gpt-image-2}")"
+    printf "      Features__OpenAIHeadshotMvp: %s\n" "$(yaml_quote "${OPENAI_HEADSHOT_MVP:-true}")"
 
     if [[ -n ${STRIPE_SECRET_KEY:-} ]]; then
       printf "      STRIPE_SECRET_KEY: %s\n" "$(yaml_quote "$STRIPE_SECRET_KEY")"
@@ -318,7 +343,7 @@ wait_for_local_api() {
   start="$(date +%s)"
 
   while true; do
-    if curl -fsS "http://127.0.0.1:${port}/swagger/v1/swagger.json" >/dev/null 2>&1; then
+    if curl -fsS "http://127.0.0.1:${port}/api/health" >/dev/null 2>&1; then
       return 0
     fi
 

@@ -60,7 +60,7 @@
           </div>
 
           <div class="operation-item" [class.affordable]="canAffordOperation('model_training')">
-            <span class="operation-name">Model Training</span>
+            <span class="operation-name">Advanced custom photoshoot pack</span>
             <span class="operation-cost">{{ getOperationCost('model_training') }} credits</span>
             <span class="affordability-status">
               {{ canAffordOperation('model_training') ? '✓' : '✗' }}
@@ -79,7 +79,7 @@
 
       <!-- Quick Actions -->
       <div class="quick-actions">
-        <a href="/credits" class="action-btn primary">Buy More Credits</a>
+        <a href="/pricing" class="action-btn primary">View Packages</a>
         <a href="/credits/history" class="action-btn secondary">Purchase History</a>
       </div>
     </div>
@@ -90,8 +90,8 @@
     <div class="empty-state">
       <div class="empty-icon">💰</div>
       <h3>No Credits Available</h3>
-      <p>Purchase credits to access premium features</p>
-      <a href="/credits" class="action-btn primary">Buy Credits</a>
+      <p>Choose a profile photo package to unlock premium features.</p>
+      <a href="/pricing" class="action-btn primary">View Packages</a>
     </div>
   </div>
 </div>

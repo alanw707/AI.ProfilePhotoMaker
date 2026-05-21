@@ -10,7 +10,7 @@ import { AuthService } from '../../services/auth.service';
 import { ProfileService, UserProfile } from '../../services/profile.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { NotificationService } from '../../services/notification.service';
-import { DashboardCoordinatorService } from '../../services/dashboard-coordinator.service';
+import { WorkspaceStateService } from '../../services/workspace-state.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 
 describe('SettingsComponent', () => {
@@ -20,7 +20,7 @@ describe('SettingsComponent', () => {
   let mockProfileService: jasmine.SpyObj<ProfileService>;
   let mockFileUploadService: jasmine.SpyObj<FileUploadService>;
   let mockNotificationService: jasmine.SpyObj<NotificationService>;
-  let mockDashboardCoordinatorService: jasmine.SpyObj<DashboardCoordinatorService>;
+  let mockWorkspaceStateService: jasmine.SpyObj<WorkspaceStateService>;
 
   const mockUserProfile: UserProfile = {
     id: 1,
@@ -87,9 +87,9 @@ describe('SettingsComponent', () => {
       'info',
       'warning',
     ]);
-    mockDashboardCoordinatorService = jasmine.createSpyObj(
-      'DashboardCoordinatorService',
-      ['getState', 'loadInitialDashboardData'],
+    mockWorkspaceStateService = jasmine.createSpyObj(
+      'WorkspaceStateService',
+      ['getState', 'loadInitialWorkspaceData'],
       {
         state$: of({
           userProfile: null,
@@ -117,7 +117,7 @@ describe('SettingsComponent', () => {
     mockProfileService.getDataStats.and.returnValue(
       of({ success: true, data: mockDataStats, error: null } as any)
     );
-    mockDashboardCoordinatorService.getState.and.returnValue({
+    mockWorkspaceStateService.getState.and.returnValue({
       userProfile: null,
       creditsInfo: mockCreditsInfo,
       userCreditStatus: mockUserCreditStatus,
@@ -173,7 +173,7 @@ describe('SettingsComponent', () => {
         { provide: ProfileService, useValue: mockProfileService },
         { provide: FileUploadService, useValue: mockFileUploadService },
         { provide: NotificationService, useValue: mockNotificationService },
-        { provide: DashboardCoordinatorService, useValue: mockDashboardCoordinatorService },
+        { provide: WorkspaceStateService, useValue: mockWorkspaceStateService },
       ],
       // Allow unknown elements/attributes (e.g. header component and other standalone deps)
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -444,7 +444,7 @@ describe('SettingsComponent', () => {
     });
 
     it('should get total available credits', () => {
-      // Credits come from dashboard state service; use mocked values
+      // Credits come from Photo Workspace state service; use mocked values
       const total = mockUserCreditStatus.credits || 0;
       expect(total).toBe(13);
     });

@@ -180,7 +180,7 @@ public class ReplicateApiClientStyleTuningTests
         return new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Replicate:ApiToken"] = "test-token",
+                ["Replicate:ApiToken"] = new string('R', 40),
                 ["Replicate:StyleTuning:DefaultGuidanceScale"] = "3.0",
                 ["Replicate:StyleTuning:DefaultNumInferenceSteps"] = "28",
                 ["Replicate:StyleTuning:ProGuidanceScale"] = "2.8",

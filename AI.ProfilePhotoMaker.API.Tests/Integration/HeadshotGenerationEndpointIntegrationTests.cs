@@ -1,0 +1,198 @@
+using System.Net;
+using System.Net.Http.Json;
+using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+
+namespace AI.ProfilePhotoMaker.API.Tests.Integration;
+
+public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWebApplicationFactory>
+{
+    private readonly CustomWebApplicationFactory _factory;
+
+    public HeadshotGenerationEndpointIntegrationTests(CustomWebApplicationFactory factory)
+    {
+        _factory = factory;
+    }
+
+    [Fact]
+    public async Task GenerateHeadshot_FreePreview_GeneratesOneStoredImageWithoutConsumingCredits()
+    {
+        var userId = $"headshot-user-{Guid.NewGuid():N}";
+        await SeedUserAsync(userId, credits: 3);
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
+
+        var response = await client.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = $"testing/enhanced/{userId}/source.png",
+            style = "professional",
+            background = "auto",
+            numOutputs = 1
+        });
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, responseBody);
+        var json = await response.Content.ReadFromJsonAsync<HeadshotApiResponse>();
+        Assert.NotNull(json);
+        Assert.True(json!.Success);
+        Assert.NotNull(json.Data);
+        Assert.Equal("openai", json.Data!.Provider);
+        Assert.Equal("gpt-image-2", json.Data.Model);
+        Assert.Equal(0, json.Data.CreditsCost);
+        Assert.Equal(3, json.Data.RemainingCredits);
+        Assert.NotEqual(0, json.Data.ProcessedImageId);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var profile = db.UserProfiles.Single(p => p.UserId == userId);
+        Assert.Equal(3, profile.Credits);
+        var image = db.ProcessedImages.Single(i => i.Id == json.Data.ProcessedImageId);
+        Assert.Equal("instant_headshot", image.GenerationMode);
+        Assert.Equal("openai", image.Provider);
+        Assert.Equal("gpt-image-2", image.ProviderModel);
+        Assert.True(image.IsGenerated);
+        Assert.Single(json.Data.Candidates);
+    }
+
+    [Fact]
+    public async Task GenerateHeadshot_StarterPackage_RequiresEntitlementAndConsumesCandidateAllowance()
+    {
+        var userId = $"headshot-starter-{Guid.NewGuid():N}";
+        await SeedUserAsync(userId, credits: 10);
+        await GrantPackageEntitlementAsync(userId, "starter_package", candidates: 3, refinements: 1, premiumAugmentations: 0, exportKit: true);
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
+
+        var response = await client.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = $"testing/enhanced/{userId}/source.png",
+            style = "professional",
+            background = "auto",
+            packageCode = "starter_package",
+            numOutputs = 5
+        });
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, responseBody);
+        var json = await response.Content.ReadFromJsonAsync<HeadshotApiResponse>();
+        Assert.NotNull(json?.Data);
+        Assert.Equal(3, json!.Data!.Candidates.Count);
+        Assert.Equal(3, json.Data.CreditsCost);
+        Assert.Equal(7, json.Data.RemainingCredits);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var entitlement = db.UserPackageEntitlements.Single(e => e.UserId == userId);
+        Assert.Equal(0, entitlement.RemainingCandidates);
+        Assert.Equal(3, db.ProcessedImages.Count(i => i.UserProfile.UserId == userId));
+    }
+
+    [Fact]
+    public async Task GenerateHeadshot_UnauthenticatedRequest_ReturnsUnauthorized()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-Unauthenticated", "true");
+
+        var response = await client.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = "dev/enhanced/test-user-1/source.png",
+            style = "professional",
+            background = "auto",
+            numOutputs = 1
+        });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    private async Task GrantPackageEntitlementAsync(string userId, string packageCode, int candidates, int refinements, int premiumAugmentations, bool exportKit)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var package = db.OutcomePackageDefinitions.Single(p => p.Code == packageCode);
+        db.UserPackageEntitlements.Add(new UserPackageEntitlement
+        {
+            UserId = userId,
+            OutcomePackageDefinitionId = package.Id,
+            Status = PackageEntitlementStatus.Active,
+            RemainingPackageUses = 1,
+            RemainingCandidates = candidates,
+            RemainingRefinements = refinements,
+            RemainingPremiumAugmentations = premiumAugmentations,
+            PlatformExportKitAvailable = exportKit,
+            ActivatedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+    }
+
+    private async Task SeedUserAsync(string userId, int credits)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<ApplicationUser>>();
+        var user = new ApplicationUser
+        {
+            Id = userId,
+            UserName = $"{userId}@example.com",
+            NormalizedUserName = $"{userId}@EXAMPLE.COM",
+            Email = $"{userId}@example.com",
+            NormalizedEmail = $"{userId}@EXAMPLE.COM",
+            EmailConfirmed = true,
+            SecurityStamp = Guid.NewGuid().ToString("N")
+        };
+        user.PasswordHash = hasher.HashPassword(user, "Password123!");
+
+        if (!db.Styles.Any(s => s.Name == "linkedin"))
+        {
+            db.Styles.Add(new Style
+            {
+                Name = "linkedin",
+                Description = "LinkedIn professional style",
+                PromptTemplate = "professional portrait of a {gender} {ethnicity}, {subject}, clean neutral background, confident approachable expression",
+                NegativePromptTemplate = "distorted face, unrealistic features",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        db.Users.Add(user);
+        db.UserProfiles.Add(new UserProfile
+        {
+            UserId = userId,
+            User = user,
+            Credits = credits,
+            LastCreditReset = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+    }
+
+    private sealed class HeadshotApiResponse
+    {
+        public bool Success { get; set; }
+        public HeadshotApiData? Data { get; set; }
+    }
+
+    private sealed class HeadshotApiData
+    {
+        public string ImageUrl { get; set; } = string.Empty;
+        public string StoragePath { get; set; } = string.Empty;
+        public int ProcessedImageId { get; set; }
+        public string Provider { get; set; } = string.Empty;
+        public string Model { get; set; } = string.Empty;
+        public int CreditsCost { get; set; }
+        public int RemainingCredits { get; set; }
+        public List<HeadshotCandidateData> Candidates { get; set; } = new();
+    }
+
+    private sealed class HeadshotCandidateData
+    {
+        public int ProcessedImageId { get; set; }
+    }
+}

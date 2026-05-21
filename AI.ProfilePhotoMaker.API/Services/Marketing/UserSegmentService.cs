@@ -61,7 +61,7 @@ public class UserSegmentService : IUserSegmentService
                 return baseQuery.Where(u => !usersWithUploads.Contains(u.Id));
             }
 
-            // Uploaded 1–4 selfies (previously blocked at 10-photo minimum, now eligible)
+            // Uploaded 1–4 photos (previously blocked at 10-photo minimum, now eligible)
             case SegmentFilters.StuckUnderMinimum:
             {
                 var eligibleIds = uploadsByUser

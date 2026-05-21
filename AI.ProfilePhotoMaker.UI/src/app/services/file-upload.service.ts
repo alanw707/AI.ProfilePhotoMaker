@@ -12,6 +12,7 @@ export interface UploadResponse {
     fileName: string;
     size: number;
     url: string;
+    storagePath?: string;
   }[];
   uploadedImageIds: number[];
   zipCreated: boolean;
@@ -27,6 +28,14 @@ export interface ProcessedImage {
   createdAt: string;
   isOriginalUpload: boolean;
   isGenerated: boolean;
+  provider?: string | null;
+  providerModel?: string | null;
+  generationMode?: string | null;
+  promptVersion?: string | null;
+  correlationId?: string | null;
+  creditCost?: number | null;
+  generationStatus?: string | null;
+  failureReason?: string | null;
 }
 
 export interface UserImagesResponse {
@@ -455,7 +464,7 @@ export class FileUploadService {
     isEnhanced = true
   ): Observable<{
     progress: number;
-    response?: { success: boolean; data: { url: string; fileName: string } };
+    response?: { success: boolean; data: { url: string; fileName: string; storagePath?: string } };
   }> {
     const formData = new FormData();
     formData.append('images', file, file.name);
@@ -515,6 +524,7 @@ export class FileUploadService {
                     originalUrl: uploadedFile.Url,
                     fallbackUrl: uploadedFile.url,
                     finalUrl: uploadedFile.Url || uploadedFile.url,
+                    storagePath: uploadedFile.StoragePath || uploadedFile.storagePath,
                   }
                 );
                 return {
@@ -524,6 +534,7 @@ export class FileUploadService {
                     data: {
                       url: uploadedFile.Url || uploadedFile.url,
                       fileName: uploadedFile.FileName || uploadedFile.fileName,
+                      storagePath: uploadedFile.StoragePath || uploadedFile.storagePath,
                     },
                   },
                 };
@@ -545,6 +556,7 @@ export class FileUploadService {
                     data: {
                       url: uploadedFile.url || uploadedFile.Url,
                       fileName: uploadedFile.fileName || uploadedFile.FileName,
+                      storagePath: uploadedFile.storagePath || uploadedFile.StoragePath,
                     },
                   },
                 };

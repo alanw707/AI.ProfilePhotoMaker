@@ -201,7 +201,7 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
         items: [
           {
             question: 'Do I need a professional camera?',
-            answer: 'No. Clear smartphone selfies are enough to get strong results.',
+            answer: 'No. Clear smartphone photos are enough to get strong results.',
           },
           {
             question: 'Can I update my headshot later?',

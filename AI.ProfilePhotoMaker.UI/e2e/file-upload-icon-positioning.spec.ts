@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test'
 
 test.describe('File Upload Icon Positioning Tests', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to the dashboard page
-    await page.goto('http://localhost:4200/dashboard')
+    // Navigate to the Photo Workspace page
+    await page.goto('http://localhost:4200/app/enhance')
     
     // Wait for the page to load
     await page.waitForSelector('.file-upload-section')

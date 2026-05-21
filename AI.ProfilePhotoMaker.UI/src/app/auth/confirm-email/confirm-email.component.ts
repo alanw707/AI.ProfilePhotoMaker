@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  inject,
+  OnInit,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -30,7 +36,9 @@ export class ConfirmEmailComponent implements OnInit {
     if (result) {
       this.isLoading = false;
       this.isSuccess = result === 'success';
-      this.error = this.isSuccess ? '' : 'Email verification failed. Please request a new verification email.';
+      this.error = this.isSuccess
+        ? ''
+        : 'Email verification failed. Please request a new verification email.';
       this._cdr.markForCheck();
       if (this.isSuccess) {
         this.checkSession(true);
@@ -107,7 +115,7 @@ export class ConfirmEmailComponent implements OnInit {
               this.goToLogin();
               return;
             }
-            this.sessionMessage = 'Please sign in to continue to your dashboard.';
+            this.sessionMessage = 'Please sign in to continue to your photo workspace.';
           } else {
             this.sessionMessage = 'Unable to verify your session right now. Please try again.';
           }
@@ -121,13 +129,13 @@ export class ConfirmEmailComponent implements OnInit {
       return;
     }
 
-    const redirectUrl = sessionStorage.getItem('redirectUrl') || '/app/dashboard';
+    const redirectUrl = sessionStorage.getItem('redirectUrl') || '/app/enhance';
     sessionStorage.removeItem('redirectUrl');
     void this._router.navigateByUrl(redirectUrl);
   }
 
   goToLogin(): void {
-    const redirectUrl = sessionStorage.getItem('redirectUrl') || '/app/dashboard';
+    const redirectUrl = sessionStorage.getItem('redirectUrl') || '/app/enhance';
     void this._router.navigate(['/auth/login'], {
       queryParams: {
         message: 'Email verified. Please sign in to continue.',
