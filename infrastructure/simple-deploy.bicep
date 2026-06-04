@@ -493,6 +493,30 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               value: 'false'
             }
             {
+              name: 'Features__OpenAIHeadshotMvp'
+              value: 'true'
+            }
+            {
+              name: 'Features__ProfilePhotoWorkflowOverhaul'
+              value: 'true'
+            }
+            {
+              name: 'Features__OutcomePackagesVisible'
+              value: 'true'
+            }
+            {
+              name: 'Features__ProfilePhotoScoreVisible'
+              value: 'true'
+            }
+            {
+              name: 'Features__CreativeStylePackVisible'
+              value: 'true'
+            }
+            {
+              name: 'Features__PremiumAugmentationsVisible'
+              value: 'true'
+            }
+            {
               name: 'CORS_ALLOWED_ORIGINS'
               value: 'https://aiprofilephotomaker.com,https://aiprofilephotomaker.com'
             }

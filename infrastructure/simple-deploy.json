@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "6018294520685048455"
+      "templateHash": "11391304353066336142"
     }
   },
   "parameters": {
@@ -24,6 +24,20 @@
     "imageTag": {
       "type": "string",
       "defaultValue": "latest"
+    },
+    "frontendCertificateId": {
+      "type": "string",
+      "defaultValue": "/subscriptions/7e5147a4-3abb-4a43-aef7-5a2ae770c739/resourceGroups/aiprofilemaker-v1/providers/Microsoft.App/managedEnvironments/aipm-env-v1-6j74jubocuukg/managedCertificates/aiprofilephotomaker.com-aipm-env-260106133524",
+      "metadata": {
+        "description": "Managed certificate resource ID for the frontend custom domain"
+      }
+    },
+    "backendCertificateId": {
+      "type": "string",
+      "defaultValue": "/subscriptions/7e5147a4-3abb-4a43-aef7-5a2ae770c739/resourceGroups/aiprofilemaker-v1/providers/Microsoft.App/managedEnvironments/aipm-env-v1-6j74jubocuukg/managedCertificates/mc-aiprofilemaker-api-aiprofilepho-8101",
+      "metadata": {
+        "description": "Managed certificate resource ID for the backend custom domain"
+      }
     },
     "sqlAdminPassword": {
       "type": "securestring"
@@ -69,6 +83,24 @@
       "metadata": {
         "description": "Stripe webhook secret for payment event validation"
       }
+    },
+    "openAiApiKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "OpenAI API key for DALL-E 3 image generation"
+      }
+    },
+    "postmarkServerToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Postmark server token for transactional email"
+      }
+    },
+    "turnstileSecretKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Cloudflare Turnstile secret key for bot verification"
+      }
     }
   },
   "variables": {
@@ -80,9 +112,7 @@
     "containerEnvName": "[format('{0}-env-{1}-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))]",
     "backendAppName": "[format('{0}-api-{1}', parameters('appName'), parameters('environment'))]",
     "frontendAppName": "[format('{0}-web-{1}', parameters('appName'), parameters('environment'))]",
-    "applicationInsightsName": "[format('{0}-ai-{1}', parameters('appName'), parameters('environment'))]",
-    "frontendCertificateId": "/subscriptions/7e5147a4-3abb-4a43-aef7-5a2ae770c739/resourceGroups/aiprofilemaker-v1/providers/Microsoft.App/managedEnvironments/aipm-env-v1-6j74jubocuukg/managedCertificates/mc-aipm-env-v1-6j-app-aiprofilepho-5691",
-    "backendCertificateId": "/subscriptions/7e5147a4-3abb-4a43-aef7-5a2ae770c739/resourceGroups/aiprofilemaker-v1/providers/Microsoft.App/managedEnvironments/aipm-env-v1-6j74jubocuukg/managedCertificates/mc-aipm-env-v1-6j-api-aiprofilepho-8094"
+    "applicationInsightsName": "[format('{0}-ai-{1}', parameters('appName'), parameters('environment'))]"
   },
   "resources": [
     {
@@ -161,7 +191,7 @@
           "corsRules": [
             {
               "allowedOrigins": [
-                "https://app.aiprofilephotomaker.com",
+                "https://aiprofilephotomaker.com",
                 "https://aiprofilephotomaker.com",
                 "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('frontendAppName')), '2023-05-01').configuration.ingress.fqdn)]",
                 "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('backendAppName')), '2023-05-01').configuration.ingress.fqdn)]",
@@ -349,6 +379,17 @@
       ]
     },
     {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-02-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'OpenAiApiKey')]",
+      "properties": {
+        "value": "[parameters('openAiApiKey')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
       "type": "Microsoft.App/managedEnvironments",
       "apiVersion": "2023-05-01",
       "name": "[variables('containerEnvName')]",
@@ -367,12 +408,21 @@
       ]
     },
     {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[format('{0}-api-identity-{1}-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]"
+    },
+    {
       "type": "Microsoft.App/containerApps",
       "apiVersion": "2023-05-01",
       "name": "[variables('backendAppName')]",
       "location": "[parameters('location')]",
       "identity": {
-        "type": "SystemAssigned"
+        "type": "SystemAssigned,UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-api-identity-{1}-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))))]": {}
+        }
       },
       "properties": {
         "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]",
@@ -385,7 +435,7 @@
             "customDomains": [
               {
                 "name": "api.aiprofilephotomaker.com",
-                "certificateId": "[variables('backendCertificateId')]",
+                "certificateId": "[parameters('backendCertificateId')]",
                 "bindingType": "SniEnabled"
               }
             ]
@@ -437,6 +487,19 @@
             {
               "name": "stripe-webhook-secret",
               "value": "[parameters('stripeWebhookSecret')]"
+            },
+            {
+              "name": "openai-api-key",
+              "keyVaultUrl": "[format('{0}secrets/OpenAiApiKey', reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-02-01').vaultUri)]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-api-identity-{1}-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix')))]"
+            },
+            {
+              "name": "postmark-server-token",
+              "value": "[parameters('postmarkServerToken')]"
+            },
+            {
+              "name": "turnstile-secret-key",
+              "value": "[parameters('turnstileSecretKey')]"
             }
           ]
         },
@@ -455,6 +518,10 @@
                   "value": "Production"
                 },
                 {
+                  "name": "Replicate__Owner",
+                  "value": "alanw707"
+                },
+                {
                   "name": "ConnectionStrings__DefaultConnection",
                   "secretRef": "connection-string"
                 },
@@ -471,6 +538,26 @@
                   "secretRef": "replicate-webhook-secret"
                 },
                 {
+                  "name": "REPLICATE_API_TOKEN",
+                  "secretRef": "replicate-token"
+                },
+                {
+                  "name": "REPLICATE_WEBHOOK_SECRET",
+                  "secretRef": "replicate-webhook-secret"
+                },
+                {
+                  "name": "Replicate__FluxTrainingModelId",
+                  "value": "replicate/fast-flux-trainer:f463fbfc97389e10a2f443a8a84b6953b1058eafbf0c9af4d84457ff07cb04db"
+                },
+                {
+                  "name": "Replicate__FluxGenerationModelId",
+                  "value": "black-forest-labs/flux-dev"
+                },
+                {
+                  "name": "Replicate__FluxKontextProModelId",
+                  "value": "black-forest-labs/flux-kontext-pro"
+                },
+                {
                   "name": "ConnectionStrings__AzureStorage",
                   "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value)]"
                 },
@@ -480,6 +567,14 @@
                 },
                 {
                   "name": "AzureStorage__ContainerName",
+                  "value": "profile-images"
+                },
+                {
+                  "name": "AZURE_STORAGE_CONNECTION_STRING",
+                  "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value)]"
+                },
+                {
+                  "name": "AZURE_STORAGE_CONTAINER_NAME",
                   "value": "profile-images"
                 },
                 {
@@ -495,8 +590,40 @@
                   "value": "false"
                 },
                 {
+                  "name": "Features__OpenAIHeadshotMvp",
+                  "value": "true"
+                },
+                {
+                  "name": "Features__ProfilePhotoWorkflowOverhaul",
+                  "value": "true"
+                },
+                {
+                  "name": "Features__OutcomePackagesVisible",
+                  "value": "true"
+                },
+                {
+                  "name": "Features__ProfilePhotoScoreVisible",
+                  "value": "true"
+                },
+                {
+                  "name": "Features__CreativeStylePackVisible",
+                  "value": "true"
+                },
+                {
+                  "name": "Features__PremiumAugmentationsVisible",
+                  "value": "true"
+                },
+                {
                   "name": "CORS_ALLOWED_ORIGINS",
-                  "value": "https://app.aiprofilephotomaker.com,https://aiprofilephotomaker.com"
+                  "value": "https://aiprofilephotomaker.com,https://aiprofilephotomaker.com"
+                },
+                {
+                  "name": "ExternalApiBaseUrl",
+                  "value": "https://api.aiprofilephotomaker.com"
+                },
+                {
+                  "name": "AppBaseUrl",
+                  "value": "https://aiprofilephotomaker.com"
                 },
                 {
                   "name": "GOOGLE_CLIENT_ID",
@@ -525,6 +652,54 @@
                 {
                   "name": "STRIPE_WEBHOOK_SECRET",
                   "secretRef": "stripe-webhook-secret"
+                },
+                {
+                  "name": "Email__Username",
+                  "value": ""
+                },
+                {
+                  "name": "Email__Password",
+                  "value": ""
+                },
+                {
+                  "name": "Email__FromEmail",
+                  "value": "no-reply@aiprofilephotomaker.com"
+                },
+                {
+                  "name": "Email__FromName",
+                  "value": "AI Profile Photo Maker"
+                },
+                {
+                  "name": "Email__SandboxMode",
+                  "value": "false"
+                },
+                {
+                  "name": "Email__FrontendBaseUrl",
+                  "value": "https://aiprofilephotomaker.com"
+                },
+                {
+                  "name": "Email__UseApi",
+                  "value": "true"
+                },
+                {
+                  "name": "Email__PostmarkServerToken",
+                  "secretRef": "postmark-server-token"
+                },
+                {
+                  "name": "TURNSTILE_SECRET_KEY",
+                  "secretRef": "turnstile-secret-key"
+                },
+                {
+                  "name": "Turnstile__SecretKey",
+                  "secretRef": "turnstile-secret-key"
+                },
+                {
+                  "name": "OPENAI_API_KEY",
+                  "secretRef": "openai-api-key"
+                },
+                {
+                  "name": "OpenAI__ApiKey",
+                  "secretRef": "openai-api-key"
                 },
                 {
                   "name": "Stripe__SecretKey",
@@ -587,11 +762,29 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-api-identity-{1}-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix')))]",
         "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]",
         "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
         "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), format('{0}db', parameters('appName')))]",
         "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2020-04-01-preview",
+      "scope": "[format('Microsoft.KeyVault/vaults/{0}', variables('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), variables('backendAppName'), 'kv-secrets-user')]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-api-identity-{1}-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/containerApps', variables('backendAppName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-api-identity-{1}-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix')))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
       ]
     },
     {
@@ -612,8 +805,8 @@
             "allowInsecure": false,
             "customDomains": [
               {
-                "name": "app.aiprofilephotomaker.com",
-                "certificateId": "[variables('frontendCertificateId')]",
+                "name": "aiprofilephotomaker.com",
+                "certificateId": "[parameters('frontendCertificateId')]",
                 "bindingType": "SniEnabled"
               }
             ]
