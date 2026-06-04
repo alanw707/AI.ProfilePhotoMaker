@@ -335,6 +335,7 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_db_migrations == true }}
         env:
           SQL_CONNECTION_STRING: "Server=tcp:aipm-sql-v1-6j74jubocuukg.database.windows.net,1433;Initial Catalog=aipmdb;User ID=sqladmin;Password=${{ secrets.SQL_ADMIN_PASSWORD }};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+          ConnectionStrings__DefaultConnection: "Server=tcp:aipm-sql-v1-6j74jubocuukg.database.windows.net,1433;Initial Catalog=aipmdb;User ID=sqladmin;Password=${{ secrets.SQL_ADMIN_PASSWORD }};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
         run: |
           echo "🔍 Checking for pending EF Core migrations against production database..."
           dotnet tool restore
