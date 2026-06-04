@@ -5,6 +5,7 @@ using Xunit;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using AI.ProfilePhotoMaker.API.Services;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 
 namespace AI.ProfilePhotoMaker.API.Tests.Unit;
 
@@ -34,6 +35,26 @@ public class AzureBlobStorageServiceTests
         var blobClient = new BlobServiceClient("UseDevelopmentStorage=true");
 
         return new AzureBlobStorageService(blobClient, config, logger.Object);
+    }
+
+    [Fact]
+    public async Task EnsureContainerExistsAsync_UsesPrivateContainerAccess()
+    {
+        PublicAccessType? observedPublicAccessType = null;
+        var containerClient = new Mock<BlobContainerClient>();
+        containerClient
+            .Setup(client => client.CreateIfNotExistsAsync(
+                It.IsAny<PublicAccessType>(),
+                It.IsAny<IDictionary<string, string>>(),
+                It.IsAny<BlobContainerEncryptionScopeOptions>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<PublicAccessType, IDictionary<string, string>, BlobContainerEncryptionScopeOptions, CancellationToken>((publicAccessType, _, _, _) =>
+                observedPublicAccessType = publicAccessType)
+            .ReturnsAsync((Azure.Response<BlobContainerInfo>?)null);
+
+        await AzureBlobStorageService.EnsureContainerExistsAsync(containerClient.Object);
+
+        Assert.Equal(PublicAccessType.None, observedPublicAccessType);
     }
 
     [Fact]

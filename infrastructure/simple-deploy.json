@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "11391304353066336142"
+      "templateHash": "12689769709904259939"
     }
   },
   "parameters": {
@@ -568,6 +568,10 @@
                 {
                   "name": "AzureStorage__ContainerName",
                   "value": "profile-images"
+                },
+                {
+                  "name": "Storage__ProxyBlobRequests",
+                  "value": "true"
                 },
                 {
                   "name": "AZURE_STORAGE_CONNECTION_STRING",

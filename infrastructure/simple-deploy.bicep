@@ -471,6 +471,10 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'AzureStorage__ContainerName'
               value: 'profile-images'
             }
+            {
+              name: 'Storage__ProxyBlobRequests'
+              value: 'true'
+            }
             // Plain env vars for EnvironmentConfiguration production checks
             {
               name: 'AZURE_STORAGE_CONNECTION_STRING'

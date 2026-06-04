@@ -22,6 +22,15 @@ public class AzureBlobStorageService : BaseStorageService
         _containerName = configuration["AzureStorage:ContainerName"] ?? "profile-images";
     }
 
+    internal static async Task EnsureContainerExistsAsync(BlobContainerClient containerClient, CancellationToken cancellationToken = default)
+    {
+        // Production storage accounts disable public blob access. Asking Azure to create a
+        // public container fails with PublicAccessNotPermitted before upload can start.
+        await containerClient.CreateIfNotExistsAsync(
+            publicAccessType: PublicAccessType.None,
+            cancellationToken: cancellationToken);
+    }
+
     public override async Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId, string folderType = "generated")
     {
         ValidateUserId(userId);
@@ -30,7 +39,7 @@ public class AzureBlobStorageService : BaseStorageService
         try
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-            await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+            await EnsureContainerExistsAsync(containerClient);
 
             var blobPath = GenerateUserStoragePath(userId, fileName, folderType);
             var blobClient = containerClient.GetBlobClient(blobPath);
@@ -78,7 +87,7 @@ public class AzureBlobStorageService : BaseStorageService
             }
 
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-            await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+            await EnsureContainerExistsAsync(containerClient);
 
             var blobClient = containerClient.GetBlobClient(blobPath.TrimStart('/'));
 
@@ -389,8 +398,8 @@ public class AzureBlobStorageService : BaseStorageService
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
             var blobClient = containerClient.GetBlobClient(blobPath.TrimStart('/'));
 
-            // For Azurite/local development, the blob containers are configured as public (`PublicAccessType.Blob`).
-            // Returning a plain URL avoids SAS version incompatibilities (Azurite may reject newer `sv` values).
+            // For Azurite/local development, returning a plain URL avoids SAS version incompatibilities
+            // (Azurite may reject newer `sv` values). Browser delivery still goes through the API proxy.
             if (IsAzuriteEndpoint(_blobServiceClient.Uri))
             {
                 return Task.FromResult(blobClient.Uri.ToString());
@@ -512,7 +521,7 @@ public class AzureBlobStorageService : BaseStorageService
             }
 
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-            await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+            await EnsureContainerExistsAsync(containerClient);
 
             var blobClient = containerClient.GetBlobClient(blobPath.TrimStart('/'));
 
