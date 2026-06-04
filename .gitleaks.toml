@@ -1,0 +1,17 @@
+title = "AI.ProfilePhotoMaker gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow documented placeholders, public publishable-key evidence, and test-only JWT fixtures. None are production secrets."
+paths = [
+  '''docs/deployment/evidence/.*\.json$''',
+  '''docs/PRODUCTION_MIGRATION_GUIDE\.md$''',
+  '''docs/deployment/SECRETS_CONFIGURATION\.md$''',
+  '''AI\.ProfilePhotoMaker\.API/tests/playwright/tests/authenticated-request-test\.spec\.ts$'''
+]
+regexes = [
+  '''headshot_linkedin''',
+  '''REPLACE_WITH_[A-Z_]+'''
+]
