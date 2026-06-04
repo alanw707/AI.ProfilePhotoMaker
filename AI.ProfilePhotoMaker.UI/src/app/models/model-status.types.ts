@@ -21,7 +21,7 @@ export enum ModelState {
   NOT_STARTED = 'NOT_STARTED',
   READY_TO_TRAIN = 'READY_TO_TRAIN',
   TRAINING = 'TRAINING',
-   GENERATING = 'GENERATING',
+  GENERATING = 'GENERATING',
   READY = 'READY',
   FAILED = 'FAILED',
 }
@@ -158,7 +158,7 @@ export interface ModelStatusConfig {
  * Default configuration values
  */
 export const DEFAULT_MODEL_STATUS_CONFIG: ModelStatusConfig = {
-  minImagesForTraining: 10,
+  minImagesForTraining: 5,
   showDetailedProgress: true,
   autoRefresh: true,
   refreshInterval: 30000, // 30 seconds

@@ -30,6 +30,10 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("NudgeType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateTime>("SentAtUtc")
                         .HasColumnType("datetime2");
 
@@ -39,9 +43,9 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId")
+                    b.HasIndex("UserId", "NudgeType")
                         .IsUnique()
-                        .HasDatabaseName("IX_AbandonedUploadNudgeLogs_UserId");
+                        .HasDatabaseName("IX_AbandonedUploadNudgeLogs_UserId_NudgeType");
 
                     b.ToTable("AbandonedUploadNudgeLogs");
                 });
@@ -622,6 +626,136 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.ToTable("ModelCreationRequests");
                 });
 
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.OutcomePackageDefinition", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IncludedCandidateCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IncludedPremiumAugmentationCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IncludedRefinementCount")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IncludesPlatformExportKit")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IncludesScoreDelta")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("InternalCreditPackageId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("StripePriceId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("IX_OutcomePackageDefinitions_Code_Unique");
+
+                    b.HasIndex("InternalCreditPackageId");
+
+                    b.HasIndex("IsActive", "DisplayOrder")
+                        .HasDatabaseName("IX_OutcomePackageDefinitions_IsActive_DisplayOrder");
+
+                    b.ToTable("OutcomePackageDefinitions");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "free_preview",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Currency = "USD",
+                            Description = "Score your source photo and try a same-quality watermarked preview before buying a package.",
+                            DisplayOrder = 1,
+                            IncludedCandidateCount = 1,
+                            IncludedPremiumAugmentationCount = 0,
+                            IncludedRefinementCount = 0,
+                            IncludesPlatformExportKit = false,
+                            IncludesScoreDelta = false,
+                            IsActive = true,
+                            Name = "Free Preview",
+                            Price = 0m
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "starter_package",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Currency = "USD",
+                            Description = "Three profile-photo candidates, best shot selector, basic adjustment, and selected platform exports.",
+                            DisplayOrder = 2,
+                            IncludedCandidateCount = 3,
+                            IncludedPremiumAugmentationCount = 0,
+                            IncludedRefinementCount = 2,
+                            IncludesPlatformExportKit = true,
+                            IncludesScoreDelta = false,
+                            InternalCreditPackageId = 1,
+                            IsActive = true,
+                            Name = "Starter Package",
+                            Price = 9.99m
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "pro_package",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Currency = "USD",
+                            Description = "Nine candidates, best shot selector, score delta, exports, refinements, and premium augmentations.",
+                            DisplayOrder = 3,
+                            IncludedCandidateCount = 9,
+                            IncludedPremiumAugmentationCount = 3,
+                            IncludedRefinementCount = 5,
+                            IncludesPlatformExportKit = true,
+                            IncludesScoreDelta = true,
+                            InternalCreditPackageId = 2,
+                            IsActive = true,
+                            Name = "Pro Package",
+                            Price = 19.99m
+                        });
+                });
+
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.PaymentTransaction", b =>
                 {
                     b.Property<int>("Id")
@@ -788,8 +922,26 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreditCost")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FailureReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GenerationMode")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("GenerationStatus")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<bool>("IsGenerated")
                         .HasColumnType("bit");
@@ -804,6 +956,18 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.Property<string>("ProcessedImageUrl")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("PromptVersion")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ProviderModel")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<DateTime>("ScheduledDeletionDate")
                         .HasColumnType("datetime2");
@@ -838,6 +1002,9 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.HasIndex("UserProfileId", "IsOriginalUpload")
                         .HasDatabaseName("IX_ProcessedImages_UserProfileId_IsOriginalUpload");
+
+                    b.HasIndex("UserProfileId", "GenerationMode", "CreatedAt")
+                        .HasDatabaseName("IX_ProcessedImages_User_Mode_CreatedAt");
 
                     b.HasIndex("UserProfileId", "Style", "CreatedAt")
                         .IsDescending(false, false, true)
@@ -1331,6 +1498,72 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.ToTable("UsageLogs");
                 });
 
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserPackageEntitlement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ActivatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ConsumedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OutcomePackageDefinitionId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("PlatformExportKitAvailable")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("RemainingCandidates")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RemainingPackageUses")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RemainingPremiumAugmentations")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RemainingRefinements")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SourcePaymentTransactionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OutcomePackageDefinitionId");
+
+                    b.HasIndex("SourcePaymentTransactionId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UserPackageEntitlements_SourcePaymentTransactionId_Unique")
+                        .HasFilter("[SourcePaymentTransactionId] IS NOT NULL");
+
+                    b.HasIndex("UserId", "Status", "CreatedAt")
+                        .HasDatabaseName("IX_UserPackageEntitlements_User_Status_CreatedAt");
+
+                    b.ToTable("UserPackageEntitlements");
+                });
+
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -1603,6 +1836,16 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.Navigation("Campaign");
                 });
 
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.OutcomePackageDefinition", b =>
+                {
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.CreditPackage", "InternalCreditPackage")
+                        .WithMany()
+                        .HasForeignKey("InternalCreditPackageId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("InternalCreditPackage");
+                });
+
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.PaymentTransaction", b =>
                 {
                     b.HasOne("AI.ProfilePhotoMaker.API.Models.Subscription", "Subscription")
@@ -1672,6 +1915,32 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasPrincipalKey("UserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserPackageEntitlement", b =>
+                {
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.OutcomePackageDefinition", "OutcomePackageDefinition")
+                        .WithMany("Entitlements")
+                        .HasForeignKey("OutcomePackageDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.PaymentTransaction", "SourcePaymentTransaction")
+                        .WithMany()
+                        .HasForeignKey("SourcePaymentTransactionId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OutcomePackageDefinition");
+
+                    b.Navigation("SourcePaymentTransaction");
 
                     b.Navigation("User");
                 });
@@ -1769,6 +2038,11 @@ namespace AI.ProfilePhotoMaker.API.Migrations
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.CreditPackage", b =>
                 {
                     b.Navigation("Purchases");
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.OutcomePackageDefinition", b =>
+                {
+                    b.Navigation("Entitlements");
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Style", b =>

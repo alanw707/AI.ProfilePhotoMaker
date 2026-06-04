@@ -250,7 +250,7 @@ ON ProcessedImages(ImageType, IsDeleted);
     <h3>No photos yet</h3>
     <p>Generate your first AI profile photo!</p>
     <button mat-raised-button color="primary" 
-            routerLink="/dashboard">
+            routerLink="/app/enhance">
       Get Started
     </button>
   </div>

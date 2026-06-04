@@ -10,12 +10,14 @@ namespace AI.ProfilePhotoMaker.API.Tests.Unit;
 
 public class ReplicateApiClientUrlNormalizationTests
 {
+    private static readonly string TestReplicateApiToken = new('R', 40);
+
     [Fact]
     public async Task NormalizeImageUrlForExternalAccessAsync_RewritesAzuriteHost_ToNgrok()
     {
         var ngrokBase = "https://clear-anteater-usually.ngrok-free.app";
         var configurationMock = new Mock<IConfiguration>();
-        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns("test-token");
+        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns(TestReplicateApiToken);
         configurationMock.Setup(x => x["Webhooks:NgrokTunnelUrl"]).Returns(ngrokBase);
 
         var loggerMock = new Mock<ILogger<ReplicateApiClient>>();
@@ -50,7 +52,7 @@ public class ReplicateApiClientUrlNormalizationTests
     {
         var ngrokBase = "https://clear-anteater-usually.ngrok-free.app";
         var configurationMock = new Mock<IConfiguration>();
-        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns("test-token");
+        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns(TestReplicateApiToken);
         configurationMock.Setup(x => x["Webhooks:NgrokTunnelUrl"]).Returns(ngrokBase);
         configurationMock.Setup(x => x["ExternalApiBaseUrl"]).Returns("https://api.example.com");
 

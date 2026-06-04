@@ -33,7 +33,7 @@ export class MockAuthService {
   }
 }
 
-export class MockDashboardStateService {
+export class MockWorkspaceStateService {
   private _stateSubject = new BehaviorSubject({
     uploadedImages: [],
     selectedStyles: [],
@@ -359,7 +359,7 @@ export class TestingHelpers {
       imports: [component, ...imports],
       providers: [
         { provide: MockAuthService, useClass: MockAuthService },
-        { provide: MockDashboardStateService, useClass: MockDashboardStateService },
+        { provide: MockWorkspaceStateService, useClass: MockWorkspaceStateService },
         { provide: MockNotificationService, useClass: MockNotificationService },
         { provide: MockFileUploadService, useClass: MockFileUploadService },
         { provide: MockReplicateService, useClass: MockReplicateService },
@@ -383,7 +383,7 @@ export const mockRoutes = [
   { path: 'gallery', component: MockComponent },
   { path: 'login', component: MockComponent },
   { path: 'settings', component: MockComponent },
-  { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
+  { path: '', redirectTo: '/app/enhance', pathMatch: 'full' },
 ];
 
 /**

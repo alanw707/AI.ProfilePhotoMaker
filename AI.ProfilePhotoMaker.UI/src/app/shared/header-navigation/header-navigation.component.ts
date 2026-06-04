@@ -42,10 +42,10 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.isHeadshotContext = this._router.url.includes('/app/dashboard');
+    this.isHeadshotContext = this._router.url.includes('/app/enhance');
     this._routerSubscription = this._router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
-        this.isHeadshotContext = event.urlAfterRedirects.includes('/app/dashboard');
+        this.isHeadshotContext = event.urlAfterRedirects.includes('/app/enhance');
         this._cdr.markForCheck();
       }
     });

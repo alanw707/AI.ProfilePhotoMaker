@@ -87,7 +87,7 @@ Content-Type: application/json
 
 #### OAuth Login
 ```http
-GET /auth/external-login/{provider}?returnUrl=/app/dashboard&ageConfirmed=true
+GET /auth/external-login/{provider}?returnUrl=/app/enhance&ageConfirmed=true
 ```
 
 #### Get User Info
@@ -132,9 +132,9 @@ Content-Type: application/json
 
 ### Image Upload
 
-#### Upload Selfies
+#### Upload Photos
 ```http
-POST /image/upload-selfies
+POST /image/upload-photos
 Authorization: Bearer <token>
 Content-Type: multipart/form-data
 
@@ -145,7 +145,7 @@ files: [binary data]
 ```json
 {
   "uploadedCount": 5,
-  "totalSelfies": 10,
+  "totalPhotos": 10,
   "uploadedFiles": [
     {
       "id": "image-id",
@@ -490,7 +490,7 @@ GET /config/app-settings
 **Response:**
 ```json
 {
-  "maxSelfies": 20,
+  "maxPhotos": 20,
   "creditCosts": {
     "generation": 10,
     "enhancement": 1
@@ -559,7 +559,7 @@ Response includes:
 
 - Maximum file size: 10MB per image
 - Supported formats: JPG, JPEG, PNG, WebP
-- Maximum selfies: 20 per user
+- Maximum photos: 20 per user
 - Minimum dimensions: 512x512 pixels
 
 ## Webhooks Security

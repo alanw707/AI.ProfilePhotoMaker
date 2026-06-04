@@ -4,18 +4,18 @@ Version: 1.2
 Last updated: 2025-12-19
 
 ### 1) Product Summary
-- AI-powered profile/headshot photo maker with: user auth (email/password + Google OAuth), photo upload, custom model training on Replicate, styled image generation, photo enhancement (Replicate + OpenAI styles), credits/credit packages, and automated data retention.
+- AI-powered profile/headshot photo maker with: user auth (email/password + Google OAuth), one-photo OpenAI-first instant headshot generation, optional/advanced custom model training on Replicate, styled image generation, photo enhancement, credits/credit packages, and automated data retention.
 - Tech: ASP.NET Core Web API + Angular frontend, EF Core + SQL Server, optional Azure Blob Storage.
 
 ### 2) Goals
-- Enable users to generate professional profile photos from their selfies using AI styles.
+- Enable users to generate professional profile photos from their photos using AI styles.
 - Provide a basic tier with a weekly top-up to 5 when below, and credit packages (Stripe PaymentIntents + webhooks in production, with simulation mode for development).
 - Ensure reliability via hybrid DB/filesystem syncing and webhook-driven flows.
 - Enforce privacy via retention: input photos deleted after 30 days, generated photos after 30 days (target behavior; automated cleanup is being phased in via background jobs).
 
 ### 3) Non‑Goals
 - No full subscription billing lifecycle in MVP (credit packages are primary; Stripe webhook flow drives credit awards, but not all UI flows are strictly payment-gated yet).
-- No admin analytics dashboard in MVP.
+- No product analytics Photo Workspace in MVP.
 - No enterprise SSO or multi-tenant roles.
 
 ### 4) Users & Personas
@@ -25,8 +25,8 @@ Last updated: 2025-12-19
 
 ### 5) User Stories (Core)
 - As a user, I can register/login (email/password or Google) to manage my photos and credits.
-- As a user, I can upload up to 20 selfies at a time for training zip creation.
-- As a user, I can select styles, train a custom model, and generate styled photos using credits.
+- As a user, I can upload one clear photo and generate an instant professional headshot using credits.
+- As a user, I can optionally use the advanced Replicate training flow to create a custom model and generate larger styled photo packs.
 - As a basic user, I can enhance photos using credits with weekly top-ups.
 - As a user, I can view, download, and delete my images.
 - As a user, I can purchase credit packages and see my credit status/history.
@@ -50,18 +50,26 @@ Styles & Selection
 - User can select multiple styles; selections persisted.
 - Endpoints: `GET /api/style`, `GET /api/style/{id}`, `GET /api/style/name/{name}/template`, `POST /api/style/select`, `GET /api/style/user-selected`.
 
-Custom Model Training (Replicate)
+Instant Headshot Generation (OpenAI)
+- Primary MVP flow behind `Features:OpenAIHeadshotMvp`.
+- Requires one uploaded source photo owned by the current user.
+- Endpoint: `POST /api/headshots/generate`.
+- Uses provider abstraction and configurable `OpenAI:ImageModel` / endpoint settings.
+- Requires `instant_headshot_generation` credits; failed provider calls refund/no permanent charge.
+- Generated outputs are stored and tracked with provider/model/generation metadata.
+
+Custom Model Training (Replicate advanced/fallback)
 - Training requires 15 credits. Prevent retrain when a READY model already exists.
 - Training completion is detected via background polling; status endpoints reflect progress and final readiness.
 - Endpoints: `POST /api/replicate/train`, `GET /api/replicate/train/status/{trainingId}`.
 
-Styled Image Generation (Replicate)
+Styled Image Generation (Replicate advanced/fallback)
 - Requires 5 credits per image output. Generates 1–4 images per request; batch generation supported across multiple styles.
 - Endpoints: `POST /api/replicate/generate`, `POST /api/replicate/generate/batch`, `GET /api/replicate/generate/status/{predictionId}`.
 
 Photo Enhancement (Replicate + OpenAI)
 - Basic tier feature using credits. Standard enhancements use Replicate Kontext Pro (1 credit).
-- Stylized enhancements (OpenAI gpt-image-1) use 2 credits and return direct image output instead of a Replicate prediction wrapper.
+- Instant headshots and stylized enhancements use the configured OpenAI image model (`gpt-image-2` by default) and return direct image output instead of a Replicate prediction wrapper.
 - Endpoints: `POST /api/replicate/enhance` (Replicate), `POST /api/enhancement/enhance` (OpenAI).
 
 Credits & Payments
@@ -81,7 +89,7 @@ Webhooks & File Downloading
 - Training ZIP: requires ≥ 10 original uploads.
 - Credits:
   - Unified balance; weekly top-up restores to 5 when below.
-  - Costs: enhancement = 1 (Replicate) or 2 (OpenAI styles), model_training = 15, styled_generation = 5 per image.
+  - Costs: instant_headshot_generation = 1, enhancement = 1 (Replicate/OpenAI enhancement styles unless otherwise configured), model_training = 15, styled_generation = 5 per image.
   - Consumption occurs before external API calls; failures refund credits.
 - Generation: 1–4 outputs per style per request; batch generation allowed; model availability checked.
 - Retention: originals 30 days; generated 30 days; scheduled at record creation and enforced by background job.
@@ -89,15 +97,15 @@ Webhooks & File Downloading
 ### 8) Data Model (high‑level)
 - ApplicationUser (Identity)
 - UserProfile: UserId, Credits, LastCreditReset, SubscriptionTier, ProcessedImages, UsageLogs.
-- ProcessedImage: IsOriginalUpload, IsGenerated, OriginalImageUrl, ProcessedImageUrl, Style, CreatedAt, ScheduledDeletionDate.
+- ProcessedImage: IsOriginalUpload, IsGenerated, OriginalImageUrl, ProcessedImageUrl, Style, CreatedAt, ScheduledDeletionDate, Provider, ProviderModel, GenerationMode, PromptVersion, CorrelationId, CreditCost, GenerationStatus.
 - Style + UserStyleSelection: Active styles and user selections.
 - ModelCreationRequest: UserId, ReplicateModelId, TrainedModelVersion, Status, CompletedAt, TrainingImageZipUrl.
 - CreditPackage, CreditPurchase.
 - UsageLog: action, creditsCost, creditsRemaining.
 
 ### 9) External Services & Config
-- Replicate API: training, prediction, enhancement; prediction-complete webhook uses signature validation with 5-minute timestamp window; training completion uses polling.
-- OpenAI API: gpt-image-1 photo enhancement for select styles; requires `OPENAI_API_KEY`.
+- OpenAI API: instant headshot generation and select photo enhancement styles; requires `OPENAI_API_KEY` / `OpenAI:ApiKey`; model is configurable with `OpenAI:ImageModel`.
+- Replicate API: advanced/fallback training, prediction, enhancement; prediction-complete webhook uses signature validation with 5-minute timestamp window; training completion uses polling.
 - Stripe: library wired; dev uses simulation flags; payment webhook handler exists but full flow is not enforced in UI yet.
 - Storage: Local or Azure Blob Storage chosen by connection string.
 
@@ -115,7 +123,7 @@ Webhooks & File Downloading
 - Response compression enabled; static file caching for images and previews.
 
 ### 12) UX Overview (Frontend)
-- Onboarding: login/register → dashboard with steps: upload → create training zip → train model → select styles → generate → view gallery.
+- Onboarding: login/register → Photo Workspace with steps: upload one photo → score readiness → choose role/package/workflow → generate candidate → view gallery.
 - Enhancement flow: upload/select photo → enhance → preview/download.
 - Credits UI: view status, packages list (public), purchase flow (mock PaymentIntent in dev), history.
 - Gallery: shows original/generate counts, download links, delete.
@@ -137,7 +145,7 @@ Webhooks & File Downloading
 
 ### 15) Risks & Mitigations
 - Replicate failures/rate limits → retry/backoff and clear error messages; credit only consumed on success.
-- Webhook misses → dashboard repair endpoints + filesystem reconciliation tools.
+- Webhook misses → workspace repair endpoints + filesystem reconciliation tools.
 - Payment incomplete → simulation mode for dev; production requires Stripe webhook completion before credit award.
 
 ### 16) Open Questions

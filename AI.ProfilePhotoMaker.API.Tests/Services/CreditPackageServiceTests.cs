@@ -11,6 +11,8 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services;
 
 public class CreditPackageServiceTests
 {
+    private static readonly string TestStripeWebhookKey = new('W', 32);
+
     [Fact]
     public async Task PurchaseCreditPackageAsync_ReturnsPending_WhenTransactionIsPending()
     {
@@ -109,9 +111,9 @@ public class CreditPackageServiceTests
 
         var stripeOptions = new StripeOptions
         {
-            PublishableKey = "pk_test_123",
-            SecretKey = "sk_test_123",
-            WebhookSecret = "whsec_123"
+            PublishableKey = new string('P', 24),
+            SecretKey = new string('S', 32),
+            WebhookSecret = TestStripeWebhookKey
         };
 
         var simulationOptions = new PaymentSimulationOptions

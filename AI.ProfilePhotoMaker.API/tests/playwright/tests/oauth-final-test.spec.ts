@@ -100,7 +100,7 @@ test.describe('OAuth Final Test', () => {
   test('Should test direct API call to OAuth endpoint', async ({ page }) => {
     console.log('🧪 Testing direct API call to OAuth endpoint...');
 
-    const response = await page.request.get('https://api.aiprofilephotomaker.com/api/auth/external-login/google?returnUrl=%2Fapp%2Fdashboard', {
+    const response = await page.request.get('https://api.aiprofilephotomaker.com/api/auth/external-login/google?returnUrl=%2Fapp%2Fenhance', {
       failOnStatusCode: false
     });
 

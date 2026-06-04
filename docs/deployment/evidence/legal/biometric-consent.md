@@ -9,10 +9,10 @@ Status: Signed off (legal).
 - Captured: 2025-12-23T20:35:36Z
 
 ## 1. Biometric Data Notice
-We may process biometric data such as face geometry to train your model and generate AI images, at your direction.
+We may process biometric data such as face geometry to generate instant headshots and, when you choose the advanced flow, train a custom model and generate AI images at your direction.
 
 ## 2. Purpose
-We use biometric data to validate photo quality, train your personalized model, and generate outputs.
+We use biometric data to validate photo quality, generate instant headshots, and optionally train your personalized model for advanced photoshoot packs.
 
 ## 3. Retention Schedule
 - Input photos: retained up to 30 days after upload unless deleted sooner.

@@ -118,7 +118,11 @@ export class NavigationService {
    * Navigate to app routes (protected)
    */
   goToDashboard(): Promise<boolean> {
-    return this.navigateTo('/app/dashboard');
+    return this.goToWorkspace();
+  }
+
+  goToWorkspace(): Promise<boolean> {
+    return this.navigateTo('/app/enhance');
   }
 
   goToGallery(): Promise<boolean> {

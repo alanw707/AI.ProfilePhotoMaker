@@ -1,13 +1,13 @@
-# OpenAI Enhancement (gpt-image-1)
+# OpenAI Enhancement and Instant Headshot Generation (gpt-image-2)
 
-This is the provider-specific reference for our OpenAI image editing integration used by the photo enhancement feature. The overall enhancement flow is documented in `docs/product/PRD.md` and `docs/operations/PHOTO_PROCESSING.md`.
+This is the provider-specific reference for our OpenAI image editing integration used by the photo enhancement feature and the OpenAI-first instant headshot MVP. The overall flow is documented in `docs/product/PRD.md`, `docs/operations/PHOTO_PROCESSING.md`, and `docs/openai-images-2-pivot-implementation-plan.md`.
 
-OpenAI is used for select enhancement styles (for example: `chibi`, `pixar_3d`, `studio_ghibli`). These requests route to `POST /api/enhancement/enhance` and consume 2 credits per enhancement.
+OpenAI is the default provider for the feature-flagged instant headshot path. These requests route to `POST /api/headshots/generate`, use a server-side stored upload path, create a generated gallery record, and consume `instant_headshot_generation` credits. OpenAI also remains available for select enhancement styles through `POST /api/enhancement/enhance` during the transition.
 
 Key points:
-- Endpoint: `POST https://api.openai.com/v1/images/edits`
+- Endpoint: `OpenAI:BaseUrl` + `OpenAI:ImageEditEndpoint` (default `https://api.openai.com/v1/images/edits`)
 - Required fields (multipart/form-data):
-  - `model=gpt-image-1`
+  - `model` from `OpenAI:ImageModel` (default: `gpt-image-2`, selected for the Images 2 pivot and configurable for rollout safety)
   - `image` (PNG we generate server-side; square up to 1024)
   - `prompt` (style-specific text)
   - `size=1024x1024`
@@ -15,8 +15,11 @@ Key points:
 - Response handling: accept either `url` or `b64_json` and return a Replicate-compatible payload to the UI.
 
 Implementation files:
-- API service: `AI.ProfilePhotoMaker.API/Services/ImageProcessing/OpenAIImageGenerationService.cs`
-- API endpoint: `AI.ProfilePhotoMaker.API/Controllers/EnhancementController.cs`
+- Low-level API service: `AI.ProfilePhotoMaker.API/Services/ImageProcessing/OpenAIImageGenerationService.cs`
+- Headshot provider: `AI.ProfilePhotoMaker.API/Services/ImageProcessing/OpenAIHeadshotGenerationProvider.cs`
+- Headshot orchestration: `AI.ProfilePhotoMaker.API/Services/ImageProcessing/HeadshotGenerationService.cs`
+- Headshot API endpoint: `AI.ProfilePhotoMaker.API/Controllers/HeadshotsController.cs`
+- Legacy enhancement endpoint: `AI.ProfilePhotoMaker.API/Controllers/EnhancementController.cs`
 - UI flow: `AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/`
 
 More detail: see `AI.ProfilePhotoMaker.UI/docs/openai-implementation.md`.

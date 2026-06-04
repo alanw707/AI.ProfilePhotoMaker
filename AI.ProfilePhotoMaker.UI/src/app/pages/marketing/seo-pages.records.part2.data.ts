@@ -64,7 +64,7 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
         type: 'bullets',
         title: 'Best practices for dating photos',
         items: [
-          'Use well-lit selfies with a clear view of your face.',
+          'Use well-lit photos with a clear view of your face.',
           'Choose styles that feel natural and approachable.',
           'Mix casual and polished looks for more range.',
         ],
@@ -75,7 +75,7 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
         items: [
           {
             question: 'Will these look like me?',
-            answer: 'Yes. The AI is trained on your selfies to keep your features consistent.',
+            answer: 'Yes. The AI is trained on your photos to keep your features consistent.',
           },
           {
             question: 'Which apps do these work for?',
@@ -160,7 +160,7 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
         items: [
           {
             question: 'Do I need a studio shoot?',
-            answer: 'No. Clear selfies are enough to create polished results.',
+            answer: 'No. Clear photos are enough to create polished results.',
           },
           {
             question: 'Will this work for teams?',
@@ -291,7 +291,7 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
     ctaIntent: 'pricing',
     title: 'AI Headshot Pricing Plans - AI Profile Photo Maker',
     description:
-      'Compare AI headshot pricing plans. Choose the best package for LinkedIn-ready photos, custom AI training, and high-quality professional headshots.',
+      'Compare AI headshot pricing plans. Choose the best package for instant LinkedIn-ready photos, optional advanced styles, and high-quality professional headshots.',
     keywords:
       'AI headshot pricing, AI headshot generator cost, LinkedIn headshot pricing, professional headshot plans, AI profile photo pricing',
     h1: 'AI Headshot Pricing Plans',
@@ -299,9 +299,9 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
       eyebrow: 'Pricing',
       headline: 'AI Headshot Pricing Plans',
       subhead:
-        'Create stunning, personalized profile photos with our advanced AI technology. Train your own custom model for unlimited professional results.',
+        'Create polished professional headshots from one clear photo instantly. Add advanced custom photoshoot packs only when you need larger styled sets.',
       ctaLabel: 'Get started',
-      ctaHref: '/dashboard',
+      ctaHref: '/app/enhance',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
     },
@@ -316,9 +316,9 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
         title: 'What you get',
         items: [
           {
-            title: 'Custom AI Training',
+            title: 'Instant AI Headshots',
             description:
-              'Train a personalized AI model with your photos for authentic, professional results.',
+              'Generate a professional headshot from one clear photo without waiting for model training.',
           },
           {
             title: 'Multiple Styles',
@@ -347,7 +347,7 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
           },
           {
             question: 'Can I upgrade my package later?',
-            answer: 'Yes, you can purchase additional credits anytime from your dashboard.',
+            answer: 'Yes, you can purchase additional credits anytime from your photo workspace.',
           },
         ],
       },
@@ -362,7 +362,7 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
       title: 'Ready to get professional headshots?',
       description: 'Choose a plan and get your AI-generated headshots in minutes.',
       label: 'Get started',
-      href: '/dashboard',
+      href: '/app/enhance',
     },
   },
   help: {
@@ -390,7 +390,7 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
           {
             question: 'What photos work best?',
             answer:
-              'Use clear selfies with good lighting and minimal filters. Variety in angles helps the model.',
+              'Use clear photos with good lighting and minimal filters. Variety in angles helps the model.',
           },
           {
             question: 'How long does it take?',

@@ -14,12 +14,15 @@ const SEO_PAGE_INTENT_ENTRIES: [string, SignupCtaType][] = [
   ['compare/aragon-ai', 'pricing'],
   ['compare/headshotpro', 'pricing'],
   ['features', 'pricing'],
+  ['founder-press-kit-photo-pack', 'headshots'],
   ['dating-app-headshots', 'headshots'],
   ['real-estate-agent-headshots', 'headshots'],
   ['medical-professional-headshots', 'headshots'],
+  ['linkedin-executive-profile-photo', 'headshots'],
   ['pricing', 'pricing'],
   ['help', 'pricing'],
   ['nurse-headshots', 'headshots'],
+  ['realtor-profile-photo-pack', 'headshots'],
   ['teacher-headshots', 'headshots'],
 ];
 

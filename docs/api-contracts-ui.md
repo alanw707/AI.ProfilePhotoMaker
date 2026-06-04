@@ -8,7 +8,7 @@ Deep scan based on Angular services and detected endpoint literals.
 - StylePreviewService (`AI.ProfilePhotoMaker.UI/src/app/services/style-preview.service.ts`) - HttpClient: yes
 - NotificationService (`AI.ProfilePhotoMaker.UI/src/app/services/notification.service.ts`) - HttpClient: no
 - LoggingService (`AI.ProfilePhotoMaker.UI/src/app/services/logging.service.ts`) - HttpClient: no
-- DashboardStateService (`AI.ProfilePhotoMaker.UI/src/app/services/dashboard-state.service.ts`) - HttpClient: no
+- WorkspaceStateService (`AI.ProfilePhotoMaker.UI/src/app/services/app/enhance-state.service.ts`) - HttpClient: no
 - ProfileService (`AI.ProfilePhotoMaker.UI/src/app/services/profile.service.ts`) - HttpClient: yes
 - SubscriptionStateService (`AI.ProfilePhotoMaker.UI/src/app/services/subscription-state.service.ts`) - HttpClient: no
 - state-base.service (`AI.ProfilePhotoMaker.UI/src/app/services/state-base.service.ts`) - HttpClient: no
@@ -16,8 +16,8 @@ Deep scan based on Angular services and detected endpoint literals.
 - FileUploadManagerService (`AI.ProfilePhotoMaker.UI/src/app/services/file-upload-manager.service.ts`) - HttpClient: no
 - BaseHttpService (`AI.ProfilePhotoMaker.UI/src/app/services/base-http.service.ts`) - HttpClient: yes
 - ModelStatusMapperService (`AI.ProfilePhotoMaker.UI/src/app/services/model-status-mapper.service.ts`) - HttpClient: no
-- DashboardCoordinatorService (`AI.ProfilePhotoMaker.UI/src/app/services/dashboard-coordinator.service.ts`) - HttpClient: no
-- WorkflowOrchestrationService (`AI.ProfilePhotoMaker.UI/src/app/services/workflow-orchestration.service.ts`) - HttpClient: no
+- WorkspaceStateService (`AI.ProfilePhotoMaker.UI/src/app/services/app/enhance-coordinator.service.ts`) - HttpClient: no
+- RemovedLegacyWorkflowOrchestration (`AI.ProfilePhotoMaker.UI/src/app/services/removed legacy workflow orchestration service`) - HttpClient: no
 - ImageValidationService (`AI.ProfilePhotoMaker.UI/src/app/services/image-validation.service.ts`) - HttpClient: no
 - ModelStateService (`AI.ProfilePhotoMaker.UI/src/app/services/model-state.service.ts`) - HttpClient: no
 - ReplicateService (`AI.ProfilePhotoMaker.UI/src/app/services/replicate.service.ts`) - HttpClient: yes
@@ -31,7 +31,7 @@ Deep scan based on Angular services and detected endpoint literals.
   - `https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model`
 - WorkflowStepService (`AI.ProfilePhotoMaker.UI/src/app/services/workflow-step.service.ts`) - HttpClient: no
 - ImageQualityService (`AI.ProfilePhotoMaker.UI/src/app/services/image-quality.service.ts`) - HttpClient: no
-- DashboardService (`AI.ProfilePhotoMaker.UI/src/app/services/dashboard.service.ts`) - HttpClient: no
+- WorkspaceStateService (`AI.ProfilePhotoMaker.UI/src/app/services/app/enhance.service.ts`) - HttpClient: no
 - ThemeService (`AI.ProfilePhotoMaker.UI/src/app/services/theme.service.ts`) - HttpClient: no
 - AuthService (`AI.ProfilePhotoMaker.UI/src/app/services/auth.service.ts`) - HttpClient: yes
 - NavigationService (`AI.ProfilePhotoMaker.UI/src/app/services/navigation.service.ts`) - HttpClient: no

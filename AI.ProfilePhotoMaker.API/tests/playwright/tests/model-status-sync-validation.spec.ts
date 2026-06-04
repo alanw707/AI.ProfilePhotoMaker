@@ -24,7 +24,7 @@ test.describe('Model Status Synchronization Validation', () => {
     await page.goto(DEV_BASE_URL);
     await page.waitForTimeout(2000);
 
-    // Check if already authenticated by looking for dashboard elements
+    // Check if already authenticated by looking for Photo Workspace elements
     const isAuthenticated = await page.locator('text=Welcome,').count() > 0;
     
     if (!isAuthenticated) {
@@ -39,8 +39,8 @@ test.describe('Model Status Synchronization Validation', () => {
       await page.waitForTimeout(5000);
     }
 
-    // Verify we're on the dashboard
-    await page.goto(`${DEV_BASE_URL}/app/dashboard`);
+    // Verify we're on the Photo Workspace
+    await page.goto(`${DEV_BASE_URL}/app/Photo Workspace`);
     await page.waitForTimeout(3000);
 
     // Step 2: Check current model status in UI

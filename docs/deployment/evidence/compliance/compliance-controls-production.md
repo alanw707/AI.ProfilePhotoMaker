@@ -23,7 +23,7 @@
 ## Evidence Files
 - `docs/deployment/evidence/compliance/age-gate-register-production.png`
 - `docs/deployment/evidence/compliance/age-gate-login-production.png`
-- `docs/deployment/evidence/compliance/biometric-consent-dashboard-production.png`
+- `docs/deployment/evidence/compliance/biometric-consent-workspace-production.png`
 - `docs/deployment/evidence/compliance/biometric-consent-enhance-production.png`
 - `docs/deployment/evidence/compliance/dsar-settings-production.png`
 - `docs/deployment/evidence/compliance/dsar-export-production.json`

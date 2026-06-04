@@ -54,7 +54,6 @@ public class PhotoEnhancementController : ControllerBase
     /// Provides professional photo enhancement using text-based image editing
     /// </summary>
     [HttpPost("enhance")]
-    [Route("~/api/replicate/enhance")]
     public async Task<IActionResult> EnhancePhoto([FromBody] EnhancePhotoRequestDto dto)
     {
         CreditConsumptionResult? creditConsumed = null;
@@ -137,7 +136,7 @@ public class PhotoEnhancementController : ControllerBase
             }
 
             // Convert image URL to external API format before passing to Replicate
-            var externalImageUrl = ReplicateHelpers.ConvertToExternalApiUrl(dto.ImageUrl, _configuration, _logger);
+            var externalImageUrl = ReplicateHelpers.ConvertToExternalApiUrl(dto.ImageUrl ?? string.Empty, _configuration, _logger);
             _logger.LogInformation("Converted image URL from {OriginalUrl} to {ExternalUrl} for Replicate API",
                 LoggingSanitizer.Sanitize(dto.ImageUrl),
                 LoggingSanitizer.Sanitize(externalImageUrl));

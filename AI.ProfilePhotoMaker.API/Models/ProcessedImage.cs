@@ -14,6 +14,16 @@ public class ProcessedImage
     public bool IsGenerated { get; set; } = false; // True for AI-generated images, false for uploaded
     public bool IsOriginalUpload { get; set; } = false; // True for user's original uploads
 
+    // Provider metadata for audit, retention, and future provider comparison
+    public string? Provider { get; set; }
+    public string? ProviderModel { get; set; }
+    public string? GenerationMode { get; set; }
+    public string? PromptVersion { get; set; }
+    public string? CorrelationId { get; set; }
+    public int? CreditCost { get; set; }
+    public string? GenerationStatus { get; set; }
+    public string? FailureReason { get; set; }
+
     // Retention policy field
     public DateTime ScheduledDeletionDate { get; set; }
 

@@ -206,7 +206,7 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
     {
       question: 'How do headshot packages work?',
       answer:
-        'Choose a package based on how many headshots you need. Each package is a one-time purchase that includes AI model training and a set number of professional headshot generations. Your package never expires, so you can use it whenever you are ready.',
+        'Choose a package based on how many headshots you need. Each package is a one-time purchase for instant AI headshots, with optional advanced custom model packs for larger styled photoshoots. Your package never expires, so you can use it whenever you are ready.',
     },
     {
       question: "What if I'm not satisfied with the results?",
@@ -717,9 +717,9 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
     const trainingCost =
       this.modelTrainingCost || this._creditService.getCreditCostSync('model_training');
     if (totalCredits >= trainingCost) {
-      return 'Model training included';
+      return 'Advanced custom model pack included';
     }
-    return `Model training available with ${trainingCost}+ credits`;
+    return `Advanced custom model pack available with ${trainingCost}+ credits`;
   }
 
   private getStyledGenerationCount(totalCredits: number): number {
@@ -759,7 +759,7 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
   private formatHeadshotCount(totalCredits: number): string {
     const count = this.getStyledGenerationCount(totalCredits);
     if (count === 0) {
-      return 'Model training credits';
+      return 'Advanced model pack credits';
     }
     return `Up to ${count} headshots`;
   }
@@ -780,7 +780,7 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
     this._meta.updateTag({
       name: 'description',
       content:
-        'Create LinkedIn-ready profile photos with AI in minutes. A single credit balance powers enhancement, training, and generation, with weekly top-ups to 5 when below.',
+        'Create LinkedIn-ready profile photos instantly from one clear photo. A single credit balance powers instant headshots, enhancement, and optional advanced generation.',
     });
     this._meta.updateTag({
       name: 'keywords',
@@ -799,7 +799,7 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
     this._meta.updateTag({
       property: 'og:description',
       content:
-        'Transform your casual photos into professional profile photos with AI. Use one credit balance for enhancement, training, and generation, with weekly top-ups to 5 when below.',
+        'Transform your casual photos into professional profile photos with AI. Use one credit balance for instant headshots, enhancement, and optional advanced generation.',
     });
     this._meta.updateTag({ property: 'og:type', content: 'website' });
     this._meta.updateTag({ property: 'og:url', content: 'https://aiprofilephotomaker.com/' });
@@ -825,7 +825,7 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
     this._meta.updateTag({
       name: 'twitter:description',
       content:
-        'Create LinkedIn-ready profile photos in minutes. One credit balance covers enhancement, training, and generation, with weekly top-ups to 5 when below.',
+        'Create LinkedIn-ready profile photos instantly. One credit balance covers instant headshots, enhancement, and optional advanced generation.',
     });
     this._meta.updateTag({
       name: 'twitter:image',
@@ -956,7 +956,7 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
       return;
     }
     void this.navigation.navigateTo('/auth/register', {
-      queryParams: { returnUrl: '/app/dashboard' },
+      queryParams: { returnUrl: '/app/enhance' },
     });
   }
 

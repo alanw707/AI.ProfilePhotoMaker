@@ -145,7 +145,7 @@ await this.authService.socialLogin(provider);
 ```typescript
 this.authService.login(email, password).subscribe({
   next: (response) => {
-    // Success - navigate to dashboard
+    // Success - navigate to Photo Workspace
   },
   error: (error) => {
     if (error.status === 401) {

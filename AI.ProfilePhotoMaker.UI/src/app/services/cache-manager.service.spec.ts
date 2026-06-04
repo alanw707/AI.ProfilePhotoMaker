@@ -334,7 +334,7 @@ describe('CacheManagerService', () => {
 
   describe('Constants', () => {
     it('should have proper cache duration constants', () => {
-      expect(CacheManagerService.DASHBOARD_CACHE_DURATION_MS).toBe(30000);
+      expect(CacheManagerService.WORKSPACE_CACHE_DURATION_MS).toBe(30000);
       expect(CacheManagerService.HTTP_CACHE_DURATION_MS).toBe(60000);
       expect(CacheManagerService.LOAD_DEBOUNCE_MS).toBe(1000);
     });

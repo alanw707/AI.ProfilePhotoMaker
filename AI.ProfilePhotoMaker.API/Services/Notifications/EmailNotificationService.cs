@@ -54,14 +54,14 @@ public class EmailNotificationService : IEmailNotificationService
     public Task SendTrainingCompletedAsync(string userId, string? email, string? modelName, string? modelVersion)
     {
         var subject = "Your model is ready 🎉";
-        var cta = BuildCtaLink("app/dashboard");
+        var cta = BuildCtaLink("app/enhance");
         var safeModel = WebUtility.HtmlEncode(modelName ?? "Your custom model");
         var safeVersion = WebUtility.HtmlEncode(modelVersion ?? "latest");
 
         var body = $@"<p style=""margin:0 0 16px;"">Your model has finished training.</p>
                       <p style=""margin:0 0 16px;""><strong>{safeModel}</strong> (version {safeVersion}) is ready to generate images.</p>
-                      <p style=""margin:0 0 16px;"">Open your dashboard to pick a style and start generating.</p>
-                      {BuildPrimaryButton("Go to dashboard", cta)}";
+                      <p style=""margin:0 0 16px;"">Open your Photo Workspace to start creating.</p>
+                      {BuildPrimaryButton("Go to Photo Workspace", cta)}";
 
         return SendEmailAsync(email, subject, body, "training-completed", userId);
     }
@@ -86,8 +86,8 @@ public class EmailNotificationService : IEmailNotificationService
         var body = $@"<p style=""margin:0 0 16px;"">Your generation request did not complete.</p>
                       <p style=""margin:0 0 16px;"">Style: <strong>{WebUtility.HtmlEncode(style ?? "Unknown")}</strong></p>
                       <p style=""margin:0 0 16px;"">Error: {WebUtility.HtmlEncode(error ?? "Unknown error")}</p>
-                      <p style=""margin:0 0 16px;"">Please retry from the dashboard.</p>
-                      {BuildPrimaryButton("Open dashboard", cta)}";
+                      <p style=""margin:0 0 16px;"">Please retry from the Photo Workspace.</p>
+                      {BuildPrimaryButton("Open Photo Workspace", cta)}";
         return SendEmailAsync(email, subject, body, "generation-failed", userId);
     }
 
@@ -126,41 +126,66 @@ public class EmailNotificationService : IEmailNotificationService
     public Task SendWelcomeAsync(string userId, string? email, string? firstName = null)
     {
         var subject = "Welcome to AI Profile Photo Maker";
-        var cta = BuildCtaLink("app/dashboard");
+        var cta = BuildCtaLink("app/enhance");
         var safeName = WebUtility.HtmlEncode(firstName ?? string.Empty);
         var greeting = string.IsNullOrWhiteSpace(safeName) ? "Welcome!" : $"Welcome, {safeName}!";
 
         var body = $@"<p style=""margin:0 0 16px;""><strong>{greeting}</strong></p>
                       <p style=""margin:0 0 16px;"">Thanks for joining. You're all set to start creating professional photos.</p>
                       <ul style=""margin:0 0 16px; padding-left:20px;"">
-                        <li>Upload selfies in Headshot Studio (5+ for best results)</li>
+                        <li>Start with one clear photo to create an instant professional headshot</li>
                         <li>Generate headshots and download your favorites</li>
-                        <li>Use Photo Transform for quick enhancements</li>
+                        <li>Use advanced photoshoot packs if you want custom model training later</li>
                       </ul>
-                      {BuildPrimaryButton("Go to dashboard", cta)}";
+                      {BuildPrimaryButton("Go to Photo Workspace", cta)}";
 
         return SendEmailAsync(email, subject, body, "welcome", userId);
     }
 
-    public Task SendAbandonedUploadNudgeAsync(string userId, string? email, string? firstName = null)
+    public Task SendAbandonedUploadNudgeAsync(
+        string userId,
+        string? email,
+        string? firstName = null,
+        int uploadedCount = 0,
+        int minimumRequiredUploads = 5)
     {
-        var subject = "Still want your professional headshots?";
-        var cta = BuildCtaLink("app/dashboard");
+        var cta = BuildCtaLink("app/enhance");
         var safeName = WebUtility.HtmlEncode(firstName ?? string.Empty);
         var greeting = string.IsNullOrWhiteSpace(safeName) ? "Hey!" : $"Hey {safeName},";
+        var safeUploadedCount = Math.Max(uploadedCount, 0);
+        var remainingUploads = Math.Max(minimumRequiredUploads - safeUploadedCount, 0);
+        var uploadedCountLabel = safeUploadedCount == 1 ? "1 photo" : $"{safeUploadedCount} photos";
+        var remainingCountLabel = remainingUploads == 1 ? "1 more photo" : $"{remainingUploads} more photos";
 
-        var body = $@"<p style=""margin:0 0 16px;""><strong>{greeting}</strong></p>
-                      <p style=""margin:0 0 16px;"">You created your account but haven't uploaded photos yet — that's the only step left to get your professional headshots.</p>
-                      <p style=""margin:0 0 16px;"">No studio. No photographer. No awkward posing. Just upload 5–15 selfies from your phone and our AI will do the rest.</p>
+        string subject;
+        string body;
+
+        if (safeUploadedCount <= 0)
+        {
+            subject = "Your instant professional headshot is one photo away";
+            body = $@"<p style=""margin:0 0 16px;""><strong>{greeting}</strong></p>
+                      <p style=""margin:0 0 16px;"">You created your account but haven’t uploaded any photos yet.</p>
+                      <p style=""margin:0 0 16px;"">Start with your first clear selfie now. You’ll need <strong>{minimumRequiredUploads} photos to train your AI model</strong>, and 10 is recommended for stronger variety.</p>
                       <p style=""margin:0 0 16px;""><strong>What makes good photos?</strong></p>
                       <ul style=""margin:0 0 16px; padding-left:20px;"">
-                        <li>Front-facing selfies with your face clearly visible</li>
+                        <li>Front-facing photos with your face clearly visible</li>
                         <li>A few different angles and expressions</li>
                         <li>Good lighting (natural light works great)</li>
                         <li>Phone photos are totally fine</li>
                       </ul>
-                      <p style=""margin:0 0 16px;"">It takes about 2 minutes to upload and you'll have professional headshots ready in no time.</p>
-                      {BuildPrimaryButton("Upload my photos now", cta)}";
+                      <p style=""margin:0 0 16px;"">Upload your first photo now and keep going until you hit the 5-photo training minimum.</p>
+                      {BuildPrimaryButton("Upload my first photos", cta)}";
+        }
+        else
+        {
+            subject = $"You’re close — add {remainingCountLabel} to start training";
+            body = $@"<p style=""margin:0 0 16px;""><strong>{greeting}</strong></p>
+                      <p style=""margin:0 0 16px;"">You’ve already uploaded <strong>{uploadedCountLabel}</strong>.</p>
+                      <p style=""margin:0 0 16px;"">Add <strong>{remainingCountLabel}</strong> to reach the {minimumRequiredUploads}-photo minimum and start training your AI headshot model.</p>
+                      <p style=""margin:0 0 16px;"">If you want stronger variety later, advanced custom photoshoot packs remain available.</p>
+                      <p style=""margin:0 0 16px;"">Quick reminder: clear face, good lighting, and a few different angles work best.</p>
+                      {BuildPrimaryButton("Finish my upload", cta)}";
+        }
 
         return SendEmailAsync(email, subject, body, "abandoned-upload-nudge", userId);
     }

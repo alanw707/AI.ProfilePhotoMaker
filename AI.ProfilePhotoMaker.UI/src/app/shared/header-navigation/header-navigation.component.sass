@@ -10,9 +10,9 @@
   background: var(--header-bg)
   backdrop-filter: blur(20px) saturate(180%)
   -webkit-backdrop-filter: blur(20px) saturate(180%)
-  box-shadow: var(--shadow-md)
+  box-shadow: var(--shadow-sm)
   border-bottom: 1px solid var(--border-color)
-  padding: 16px 0
+  padding: 12px 0
   position: relative  // Changed from fixed to relative for natural flow
   z-index: 100
   // Removed transform/transition - no longer needed for scroll behavior
@@ -22,17 +22,20 @@
     -webkit-backdrop-filter: blur(24px) saturate(200%)
 
   .header-content
+    width: 100%
     max-width: 1400px
+    min-width: 0
     margin: 0 auto
     padding: 0 24px
     display: flex
     justify-content: space-between
     align-items: center
-    gap: 32px
+    gap: 24px
 
   .logo-section
     display: flex
     align-items: center
+    min-width: 0
     gap: 16px
     text-decoration: none
     color: inherit
@@ -56,15 +59,15 @@
       transform: translateY(0)
 
     .header-logo
-      width: 48px
-      height: 48px
+      width: 42px
+      height: 42px
       object-fit: contain
       filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3))
 
     .logo-title
       font-family: 'Poppins', sans-serif
       color: var(--text-primary)
-      font-size: 20px
+      font-size: 18px
       font-weight: 600
       margin: 0
 
@@ -80,7 +83,7 @@
       display: flex
       align-items: center
       gap: 6px
-      padding: 8px 14px
+      padding: 8px 12px
       border-radius: 8px
       text-decoration: none
       color: var(--text-secondary)
@@ -97,18 +100,18 @@
         color: var(--text-primary) !important
 
       &.active
-        background: var(--primary)
-        color: white !important
-        border-color: var(--primary)
+        background: linear-gradient(135deg, rgba(94, 234, 212, 0.92), rgba(125, 211, 216, 0.92))
+        color: #0f172a !important
+        border-color: rgba(125, 211, 216, 0.75)
         
         // Ensure icons match readable color in the active pill
         svg
-          color: white !important
+          color: #0f172a !important
 
       &.active:hover
-        background: var(--primary-hover)
-        color: white !important
-        border-color: var(--primary-hover)
+        background: linear-gradient(135deg, #5EEAD4, #7DD3D8)
+        color: #0f172a !important
+        border-color: rgba(125, 211, 216, 0.9)
 
       svg
         width: 16px
@@ -147,13 +150,18 @@
       display: flex
       flex-direction: column
       align-items: flex-end
+      min-width: 0
       gap: 2px
 
       .user-name
+        max-width: 100%
         color: var(--text-primary)
         font-family: 'Inter', sans-serif
         font-weight: 600
         font-size: 13px
+        overflow: hidden
+        text-overflow: ellipsis
+        white-space: nowrap
 
       .user-email
         color: var(--text-secondary)
@@ -291,9 +299,36 @@
     // User section drops to full-width second row on mobile
     .user-section
       flex-basis: 100%
+      min-width: 0
       order: 3
       margin-top: 8px
       justify-content: space-between
+      gap: 12px
+
+      .user-info
+        align-items: flex-start
+        flex: 1 1 auto
+        max-width: calc(100% - 58px)
+
+      .user-email
+        display: none
+
+      .btn-logout
+        flex: 0 0 auto
+        width: 44px
+        height: 44px
+        justify-content: center
+        padding: 0
+        border-radius: 12px
+
+        span
+          position: absolute
+          width: 1px
+          height: 1px
+          margin: -1px
+          overflow: hidden
+          clip: rect(0, 0, 0, 0)
+          white-space: nowrap
     
     .nav-menu
       position: absolute  // Changed from fixed to absolute for natural positioning

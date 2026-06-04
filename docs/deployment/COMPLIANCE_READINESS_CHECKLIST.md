@@ -5,8 +5,9 @@ Scope: AI.ProfilePhotoMaker global baseline (US/UK/EU/CA). Not legal advice.
 
 ## Product data flow summary (from PRD + code)
 - Users upload photos that are stored on the app server (local or Azure Blob storage).
-- Custom model training and styled image generation use Replicate.
-- Photo enhancement uses Replicate or OpenAI (gpt-image-1).
+- Instant headshot generation uses OpenAI through the feature-flagged OpenAI-first flow.
+- Custom model training and styled image generation use Replicate as optional/advanced fallback.
+- Photo enhancement uses Replicate or OpenAI depending on feature/style.
 - API retention policy: original uploads deleted after 30 days; generated images deleted after 30 days (background job every 6 hours).
 - User data controls: delete input photos, delete AI model, delete all data, delete account, and export data (JSON metadata only).
 

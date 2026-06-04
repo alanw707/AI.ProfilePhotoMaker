@@ -49,7 +49,7 @@
 
 ## Priority: Medium (Coordinated Cleanups)
 - [x] **Review console logging left in production services** *(UI)*  
-  - Examples: `AI.ProfilePhotoMaker.UI/src/app/services/file-upload.service.ts:445-509`, `.../services/workflow-orchestration.service.ts:384-845`, `.../pages/premium/premium.component.ts:162-185`.  
+  - Examples: `AI.ProfilePhotoMaker.UI/src/app/services/file-upload.service.ts:445-509`, `.../services/removed legacy workflow orchestration service:384-845`, `.../pages/premium/premium.component.ts:162-185`.  
   - Rationale: Verbose logs can leak sensitive data and clutter prod consoles.  
   - Action: Route critical diagnostics through `LoggingService`; guard or remove noisy logs.  
   - Validation: Manual QA around uploads, workflow routing, premium purchase flows.  
@@ -94,7 +94,7 @@
   - Validation: Run retention policy integration tests and storage cleanup scripts in staging.  
   - Status: Legacy scan wrapped in `LegacyCompatibilityOptions.EnableLegacyEnhancedPathLookup`; logging added when disabled (Jan 2025).
 - [ ] **Audit legacy status bridging layer** *(UI model status)*  
-  - Locations: `AI.ProfilePhotoMaker.UI/src/app/models/dashboard.types.ts:73-161`, `.../services/model-status-mapper.service.ts:41-360`, `.../services/model-state.service.ts:234-256`.  
+  - Locations: `AI.ProfilePhotoMaker.UI/src/app/models/app/enhance.types.ts:73-161`, `.../services/model-status-mapper.service.ts:41-360`, `.../services/model-state.service.ts:234-256`.  
   - Rationale: Extensive conversion logic keeps `legacyStatus` strings alive; cleanup requires API alignment.  
   - Action: Coordinate with API team, gather telemetry on `legacyStatus` usage, plan phased removal.  
   - Validation: Instrument UI logs/metrics before deleting pathways.  

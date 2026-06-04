@@ -32,16 +32,16 @@ import { MarketingFooterComponent } from '../../shared/marketing-footer/marketin
             </thead>
             <tbody>
               <tr>
-                <td>Replicate</td>
-                <td>Model training and image generation</td>
-                <td>Train custom models and generate images</td>
-                <td>Uploaded photos, prompts, model metadata</td>
+                <td>OpenAI</td>
+                <td>Instant headshot generation and photo enhancement</td>
+                <td>Generate professional headshots and enhanced images</td>
+                <td>Uploaded photos, prompts, output images</td>
               </tr>
               <tr>
-                <td>OpenAI</td>
-                <td>Photo enhancement</td>
-                <td>Enhance images for select styles</td>
-                <td>Uploaded photos, prompts, output images</td>
+                <td>Replicate</td>
+                <td>Optional/advanced model training and image generation</td>
+                <td>Train custom models and generate larger styled photo packs</td>
+                <td>Uploaded photos, prompts, model metadata</td>
               </tr>
               <tr>
                 <td>Stripe</td>

@@ -8,7 +8,7 @@ import { FileUploadService } from './file-upload.service';
 import { LoggingService } from './logging.service';
 import { ModelStatusService } from './model-status.service';
 import {
-  DashboardStateForFallback,
+  WorkspaceStateForFallback,
   IFallbackOperationsService,
 } from '../interfaces/service.interfaces';
 
@@ -256,7 +256,7 @@ describe('FallbackOperationsService', () => {
   });
 
   describe('checkIfFallbackNeeded()', () => {
-    let mockState: DashboardStateForFallback;
+    let mockState: WorkspaceStateForFallback;
 
     beforeEach(() => {
       mockState = {
@@ -344,7 +344,7 @@ describe('FallbackOperationsService', () => {
     it('should return comprehensive discrepancy data', async () => {
       const result = await service.debugDataDiscrepancy();
 
-      expect(result.dashboardCount).toBe(0); // Default value
+      expect(result.workspaceCount).toBe(0); // Default value
       expect(result.apiGeneratedField).toBe(5);
       expect(result.filteredCount).toBe(2); // Two isGenerated: true items
       expect(result.totalImages).toBe(3);
@@ -503,7 +503,7 @@ describe('FallbackOperationsService', () => {
       expect(typeof isNeeded).toBe('boolean');
 
       const discrepancy = await service.debugDataDiscrepancy();
-      expect(discrepancy.dashboardCount).toBeDefined();
+      expect(discrepancy.workspaceCount).toBeDefined();
       expect(discrepancy.apiGeneratedField).toBeDefined();
     });
   });
@@ -515,7 +515,7 @@ describe('FallbackOperationsService', () => {
       const calls = Array(10)
         .fill(0)
         .map(() => {
-          const state: DashboardStateForFallback = {
+          const state: WorkspaceStateForFallback = {
             generatedPhotosCount: 0,
             modelStatus: 'Model Ready',
             hasLatestTrainedModel: true,

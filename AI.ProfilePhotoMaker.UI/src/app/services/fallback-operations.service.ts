@@ -7,7 +7,7 @@ import { ConfigService } from './config.service';
 import { FileUploadService } from './file-upload.service';
 import { ModelStatusService } from './model-status.service';
 import {
-  DashboardStateForFallback,
+  WorkspaceStateForFallback,
   DataDiscrepancyResult,
   FallbackCheckResult,
   FallbackTracker,
@@ -135,7 +135,7 @@ export class FallbackOperationsService implements IFallbackOperationsService {
   /**
    * Intelligent fallback operations - only run when actually needed
    */
-  checkIfFallbackNeeded(state: DashboardStateForFallback): FallbackCheckResult {
+  checkIfFallbackNeeded(state: WorkspaceStateForFallback): FallbackCheckResult {
     this._logger.debug('🔍 Checking if fallback needed with state:', state);
 
     // Check filesystem if we have 0 photos but evidence of a trained model
@@ -183,7 +183,7 @@ export class FallbackOperationsService implements IFallbackOperationsService {
       const userData = freshData?.success ? freshData.data : null;
 
       const result: DataDiscrepancyResult = {
-        dashboardCount: 0, // This would be passed from dashboard state
+        workspaceCount: 0, // This would be passed from workspace state
         apiGeneratedField: userData?.generatedImages || 0,
         filteredCount: userData?.images?.filter((img: any) => img.isGenerated)?.length || 0,
         totalImages: userData?.totalImages || 0,

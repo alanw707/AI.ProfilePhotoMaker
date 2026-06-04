@@ -149,6 +149,7 @@ export class GalleryComponent implements OnInit {
               status: 'completed' as const,
               type,
               downloadUrl: preferredUrl,
+              canResumePreview: img.generationMode === 'instant_headshot',
             };
           })
           .filter(img => img !== null) as any[];
@@ -191,6 +192,16 @@ export class GalleryComponent implements OnInit {
 
   refreshGallery() {
     this.loadImages(true);
+  }
+
+  get resumablePreviewImages(): GalleryImage[] {
+    return this.galleryImages.filter(
+      image => (image as GalleryImage & { canResumePreview?: boolean }).canResumePreview
+    );
+  }
+
+  continueInPhotoWorkspace(image: GalleryImage): void {
+    this._router.navigate(['/app/enhance'], { queryParams: { resumePreviewId: image.id } });
   }
 
   onImageClick(image: GalleryImage) {

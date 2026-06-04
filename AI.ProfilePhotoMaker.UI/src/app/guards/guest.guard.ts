@@ -18,13 +18,13 @@ export const guestGuard: CanActivateFn = (_route, state) => {
   }
 
   if (authService.hasVerifiedSession()) {
-    router.navigate(['/app/dashboard']);
+    router.navigate(['/app/enhance']);
     return false;
   }
 
   return authService.validateSession().pipe(
     map(() => {
-      router.navigate(['/app/dashboard']);
+      router.navigate(['/app/enhance']);
       return false;
     }),
     catchError(() => {

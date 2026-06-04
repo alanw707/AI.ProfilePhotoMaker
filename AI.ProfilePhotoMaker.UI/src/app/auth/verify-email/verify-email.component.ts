@@ -87,7 +87,7 @@ export class VerifyEmailComponent implements OnInit {
             void this._router.navigate(['/auth/login'], {
               queryParams: {
                 message: 'Please sign in to continue.',
-                returnUrl: '/app/dashboard',
+                returnUrl: '/app/enhance',
               },
             });
             return;
@@ -133,7 +133,7 @@ export class VerifyEmailComponent implements OnInit {
             void this._router.navigate(['/auth/login'], {
               queryParams: {
                 message: 'Please sign in to continue.',
-                returnUrl: '/app/dashboard',
+                returnUrl: '/app/enhance',
               },
             });
             return;
@@ -185,7 +185,7 @@ export class VerifyEmailComponent implements OnInit {
   }
 
   continue(): void {
-    const redirectUrl = sessionStorage.getItem('redirectUrl') || '/app/dashboard';
+    const redirectUrl = sessionStorage.getItem('redirectUrl') || '/app/enhance';
     sessionStorage.removeItem('redirectUrl');
     void this._router.navigateByUrl(redirectUrl);
   }
@@ -196,7 +196,7 @@ export class VerifyEmailComponent implements OnInit {
 
   getUrgencyMessage(): string {
     if (!this.signupIntent) {
-      return 'Your 25 free credits are waiting! Complete verification to get started.';
+      return 'Your Free Preview is waiting! Complete verification to get started.';
     }
 
     if (this.signupIntent.ctaType === 'headshots') {
@@ -204,10 +204,10 @@ export class VerifyEmailComponent implements OnInit {
     }
 
     if (this.signupIntent.ctaType === 'enhance') {
-      return 'Your 25 free credits are waiting! Complete verification to enhance your photos.';
+      return 'Your Free Preview is waiting! Complete verification to enhance your photos.';
     }
 
-    return 'Your 25 free credits are waiting! Complete verification to start creating your profile photos.';
+    return 'Your Free Preview is waiting! Complete verification to start creating your profile photos.';
   }
 
   getPreviewImages(): { src: string; alt: string }[] {

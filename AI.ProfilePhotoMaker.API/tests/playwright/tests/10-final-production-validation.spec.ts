@@ -60,7 +60,7 @@ test.describe('Final Production Validation Suite', () => {
       }
 
       // Test OAuth redirect flow
-      const oauthUrl = `${OAUTH_ENDPOINT}?returnUrl=${encodeURIComponent(PRODUCTION_FRONTEND + '/dashboard')}`;
+      const oauthUrl = `${OAUTH_ENDPOINT}?returnUrl=${encodeURIComponent(PRODUCTION_FRONTEND + '/app/enhance')}`;
       await page.goto(oauthUrl, { waitUntil: 'networkidle', timeout: 30000 });
       
       const finalUrl = page.url();
@@ -171,8 +171,8 @@ test.describe('Final Production Validation Suite', () => {
         addTestResult('Google login button configured', true, 5, `Button text: ${buttonText}`);
       }
 
-      // Test navigation to dashboard URL (without auth)
-      await page.goto(`${PRODUCTION_FRONTEND}/dashboard`, {
+      // Test navigation to Photo Workspace URL (without auth)
+      await page.goto(`${PRODUCTION_FRONTEND}/app/enhance`, {
         waitUntil: 'domcontentloaded',
         timeout: 30000
       });

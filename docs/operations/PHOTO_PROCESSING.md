@@ -2,14 +2,14 @@
 
 ## Overview
 
-The AI Profile Photo Maker uses advanced AI models from Replicate to train custom models on user selfies and generate professional profile photos in various styles. The system includes photo enhancement capabilities and intelligent face detection for optimal results.
+The AI Profile Photo Maker is pivoting to an OpenAI-first instant headshot flow for the primary product path: one uploaded photo can produce a professional profile photo without custom model training. Replicate custom model training and styled generation remain available as an advanced/fallback path during rollout. The system also includes photo enhancement capabilities and intelligent face detection for optimal results.
 
 ## Core Features
 
 ### Photo Upload & Validation
 
 1. **Upload Limits**
-   - Maximum 20 selfies per user (configurable)
+   - Maximum 20 photos per user (configurable)
    - Supported formats: JPG, JPEG, PNG, WebP
    - File size limit: 10MB per image
    - Minimum dimensions: 512x512 pixels
@@ -26,7 +26,41 @@ The AI Profile Photo Maker uses advanced AI models from Replicate to train custo
    - Image clarity assessment
    - Duplicate detection
 
-### AI Model Training
+### Instant Headshot Generation (OpenAI-first)
+
+#### OpenAI-first Process Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI
+    participant API
+    participant OpenAI
+    participant Storage
+    participant DB
+
+    User->>UI: Upload one source photo
+    UI->>API: POST /api/image/upload
+    API->>Storage: Store source image
+    UI->>API: POST /api/headshots/generate
+    API->>API: Validate ownership + credits
+    API->>OpenAI: Edit image with configured GPT Image model
+    OpenAI-->>API: Generated image
+    API->>Storage: Store generated headshot
+    API->>DB: Create ProcessedImage provider metadata
+    API-->>UI: Return image URL + remaining credits
+```
+
+#### Headshot Configuration
+
+- **Provider**: OpenAI via `IHeadshotGenerationProvider`
+- **Model**: `OpenAI:ImageModel` (default: `gpt-image-2`, configurable for rollout safety)
+- **Endpoint**: `POST /api/headshots/generate`
+- **Feature flag**: `Features:OpenAIHeadshotMvp`
+- **Credit action**: `instant_headshot_generation`
+- **Generated metadata**: provider, model, generation mode, prompt version, credit cost, correlation id
+
+### AI Model Training (Replicate advanced/fallback)
 
 #### Training Process Flow
 
@@ -38,7 +72,7 @@ sequenceDiagram
     participant Replicate
     participant Poller
 
-    User->>API: Upload selfies
+    User->>API: Upload photos
     API->>Storage: Store images
     API->>API: Create ZIP file
     API->>Replicate: Start training
@@ -52,7 +86,7 @@ sequenceDiagram
 
 - **Model**: Fast FLUX Trainer (`replicate/fast-flux-trainer`)
 - **Training Time**: ~30 minutes
-- **Input Requirements**: 10-20 high-quality selfies
+- **Input Requirements**: 10-20 high-quality photos
 - **Output**: Custom LoRA model for user
 
 #### Webhook Integration
@@ -104,7 +138,7 @@ The system supports 23+ professional photo styles:
 
 1. **AI-Powered Enhancement**
    - Standard enhancements use Replicate FLUX Kontext Pro
-   - Stylized enhancements use OpenAI gpt-image-1 (select styles)
+   - Stylized enhancements and instant headshots use the configured OpenAI image model (`gpt-image-2` by default)
    - Improves lighting and clarity while maintaining natural appearance
    - UI routes to the correct provider based on `enhancementType`
 
@@ -214,7 +248,7 @@ The system implements a hybrid approach to handle cases where webhooks fail or d
 ### Self-Healing Mechanism
 
 1. **Auto-Detection**
-   - Dashboard checks for filesystem/database mismatches
+   - Photo Workspace checks for filesystem/database mismatches
    - Automatically repairs missing records
    - Preserves existing data integrity
 
@@ -267,11 +301,11 @@ public async Task<IActionResult> ReconcileImages()
 ### Caching Strategy
 
 1. **Generated Images Cache**
-   - 5-minute cache for dashboard stats
+   - 5-minute cache for workspace stats
    - Reduces database queries by 50%
    - Invalidated on new generation
 
-2. **Model Status Cache**
+2. **Advanced Model Cache**
    - Caches training status for 30 seconds
    - Prevents excessive Replicate API calls
    - Updates via webhook
@@ -290,7 +324,7 @@ const results = await Promise.all(detectionPromises);
 ## Best Practices
 
 1. **Image Quality**
-   - Recommend well-lit, clear selfies
+   - Recommend well-lit, clear photos
    - Variety of angles and expressions
    - Consistent person across images
 

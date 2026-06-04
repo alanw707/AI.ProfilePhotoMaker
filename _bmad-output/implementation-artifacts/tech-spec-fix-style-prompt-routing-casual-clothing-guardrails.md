@@ -18,7 +18,7 @@ files_to_modify:
   - AI.ProfilePhotoMaker.API/Data/ApplicationDbContext.cs
   - AI.ProfilePhotoMaker.API/Models/ProcessedImage.cs
   - AI.ProfilePhotoMaker.API/Models/DTOs/GenerateImagesRequestDto.cs
-  - AI.ProfilePhotoMaker.UI/src/app/services/workflow-orchestration.service.ts
+  - AI.ProfilePhotoMaker.UI/src/app/services/removed legacy workflow orchestration service
   - AI.ProfilePhotoMaker.UI/src/app/services/replicate.service.ts
   - AI.ProfilePhotoMaker.UI/src/app/pages/gallery/gallery.component.ts
   - AI.ProfilePhotoMaker.UI/src/app/components/photo-gallery/photo-gallery.component.ts
@@ -91,7 +91,7 @@ Audit and harden end-to-end style resolution (selection -> prompt lookup -> gene
 | `AI.ProfilePhotoMaker.API/Data/ApplicationDbContext.cs` | Seed style IDs/prompts; source-of-truth for migrations/tests. |
 | `AI.ProfilePhotoMaker.API/Models/DTOs/GenerateImagesRequestDto.cs` | Confirms batch request uses `List<string> Styles`. |
 | `AI.ProfilePhotoMaker.API/Models/ProcessedImage.cs` | Gallery record model containing persisted style label. |
-| `AI.ProfilePhotoMaker.UI/src/app/services/workflow-orchestration.service.ts` | Builds batch generation request from selected style names and tracks prediction IDs. |
+| `AI.ProfilePhotoMaker.UI/src/app/services/removed legacy workflow orchestration service` | Builds batch generation request from selected style names and tracks prediction IDs. |
 | `AI.ProfilePhotoMaker.UI/src/app/services/replicate.service.ts` | API client for `/replicate/generate/batch` and polling endpoints. |
 | `AI.ProfilePhotoMaker.UI/src/app/pages/gallery/gallery.component.ts` | Converts `ProcessedImage.style` to card title shown to user. |
 | `AI.ProfilePhotoMaker.UI/src/app/components/photo-gallery/photo-gallery.component.ts` | Rendering, style label formatting, and card metadata display. |
@@ -148,7 +148,7 @@ Audit and harden end-to-end style resolution (selection -> prompt lookup -> gene
   - Notes: Current DB is missing latest style-fix migrations; this task must include safe data updates and rollback behavior.
 
 - [x] Task 8: Stabilize UI generation request style mapping
-  - File: `AI.ProfilePhotoMaker.UI/src/app/services/workflow-orchestration.service.ts`
+  - File: `AI.ProfilePhotoMaker.UI/src/app/services/removed legacy workflow orchestration service`
   - Action: Build batch request styles from canonical API-provided style names; prevent duplicate or stale style names from being submitted.
   - Notes: Keep selected style id/name mapping explicit in memory to avoid accidental mismatches.
 

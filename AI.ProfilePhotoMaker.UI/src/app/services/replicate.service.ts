@@ -216,7 +216,7 @@ export class ReplicateService {
     );
   }
 
-  // Photo Enhancement - Routes to correct provider based on enhancement type
+  // Photo Enhancement - GPT Image endpoint. The backend keeps the response Replicate-compatible.
   enhancePhoto(request: EnhancePhotoRequest): Observable<{
     success: boolean;
     data: {
@@ -234,14 +234,12 @@ export class ReplicateService {
       /* eslint-enable @typescript-eslint/naming-convention */
       dataUrl?: string;
       provider?: string;
+      processedImageId?: number;
+      storagePath?: string;
     };
     error: any;
   }> {
-    // OpenAI enhancement types
-    const openAIStyles = ['chibi', 'pixar_3d', 'studio_ghibli'];
-    const isOpenAI = openAIStyles.includes(request.enhancementType || '');
-
-    const endpoint = isOpenAI ? '/api/enhancement/enhance' : '/replicate/enhance';
+    const endpoint = '/api/enhancement/enhance';
 
     return this.http.post<{
       success: boolean;
@@ -260,6 +258,8 @@ export class ReplicateService {
         /* eslint-enable @typescript-eslint/naming-convention */
         dataUrl?: string;
         provider?: string;
+        processedImageId?: number;
+        storagePath?: string;
       };
       error: any;
     }>(this.config.getFullUrl(endpoint), request);
@@ -267,7 +267,8 @@ export class ReplicateService {
 }
 
 export interface EnhancePhotoRequest {
-  imageUrl: string;
+  imageUrl?: string;
+  imageStoragePath?: string;
   enhancementType?: string;
   turnstileToken?: string;
 }

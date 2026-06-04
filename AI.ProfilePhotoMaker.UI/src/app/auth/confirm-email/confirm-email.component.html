@@ -6,9 +6,7 @@
 
       <p *ngIf="isLoading">Verifying your email address…</p>
 
-      <p *ngIf="!isLoading && isSuccess">
-        Your email is confirmed. You can now use Photo Transform.
-      </p>
+      <p *ngIf="!isLoading && isSuccess">Your email is confirmed. You can now use Photo Transform.</p>
 
       <p *ngIf="!isLoading && error" class="error-text">
         {{ error }}
@@ -21,11 +19,9 @@
 
     <div class="confirm-actions" *ngIf="!isLoading">
       <button class="btn btn-primary" (click)="goToDashboard()" *ngIf="isSessionChecked && isSessionValid">
-        Go to Dashboard
+        Go to Photo Workspace
       </button>
-      <button class="btn btn-primary" (click)="goToLogin()" *ngIf="isSessionChecked && !isSessionValid">
-        Sign In
-      </button>
+      <button class="btn btn-primary" (click)="goToLogin()" *ngIf="isSessionChecked && !isSessionValid">Sign In</button>
       <a routerLink="/" class="btn btn-outline">Home</a>
     </div>
   </div>

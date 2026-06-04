@@ -174,7 +174,7 @@ pages/marketing/
 **Verification checklist:**
 - [ ] Method uses `this._configService.getOAuthBaseUrl()`
 - [ ] Constructs URL: `${oauthBaseUrl}/api/auth/external-login/Google?returnUrl=...`
-- [ ] Return URL points to `/app/dashboard`
+- [ ] Return URL points to `/app/enhance`
 - [ ] Uses `window.location.href` for redirect
 
 **Status:** ✅ VERIFIED - Method is correct, no changes needed

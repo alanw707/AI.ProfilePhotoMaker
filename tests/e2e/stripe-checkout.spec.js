@@ -121,8 +121,8 @@ test.describe('Stripe Checkout Flow', () => {
     });
     await expect(infoToast, 'Pending reconciliation toast should appear').toBeVisible({ timeout: 15000 });
 
-    // After processing we land back on the dashboard and surface a success toast
-    await page.waitForURL('**/app/dashboard', { timeout: 15000 });
+    // After processing we land back on the Photo Workspace and surface a success toast
+    await page.waitForURL('**/app/enhance', { timeout: 15000 });
     await expect(
       page.locator('.notification-title', { hasText: 'Credits Added' })
     ).toBeVisible({ timeout: 15000 });
@@ -136,8 +136,8 @@ async function login(page) {
   await page.fill('input#password', config.testUser.password);
   await page.click('button[type="submit"]');
 
-  await page.waitForURL('**/app/dashboard', { timeout: 30000 });
-  await expect(page.locator('.dashboard-container')).toBeVisible({ timeout: 15000 });
+  await page.waitForURL('**/app/enhance', { timeout: 30000 });
+  await expect(page.locator('.gallery-page-container')).toBeVisible({ timeout: 15000 });
 }
 
 async function waitForStripeCardMount(page) {

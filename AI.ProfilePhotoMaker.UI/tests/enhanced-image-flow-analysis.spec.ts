@@ -29,7 +29,7 @@ async function seedSession(page) {
 test.describe('Enhanced Image Flow Analysis', () => {
   test.beforeEach(async ({ page }) => {
     await seedSession(page);
-    await page.goto(BASE_URL + '/app/dashboard');
+    await page.goto(BASE_URL + '/app/enhance');
     await page.waitForLoadState('domcontentloaded');
   });
 

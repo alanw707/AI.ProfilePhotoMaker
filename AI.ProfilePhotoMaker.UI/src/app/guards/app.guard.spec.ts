@@ -47,14 +47,14 @@ describe('AppGuard', () => {
     authService.validateSession.and.returnValue(of('ok'));
     authService.checkProfileCompletion.and.returnValue(of({ isCompleted: true } as any));
 
-    toObservable(guard.canActivate({} as any, { url: '/app/dashboard' } as any)).subscribe(
+    toObservable(guard.canActivate({} as any, { url: '/app/enhance' } as any)).subscribe(
       (result: boolean) => {
-      expect(result).toBeTrue();
-      expect(authService.ensureSession).toHaveBeenCalled();
-      expect(authService.validateSession).not.toHaveBeenCalled();
-      expect(authService.checkProfileCompletion).toHaveBeenCalled();
-      expect(router.navigate).not.toHaveBeenCalled();
-      done();
+        expect(result).toBeTrue();
+        expect(authService.ensureSession).toHaveBeenCalled();
+        expect(authService.validateSession).not.toHaveBeenCalled();
+        expect(authService.checkProfileCompletion).toHaveBeenCalled();
+        expect(router.navigate).not.toHaveBeenCalled();
+        done();
       }
     );
   });
@@ -63,16 +63,16 @@ describe('AppGuard', () => {
     authService.hasVerifiedSession.and.returnValue(false);
     authService.ensureSession.and.returnValue(of(false));
 
-    toObservable(guard.canActivate({} as any, { url: '/app/dashboard' } as any)).subscribe(
+    toObservable(guard.canActivate({} as any, { url: '/app/enhance' } as any)).subscribe(
       (result: boolean) => {
-      expect(result).toBeFalse();
-      expect(router.navigate).toHaveBeenCalledWith(['/auth/login'], {
-        queryParams: {
-          message: 'Please log in to access this feature',
-          returnUrl: '/app/dashboard',
-        },
-      });
-      done();
+        expect(result).toBeFalse();
+        expect(router.navigate).toHaveBeenCalledWith(['/auth/login'], {
+          queryParams: {
+            message: 'Please log in to access this feature',
+            returnUrl: '/app/enhance',
+          },
+        });
+        done();
       }
     );
   });
@@ -82,11 +82,11 @@ describe('AppGuard', () => {
     isAuthenticatedSubject.next(true);
     authService.getAccountStatus.and.returnValue(of({ data: { emailConfirmed: false } } as any));
 
-    toObservable(guard.canActivate({} as any, { url: '/app/dashboard' } as any)).subscribe(
+    toObservable(guard.canActivate({} as any, { url: '/app/enhance' } as any)).subscribe(
       (result: boolean) => {
-      expect(result).toBeFalse();
-      expect(router.navigate).toHaveBeenCalledWith(['/auth/verify-email']);
-      done();
+        expect(result).toBeFalse();
+        expect(router.navigate).toHaveBeenCalledWith(['/auth/verify-email']);
+        done();
       }
     );
   });
@@ -97,11 +97,11 @@ describe('AppGuard', () => {
     authService.getAccountStatus.and.returnValue(of({ data: { emailConfirmed: true } } as any));
     authService.checkProfileCompletion.and.returnValue(of({ isCompleted: false } as any));
 
-    toObservable(guard.canActivate({} as any, { url: '/app/dashboard' } as any)).subscribe(
+    toObservable(guard.canActivate({} as any, { url: '/app/enhance' } as any)).subscribe(
       (result: boolean) => {
-      expect(result).toBeTrue();
-      expect(router.navigate).toHaveBeenCalledWith(['/auth/complete-profile']);
-      done();
+        expect(result).toBeTrue();
+        expect(router.navigate).toHaveBeenCalledWith(['/auth/complete-profile']);
+        done();
       }
     );
   });

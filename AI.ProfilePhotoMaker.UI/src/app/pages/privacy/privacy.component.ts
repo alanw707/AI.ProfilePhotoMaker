@@ -78,8 +78,8 @@ import { MarketingFooterComponent } from '../../shared/marketing-footer/marketin
           <h2>6. Sharing and Third Parties</h2>
           <p>We share data with service providers that help us operate the service, including:</p>
           <ul>
-            <li>Replicate for model training and image generation.</li>
-            <li>OpenAI for select photo enhancements.</li>
+            <li>OpenAI for instant headshot generation and select photo enhancements.</li>
+            <li>Replicate for optional/advanced model training and styled image generation.</li>
             <li>Stripe for payments and billing.</li>
             <li>Google for optional OAuth login.</li>
             <li>Google Analytics 4 for usage analytics when you consent.</li>

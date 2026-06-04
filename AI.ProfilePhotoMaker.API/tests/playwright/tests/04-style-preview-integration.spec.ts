@@ -34,7 +34,7 @@ test.describe('Style Preview Component Integration Tests', () => {
     if (!serviceAvailable) {
       console.log('⚠️  Angular application not detected on landing page');
       // Try to find Angular-specific elements or routes
-      const possibleRoutes = ['/dashboard', '/styles', '/create'];
+      const possibleRoutes = ['/app/enhance', '/styles', '/create'];
       
       for (const route of possibleRoutes) {
         try {

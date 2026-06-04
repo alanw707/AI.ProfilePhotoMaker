@@ -2,13 +2,13 @@
   <!-- Shared Header Navigation -->
   <app-header-navigation></app-header-navigation>
 
-  <!-- Main Gallery Content -->
+  <!-- Main Photo Workspace Content -->
   <main class="gallery-main">
     <div class="gallery-content">
       <!-- Page Header -->
       <section class="page-header">
-        <h2>Photo Gallery</h2>
-        <p>View, download, and manage all your generated and enhanced photos</p>
+        <h2>Photo Workspace</h2>
+        <p>Review, download, and manage your generated, refined, and exported profile photos.</p>
         <div class="retention-info">
           <small class="text-muted">
             📅 AI headshots stored for 30 days • Input photos deleted after 30 days •
@@ -23,7 +23,19 @@
         <p>Loading your photos...</p>
       </div>
 
-      <!-- Gallery Component -->
+      <section class="resume-preview-section" *ngIf="!isLoading && resumablePreviewImages.length">
+        <div class="resume-preview-card" *ngFor="let image of resumablePreviewImages.slice(0, 3)">
+          <div>
+            <strong>Continue this profile photo session</strong>
+            <p>{{ image.title }} • {{ image.createdAt | date: 'medium' }}</p>
+          </div>
+          <button class="btn btn-primary" type="button" (click)="continueInPhotoWorkspace(image)">
+            Continue in Photo Workspace
+          </button>
+        </div>
+      </section>
+
+      <!-- Photo Workspace Component -->
       <section class="gallery-section" *ngIf="!isLoading" [class.downloading]="isDownloading">
         <app-photo-gallery
           #photoGallery
@@ -46,7 +58,7 @@
             with our AI enhancement tools.
           </p>
           <div class="empty-actions">
-            <button class="btn btn-primary" routerLink="/app/dashboard">
+            <button class="btn btn-primary" routerLink="/app/enhance">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2" />
                 <rect x="13" y="3" width="8" height="5" stroke="currentColor" stroke-width="2" />

@@ -84,7 +84,7 @@ export class AppComponent implements OnInit {
         clearTimeout(timeout);
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
-        this._router.navigate(['/app/dashboard']);
+        this._router.navigate(['/app/enhance']);
       });
     }
   }

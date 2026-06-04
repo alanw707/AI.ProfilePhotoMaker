@@ -350,7 +350,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         FileName = fileName,
                         Size = image.Length,
-                        Url = publicUrl
+                        Url = publicUrl,
+                        StoragePath = storagePath
                     });
                 }
 
@@ -402,50 +403,35 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             var images = new List<object>();
 
+            string? ResolveImageUrl(string? imagePath)
+            {
+                if (string.IsNullOrEmpty(imagePath))
+                {
+                    return null;
+                }
+
+                return imagePath.StartsWith("http") ? imagePath : _storageService.GetImageUrl(imagePath);
+            }
+
             foreach (var i in profile.ProcessedImages.OrderByDescending(i => i.CreatedAt))
             {
-                string? originalUrl = null;
-                string? processedUrl = null;
-
-                // Handle OriginalImageUrl - use storage service for URL generation
-                if (!string.IsNullOrEmpty(i.OriginalImageUrl))
-                {
-                    if (i.OriginalImageUrl.StartsWith("http"))
-                    {
-                        // Already a full URL (external or SAS URL)
-                        originalUrl = i.OriginalImageUrl;
-                    }
-                    else
-                    {
-                        // Storage path - get environment-appropriate URL for frontend access
-                        originalUrl = _storageService.GetImageUrl(i.OriginalImageUrl);
-                    }
-                }
-
-                // Handle ProcessedImageUrl - use storage service for URL generation
-                if (!string.IsNullOrEmpty(i.ProcessedImageUrl))
-                {
-                    if (i.ProcessedImageUrl.StartsWith("http"))
-                    {
-                        // Already a full URL (external or SAS URL)
-                        processedUrl = i.ProcessedImageUrl;
-                    }
-                    else
-                    {
-                        // Storage path - get environment-appropriate URL for frontend access
-                        processedUrl = _storageService.GetImageUrl(i.ProcessedImageUrl);
-                    }
-                }
-
                 images.Add(new
                 {
                     id = i.Id,
-                    originalImageUrl = originalUrl,
-                    processedImageUrl = processedUrl,
+                    originalImageUrl = ResolveImageUrl(i.OriginalImageUrl),
+                    processedImageUrl = ResolveImageUrl(i.ProcessedImageUrl),
                     style = i.Style,
                     createdAt = i.CreatedAt,
                     isOriginalUpload = i.IsOriginalUpload,
-                    isGenerated = i.IsGenerated
+                    isGenerated = i.IsGenerated,
+                    provider = i.Provider,
+                    providerModel = i.ProviderModel,
+                    generationMode = i.GenerationMode,
+                    promptVersion = i.PromptVersion,
+                    correlationId = i.CorrelationId,
+                    creditCost = i.CreditCost,
+                    generationStatus = i.GenerationStatus,
+                    failureReason = i.FailureReason != null && i.FailureReason.StartsWith("raw-preview:") ? null : i.FailureReason
                 });
             }
 

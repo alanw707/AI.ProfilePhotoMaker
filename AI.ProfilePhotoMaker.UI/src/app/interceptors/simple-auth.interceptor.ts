@@ -10,17 +10,47 @@ export const simpleAuthInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
-  // Get the auth token from localStorage (check both keys for compatibility)
-  // Rely on secure HttpOnly cookie; do not add Authorization header from storage
+  const headers: Record<string, string> = {
+    'X-Requested-With': 'XMLHttpRequest',
+    'ngrok-skip-browser-warning': 'true',
+  };
+
+  const fallbackToken = getDevelopmentFallbackToken();
+  if (fallbackToken) {
+    headers['Authorization'] = `Bearer ${fallbackToken}`;
+  }
+
   const passReq = req.clone({
-    setHeaders: {
-      'X-Requested-With': 'XMLHttpRequest',
-      'ngrok-skip-browser-warning': 'true',
-    },
+    setHeaders: headers,
     withCredentials: true,
   });
   return next(passReq);
 };
+
+function getDevelopmentFallbackToken(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const host = window.location.hostname.toLowerCase();
+  if (host !== 'localhost' && host !== '127.0.0.1' && !host.endsWith('.ngrok-free.app')) {
+    return null;
+  }
+
+  try {
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser) {
+      const parsed = JSON.parse(currentUser) as { token?: string };
+      if (parsed.token) {
+        return parsed.token;
+      }
+    }
+
+    return localStorage.getItem('auth_token') || localStorage.getItem('authToken');
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Check if endpoint is public (doesn't require authentication)

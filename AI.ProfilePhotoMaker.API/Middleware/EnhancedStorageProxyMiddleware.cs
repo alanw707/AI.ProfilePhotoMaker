@@ -194,6 +194,14 @@ public class EnhancedStorageProxyMiddleware
             // Add cache headers for performance (1 year for images)
             context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
             context.Response.Headers["ETag"] = $"\"{storagePath.GetHashCode():X}\"";
+            if (context.Request.Query.ContainsKey("download"))
+            {
+                var requestedFileName = context.Request.Query["filename"].FirstOrDefault();
+                var fileName = string.IsNullOrWhiteSpace(requestedFileName)
+                    ? Path.GetFileName(storagePath)
+                    : Path.GetFileName(requestedFileName);
+                context.Response.Headers["Content-Disposition"] = $"attachment; filename=\"{fileName}\"";
+            }
             await ApplyCorsHeadersAsync(context);
 
             // Stream the image to the response

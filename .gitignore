@@ -122,11 +122,6 @@ AGENTS.md
 .agents/
 .github/skills/
 
-# BMAD planning artifacts (keep local only)
-_bmad/
-_bmad-output/
-bdocs/
-
 # Development tools and utilities (keep local only)
 tools/
 ~/
@@ -245,15 +240,6 @@ deployment-params.*.json
 .env.production
 .env.secrets
 deployment-secrets.env
-
-# Allow tracked BMAD implementation artifacts
-!/_bmad-output/
-!/_bmad-output/implementation-artifacts/
-!/_bmad-output/implementation-artifacts/**
-
-# Local-only BMAD scratch specs
-/_bmad-output/implementation-artifacts/tech-spec-before-after-photo-expansion-testimonials.md
-/_bmad-output/implementation-artifacts/tech-spec-dotnet10-upgrade-cleanup.md
 
 # Local screenshot/mockup artifacts
 /app-premium-404.png

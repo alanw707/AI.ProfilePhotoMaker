@@ -12,6 +12,14 @@ export interface CreditPackage {
   price: number;
   description: string;
   displayOrder: number;
+  outcomeCode?: string;
+  internalCreditPackageId?: number | null;
+  includedCandidateCount?: number;
+  includedRefinementCount?: number;
+  includedPremiumAugmentationCount?: number;
+  includesPlatformExportKit?: boolean;
+  includesScoreDelta?: boolean;
+  highlights?: string[];
 }
 
 export interface UserCreditStatus {
@@ -41,6 +49,7 @@ export interface CreditCost {
 
 export interface CreditCosts {
   photoEnhancement: CreditCost;
+  instantHeadshotGeneration?: CreditCost;
   modelTraining: CreditCost;
   styledGeneration: CreditCost;
 }
@@ -192,6 +201,8 @@ export class CreditService {
     switch (operation.toLowerCase()) {
       case 'photo_enhancement':
         return this._creditCosts?.photoEnhancement.cost || 1;
+      case 'instant_headshot_generation':
+        return this._creditCosts?.instantHeadshotGeneration?.cost || 1;
       case 'model_training':
         return this._creditCosts?.modelTraining.cost || 15;
       case 'styled_generation':
@@ -213,6 +224,8 @@ export class CreditService {
     switch (operation.toLowerCase()) {
       case 'photo_enhancement':
         return this._creditCosts.photoEnhancement.cost;
+      case 'instant_headshot_generation':
+        return this._creditCosts.instantHeadshotGeneration?.cost || 1;
       case 'model_training':
         return this._creditCosts.modelTraining.cost;
       case 'styled_generation':
@@ -243,6 +256,7 @@ export class CreditService {
   private getFallbackCreditCost(operation: string): number {
     switch (operation.toLowerCase()) {
       case 'photo_enhancement':
+      case 'instant_headshot_generation':
         return 1;
       case 'model_training':
         return 15;

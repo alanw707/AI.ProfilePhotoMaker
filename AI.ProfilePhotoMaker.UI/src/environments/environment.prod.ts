@@ -13,6 +13,13 @@ export const environment = {
     cors: true, // Enable CORS for cross-origin requests to Azure API
     enableImageValidation: true, // Enable validation in production
     enableReplicateCredits: true, // Enable Replicate API in production
+    openAIHeadshotMvp: false,
+    profilePhotoWorkflowOverhaul: false,
+    outcomePackagesVisible: false,
+    profilePhotoScoreVisible: false,
+    creativeStylePackVisible: true,
+    premiumAugmentationsVisible: false,
+    replicateTrainingFlowVisible: true,
 
     // Granular Logging Controls (Production - Minimal Logging)
     logging: {

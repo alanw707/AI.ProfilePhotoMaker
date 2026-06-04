@@ -1,7 +1,7 @@
 <div class="credit-packages-container">
   <div class="header">
-    <h2>Purchase Credits</h2>
-    <p class="subtitle">Choose a credit package to unlock premium features</p>
+    <h2>Choose Your Profile Photo Package</h2>
+    <p class="subtitle">Pay for a finished outcome: score, candidates, refinements, and platform-ready exports.</p>
     <div class="simulation-notice" *ngIf="isSimulationMode">
       <small>
         <strong>Development Mode:</strong>
@@ -15,8 +15,8 @@
 
     <div class="stripe-summary">
       <div class="summary-row">
-        <span>Credits</span>
-        <span>{{ selectedPackage.totalCredits }}</span>
+        <span>Package</span>
+        <span>{{ selectedPackage.name }}</span>
       </div>
       <div class="summary-row">
         <span>Original Amount</span>
@@ -188,7 +188,9 @@
             </label>
           </div>
 
-          <p class="billing-hint">Your billing country should use the two-letter code (e.g., US, CA, GB).</p>
+          <p class="billing-hint">
+            Country uses a two-letter code, for example US, CA, or GB. Use the postal code that matches that country.
+          </p>
           <div class="billing-validation" *ngIf="billingDetailsTouched && !isBillingDetailsValid">
             Please complete all required fields to continue.
           </div>
@@ -229,7 +231,9 @@
       <span class="webhook-spinner" aria-hidden="true"></span>
       <div class="webhook-copy">
         <strong>Finalizing payment...</strong>
-        <p>Stripe is confirming your payment. We will update your credits automatically once it finishes.</p>
+        <p>
+          Stripe is confirming your payment. We will unlock your profile photo package automatically once it finishes.
+        </p>
       </div>
     </div>
 
@@ -249,11 +253,11 @@
   </div>
 
   <div class="loading" *ngIf="isLoadingPackages">
-    <p>Loading credit packages...</p>
+    <p>Loading profile photo packages...</p>
   </div>
 
   <div class="empty-state" *ngIf="!isLoadingPackages && packages.length === 0 && !selectedPackage">
-    <p>No credit packages available at this time.</p>
+    <p>No profile photo packages available at this time.</p>
     <button class="retry-btn" (click)="loadPackages()">Retry</button>
   </div>
 
@@ -267,51 +271,62 @@
       <div class="package-header">
         <h3 class="package-name">{{ pkg.name }}</h3>
         <div class="package-price">
-          <span class="currency">$</span>
-          <span class="amount">{{ pkg.price }}</span>
+          <span class="currency" *ngIf="pkg.price > 0">$</span>
+          <span class="amount">{{ pkg.price > 0 ? pkg.price : 'Free' }}</span>
         </div>
         <p class="package-description">{{ pkg.description }}</p>
       </div>
 
       <div class="credit-info">
-        <div class="credit-highlight">
-          <span class="total-credits">{{ pkg.totalCredits }}</span>
-          <span class="credit-label">Total Credits</span>
+        <div class="credit-highlight" *ngIf="pkg.outcomeCode === 'free_preview'">
+          <span class="total-credits">Free</span>
+          <span class="credit-label">score + preview path</span>
+        </div>
+        <div class="credit-highlight" *ngIf="pkg.outcomeCode !== 'free_preview'">
+          <span class="total-credits">{{ pkg.includedCandidateCount || 0 }}</span>
+          <span class="credit-label">candidate photos</span>
         </div>
 
-        <div class="value-proposition" *ngIf="pkg.bonusCredits > 0">
+        <div class="value-proposition" *ngIf="pkg.includesPlatformExportKit">
           <div class="bonus-highlight">
-            <span>+ {{ pkg.bonusCredits }} bonus credits</span>
+            <span>Platform export kit included</span>
           </div>
         </div>
 
-        <div class="value-proposition">
-          <span class="credits-per-dollar">{{ getCreditsPerDollar(pkg) }} credits per $</span>
+        <div class="value-proposition" *ngIf="pkg.includedPremiumAugmentationCount">
+          <span class="credits-per-dollar">
+            {{ pkg.includedPremiumAugmentationCount }} premium augmentations included
+          </span>
         </div>
       </div>
 
       <div class="package-highlights">
         <div class="usage-examples">
-          <div class="usage-item" *ngIf="getStyledGenerations(pkg) > 0">
-            <span class="count">~{{ getStyledGenerations(pkg) }}</span>
-            <span class="label">style photo{{ getStyledGenerations(pkg) > 1 ? 's' : '' }}</span>
+          <div class="usage-item" *ngIf="pkg.includedRefinementCount">
+            <span class="count">{{ pkg.includedRefinementCount }}</span>
+            <span class="label">guided refinement{{ pkg.includedRefinementCount === 1 ? '' : 's' }}</span>
           </div>
-          <div class="training-available" *ngIf="canAffordTraining(pkg)">
-            <span class="training-badge">✓ Model Training</span>
+          <div class="training-available" *ngIf="pkg.includesScoreDelta">
+            <span class="training-badge">✓ Score improvement delta</span>
           </div>
         </div>
 
         <div class="key-features">
-          <div class="feature-item">🎨 20 styles to choose from</div>
-          <div class="feature-item">✨ Studio quality photos</div>
-          <div class="feature-item">⚡ Ready in minutes</div>
-          <div class="feature-item">♾️ Credits never expire</div>
+          <div class="feature-item" *ngFor="let highlight of pkg.highlights">✓ {{ highlight }}</div>
+          <div class="feature-item">🎯 Best shot selector</div>
+          <div class="feature-item">📦 Download package</div>
         </div>
       </div>
 
       <div class="package-actions">
         <button class="purchase-btn" [disabled]="isPurchasing || isStripePaymentActive" (click)="purchasePackage(pkg)">
-          {{ isPurchasing || isStripePaymentActive ? 'Processing...' : 'Purchase Credits' }}
+          {{
+            isPurchasing || isStripePaymentActive
+              ? 'Processing...'
+              : pkg.outcomeCode === 'free_preview'
+                ? 'Start Free Preview'
+                : 'Choose Package'
+          }}
         </button>
         <p class="mt-3 text-sm text-gray-600">
           14-day satisfaction guarantee —
@@ -340,22 +355,22 @@
   </div>
 
   <div class="credit-costs-info">
-    <h3>Credit Costs</h3>
+    <h3>What makes a package different?</h3>
     <div class="cost-grid">
       <div class="cost-item">
-        <span class="operation">Photo Enhancement</span>
-        <span class="cost">1 credit</span>
-        <small class="note">(Uses your credits balance)</small>
+        <span class="operation">Profile Photo Score</span>
+        <span class="cost">Included</span>
+        <small class="note">Clear guidance before and after generation.</small>
       </div>
       <div class="cost-item">
-        <span class="operation">Model Training</span>
-        <span class="cost">15 credits</span>
-        <small class="note">(Uses your credits balance)</small>
+        <span class="operation">Best Shot Selector</span>
+        <span class="cost">Included in paid packages</span>
+        <small class="note">A small candidate set, ranked for professional use.</small>
       </div>
       <div class="cost-item">
-        <span class="operation">Styled Generation</span>
-        <span class="cost">5 credits</span>
-        <small class="note">(Uses your credits balance)</small>
+        <span class="operation">Platform Export Kit</span>
+        <span class="cost">User-selected</span>
+        <small class="note">LinkedIn, Gmail, Slack, GitHub, resume, website, and high-res exports.</small>
       </div>
     </div>
   </div>

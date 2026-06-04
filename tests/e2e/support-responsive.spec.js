@@ -47,7 +47,7 @@ test.describe('Support form responsive', () => {
     await page.click('button[type="submit"]');
     await page.waitForURL('**/auth/verify-email', { timeout: 30000 });
     await confirmEmailForTest(page);
-    await page.goto(buildAppUrl('/app/dashboard'));
+    await page.goto(buildAppUrl('/app/enhance'));
     await page.waitForURL('**/app/**', { timeout: 30000 });
 
     await page.goto(buildAppUrl('/app/support'));

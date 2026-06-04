@@ -9,7 +9,7 @@ Key idea: the API must generate a `redirect_uri` that exactly matches an authori
 ## OAuth Flow
 
 ```
-User → Angular → API (/api/auth/external-login/google?ageConfirmed=true) → Google OAuth → API (/api/auth/external-login-callback) → Angular (dashboard)
+User → Angular → API (/api/auth/external-login/google?ageConfirmed=true) → Google OAuth → API (/api/auth/external-login-callback) → Angular (Photo Workspace)
 ```
 
 ## Key Configuration

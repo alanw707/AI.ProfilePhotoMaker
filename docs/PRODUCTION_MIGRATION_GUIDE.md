@@ -98,7 +98,7 @@ POST /api/migration/validate-migration
 Update UI services to re-enable auto-repair functionality:
 
 ```typescript
-// dashboard-state.service.ts
+// workspace-state.service.ts
 // image-state.service.ts
 // Remove or modify the disabled auto-repair logic
 ```
@@ -220,7 +220,7 @@ GET /api/migration/sql-scripts
 
 ### Production Validation
 1. **Spot Check**: Manually verify sample URLs work
-2. **Dashboard Test**: Check user dashboard image display
+2. **Photo Workspace Test**: Check user Photo Workspace image display
 3. **Upload Test**: Verify new uploads still work correctly
 4. **Delete Test**: Test image deletion functionality
 
@@ -259,7 +259,7 @@ WHERE Id IN (SELECT Id FROM FailedMigrationIds);
 ### Post-Migration
 - Image loading success rate
 - 404 error reduction
-- User dashboard functionality
+- User Photo Workspace functionality
 - Auto-repair activation status
 
 ## Performance Expectations
@@ -307,7 +307,7 @@ WHERE Id IN (SELECT Id FROM FailedMigrationIds);
 
 ### Immediate (0-1 hours)
 - [ ] Validate sample images display correctly
-- [ ] Check dashboard functionality
+- [ ] Check Photo Workspace functionality
 - [ ] Monitor error rates
 - [ ] Test new image uploads
 
@@ -332,7 +332,7 @@ WHERE Id IN (SELECT Id FROM FailedMigrationIds);
 - ✅ Migration completed within estimated timeframe
 
 ### Functional Success
-- ✅ Images display correctly in dashboard
+- ✅ Images display correctly in Photo Workspace
 - ✅ Image upload functionality unaffected
 - ✅ Auto-repair functionality works correctly
 - ✅ No false positive deletions

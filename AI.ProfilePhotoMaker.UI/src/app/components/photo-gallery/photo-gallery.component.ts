@@ -207,7 +207,7 @@ export interface GalleryImage {
 })
 export class PhotoGalleryComponent implements OnInit, OnChanges {
   @Input() images: GalleryImage[] = [];
-  @Input() title = 'Photo Gallery';
+  @Input() title = 'Photo Workspace';
   @Input() allowSelection = true;
   @Input() showBulkActions = true;
 

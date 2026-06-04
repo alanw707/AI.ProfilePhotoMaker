@@ -70,7 +70,7 @@ export abstract class StateBaseService<T> {
   protected setCachedData<TCache>(
     key: string,
     data: TCache,
-    ttl: number = CacheManagerService.DASHBOARD_CACHE_DURATION_MS
+    ttl: number = CacheManagerService.WORKSPACE_CACHE_DURATION_MS
   ): void {
     this._cacheManager.setCachedData(key, data, ttl);
   }

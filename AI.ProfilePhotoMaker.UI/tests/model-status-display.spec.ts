@@ -204,7 +204,7 @@ test.describe('Dashboard Model Status Display', () => {
       await route.fulfill(jsonResponse({ success: true }));
     });
 
-    await page.goto(`${BASE_URL}/app/dashboard`);
+    await page.goto(`${BASE_URL}/app/enhance`);
 
     await expect(page.getByText('Ready for Training')).toBeVisible({ timeout: 15000 });
   });

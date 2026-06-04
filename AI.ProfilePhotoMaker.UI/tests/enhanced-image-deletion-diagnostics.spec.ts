@@ -29,7 +29,7 @@ async function prepareSession(page) {
 test.describe('Enhanced Image Diagnostics', () => {
   test.beforeEach(async ({ page }) => {
     await prepareSession(page);
-    await page.goto(BASE_URL + '/app/dashboard');
+    await page.goto(BASE_URL + '/app/enhance');
     await page.waitForLoadState('domcontentloaded');
   });
 

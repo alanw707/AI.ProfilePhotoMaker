@@ -48,14 +48,19 @@ export class ModelStatusMapperService {
    */
   fromApiResponse(response: UnifiedModelStatusResponse): ModelStatus {
     const generationInProgress =
-      this.isGenerationInProgress(response.generationStatus) || response.statusCode === 'Generating';
+      this.isGenerationInProgress(response.generationStatus) ||
+      response.statusCode === 'Generating';
     const generationFailed = this.isGenerationFailed(response.generationStatus);
     const stateFromApi = this.mapApiCodeToState(response.statusCode);
     const state = generationInProgress ? ModelState.GENERATING : stateFromApi;
 
     return {
       state,
-      capabilities: this.computeCapabilitiesFromApi(response, generationFailed, generationInProgress),
+      capabilities: this.computeCapabilitiesFromApi(
+        response,
+        generationFailed,
+        generationInProgress
+      ),
       display: this.createDisplayInfoFromApi(response, generationFailed, generationInProgress),
       metadata: {
         lastUpdated: response.lastUpdated ? new Date(response.lastUpdated) : new Date(),
@@ -257,9 +262,12 @@ export class ModelStatusMapperService {
     generationInProgress: boolean
   ): ModelCapabilities {
     return {
-      canGenerate: response.hasTrainedModel && response.statusCode === 'ModelReady' && !generationInProgress,
-      canTrain: response.canStartTraining && response.statusCode !== 'Training' && !generationInProgress,
-      canCancel: (response.statusCode === 'Training' && !!response.currentRequest) || generationInProgress,
+      canGenerate:
+        response.hasTrainedModel && response.statusCode === 'ModelReady' && !generationInProgress,
+      canTrain:
+        response.canStartTraining && response.statusCode !== 'Training' && !generationInProgress,
+      canCancel:
+        (response.statusCode === 'Training' && !!response.currentRequest) || generationInProgress,
       canRetry: response.statusCode === 'Failed' || generationFailed,
       canDelete: response.hasTrainedModel,
     };
@@ -329,7 +337,7 @@ export class ModelStatusMapperService {
       case 'Training':
         return {
           primaryText: 'Training in progress',
-          secondaryText: 'This usually takes 10-15 minutes',
+          secondaryText: 'Advanced custom model processing is running',
           progressPercent: this.estimateTrainingProgress(response.currentRequest),
           estimatedTimeRemaining: this.estimateTimeRemaining(response.currentRequest),
           icon: StatusIcon.TRAINING,
@@ -386,7 +394,7 @@ export class ModelStatusMapperService {
       case ModelState.TRAINING:
         return {
           primaryText: 'Training in progress',
-          secondaryText: 'This usually takes 10-15 minutes',
+          secondaryText: 'Advanced custom model processing is running',
           icon: StatusIcon.TRAINING,
           variant: StatusVariant.LOADING,
         };
@@ -449,7 +457,7 @@ export class ModelStatusMapperService {
     if (status.toLowerCase().includes('training') || status.toLowerCase().includes('processing')) {
       return {
         primaryText: 'Training in progress',
-        secondaryText: 'This usually takes 10-15 minutes',
+        secondaryText: 'Advanced custom model processing is running',
         progressPercent: progress,
         icon: StatusIcon.TRAINING,
         variant: StatusVariant.LOADING,

@@ -1,12 +1,12 @@
-# OpenAI Image Editing (gpt-image-1) Photo Enhancement Implementation
+# OpenAI Image Editing (gpt-image-2) Photo Enhancement and Instant Headshot Implementation
 
 ## Overview
 
-This document describes the OpenAI image editing enhancement built on `gpt-image-1` with the `/images/edits` endpoint. The feature transforms user-uploaded photos into various artistic styles using OpenAI's image editing capabilities.
+This document describes the OpenAI image editing implementation built on the configured OpenAI image model (`gpt-image-2` by default) with the `/images/edits` endpoint. It supports the OpenAI-first instant headshot flow and select photo enhancement styles. The feature transforms user-uploaded photos into various artistic styles using OpenAI's image editing capabilities.
 
 **Implementation Date**: September 2025  
 **API Version**: OpenAI API v1  
-**Model**: gpt-image-1 (supports image edits and variations)
+**Model**: gpt-image-2 (supports image edits and variations)
 
 ## Problem and Solution
 
@@ -16,14 +16,14 @@ The initial implementation attempted to use OpenAI's image generation endpoint (
 ### Root Cause Analysis
 - **Wrong Endpoint**: Using `/images/generations` instead of `/images/edits`
 - **Incorrect Request Format**: Sending JSON payload instead of multipart/form-data
-- **Missing Model Parameter**: Not specifying `model` caused 400 errors; `gpt-image-1` is required
+- **Missing Model Parameter**: Not specifying `model` caused 400 errors; `gpt-image-2` is required
 - **Missing Components**: No image processing pipeline for format conversion and masking
 
 ### Solution Implementation
 Complete rewrite of the `OpenAIImageGenerationService` to use:
 - **Correct Endpoint**: `/images/edits` for image transformation
 - **Proper Format**: multipart/form-data with `model`, `image`, and `prompt` (mask optional)
-- **Right Model**: `gpt-image-1` (explicitly provided)
+- **Right Model**: `gpt-image-2` (explicitly provided)
 - **Image Processing**: Full pipeline for download, conversion, and masking
 
 ## Technical Architecture
@@ -64,7 +64,7 @@ Complete rewrite of the `OpenAIImageGenerationService` to use:
 #### 1. OpenAIImageGenerationService
 **File**: `AI.ProfilePhotoMaker.API/Services/ImageProcessing/OpenAIImageGenerationService.cs`
 
-**Purpose**: Handles the complete image transformation pipeline using OpenAI's `gpt-image-1` image editing capabilities.
+**Purpose**: Handles the complete image transformation pipeline using OpenAI's `gpt-image-2` image editing capabilities.
 
 **Key Methods**:
 - `EnhancePhotoQualityAsync()`: Main enhancement method
@@ -117,7 +117,8 @@ formData.Add(new ByteArrayContent(imageBytes), "image", "image.png");
 formData.Add(new StringContent(prompt), "prompt");
 
 // API parameters
-formData.Add(new StringContent("gpt-image-1"), "model");      // Required model
+var imageModel = _configuration["OpenAI:ImageModel"] ?? "gpt-image-2";
+formData.Add(new StringContent(imageModel), "model");      // Required model
 formData.Add(new StringContent("1024x1024"), "size");         // Image size
 ```
 
@@ -180,7 +181,7 @@ OpenAI may return either a URL or `b64_json` depending on parameters. We accept 
 The controller wraps the result in a Replicate‑compatible shape so the UI can display either base64 or URL output.
 
 ### Required Parameters for `/images/edits`
-- `model`: must be set to `gpt-image-1`
+- `model`: must be set to `gpt-image-2`
 - `image`: PNG image to edit (converted from input)
 - `prompt`: text prompt describing desired transformation
 - `size`: e.g., `1024x1024`
@@ -291,7 +292,7 @@ dotnet user-secrets set "OpenAI:ApiKey" "sk-your-api-key-here"
 - OpenAI rate limiting or service outage
 
 **Solutions**:
-- Ensure request includes `model=gpt-image-1`
+- Ensure request includes `model from `OpenAI:ImageModel` (default `gpt-image-2`)`
 - Verify `OpenAI:ApiKey` is configured in environment or user-secrets
 - Replace `System.Drawing.Common` with a cross-platform library (see note below)
 - Implement retry with exponential backoff for transient errors
@@ -396,7 +397,7 @@ Content-Type: application/json
 ### Potential Improvements
 
 #### 1. Advanced OpenAI Features
-Evaluate new parameters and quality controls released for `gpt-image-1` as they become available:
+Evaluate new parameters and quality controls released for `gpt-image-2` as they become available:
 - Quality improvements
 - Better prompt adherence
 - Additional transformations
@@ -418,7 +419,7 @@ Evaluate new parameters and quality controls released for `gpt-image-1` as they 
 
 ## Conclusion
 
-The OpenAI photo enhancement implementation uses `gpt-image-1` with the `/images/edits` endpoint and proper image processing, maintaining compatibility with the existing frontend and credit system.
+The OpenAI photo enhancement implementation uses `gpt-image-2` with the `/images/edits` endpoint and proper image processing, maintaining compatibility with the existing frontend and credit system.
 
 Key achievements:
 - ✅ Resolved ServiceUnavailable errors through correct API usage (including explicit `model`)

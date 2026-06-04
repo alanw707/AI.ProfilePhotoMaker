@@ -359,6 +359,19 @@ h2
     padding: 24px
     border-radius: 16px
 
+  .legal-prose
+    table
+      display: block
+      width: 100%
+      max-width: 100%
+      overflow-x: auto
+      -webkit-overflow-scrolling: touch
+
+    th,
+    td
+      min-width: 140px
+      padding: 10px 12px
+
 // Reduced motion support
 @media (prefers-reduced-motion: reduce)
   .marketing-legal
@@ -716,8 +729,23 @@ input, textarea, select
   select
     color: #ffffff !important
     background-color: #1e2530 !important
-    -webkit-text-fill-color: #ffffff !important
-    
+    // NOTE: do NOT set -webkit-text-fill-color here — it overrides
+    // ::placeholder color in WebKit/Blink and makes placeholders
+    // render as solid white. It is set inside the :-webkit-autofill
+    // and :autofill blocks below where it is actually needed.
+
+    &::placeholder
+      color: rgba(148, 163, 184, 0.45) !important
+      opacity: 1
+
+    &::-webkit-input-placeholder
+      color: rgba(148, 163, 184, 0.45) !important
+      -webkit-text-fill-color: rgba(148, 163, 184, 0.45) !important
+      opacity: 1
+
+    &:placeholder-shown
+      -webkit-text-fill-color: rgba(148, 163, 184, 0.45) !important
+
     // Chrome/Edge (Chromium) autofill - needs high specificity
     &:-webkit-autofill,
     &:-webkit-autofill:hover,

@@ -2,6 +2,7 @@ using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 
 namespace AI.ProfilePhotoMaker.API.Extensions;
 
@@ -57,11 +58,6 @@ public static class ReplicateServiceExtensions
             services.AddScoped<IReplicatePredictionService>(sp => sp.GetRequiredService<IReplicateApiClient>());
             services.AddScoped<IReplicateEnhancementService>(sp => sp.GetRequiredService<IReplicateApiClient>());
 
-            services.AddHttpClient<OpenAIImageGenerationService>(client =>
-            {
-                client.Timeout = TimeSpan.FromMinutes(5);
-            });
-
             services.Configure<ModelDiscoveryRobustnessOptions>(options =>
             {
                 options.MaxRetryAttempts = 3;
@@ -74,6 +70,22 @@ public static class ReplicateServiceExtensions
             services.AddSingleton<ModelDiscoveryRobustnessService>();
             services.AddScoped<IModelDiscoveryService, ModelDiscoveryService>();
         }
+
+        services.AddHttpClient<OpenAIImageGenerationService>(client =>
+        {
+            client.Timeout = TimeSpan.FromMinutes(5);
+        });
+        services.AddScoped<IHeadshotGenerationProvider, OpenAIHeadshotGenerationProvider>();
+        services.AddScoped<IHeadshotGenerationService>(sp => new HeadshotGenerationService(
+            sp.GetRequiredService<ApplicationDbContext>(),
+            sp.GetRequiredService<IBasicTierService>(),
+            sp.GetRequiredService<IHeadshotGenerationProvider>(),
+            sp.GetRequiredService<IStorageService>(),
+            sp.GetRequiredService<StoragePathResolver>(),
+            sp.GetRequiredService<IHttpClientFactory>(),
+            sp.GetRequiredService<IConfiguration>(),
+            sp.GetRequiredService<ILogger<HeadshotGenerationService>>(),
+            sp.GetRequiredService<IOutcomePackageService>()));
 
         services.AddScoped<IWebhookUrlResolver, WebhookUrlResolver>();
         services.AddHttpClient<WebhookUrlResolver>();

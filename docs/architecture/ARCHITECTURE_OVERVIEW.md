@@ -193,12 +193,12 @@ AuthGuard               // Route protection
 
 // Data Services
 ProfileService          // User profile operations
-DashboardService       // Dashboard data aggregation
+WorkspaceStateService       // Photo Workspace data aggregation
 CreditService          // Credit balance & purchases
 StyleService           // Style selection
 
 // State Management
-DashboardStateService  // Dashboard state coordination
+WorkspaceStateService  // Workspace state coordination
 CacheManagerService    // Client-side caching
 
 // Utility Services

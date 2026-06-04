@@ -146,16 +146,11 @@
 
       <ng-container *ngIf="!isAuthenticated; else authenticatedActions">
         <a class="nav-link ghost" routerLink="/auth/login" (click)="closeAllMenus()">Login</a>
-        <a
-          class="nav-link cta"
-          routerLink="/auth/register"
-          (click)="onRegisterLinkClick($event)">
-          Get Started
-        </a>
+        <a class="nav-link cta" routerLink="/auth/register" (click)="onRegisterLinkClick($event)">Get Started</a>
       </ng-container>
       <ng-template #authenticatedActions>
         <button class="nav-link nav-link-button cta" type="button" (click)="navigateToDashboard()">
-          Go to Dashboard
+          Go to Photo Workspace
         </button>
         <button class="nav-link nav-link-button logout" type="button" (click)="logout()">Logout</button>
       </ng-template>

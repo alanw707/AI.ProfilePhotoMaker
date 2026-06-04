@@ -95,7 +95,14 @@ public class ConfigController : ControllerBase
                 {
                     enableAutoUrlDetection = true,
                     enableExternalAccess = !_environment.IsProduction(),
-                    enableConfigurationDebug = _environment.IsDevelopment()
+                    enableConfigurationDebug = _environment.IsDevelopment(),
+                    openAIHeadshotMvp = _configuration.GetValue<bool?>("Features:OpenAIHeadshotMvp") ?? !_environment.IsProduction(),
+                    profilePhotoWorkflowOverhaul = _configuration.GetValue<bool?>("Features:ProfilePhotoWorkflowOverhaul") ?? (_configuration.GetValue<bool?>("Features:OpenAIHeadshotMvp") ?? !_environment.IsProduction()),
+                    outcomePackagesVisible = _configuration.GetValue<bool?>("Features:OutcomePackagesVisible") ?? (_configuration.GetValue<bool?>("Features:ProfilePhotoWorkflowOverhaul") ?? (_configuration.GetValue<bool?>("Features:OpenAIHeadshotMvp") ?? !_environment.IsProduction())),
+                    profilePhotoScoreVisible = _configuration.GetValue<bool?>("Features:ProfilePhotoScoreVisible") ?? (_configuration.GetValue<bool?>("Features:ProfilePhotoWorkflowOverhaul") ?? (_configuration.GetValue<bool?>("Features:OpenAIHeadshotMvp") ?? !_environment.IsProduction())),
+                    creativeStylePackVisible = _configuration.GetValue<bool?>("Features:CreativeStylePackVisible") ?? true,
+                    premiumAugmentationsVisible = _configuration.GetValue<bool?>("Features:PremiumAugmentationsVisible") ?? (_configuration.GetValue<bool?>("Features:ProfilePhotoWorkflowOverhaul") ?? (_configuration.GetValue<bool?>("Features:OpenAIHeadshotMvp") ?? !_environment.IsProduction())),
+                    replicateTrainingFlowVisible = _configuration.GetValue<bool?>("Features:ReplicateTrainingFlowVisible") ?? true
                 },
                 oauth = new
                 {

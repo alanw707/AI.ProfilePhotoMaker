@@ -13,6 +13,13 @@ export const environment = {
     cors: true,
     enableImageValidation: true,
     enableReplicateCredits: false,
+    openAIHeadshotMvp: true,
+    profilePhotoWorkflowOverhaul: true,
+    outcomePackagesVisible: true,
+    profilePhotoScoreVisible: true,
+    creativeStylePackVisible: true,
+    premiumAugmentationsVisible: true,
+    replicateTrainingFlowVisible: false,
     logging: {
       enableApiDebug: false,
       enableStateDebug: false,

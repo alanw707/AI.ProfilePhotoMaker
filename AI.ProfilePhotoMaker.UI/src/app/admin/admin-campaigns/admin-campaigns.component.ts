@@ -11,25 +11,25 @@ import {
   CreateCampaignRequest,
 } from '../../services/marketing.service';
 
-const FIRST_CAMPAIGN_BODY = `<p>We heard you — getting 10+ selfies together was a real barrier.</p>
-<p><strong>We've lowered the minimum to just 5 selfies.</strong></p>
-<p>That's enough for our AI to learn your face and generate professional headshots in any style — LinkedIn, executive, casual, you name it.</p>
+const FIRST_CAMPAIGN_BODY = `<p>We heard you — getting one clear photo together was a real barrier.</p>
+<p><strong>We've lowered the minimum to one clear photo.</strong></p>
+<p>That is enough to create an instant headshot. Advanced custom photoshoot packs remain available when you want more variety.</p>
 <p style="margin:16px 0;">Here's what you'll get:</p>
 <ul style="margin:0 0 16px; padding-left:20px; line-height:1.8;">
-  <li>AI-trained model built from your 5+ selfies</li>
+  <li>AI-trained model once you reach the 5-photo minimum</li>
   <li>Unlimited styled generations (credits permitting)</li>
   <li>LinkedIn, executive, casual, and 20+ styles</li>
   <li>Ready in minutes, not hours</li>
 </ul>
 <p>
-  <a href="https://aiprofilephotomaker.com/dashboard"
+  <a href="https://aiprofilephotomaker.com/app/enhance"
      style="display:inline-block; background:#0ea5e9; color:#ffffff; text-decoration:none;
             padding:12px 24px; border-radius:8px; font-weight:600; font-size:16px;">
     Get my headshots now
   </a>
 </p>
 <p style="margin-top:16px; font-size:14px; color:#64748b;">
-  Already uploaded photos? You may already be eligible — just head to your dashboard to check.
+  Already uploaded photos? You may already be eligible — just head to your photo workspace to check.
 </p>`;
 
 type View = 'list' | 'create' | 'detail' | 'logs';
@@ -60,7 +60,7 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
 
   model: CreateCampaignRequest = {
     name: '',
-    subject: 'Good news: you can now create AI headshots with just 5 photos',
+    subject: 'Good news: you can now create AI headshots from one clear photo',
     htmlBody: FIRST_CAMPAIGN_BODY,
     segmentFilter: 'no-uploads',
     scheduledAt: null,
@@ -134,7 +134,7 @@ export class AdminCampaignsComponent implements OnInit, OnDestroy {
     this.view = 'create';
     this.model = {
       name: '',
-      subject: 'Good news: you can now create AI headshots with just 5 photos',
+      subject: 'Good news: you can now create AI headshots from one clear photo',
       htmlBody: FIRST_CAMPAIGN_BODY,
       segmentFilter: 'no-uploads',
       scheduledAt: null,

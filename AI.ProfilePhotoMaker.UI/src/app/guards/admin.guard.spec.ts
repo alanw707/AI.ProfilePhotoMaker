@@ -46,7 +46,7 @@ describe('AdminGuard', () => {
 
     guard.canActivate({} as any, { url: '/admin' } as any).subscribe(result => {
       expect(result).toBeFalse();
-      expect(router.navigate).toHaveBeenCalledWith(['/app/dashboard'], {
+      expect(router.navigate).toHaveBeenCalledWith(['/app/enhance'], {
         queryParams: { message: 'not-authorized' },
       });
       done();

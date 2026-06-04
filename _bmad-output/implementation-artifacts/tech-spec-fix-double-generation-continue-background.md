@@ -5,9 +5,9 @@ created: '2026-02-18'
 status: 'completed'
 stepsCompleted: [1, 2, 3, 4]
 tech_stack: ['Angular 19', 'TypeScript', 'ASP.NET Core', 'C#', 'Entity Framework Core (InMemory + SQL)', 'xUnit + Moq + FluentAssertions', 'Jasmine + Karma']
-files_to_modify: ['AI.ProfilePhotoMaker.UI/src/app/services/workflow-orchestration.service.ts', 'AI.ProfilePhotoMaker.UI/src/app/dashboard/dashboard.component.ts']
+files_to_modify: ['AI.ProfilePhotoMaker.UI/src/app/services/removed legacy workflow orchestration service', 'AI.ProfilePhotoMaker.UI/src/app/enhance/app/photo-enhancement.component.ts']
 code_patterns: ['Angular services with eagerly-injected _deps struct + lazy-loaded individual services (_loadReplicateService)', 'setInterval-based polling with clearInterval cleanup', 'Fire-and-forget async calls (queueBackgroundGeneration)', 'Backend uses scoped DI services resolved on-demand in controller actions', 'PendingGenerationRequest status machine: Pending → Started → Succeeded/Failed']
-test_patterns: ['xUnit + Moq + InMemoryDatabase for backend unit tests', 'Jasmine + Karma + TestBed for Angular specs', 'No existing tests for WorkflowOrchestrationService', 'PendingGenerationServiceTests.cs exists with good coverage patterns']
+test_patterns: ['xUnit + Moq + InMemoryDatabase for backend unit tests', 'Jasmine + Karma + TestBed for Angular specs', 'No existing tests for RemovedLegacyWorkflowOrchestration', 'PendingGenerationServiceTests.cs exists with good coverage patterns']
 ---
 
 # Tech-Spec: Fix Double Image Generation on Continue-in-Background
@@ -22,7 +22,7 @@ When a user starts a combined training+generation session and clicks "Continue i
 
 ### Solution
 
-Add a boolean guard flag (`_backgroundGenerationQueued`) to `WorkflowOrchestrationService`. The flag must be set **synchronously** as the very first operation in `queueBackgroundGeneration()` — before any `await` — to eliminate the race window between the fire-and-forget call from the dashboard and the polling interval. In `_startTrainingStatusPolling`, check this flag before calling `_generateImagesWithStyles` in **both** the primary path and the 15-second retry/fallback path — if `true`, skip the direct frontend generation since the backend will handle it via `ProcessTrainingCompletion` → `ProcessAsync`. The flag is **not consumed** (not reset to `false`) at the check point; instead it is reset only at the start of a new training session (`_startModelTraining`) to ensure clean state. Additionally, guard the dashboard's `continueInBackground()` to prevent multiple rapid clicks from queuing duplicate requests.
+Add a boolean guard flag (`_backgroundGenerationQueued`) to `RemovedLegacyWorkflowOrchestration`. The flag must be set **synchronously** as the very first operation in `queueBackgroundGeneration()` — before any `await` — to eliminate the race window between the fire-and-forget call from the Photo Workspace and the polling interval. In `_startTrainingStatusPolling`, check this flag before calling `_generateImagesWithStyles` in **both** the primary path and the 15-second retry/fallback path — if `true`, skip the direct frontend generation since the backend will handle it via `ProcessTrainingCompletion` → `ProcessAsync`. The flag is **not consumed** (not reset to `false`) at the check point; instead it is reset only at the start of a new training session (`_startModelTraining`) to ensure clean state. Additionally, guard the Photo Workspace's `continueInBackground()` to prevent multiple rapid clicks from queuing duplicate requests.
 
 ### Scope
 
@@ -44,20 +44,20 @@ Add a boolean guard flag (`_backgroundGenerationQueued`) to `WorkflowOrchestrati
 
 - **`_deps` struct** is eagerly populated in the constructor (L227-233) with directly injected singletons. Separately, `_replicateService` and `_fileUploadService` are lazy-loaded via explicit `_loadReplicateService()` / `_loadFileUploadService()` methods.
 - **Polling** uses `setInterval` with `clearInterval` cleanup, stored in `this._pollingInterval`
-- **`queueBackgroundGeneration`** is `async` and called fire-and-forget (`queueWork()` without `await` in dashboard L608). It awaits `_loadReplicateService()` internally, creating an async gap before the API call.
+- **`queueBackgroundGeneration`** is `async` and called fire-and-forget (`queueWork()` without `await` in Photo Workspace L608). It awaits `_loadReplicateService()` internally, creating an async gap before the API call.
 - **`PendingGenerationRequest`** follows a status machine: `Pending` → `Started` → `Succeeded`/`Failed`
 - **`ProcessAsync`** filters by `Status == Pending` — provides idempotency for sequential calls but not concurrent ones
 - **`ProcessTrainingCompletion`** guards with `CompletedAt.HasValue` — prevents re-finalization but has a narrow race window
 - **Existing boolean flags** in the service follow the pattern of private class fields (e.g., `private _isResetting = false`)
-- **`resetProgress()`** is only called from `dispose()` (L1783-1786). `dispose()` is never called from the dashboard component. `ngOnDestroy` only calls `pause()` → `_clearAllIntervals()`.
+- **`resetProgress()`** is only called from `dispose()` (L1783-1786). `dispose()` is never called from the Photo Workspace component. `ngOnDestroy` only calls `pause()` → `_clearAllIntervals()`.
 - **`_clearAllIntervals()`** is called in multiple contexts: at the start of `_generateImagesWithStyles` (L1043), via `pause()` on `ngOnDestroy`, and elsewhere. It is NOT a safe place to reset generation-related state.
 
 ### Files to Reference
 
 | File | Purpose |
 | ---- | ------- |
-| `AI.ProfilePhotoMaker.UI/src/app/services/workflow-orchestration.service.ts` | **Primary edit target** — contains `_startTrainingStatusPolling` (L911), `_generateImagesWithStyles` (L1033), `_attemptFinalizeTraining` (L1192), `queueBackgroundGeneration` (L1788), `_startModelTraining`, `resetProgress()` |
-| `AI.ProfilePhotoMaker.UI/src/app/dashboard/dashboard.component.ts` | **Secondary edit target** — `continueInBackground()` (L589) needs a guard against multiple clicks |
+| `AI.ProfilePhotoMaker.UI/src/app/services/removed legacy workflow orchestration service` | **Primary edit target** — contains `_startTrainingStatusPolling` (L911), `_generateImagesWithStyles` (L1033), `_attemptFinalizeTraining` (L1192), `queueBackgroundGeneration` (L1788), `_startModelTraining`, `resetProgress()` |
+| `AI.ProfilePhotoMaker.UI/src/app/enhance/app/photo-enhancement.component.ts` | **Secondary edit target** — `continueInBackground()` (L589) needs a guard against multiple clicks |
 | `AI.ProfilePhotoMaker.API/Services/TrainingPollingService.cs` | `ProcessTrainingCompletion` (L124) — calls `ProcessAsync` at L275. No changes needed. |
 | `AI.ProfilePhotoMaker.API/Services/PendingGenerationService.cs` | `ProcessAsync` (L83) — processes queued generation. No changes needed. |
 
@@ -75,13 +75,13 @@ Add a boolean guard flag (`_backgroundGenerationQueued`) to `WorkflowOrchestrati
 
 ### Tasks
 
-- [x] **Task 1: Add `_backgroundGenerationQueued` flag to `WorkflowOrchestrationService`**
-  - File: `AI.ProfilePhotoMaker.UI/src/app/services/workflow-orchestration.service.ts`
+- [x] **Task 1: Add `_backgroundGenerationQueued` flag to `RemovedLegacyWorkflowOrchestration`**
+  - File: `AI.ProfilePhotoMaker.UI/src/app/services/removed legacy workflow orchestration service`
   - Action: Add a private boolean field `private _backgroundGenerationQueued = false;` alongside the other private fields in the class
   - Notes: Follow existing naming convention for private fields (e.g., `_pollingInterval`, `_isResetting`)
 
 - [x] **Task 2: Set the flag synchronously in `queueBackgroundGeneration`**
-  - File: `AI.ProfilePhotoMaker.UI/src/app/services/workflow-orchestration.service.ts`
+  - File: `AI.ProfilePhotoMaker.UI/src/app/services/removed legacy workflow orchestration service`
   - Action: In `queueBackgroundGeneration` (~L1788), set `this._backgroundGenerationQueued = true;` as the **very first line** of the method body, before the `trainingId` read, before any `await`, before the `try` block. This closes the race window identified in F1 — since `continueInBackground()` calls this fire-and-forget, the flag must be set synchronously in the same microtask.
   - Error handling: In the `catch` block, reset `this._backgroundGenerationQueued = false;`. Also after the `firstValueFrom()` call, check if the response indicates failure (non-success status) and reset the flag if so. Example:
     ```typescript
@@ -108,7 +108,7 @@ Add a boolean guard flag (`_backgroundGenerationQueued`) to `WorkflowOrchestrati
     ```
 
 - [x] **Task 3: Guard `_generateImagesWithStyles` in BOTH generation paths**
-  - File: `AI.ProfilePhotoMaker.UI/src/app/services/workflow-orchestration.service.ts`
+  - File: `AI.ProfilePhotoMaker.UI/src/app/services/removed legacy workflow orchestration service`
   - Action: In `_startTrainingStatusPolling`, guard `_generateImagesWithStyles` in **both** the primary path (~L985-986) AND the 15-second `setTimeout` retry/fallback path (~L1000-1005). Do NOT reset the flag at the check point — it must stay `true` to guard both paths:
     ```typescript
     // Primary path (~L985-986):
@@ -124,14 +124,14 @@ Add a boolean guard flag (`_backgroundGenerationQueued`) to `WorkflowOrchestrati
   - Notes: The flag is NOT consumed here. It stays `true` to guard both paths. Log when skipping for observability: `console.debug('[Workflow] Skipping frontend generation — background generation queued');`
 
 - [x] **Task 4: Reset the flag at session start**
-  - File: `AI.ProfilePhotoMaker.UI/src/app/services/workflow-orchestration.service.ts`
+  - File: `AI.ProfilePhotoMaker.UI/src/app/services/removed legacy workflow orchestration service`
   - Action: Add `this._backgroundGenerationQueued = false;` in TWO places:
     1. At the start of `_startModelTraining()` — this is the actual entry point for every new training session, guaranteeing clean state regardless of how the previous session ended.
     2. In `resetProgress()` — as defense-in-depth, even though this method is not called in normal operation.
   - Notes: Do NOT add to `_clearAllIntervals()` — that method is called in too many contexts and would create dangerous interactions (F6).
 
 - [x] **Task 5: Guard against multiple rapid clicks on "Continue in Background"**
-  - File: `AI.ProfilePhotoMaker.UI/src/app/dashboard/dashboard.component.ts`
+  - File: `AI.ProfilePhotoMaker.UI/src/app/enhance/app/photo-enhancement.component.ts`
   - Action: In `continueInBackground()` (~L589), add an early return if `_backgroundGenerationQueued` is already true. Since `_backgroundGenerationQueued` lives on the workflow service, check it via a public getter or check a local component flag:
     - **Option A (preferred)**: Add a component-level `_backgroundQueued = false` flag. Set to `true` at the start of `continueInBackground()`, check it as the first line.
     - **Option B**: Expose a public `get backgroundGenerationQueued()` getter on the workflow service and check it.
@@ -176,8 +176,8 @@ Add a boolean guard flag (`_backgroundGenerationQueued`) to `WorkflowOrchestrati
 7. Start a second training+generation session after the first completes — verify normal behavior
 
 **Unit Testing (Recommended):**
-- No spec file exists for `WorkflowOrchestrationService` yet
-- Create `workflow-orchestration.service.spec.ts` with Jasmine/Karma or add focused tests
+- No spec file exists for `RemovedLegacyWorkflowOrchestration` yet
+- Create `removed legacy workflow orchestration service spec` with Jasmine/Karma or add focused tests
 - Test that `queueBackgroundGeneration` sets the flag synchronously (before any async operation)
 - Test that `queueBackgroundGeneration` resets the flag on API failure
 - Test that `_startModelTraining` resets the flag

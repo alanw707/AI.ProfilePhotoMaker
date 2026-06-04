@@ -192,7 +192,7 @@ test.describe('Image Upload Flow Validation', () => {
       },
     ]);
 
-    await page.goto(`${runtimeConfig.baseUrl}/app/dashboard`);
+    await page.goto(`${runtimeConfig.baseUrl}/app/enhance`);
     await page.waitForURL('**/app/**', { timeout: 15000 });
   }
   
@@ -248,7 +248,7 @@ test.describe('Image Upload Flow Validation', () => {
 
         if (loginResult === 'verify') {
           await confirmEmailForTest(page);
-          await page.goto(`${runtimeConfig.baseUrl}/app/dashboard`);
+          await page.goto(`${runtimeConfig.baseUrl}/app/enhance`);
           await page.waitForURL('**/app/**', { timeout: 15000 });
         }
         console.log('✅ Login successful');

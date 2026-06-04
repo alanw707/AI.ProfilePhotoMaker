@@ -40,6 +40,7 @@
     "prepush": "npm run lint:errors-only",
     "_comment_utilities": "=== UTILITY SCRIPTS ===",
     "generate:seo-static": "node scripts/generate-seo-static-pages.cjs",
+    "verify:docker-frontend": "node scripts/verify-docker-frontend.cjs",
     "watch": "ng build --watch --configuration development",
     "prepare": "husky"
   },
@@ -90,19 +91,9 @@
     "typescript-eslint": "8.34.1"
   },
   "lint-staged": {
-    "src/**/*.{ts,js}": [
-      "prettier --write",
-      "eslint --fix"
-    ],
-    "src/**/*.html": [
-      "prettier --write",
-      "eslint --fix"
-    ],
-    "src/**/*.{scss,css}": [
-      "prettier --write"
-    ],
-    "src/**/*.{json,md}": [
-      "prettier --write"
-    ]
+    "src/**/*.{ts,js}": ["prettier --write", "eslint --fix"],
+    "src/**/*.html": ["prettier --write", "eslint --fix"],
+    "src/**/*.{scss,css}": ["prettier --write"],
+    "src/**/*.{json,md}": ["prettier --write"]
   }
 }

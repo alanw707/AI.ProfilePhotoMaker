@@ -12,21 +12,21 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
     ctaIntent: 'pricing',
     title: 'How AI Profile Photo Maker Works | Studio-quality headshots in minutes',
     description:
-      'Studio-quality headshots in minutes. Upload clear selfies and get professional results fast.',
+      'Studio-quality headshots in minutes. Upload one clear photo and get professional results fast.',
     keywords:
       'how AI headshots work, headshot process, AI headshot workflow, professional headshots in minutes',
     h1: 'How AI Profile Photo Maker Works',
     hero: {
       eyebrow: 'How it works',
       headline: 'How AI Profile Photo Maker Works',
-      subhead: 'Upload clear selfies, pick a style, and get professional results fast.',
+      subhead: 'Upload one clear photo, pick a style, and get professional results fast.',
       ctaLabel: 'Get your headshot in minutes',
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
     },
     highlights: [
-      { value: 'At least 5', label: 'Minimum selfies' },
+      { value: 'One photo', label: 'Minimum input' },
       { value: 'Minutes', label: 'Typical delivery' },
       { value: '20+', label: 'Styles available' },
     ],
@@ -36,7 +36,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
         title: 'Three simple steps',
         items: [
           {
-            title: 'Upload at least 5 clear selfies',
+            title: 'Upload one clear photo',
             description:
               'Front-facing shots with variety in angles and lighting help the model learn your features accurately.',
           },
@@ -113,7 +113,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
     ],
     cta: {
       title: 'Ready to see your results?',
-      description: 'Start with clear selfies and get a full headshot gallery in minutes.',
+      description: 'Start with clear photos and get a full headshot gallery in minutes.',
       label: 'Get your headshot in minutes',
       href: '/pricing',
     },
@@ -220,7 +220,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
     ],
     cta: {
       title: 'Want a before and after set of your own?',
-      description: 'Upload clear selfies and get a full gallery of headshots in minutes.',
+      description: 'Upload one clear photo and get a full gallery of headshots in minutes.',
       label: 'Get your headshot in minutes',
       href: '/pricing',
     },
@@ -308,7 +308,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
         title: 'How it works',
         items: [
           {
-            title: 'Upload clear selfies',
+            title: 'Upload one clear photo',
             description:
               'Share varied, well-lit photos so the model captures your features accurately.',
           },
@@ -408,7 +408,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
         title: 'How it works',
         items: [
           {
-            title: 'Upload at least 5 clear selfies',
+            title: 'Upload one clear photo',
             description: 'Use varied angles and lighting for stronger face consistency.',
           },
           {
@@ -427,7 +427,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
         items: [
           {
             question: 'How many photos should I upload?',
-            answer: 'We recommend at least 5 clear selfies with varied angles and lighting.',
+            answer: 'We recommend one clear photo with varied angles and lighting.',
           },
           {
             question: 'How fast are results?',

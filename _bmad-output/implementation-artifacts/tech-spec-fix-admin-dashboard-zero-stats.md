@@ -44,7 +44,7 @@ The admin dashboard is displaying 0 for all statistics (Total Users: 0, Active U
 Add proper error handling to the `admin-dashboard.component.ts` subscription that:
 1. Catches and logs API errors to the console
 2. Sets an error state flag for potential UI display
-3. Keeps the dashboard responsive even when data fails to load
+3. Keeps the Photo Workspace responsive even when data fails to load
 4. Allows developers to diagnose why data isn't appearing
 
 ### Scope
@@ -191,7 +191,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-export class AdminDashboardComponent implements OnInit, OnDestroy {
+export class AdminPhotoWorkspaceComponent implements OnInit, OnDestroy {
   // ... existing dashboard property
   isLoading = false;
   error: string | null = null;
@@ -296,7 +296,7 @@ When data loads successfully
 Then all statistics display correctly with no visual regression AND no console errors
 
 **AC6: No Memory Leaks**
-Given the admin dashboard component
+Given the admin Photo Workspace component
 When the user navigates away from the page before the API call completes
 Then the subscription is properly cleaned up AND no memory leaks occur
 

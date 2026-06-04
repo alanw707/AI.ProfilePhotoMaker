@@ -13,7 +13,7 @@ using SixLabors.ImageSharp.Formats.Png;
 namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 
 /// <summary>
-/// OpenAI DALL-E implementation for creative image enhancement using HTTP client
+/// OpenAI GPT Image implementation for creative image enhancement using HTTP client
 /// </summary>
 public class OpenAIImageGenerationService : IImageProcessingService
 {
@@ -39,8 +39,9 @@ public class OpenAIImageGenerationService : IImageProcessingService
         _logger = logger;
         _storageService = storageService;
 
-        // Configure HTTP client for OpenAI API
-        _openAiClient.BaseAddress = new Uri("https://api.openai.com/v1/");
+        // Configure HTTP client for OpenAI API. Keep base URL configurable for Azure/private gateways/tests.
+        var baseUrl = _configuration["OpenAI:BaseUrl"] ?? "https://api.openai.com/v1/";
+        _openAiClient.BaseAddress = new Uri(baseUrl.EndsWith('/') ? baseUrl : $"{baseUrl}/");
         _openAiClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
         // Load API key from canonical configuration path. Environment variables should use OpenAI__ApiKey.
@@ -60,7 +61,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
     // avoids ambiguity and simplifies runtime behavior.
 
     /// <summary>
-    /// Enhances photo quality using OpenAI DALL-E image transformation and returns base64 data URL format
+    /// Enhances photo quality using OpenAI GPT Image transformation and returns base64 data URL format
     /// </summary>
     /// <param name="request">Enhancement request with image URL and style preferences</param>
     /// <returns>Base64 data URL in format: data:image/png;base64,{base64data}</returns>
@@ -74,43 +75,44 @@ public class OpenAIImageGenerationService : IImageProcessingService
                 S(request.EnhancementType),
                 S(request.ImageUrl));
 
-            // Step 1: Download and process the image
-            // Ensure the image URL is accessible from the server context (SAS/proxy)
-            var normalizedUrl = await NormalizeImageUrlForServerAccessAsync(request.ImageUrl);
-            var (imageBytes, maskBytes) = await PrepareImageAndMask(normalizedUrl);
+            // Step 1: Load and process the image. New enhancement uploads pass a storage path
+            // so local/container runs do not need to re-download the source through Azurite URLs.
+            (byte[] imageBytes, byte[] maskBytes) imageAndMask;
+            if (!string.IsNullOrWhiteSpace(request.ImageStoragePath))
+            {
+                imageAndMask = await PrepareImageAndMaskFromStorageAsync(request.ImageStoragePath);
+            }
+            else
+            {
+                // Legacy fallback for older clients that only send a URL.
+                var normalizedUrl = await NormalizeImageUrlForServerAccessAsync(request.ImageUrl ?? string.Empty);
+                imageAndMask = await PrepareImageAndMaskFromUrlAsync(normalizedUrl);
+            }
+
+            var (imageBytes, _) = imageAndMask;
             _logger.LogInformation("Image processed - Original size: {Size} bytes", imageBytes.Length);
 
-            // Step 2: Generate transformation prompt
-            var prompt = GenerateTransformationPrompt(request.EnhancementType ?? "professional");
+            var prompt = !string.IsNullOrWhiteSpace(request.CustomPrompt)
+                ? BuildCustomTransformationPrompt(request.CustomPrompt)
+                : GenerateTransformationPrompt(request.EnhancementType ?? "professional");
             _logger.LogInformation("Using transformation prompt: {Prompt}", S(prompt));
 
-            // Step 3: Create multipart form data for image editing
             using var formData = new MultipartFormDataContent();
 
-            // Add the image file (OpenAI edits expect field name image[])
             var imageContent = new ByteArrayContent(imageBytes);
             imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
-            formData.Add(imageContent, "image[]", "image.png");
+            formData.Add(imageContent, "image", "image.png");
 
-            // Add the mask file (optional). Some models/endpoints behave better without an explicit mask.
-            // Skipping mask to allow full-image edits reliably.
-            // formData.Add(new ByteArrayContent(maskBytes), "mask", "mask.png");
-
-            // Specify model explicitly (required by OpenAI)
-            formData.Add(new StringContent("gpt-image-1"), "model");
-
-            // Add the prompt
+            var imageModel = _configuration["OpenAI:ImageModel"] ?? "gpt-image-2";
+            formData.Add(new StringContent(imageModel), "model");
             formData.Add(new StringContent(prompt), "prompt");
-
-            // Add other parameters (keep minimal to avoid unknown-parameter errors)
-            // Note: Some OpenAI deployments reject response_format on edits; omit it and accept url or b64_json in response
             formData.Add(new StringContent("1024x1024"), "size");
 
-            // Step 4: Call OpenAI image edit endpoint
             _logger.LogInformation(
-                "Posting to OpenAI images/edits: model=gpt-image-1, promptLen={PromptLen}, imageBytes={ImageBytes}",
-                prompt?.Length ?? 0, imageBytes?.Length ?? 0);
-            var response = await _openAiClient.PostAsync("images/edits", formData);
+                "Posting to OpenAI images/edits: model={Model}, promptLen={PromptLen}, imageBytes={ImageBytes}",
+                S(imageModel), prompt?.Length ?? 0, imageBytes?.Length ?? 0);
+            var editEndpoint = _configuration["OpenAI:ImageEditEndpoint"] ?? "images/edits";
+            var response = await _openAiClient.PostAsync(editEndpoint, formData);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -182,6 +184,18 @@ public class OpenAIImageGenerationService : IImageProcessingService
     {
         var styles = new[]
         {
+            "background",
+            "social",
+            "cartoon",
+            "professional",
+            "relighting",
+            "professional_polish",
+            "outfit_upgrade",
+            "background_upgrade",
+            "skin_tone_polish",
+            "sharpen_detail",
+            "skin_smoothing",
+            "wrinkle_softening",
             "chibi",
             "pixar_3d",
             "studio_ghibli",
@@ -190,7 +204,8 @@ public class OpenAIImageGenerationService : IImageProcessingService
             "retro_90s_anime",
             "low_poly",
             "clay_animation",
-            "voxel_art"
+            "voxel_art",
+            "headshot",
         };
         return Task.FromResult<IEnumerable<string>>(styles);
     }
@@ -203,7 +218,50 @@ public class OpenAIImageGenerationService : IImageProcessingService
     /// <summary>
     /// Downloads the image from URL, converts to PNG (square up to 1024), and creates transparent mask
     /// </summary>
-    private async Task<(byte[] imageBytes, byte[] maskBytes)> PrepareImageAndMask(string imageUrl)
+    private async Task<(byte[] imageBytes, byte[] maskBytes)> PrepareImageAndMaskFromStorageAsync(string storagePath)
+    {
+        try
+        {
+            _logger.LogInformation("Loading enhancement source image from storage path: {StoragePath}", S(storagePath));
+            await using var imageStream = await OpenStorageImageWithEnvironmentFallbackAsync(storagePath);
+            if (imageStream == null)
+            {
+                throw new FileNotFoundException("Enhancement source image was not found in storage.", storagePath);
+            }
+
+            using var memoryStream = new MemoryStream();
+            await imageStream.CopyToAsync(memoryStream);
+            var originalImageBytes = memoryStream.ToArray();
+            _logger.LogInformation("Loaded storage image - Size: {Size} bytes", originalImageBytes.Length);
+
+            return await PrepareImageAndMaskFromBytesAsync(originalImageBytes, "storage");
+        }
+        catch (Exception ex) when (ex is not FileNotFoundException)
+        {
+            _logger.LogError(ex, "Failed to prepare image and mask from storage path: {StoragePath}", S(storagePath));
+            throw new InvalidOperationException($"Failed to process image from storage: {ex.Message}", ex);
+        }
+    }
+
+    private async Task<Stream?> OpenStorageImageWithEnvironmentFallbackAsync(string storagePath)
+    {
+        var imageStream = await _storageService.GetImageAsync(storagePath);
+        if (imageStream != null)
+        {
+            return imageStream;
+        }
+
+        var parts = storagePath.Split('/', 2, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 2 && (parts[0] is "dev" or "staging" or "prod" or "development" or "production"))
+        {
+            _logger.LogWarning("Storage image not found at environment-prefixed path. Retrying without prefix: {StoragePath}", S(storagePath));
+            return await _storageService.GetImageAsync(parts[1]);
+        }
+
+        return null;
+    }
+
+    private async Task<(byte[] imageBytes, byte[] maskBytes)> PrepareImageAndMaskFromUrlAsync(string imageUrl)
     {
         try
         {
@@ -234,52 +292,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
             var originalImageBytes = await imageResponse.Content.ReadAsByteArrayAsync();
             _logger.LogInformation("Downloaded image - Size: {Size} bytes", originalImageBytes.Length);
 
-            // Process image and create mask using ImageSharp (cross-platform)
-            using var original = SixLabors.ImageSharp.Image.Load<Rgba32>(originalImageBytes);
-
-            // Determine target square size (up to 1024)
-            var targetSize = Math.Min(1024, Math.Max(original.Width, original.Height));
-
-            // Create square canvas with white background
-            using var squareImage = new SixLabors.ImageSharp.Image<Rgba32>(targetSize, targetSize, new Rgba32(255, 255, 255, 255));
-
-            // Resize down if needed (do not upscale)
-            int drawWidth = original.Width;
-            int drawHeight = original.Height;
-            if (original.Width > targetSize || original.Height > targetSize)
-            {
-                var scale = Math.Min((double)targetSize / original.Width, (double)targetSize / original.Height);
-                drawWidth = (int)Math.Round(original.Width * scale);
-                drawHeight = (int)Math.Round(original.Height * scale);
-            }
-
-            using var resized = original.Clone(ctx => ctx.Resize(new ResizeOptions
-            {
-                Size = new Size(drawWidth, drawHeight),
-                Mode = ResizeMode.Stretch
-            }));
-
-            // Center the (possibly resized) original image onto the white square canvas
-            var offsetX = (targetSize - drawWidth) / 2;
-            var offsetY = (targetSize - drawHeight) / 2;
-            squareImage.Mutate(ctx => ctx.DrawImage(resized, new Point(offsetX, offsetY), 1f));
-
-            // Encode to PNG bytes
-            var pngEncoder = new PngEncoder { ColorType = PngColorType.RgbWithAlpha };
-            using var imageStream = new MemoryStream();
-            await squareImage.SaveAsync(imageStream, pngEncoder);
-            var processedImageBytes = imageStream.ToArray();
-
-            // Create fully transparent mask (edit entire image)
-            using var maskImage = new SixLabors.ImageSharp.Image<Rgba32>(targetSize, targetSize, new Rgba32(255, 255, 255, 0));
-            using var maskStream = new MemoryStream();
-            await maskImage.SaveAsync(maskStream, pngEncoder);
-            var maskBytes = maskStream.ToArray();
-
-            _logger.LogInformation("Image processed to {Size}x{Size} PNG - Image: {ImageSize} bytes, Mask: {MaskSize} bytes",
-                targetSize, targetSize, processedImageBytes.Length, maskBytes.Length);
-
-            return (processedImageBytes, maskBytes);
+            return await PrepareImageAndMaskFromBytesAsync(originalImageBytes, "url");
         }
         catch (HttpRequestException ex)
         {
@@ -292,6 +305,56 @@ public class OpenAIImageGenerationService : IImageProcessingService
             _logger.LogError(ex, "Failed to prepare image and mask from URL: {ImageUrl}", S(imageUrl));
             throw new InvalidOperationException($"Failed to process image: {ex.Message}", ex);
         }
+    }
+
+    private async Task<(byte[] imageBytes, byte[] maskBytes)> PrepareImageAndMaskFromBytesAsync(byte[] originalImageBytes, string source)
+    {
+        // Process image and create mask using ImageSharp (cross-platform)
+        using var original = SixLabors.ImageSharp.Image.Load<Rgba32>(originalImageBytes);
+
+        // Determine target square size (up to 1024)
+        var targetSize = Math.Min(1024, Math.Max(original.Width, original.Height));
+
+        // Create square canvas with white background
+        using var squareImage = new SixLabors.ImageSharp.Image<Rgba32>(targetSize, targetSize, new Rgba32(255, 255, 255, 255));
+
+        // Resize down if needed (do not upscale)
+        int drawWidth = original.Width;
+        int drawHeight = original.Height;
+        if (original.Width > targetSize || original.Height > targetSize)
+        {
+            var scale = Math.Min((double)targetSize / original.Width, (double)targetSize / original.Height);
+            drawWidth = (int)Math.Round(original.Width * scale);
+            drawHeight = (int)Math.Round(original.Height * scale);
+        }
+
+        using var resized = original.Clone(ctx => ctx.Resize(new ResizeOptions
+        {
+            Size = new Size(drawWidth, drawHeight),
+            Mode = ResizeMode.Stretch
+        }));
+
+        // Center the (possibly resized) original image onto the white square canvas
+        var offsetX = (targetSize - drawWidth) / 2;
+        var offsetY = (targetSize - drawHeight) / 2;
+        squareImage.Mutate(ctx => ctx.DrawImage(resized, new Point(offsetX, offsetY), 1f));
+
+        // Encode to PNG bytes
+        var pngEncoder = new PngEncoder { ColorType = PngColorType.RgbWithAlpha };
+        using var imageStream = new MemoryStream();
+        await squareImage.SaveAsync(imageStream, pngEncoder);
+        var processedImageBytes = imageStream.ToArray();
+
+        // Create fully transparent mask (edit entire image)
+        using var maskImage = new SixLabors.ImageSharp.Image<Rgba32>(targetSize, targetSize, new Rgba32(255, 255, 255, 0));
+        using var maskStream = new MemoryStream();
+        await maskImage.SaveAsync(maskStream, pngEncoder);
+        var maskBytes = maskStream.ToArray();
+
+        _logger.LogInformation("Image processed from {Source} to {Size}x{Size} PNG - Image: {ImageSize} bytes, Mask: {MaskSize} bytes",
+            S(source), targetSize, targetSize, processedImageBytes.Length, maskBytes.Length);
+
+        return (processedImageBytes, maskBytes);
     }
 
     /// <summary>
@@ -375,12 +438,38 @@ public class OpenAIImageGenerationService : IImageProcessingService
         }
     }
 
+    private static string BuildCustomTransformationPrompt(string customPrompt)
+    {
+        var preserveIdentity =
+            "Preserve the person's identity, age, facial structure, skin tone, expression, hairstyle, and recognizable features. ";
+        return preserveIdentity + customPrompt.Trim();
+    }
+
     private static string GenerateTransformationPrompt(string enhancementType)
     {
-        var basePrompt = "Transform this portrait into ";
+        var preserveIdentity =
+            "Preserve the person's identity, age, facial structure, skin tone, expression, hairstyle, and clothing unless specifically requested. Preserve the exact crop, pose, camera angle, head position, body position, and overall composition unless the requested edit explicitly requires changing them. ";
+        var basePrompt = preserveIdentity + "Transform this portrait into ";
 
         return enhancementType.ToLower() switch
         {
+            "background" => preserveIdentity + "Create a polished professional headshot. Replace distracting or messy backgrounds with a clean neutral studio backdrop, improve lighting and contrast naturally, keep realistic skin texture, and avoid changing facial features.",
+            "social" => preserveIdentity + "Create a bright, engaging social media profile photo. Improve lighting, sharpness, color balance, and background cleanliness while keeping a natural realistic look and avoiding over-smoothed skin.",
+            "cartoon" => basePrompt + "a high-quality friendly cartoon portrait with clean lines, expressive but recognizable facial features, natural proportions, polished lighting, and a simple uncluttered background",
+            "professional" => preserveIdentity + "Create a realistic professional profile photo with clean lighting, subtle background cleanup, natural color correction, crisp focus, and realistic skin texture.",
+            "headshot" => preserveIdentity + "Create a natural professional headshot suitable for LinkedIn and work profiles. Use studio-quality lighting, a clean neutral background, realistic skin texture, subtle retouching, natural color correction, and crisp focus. Avoid waxy smoothing, plastic skin, exaggerated facial changes, beauty-filter effects, and over-retouching.",
+            "relighting" => preserveIdentity + "Relight this profile photo with professional studio-style lighting. Soften harsh shadows, balance exposure, keep skin texture realistic, and do not change the person's identity, facial structure, clothing, or background content beyond natural lighting improvements.",
+            "professional_polish" => preserveIdentity + "Apply subtle professional photo polish. Reduce shine and minor distractions, improve clarity and color balance, lightly soften under-eye shadows, preserve age and natural skin texture, and avoid beauty-filter or plastic-skin effects.",
+            "outfit_upgrade" => preserveIdentity + "Upgrade visible clothing to neutral role-appropriate professional attire such as a blazer, collared shirt, or polished business-casual top. Preserve body shape, face, age, and identity. Avoid credential-specific uniforms, sexualized clothing, logos, luxury/status deception, or drastic body changes.",
+            "background_upgrade" => preserveIdentity + "Replace or improve the background with a clean professional setting such as a neutral studio backdrop, tasteful office, or warm uncluttered interior. Preserve the person exactly and keep lighting natural.",
+            "skin_tone_polish" => preserveIdentity + "Apply subtle natural skin tone polish. Balance redness, shadows, and uneven color while preserving realistic skin texture, age, identity, facial structure, crop, framing, and subject position. Avoid changing ethnicity, face shape, camera angle, pose, body position, or creating a beauty-filter look.",
+            "sharpen_detail" => preserveIdentity + "Improve perceived sharpness and detail for a professional profile photo. Enhance crisp focus around eyes, hair, facial contours, and clothing edges while reducing camera softness. Keep lighting, color, face shape, identity, skin texture, crop, framing, subject position, and background composition natural. Avoid halos, over-sharpening, gritty texture, artificial HDR effects, or repositioning the person.",
+            "skin_smoothing" => preserveIdentity + "Make a minimal localized skin-retouch edit only. Preserve the exact crop, pose, expression, clothing, background, lighting direction, camera angle, and overall composition. Lightly reduce minor blotchiness and camera noise on skin while preserving pores, natural texture, age, identity, and facial structure. Do not change wardrobe, background, face shape, hairstyle, smile, body position, or framing. Avoid waxy or plastic skin.",
+            "wrinkle_softening" => preserveIdentity + "Subtly soften harsh wrinkle shadows and under-eye creases for a polished professional profile photo while preserving age, identity, natural expression, facial structure, and realistic skin texture.",
+            "headshot_linkedin" => preserveIdentity + "Create a realistic LinkedIn-ready professional headshot with head-and-shoulders framing, clean neutral background, confident approachable expression, crisp focus, natural color correction, and subtle realistic retouching. Avoid changing facial features or creating plastic skin.",
+            "headshot_creator" => preserveIdentity + "Create a polished creator/founder profile headshot with warm natural lighting, clean modern background, approachable expression, realistic skin texture, and professional social-profile framing. Avoid exaggerated edits, beauty-filter effects, and identity drift.",
+            "headshot_office" => preserveIdentity + "Create a realistic professional headshot with tasteful office-style background, balanced lighting, head-and-shoulders framing, crisp focus, and subtle retouching. Keep the person recognizable and avoid over-smoothing.",
+            "headshot_studio" => preserveIdentity + "Create a studio-quality professional headshot with a clean studio backdrop, flattering but natural lighting, head-and-shoulders framing, realistic skin texture, and conservative retouching. Do not alter identity-defining facial features.",
             "chibi" => basePrompt + "japan chibi anime style with oversized head, huge sparkling eyes, tiny body, extremely cute, soft pastel colors, maintaining facial features",
             "studio_ghibli" => basePrompt + "japan Studio Ghibli animation style with soft watercolor painting effect, dreamy atmosphere, whimsical feeling, preserving the person's likeness",
             "kawaii" => basePrompt + "japan kawaii anime style with ultra cute aesthetic, pastel colors, sparkly large eyes, blushing cheeks, keeping facial structure",
@@ -390,7 +479,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
             "low_poly" => basePrompt + "low poly 3D art style with geometric faceted design, angular features, maintaining facial structure",
             "clay_animation" => basePrompt + "clay animation style like stop-motion figure made of modeling clay, preserving the person's likeness",
             "voxel_art" => basePrompt + "voxel art style with Minecraft-inspired blocky 3D design, keeping facial features recognizable",
-            _ => basePrompt + "professional anime style with improved lighting, clarity, and artistic quality while maintaining the person's appearance"
+            _ => preserveIdentity + "Create a polished profile photo with improved lighting, clarity, background cleanliness, and natural realistic quality while maintaining the person's appearance."
         };
     }
 

@@ -12,7 +12,7 @@ public interface IEmailNotificationService
     Task SendEmailVerificationAsync(string userId, string? email, string encodedToken);
     Task SendWelcomeAsync(string userId, string? email, string? firstName = null);
     Task SendRetentionDeletionWarningAsync(string userId, string? email, int imageCount, DateTime deletionDate, int daysUntilDeletion);
-    Task SendAbandonedUploadNudgeAsync(string userId, string? email, string? firstName = null);
+    Task SendAbandonedUploadNudgeAsync(string userId, string? email, string? firstName = null, int uploadedCount = 0, int minimumRequiredUploads = 5);
     Task<EmailSendResult> SendMarketingEmailAsync(string userId, string email, string subject, string htmlBody, string unsubscribeUrl);
     string RenderMarketingEmailPreview(string subject, string htmlBody);
 }

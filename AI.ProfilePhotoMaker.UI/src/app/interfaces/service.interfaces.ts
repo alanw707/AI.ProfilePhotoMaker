@@ -97,7 +97,7 @@ export interface FallbackTracker {
 }
 
 export interface DataDiscrepancyResult {
-  dashboardCount: number;
+  workspaceCount: number;
   apiGeneratedField: number;
   filteredCount: number;
   totalImages: number;
@@ -109,7 +109,7 @@ export interface FallbackCheckResult {
   shouldDiscoverModels: boolean;
 }
 
-export interface DashboardStateForFallback {
+export interface WorkspaceStateForFallback {
   generatedPhotosCount: number;
   modelStatus: string;
   hasLatestTrainedModel: boolean;
@@ -130,7 +130,7 @@ export interface IFallbackOperationsService {
     uploadedImages: number,
     hasTrainedModel: boolean
   ): boolean;
-  checkIfFallbackNeeded(state: DashboardStateForFallback): FallbackCheckResult;
+  checkIfFallbackNeeded(state: WorkspaceStateForFallback): FallbackCheckResult;
   debugDataDiscrepancy(): Promise<DataDiscrepancyResult>;
   resetFallbackTracking(): void;
   getFallbackTracker(): FallbackTracker;
@@ -145,7 +145,7 @@ export interface UploadedImageThumbnail {
   fileName: string;
 }
 
-export interface DashboardState {
+export interface WorkspaceState {
   userProfile: any | null;
   creditsInfo: any | null;
   userCreditStatus: any | null;
@@ -153,7 +153,7 @@ export interface DashboardState {
   uploadedImageThumbnails: UploadedImageThumbnail[];
   generatedPhotosCount: number;
   modelStatus: string; // Legacy string status (to be deprecated)
-  modelStatusSemantic?: import('../models/dashboard.types').ModelStatus; // New semantic status
+  modelStatusSemantic?: import('../models/workspace.types').ModelStatus; // New semantic status
   isPremiumWorkflow: boolean;
   isLoading: boolean;
   latestTrainedModel?: any;
@@ -162,10 +162,10 @@ export interface DashboardState {
   lastValidationTime?: number; // Timestamp of last validation
 }
 
-export interface IDashboardStateService {
-  getState(): DashboardState;
-  setState(newState: Partial<DashboardState>): void;
-  loadInitialDashboardData(): void;
+export interface IWorkspaceStateService {
+  getState(): WorkspaceState;
+  setState(newState: Partial<WorkspaceState>): void;
+  loadInitialWorkspaceData(): void;
   resetState(): void;
   forceRefresh(): void;
   invalidateAndRefreshImages(): void;
@@ -216,7 +216,7 @@ export type RefactoredServices =
   | ICacheManagerService
   | IModelStateService
   | IFallbackOperationsService
-  | IDashboardStateService;
+  | IWorkspaceStateService;
 
 export type ServiceIdentifier =
   | 'ModelLoaderService'
@@ -225,4 +225,4 @@ export type ServiceIdentifier =
   | 'CacheManagerService'
   | 'ModelStateService'
   | 'FallbackOperationsService'
-  | 'DashboardStateService';
+  | 'WorkspaceStateService';

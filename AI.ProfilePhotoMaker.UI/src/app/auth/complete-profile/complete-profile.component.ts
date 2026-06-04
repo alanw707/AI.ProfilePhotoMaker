@@ -10,6 +10,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService, ProfileCompletionDto } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
+import { ETHNICITY_OPTIONS_WITH_LEGACY_GENERIC_ASIAN } from '../../shared/constants/ethnicity-options';
 
 @Component({
   selector: 'app-complete-profile',
@@ -23,6 +24,7 @@ export class CompleteProfileComponent implements OnInit {
   profileForm: FormGroup;
   loading = false;
   error = '';
+  readonly ethnicityOptions = ETHNICITY_OPTIONS_WITH_LEGACY_GENERIC_ASIAN;
 
   private readonly _formBuilder = inject(FormBuilder);
   private readonly _authService = inject(AuthService);
@@ -100,14 +102,15 @@ export class CompleteProfileComponent implements OnInit {
         this.loading = false;
         if (response.success) {
           // Profile completed successfully, navigate to dashboard
-          this._router.navigate(['/app/dashboard']);
+          this._router.navigate(['/app/enhance']);
         } else {
           this.error = response.message || 'Failed to complete profile';
         }
       },
       error: error => {
         this.loading = false;
-        this.error = error?.error?.error || error?.message || 'Profile completion failed. Please try again.';
+        this.error =
+          error?.error?.error || error?.message || 'Profile completion failed. Please try again.';
       },
     });
   }

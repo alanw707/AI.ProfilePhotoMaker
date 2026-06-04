@@ -40,6 +40,41 @@ describe('ConfigService - API URL building in test env', () => {
     });
   });
 
+  describe('Runtime client flags', () => {
+    let originalFetch: typeof window.fetch;
+
+    beforeEach(() => {
+      originalFetch = window.fetch;
+    });
+
+    afterEach(() => {
+      window.fetch = originalFetch;
+    });
+
+    it('should override build-time feature flags from /api/config/client', async () => {
+      window.fetch = jasmine.createSpy('fetch').and.resolveTo(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              features: {
+                openAIHeadshotMvp: false,
+                replicateTrainingFlowVisible: false,
+              },
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      );
+
+      await service.loadClientConfiguration();
+
+      expect(window.fetch).toHaveBeenCalledWith('/api/config/client', jasmine.any(Object));
+      expect(service.isOpenAIHeadshotMvpEnabled).toBeFalse();
+      expect(service.isReplicateTrainingFlowVisible).toBeFalse();
+    });
+  });
+
   describe('OAuth Configuration', () => {
     it('should use window origin for OAuth in tests', () => {
       const oauthBase = service.getOAuthBaseUrl();

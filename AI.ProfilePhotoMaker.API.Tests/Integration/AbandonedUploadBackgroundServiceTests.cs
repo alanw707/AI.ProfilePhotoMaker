@@ -96,6 +96,43 @@ public class AbandonedUploadBackgroundServiceTests
 
         await harness.BackgroundService.PerformAbandonedUploadCheck();
 
+        var call = Assert.Single(harness.EmailService.NudgeCalls);
+        Assert.Equal("user-uploaded", call.UserId);
+        Assert.Equal(1, call.UploadedCount);
+        Assert.Equal(5, call.MinimumRequiredUploads);
+    }
+
+    [Fact]
+    public async Task DoesNotNudgeUserWhoAlreadyHasMinimumPhotos()
+    {
+        var timeProvider = CreateTimeProvider();
+        using var harness = CreateHarness(timeProvider: timeProvider);
+
+        var profile = await SeedUserAsync(harness, "user-ready", "ready@example.com", "Dana",
+            createdAt: timeProvider.GetUtcNow().UtcDateTime.AddHours(-5));
+
+        using (var scope = harness.Provider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            for (var i = 0; i < 5; i++)
+            {
+                db.ProcessedImages.Add(new ProcessedImage
+                {
+                    UserProfileId = profile.Id,
+                    IsOriginalUpload = true,
+                    IsGenerated = false,
+                    ProcessedImageUrl = $"uploads/user-ready/{Guid.NewGuid():N}.jpg",
+                    OriginalImageUrl = $"originals/user-ready/{Guid.NewGuid():N}.jpg",
+                    ScheduledDeletionDate = DateTime.UtcNow.AddDays(90)
+                });
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        await harness.BackgroundService.PerformAbandonedUploadCheck();
+
         Assert.Empty(harness.EmailService.NudgeCalls);
     }
 
@@ -148,6 +185,39 @@ public class AbandonedUploadBackgroundServiceTests
     }
 
     [Fact]
+    public async Task CanSendPartialUploadNudgeAfterNoUploadNudge()
+    {
+        var timeProvider = CreateTimeProvider();
+        using var harness = CreateHarness(timeProvider: timeProvider);
+
+        var profile = await SeedUserAsync(harness, "user-progress", "progress@example.com", "Frank",
+            createdAt: timeProvider.GetUtcNow().UtcDateTime.AddHours(-5));
+
+        await harness.BackgroundService.PerformAbandonedUploadCheck();
+
+        using (var scope = harness.Provider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.ProcessedImages.Add(new ProcessedImage
+            {
+                UserProfileId = profile.Id,
+                IsOriginalUpload = true,
+                IsGenerated = false,
+                ProcessedImageUrl = $"uploads/user-progress/{Guid.NewGuid():N}.jpg",
+                OriginalImageUrl = $"originals/user-progress/{Guid.NewGuid():N}.jpg",
+                ScheduledDeletionDate = DateTime.UtcNow.AddDays(90)
+            });
+            await db.SaveChangesAsync();
+        }
+
+        await harness.BackgroundService.PerformAbandonedUploadCheck();
+
+        Assert.Equal(2, harness.EmailService.NudgeCalls.Count);
+        Assert.Equal(0, harness.EmailService.NudgeCalls[0].UploadedCount);
+        Assert.Equal(1, harness.EmailService.NudgeCalls[1].UploadedCount);
+    }
+
+    [Fact]
     public async Task PersistsNudgeLogToDatabase()
     {
         var timeProvider = CreateTimeProvider();
@@ -166,6 +236,7 @@ public class AbandonedUploadBackgroundServiceTests
 
         Assert.NotNull(log);
         Assert.Equal(timeProvider.GetUtcNow().UtcDateTime, log.SentAtUtc);
+        Assert.Equal(AbandonedUploadNudgeTypes.NoUploads, log.NudgeType);
     }
 
     // ── Email filtering ──────────────────────────────────────────────
@@ -459,7 +530,12 @@ public class AbandonedUploadBackgroundServiceTests
         public Task SendWelcomeAsync(string userId, string? email, string? firstName = null) => Task.CompletedTask;
         public Task SendRetentionDeletionWarningAsync(string userId, string? email, int imageCount, DateTime deletionDate, int daysUntilDeletion) => Task.CompletedTask;
 
-        public Task SendAbandonedUploadNudgeAsync(string userId, string? email, string? firstName = null)
+        public Task SendAbandonedUploadNudgeAsync(
+            string userId,
+            string? email,
+            string? firstName = null,
+            int uploadedCount = 0,
+            int minimumRequiredUploads = 5)
         {
             if (ThrowOnNudge)
             {
@@ -467,7 +543,7 @@ public class AbandonedUploadBackgroundServiceTests
                 throw new InvalidOperationException("Simulated email failure");
             }
 
-            NudgeCalls.Add(new NudgeCall(userId, email, firstName));
+            NudgeCalls.Add(new NudgeCall(userId, email, firstName, uploadedCount, minimumRequiredUploads));
             return Task.CompletedTask;
         }
 
@@ -475,5 +551,10 @@ public class AbandonedUploadBackgroundServiceTests
         public string RenderMarketingEmailPreview(string subject, string htmlBody) => htmlBody;
     }
 
-    private sealed record NudgeCall(string UserId, string? Email, string? FirstName);
+    private sealed record NudgeCall(
+        string UserId,
+        string? Email,
+        string? FirstName,
+        int UploadedCount,
+        int MinimumRequiredUploads);
 }

@@ -18,7 +18,7 @@ Status: Evidence captured (documentation review).
 
 ## 2. Processing and storage
 - Uploads are stored in local or Azure storage and tracked in the database as ProcessedImage records.
-- Model training and image generation use Replicate; enhancement uses Replicate or OpenAI (gpt-image-1).
+- Instant headshot generation uses OpenAI through `/api/headshots/generate`; optional/advanced model training and styled generation use Replicate; enhancement uses Replicate or OpenAI depending on feature/style.
 - Outputs are stored in storage and referenced in the database for gallery and downloads.
 
 ## 3. Retention and deletion

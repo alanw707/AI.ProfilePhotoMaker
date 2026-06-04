@@ -268,7 +268,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
           {
             label: 'Workflow',
             values: [
-              'Upload at least 5 photos, pick styles, download fast',
+              'Upload one clear photo, pick a style, download fast',
               'Upload photos, select attire/backgrounds, download',
             ],
           },
@@ -276,7 +276,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
             label: 'Turnaround expectations',
             values: [
               'Minutes after upload for most users',
-              '45 mins (Basic), 30 mins (Standard), 15 mins (Executive)',
+              'Instant single-headshot generation; advanced packs vary by package',
             ],
           },
           {
@@ -379,7 +379,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
           {
             label: 'Setup steps',
             values: [
-              'Upload at least 5 photos, select styles, download results',
+              'Upload one clear photo, select a style, download results',
               'Upload photos, choose style options, download favorites',
             ],
           },
@@ -476,8 +476,8 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
       eyebrow: 'Features',
       headline: 'AI Headshot Features Built for Professional Profiles',
       subhead:
-        'Upload casual selfies and get studio-quality headshots in minutes — realistic detail, flexible styles, and privacy-first processing.',
-      ctaLabel: 'Get your headshot in minutes',
+        'Upload one clear photo and get a studio-quality headshot instantly — realistic detail, flexible styles, and privacy-first processing.',
+      ctaLabel: 'Get your headshot instantly',
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
@@ -485,7 +485,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
       imageAlt: 'AI-generated professional headshot with studio lighting',
     },
     highlights: [
-      { value: '~15 min', label: 'Typical delivery' },
+      { value: 'Instant', label: 'Typical generation' },
       { value: '20+', label: 'Style options' },
       { value: 'HD', label: 'Resolution output' },
     ],
@@ -582,7 +582,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
         title: 'How it works',
         items: [
           {
-            title: 'Upload 5–15 clear selfies',
+            title: 'Upload one clear photo',
             description:
               'Front-facing shots with variety in angles and lighting help the AI model learn your features accurately.',
           },
@@ -615,7 +615,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
           {
             question: 'How many photos should I upload?',
             answer:
-              'We recommend 5–15 clear selfies with varied angles and lighting for the best results.',
+              'We recommend one clear photo with varied angles and lighting for the best results.',
           },
           {
             question: 'Will the headshots look like me?',
@@ -639,9 +639,8 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
     ],
     cta: {
       title: 'Ready to see these features in action?',
-      description:
-        'Upload your selfies and get a full gallery of professional headshots in minutes.',
-      label: 'Get your headshot in minutes',
+      description: 'Upload one clear photo and get a professional headshot instantly.',
+      label: 'Get your headshot instantly',
       href: '/pricing',
     },
   },

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The AI Profile Photo Maker uses a unified credit balance for enhancements, training, and generation. Weekly top-ups restore a user's balance to 5 when it drops below 5. The system integrates with Stripe for payment processing while maintaining a simulation mode for development.
+The AI Profile Photo Maker uses a unified credit balance for instant headshots, enhancements, and optional advanced generation/training flows. Weekly top-ups restore a user's balance to 5 when it drops below 5. The system integrates with Stripe for payment processing while maintaining a simulation mode for development.
 
 ## Credit System Architecture
 

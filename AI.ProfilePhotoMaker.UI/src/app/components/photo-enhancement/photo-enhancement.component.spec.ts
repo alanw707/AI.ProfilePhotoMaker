@@ -2,14 +2,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PhotoEnhancementComponent } from './photo-enhancement.component';
 import {
   MockAuthService,
-  MockDashboardStateService,
+  MockWorkspaceStateService,
   MockFileUploadService,
   MockReplicateService,
   TestingHelpers,
 } from '../../testing/testing-utils';
 
 import { AuthService } from '../../services/auth.service';
-import { DashboardStateService } from '../../services/dashboard-state.service';
+import { WorkspaceStateService } from '../../services/workspace-state.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { ReplicateService } from '../../services/replicate.service';
 import { Router } from '@angular/router';
@@ -25,14 +25,14 @@ xdescribe('PhotoEnhancementComponent', () => {
   let component: PhotoEnhancementComponent;
   let fixture: ComponentFixture<PhotoEnhancementComponent>;
   let mockAuthService: MockAuthService;
-  let mockDashboardStateService: MockDashboardStateService;
+  let mockWorkspaceStateService: MockWorkspaceStateService;
   let mockFileUploadService: MockFileUploadService;
   let mockReplicateService: MockReplicateService;
   let mockRouter: jasmine.SpyObj<Router>;
 
   beforeEach(async () => {
     mockAuthService = new MockAuthService();
-    mockDashboardStateService = new MockDashboardStateService();
+    mockWorkspaceStateService = new MockWorkspaceStateService();
     mockFileUploadService = new MockFileUploadService();
     mockReplicateService = new MockReplicateService();
     mockRouter = jasmine.createSpyObj('Router', ['navigate']);
@@ -41,7 +41,7 @@ xdescribe('PhotoEnhancementComponent', () => {
       imports: [PhotoEnhancementComponent],
       providers: [
         { provide: AuthService, useValue: mockAuthService },
-        { provide: DashboardStateService, useValue: mockDashboardStateService },
+        { provide: WorkspaceStateService, useValue: mockWorkspaceStateService },
         { provide: FileUploadService, useValue: mockFileUploadService },
         { provide: ReplicateService, useValue: mockReplicateService },
         { provide: Router, useValue: mockRouter },
@@ -124,7 +124,11 @@ xdescribe('PhotoEnhancementComponent', () => {
 
   describe('Component State', () => {
     it('should handle enhanced image result', () => {
-      const mockResult = { url: 'enhanced-image.jpg', status: 'completed' };
+      const mockResult = {
+        url: 'enhanced-image.jpg',
+        displayUrl: 'enhanced-image.jpg',
+        status: 'completed',
+      };
 
       component.enhancedImage = mockResult;
 

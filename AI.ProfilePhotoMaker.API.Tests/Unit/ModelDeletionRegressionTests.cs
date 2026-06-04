@@ -18,6 +18,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Unit;
 /// </summary>
 public class ModelDeletionRegressionTests : IDisposable
 {
+    private static readonly string TestReplicateApiToken = new('R', 40);
     private readonly Mock<HttpMessageHandler> _httpHandlerMock;
     private readonly Mock<ILogger<ReplicateApiClient>> _loggerMock;
     private readonly ApplicationDbContext _context;
@@ -43,7 +44,7 @@ public class ModelDeletionRegressionTests : IDisposable
     {
         // Create a proper configuration mock with required settings
         var configurationMock = new Mock<IConfiguration>();
-        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns("test-token");
+        configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns(TestReplicateApiToken);
 
         // Create mock webhook resolver
         var webhookResolver = new Mock<IWebhookUrlResolver>();

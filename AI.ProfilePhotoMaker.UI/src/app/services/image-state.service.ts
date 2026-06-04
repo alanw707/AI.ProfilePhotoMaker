@@ -25,7 +25,7 @@ export interface ImageValidationResult {
 
 /**
  * Service responsible for managing image state, validation, and thumbnails
- * Extracted from DashboardStateService for better separation of concerns
+ * Extracted from WorkspaceStateService for better separation of concerns
  */
 @Injectable({
   providedIn: 'root',

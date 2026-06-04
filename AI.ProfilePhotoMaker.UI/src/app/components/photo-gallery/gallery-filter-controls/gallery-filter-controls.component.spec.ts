@@ -21,7 +21,7 @@ describe('GalleryFilterControlsComponent', () => {
     });
 
     it('should initialize with default values', () => {
-      expect(component.title).toBe('Photo Gallery');
+      expect(component.title).toBe('Photo Workspace');
       expect(component.filterType).toBe('generated');
       expect(component.viewMode).toBe('grid');
       expect(component.pageSize).toBe(12);
@@ -343,7 +343,7 @@ describe('GalleryFilterControlsComponent', () => {
   describe('State Management', () => {
     it('should maintain component state correctly', () => {
       // Initial state
-      expect(component.title).toBe('Photo Gallery');
+      expect(component.title).toBe('Photo Workspace');
       expect(component.filterType).toBe('generated');
       expect(component.viewMode).toBe('grid');
       expect(component.pageSize).toBe(12);

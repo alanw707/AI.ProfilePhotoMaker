@@ -540,7 +540,7 @@ Build a secure, role-based admin panel accessible at `/admin` with full user man
   - Action: Create guard that:
     1. Checks authentication (similar to `AppGuard`)
     2. Calls `AuthService.isAdmin()` or checks roles from `AuthService.roles$`
-    3. If not admin, redirect to `/app/dashboard` with a "not authorized" message
+    3. If not admin, redirect to `/app/enhance` with a "not authorized" message
     4. If not authenticated, redirect to `/auth/login`
   - Notes: Follow `AppGuard` pattern for structure. Simpler than AppGuard — no need for profile completion or email verification checks (those should already be done).
 
@@ -557,7 +557,7 @@ Build a secure, role-based admin panel accessible at `/admin` with full user man
         { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
         {
           path: 'dashboard',
-          loadComponent: () => import('./admin/admin-dashboard/admin-dashboard.component').then(m => m.AdminDashboardComponent),
+          loadComponent: () => import('./admin/admin-dashboard/admin-dashboard.component').then(m => m.AdminPhotoWorkspaceComponent),
           title: 'Admin Dashboard',
         },
         {
@@ -604,7 +604,7 @@ Build a secure, role-based admin panel accessible at `/admin` with full user man
     - `getDashboard()` → `GET /api/admin/dashboard`
   - Notes: Extend `BaseHttpService` for consistent error handling. All requests use `withCredentials: true` for cookie auth.
 
-- [x] Task 23: Create Admin Dashboard component
+- [x] Task 23: Create Admin Photo Workspace component
   - File: `AI.ProfilePhotoMaker.UI/src/app/admin/admin-dashboard/admin-dashboard.component.ts` (NEW)
   - File: `AI.ProfilePhotoMaker.UI/src/app/admin/admin-dashboard/admin-dashboard.component.html` (NEW)
   - Action: Create standalone component displaying:
@@ -715,7 +715,7 @@ Build a secure, role-based admin panel accessible at `/admin` with full user man
   - File: `AI.ProfilePhotoMaker.UI/src/app/guards/admin.guard.spec.ts` (NEW)
   - Action: Create test using Angular `TestBed`:
     - Mock `AuthService` with `isAdmin()` returning `true` — assert guard allows navigation
-    - Mock `AuthService` with `isAdmin()` returning `false` — assert guard redirects to `/app/dashboard`
+    - Mock `AuthService` with `isAdmin()` returning `false` — assert guard redirects to `/app/enhance`
     - Mock `AuthService` with `isAuthenticated$` emitting `false` — assert guard redirects to `/auth/login`
   - Notes: Follow standard Angular guard testing patterns with `RouterTestingModule`.
 
@@ -748,7 +748,7 @@ Build a secure, role-based admin panel accessible at `/admin` with full user man
 #### Authorization & Security
 - [x] AC 16: Given a non-authenticated user, when they try to access any `/api/admin/*` endpoint, then they receive a 401 Unauthorized response
 - [x] AC 17: Given an authenticated user WITHOUT the Admin role, when they try to access any `/api/admin/*` endpoint, then they receive a 403 Forbidden response
-- [x] AC 18: Given an authenticated user WITHOUT the Admin role, when they navigate to `/admin` in the browser, then they are redirected to `/app/dashboard`
+- [x] AC 18: Given an authenticated user WITHOUT the Admin role, when they navigate to `/admin` in the browser, then they are redirected to `/app/enhance`
 - [x] AC 19: Given an authenticated admin user, when they log in, then their JWT token includes the "Admin" role claim
 
 #### Audit Logging

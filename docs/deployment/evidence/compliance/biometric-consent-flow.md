@@ -6,12 +6,12 @@ Status: Evidence captured (production).
 ## Evidence (production)
 - Legal disclosure URL: https://aiprofilephotomaker.com/legal/biometric-consent
 - Screenshot: docs/deployment/evidence/legal/biometric-consent-production.png
-- Dashboard upload consent: docs/deployment/evidence/compliance/biometric-consent-dashboard-production.png
+- Photo Workspace upload consent: docs/deployment/evidence/compliance/biometric-consent-workspace-production.png
 - Photo transform consent: docs/deployment/evidence/compliance/biometric-consent-enhance-production.png
 - Captured: 2025-12-23T21:34:14Z
 
 ## Where Consent Is Collected
-- Training upload flow (Dashboard > Upload Selfies).
+- Training upload flow (Photo Workspace > Upload Photo).
 - Photo enhancement flow (Transform Photo).
 
 ## Behavior
@@ -21,8 +21,8 @@ Status: Evidence captured (production).
 
 ## Code References
 - `AI.ProfilePhotoMaker.UI/src/app/services/biometric-consent.service.ts`
-- `AI.ProfilePhotoMaker.UI/src/app/components/dashboard/file-upload-section/file-upload-section.component.ts`
-- `AI.ProfilePhotoMaker.UI/src/app/components/dashboard/file-upload-section/file-upload-section.component.html`
+- `AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.ts`
+- `AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html`
 - `AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.ts`
 - `AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html`
 - `AI.ProfilePhotoMaker.UI/src/app/pages/biometric-consent/biometric-consent.component.ts`

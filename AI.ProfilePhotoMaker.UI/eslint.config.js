@@ -52,7 +52,7 @@ module.exports = tseslint.config(
       // TypeScript rules for better code quality - Strategic adjustments
       "@typescript-eslint/no-unused-vars": ["warn", { 
         "argsIgnorePattern": "^(_|unused|inject|provide|override)",
-        "varsIgnorePattern": "^(_|unused|mock|Mock|DashboardState)",
+        "varsIgnorePattern": "^(_|unused|mock|Mock|WorkspaceState)",
         "caughtErrorsIgnorePattern": "^(_|ignored|error)",
         "destructuredArrayIgnorePattern": "^_"
       }],

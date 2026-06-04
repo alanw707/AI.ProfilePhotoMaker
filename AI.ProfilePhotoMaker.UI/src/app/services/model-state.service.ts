@@ -4,7 +4,7 @@ import { ProfileService } from './profile.service';
 import { FileUploadService } from './file-upload.service';
 import { IModelStateService } from '../interfaces/service.interfaces';
 import { ModelStatusService } from './model-status.service';
-import { ModelStatus, ModelStatusHelper } from '../models/dashboard.types';
+import { ModelStatus, ModelStatusHelper } from '../models/workspace.types';
 
 @Injectable({
   providedIn: 'root',
@@ -126,8 +126,7 @@ export class ModelStateService implements IModelStateService {
         ? [...modelRequestsData.allRequests]
         : [];
       const wasDeleted = all.some(
-        (req: any) =>
-          req.status === 'failed' && this.isModelUnavailableReason(req.errorMessage)
+        (req: any) => req.status === 'failed' && this.isModelUnavailableReason(req.errorMessage)
       );
 
       if (wasDeleted) {
@@ -167,7 +166,7 @@ export class ModelStateService implements IModelStateService {
       ) {
         modelStatus = 'ModelReady'; // Use unified status code
         // We can't guarantee latestTrainedModel details from this endpoint
-        // but we can safely reflect readiness in the dashboard
+        // but we can safely reflect readiness in the workspace
         hasTrainedModel = true;
         return { modelStatus, hasTrainedModel, latestTrainedModel };
       }
@@ -254,8 +253,8 @@ export class ModelStateService implements IModelStateService {
   }
 
   /**
-   * Notify dashboard state service of model status updates
-   * This would be implemented to communicate with DashboardStateService
+   * Notify workspace state service of model status updates
+   * This would be implemented to communicate with WorkspaceStateService
    */
   private notifyModelStatusUpdate(_modelStatus: string, _latestTrainedModel: any): void {
     // This could emit an event or call a callback

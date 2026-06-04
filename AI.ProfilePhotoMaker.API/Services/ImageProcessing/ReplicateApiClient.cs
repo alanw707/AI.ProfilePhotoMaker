@@ -435,7 +435,7 @@ public class ReplicateApiClient : IReplicateApiClient
             return;
         }
 
-        // Ensure a failed Replicate call doesn't leave the dashboard stuck in "Training" forever.
+        // Ensure a failed Replicate call doesn't leave the workspace stuck in "Training" forever.
         if (request.Status != ModelCreationStatus.Pending && request.Status != ModelCreationStatus.Creating)
         {
             return;

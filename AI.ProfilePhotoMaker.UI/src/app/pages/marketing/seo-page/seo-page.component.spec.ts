@@ -77,6 +77,20 @@ describe('SeoPageComponent intent routing', () => {
     expect(queryParams?.['intent']).toBeUndefined();
   });
 
+  it('parses existing href query params for enhance use-case links', () => {
+    const fixture = TestBed.createComponent(SeoPageComponent);
+    const component = fixture.componentInstance;
+    component.utmParams = { [utmSourceKey]: 'google' };
+
+    expect(component.getRouterLinkForHref('/app/enhance?useCase=realtor', 'enhance')).toBe(
+      '/app/enhance'
+    );
+    expect(component.getQueryParamsForHref('/app/enhance?useCase=realtor', 'enhance')).toEqual({
+      useCase: 'realtor',
+      [utmSourceKey]: 'google',
+    });
+  });
+
   it('stores intent when CTA click leads to register', () => {
     const fixture = TestBed.createComponent(SeoPageComponent);
     const component = fixture.componentInstance;

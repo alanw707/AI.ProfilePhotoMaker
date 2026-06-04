@@ -40,6 +40,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     // Credit Package management (new unified system)
     public virtual DbSet<CreditPackage> CreditPackages { get; set; }
     public virtual DbSet<CreditPurchase> CreditPurchases { get; set; }
+    public virtual DbSet<OutcomePackageDefinition> OutcomePackageDefinitions { get; set; }
+    public virtual DbSet<UserPackageEntitlement> UserPackageEntitlements { get; set; }
     public virtual DbSet<AdminAuditLog> AdminAuditLogs { get; set; }
     public virtual DbSet<Coupon> Coupons { get; set; }
     public virtual DbSet<CouponRedemption> CouponRedemptions { get; set; }
@@ -63,6 +65,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         ConfigureFeedbackSubmissionRelationships(builder);
         ConfigurePendingGenerationRelationships(builder);
         ConfigureCreditPackageRelationships(builder);
+        ConfigureOutcomePackageRelationships(builder);
         ConfigureAdminRelationships(builder);
         ConfigureRetentionDeletionWarningLogRelationships(builder);
         ConfigureAbandonedUploadNudgeLogRelationships(builder);
@@ -77,6 +80,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         // Seed data
         SeedCreditPackages(builder);
+        SeedOutcomePackageDefinitions(builder);
         SeedStyles(builder);
     }
 
@@ -108,6 +112,34 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(i => i.ProcessedImageUrl)
             .IsUnique()
             .HasDatabaseName("IX_ProcessedImages_ProcessedImageUrl_Unique");
+
+        builder.Entity<ProcessedImage>()
+            .HasIndex(i => new { i.UserProfileId, i.GenerationMode, i.CreatedAt })
+            .HasDatabaseName("IX_ProcessedImages_User_Mode_CreatedAt");
+
+        builder.Entity<ProcessedImage>()
+            .Property(i => i.Provider)
+            .HasMaxLength(64);
+
+        builder.Entity<ProcessedImage>()
+            .Property(i => i.ProviderModel)
+            .HasMaxLength(128);
+
+        builder.Entity<ProcessedImage>()
+            .Property(i => i.GenerationMode)
+            .HasMaxLength(64);
+
+        builder.Entity<ProcessedImage>()
+            .Property(i => i.PromptVersion)
+            .HasMaxLength(128);
+
+        builder.Entity<ProcessedImage>()
+            .Property(i => i.GenerationStatus)
+            .HasMaxLength(64);
+
+        builder.Entity<ProcessedImage>()
+            .Property(i => i.CorrelationId)
+            .HasMaxLength(128);
     }
 
     private void ConfigureUsageLogRelationships(ModelBuilder builder)
@@ -201,10 +233,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     private void ConfigureAbandonedUploadNudgeLogRelationships(ModelBuilder builder)
     {
-        // One nudge email per user, ever
+        // One nudge email per user and abandoned-upload state.
         builder.Entity<AbandonedUploadNudgeLog>()
-            .HasIndex(log => log.UserId)
-            .HasDatabaseName("IX_AbandonedUploadNudgeLogs_UserId")
+            .HasIndex(log => new { log.UserId, log.NudgeType })
+            .HasDatabaseName("IX_AbandonedUploadNudgeLogs_UserId_NudgeType")
             .IsUnique();
     }
 
@@ -244,6 +276,38 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasFilter("[PaymentTransactionId] IS NOT NULL")
             .IsUnique()
             .HasDatabaseName("IX_CreditPurchases_PaymentTransactionId_Unique");
+    }
+
+    private void ConfigureOutcomePackageRelationships(ModelBuilder builder)
+    {
+        builder.Entity<OutcomePackageDefinition>()
+            .HasIndex(p => p.Code)
+            .IsUnique()
+            .HasDatabaseName("IX_OutcomePackageDefinitions_Code_Unique");
+
+        builder.Entity<OutcomePackageDefinition>()
+            .HasOne(p => p.InternalCreditPackage)
+            .WithMany()
+            .HasForeignKey(p => p.InternalCreditPackageId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        builder.Entity<UserPackageEntitlement>()
+            .HasOne(e => e.User)
+            .WithMany()
+            .HasForeignKey(e => e.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<UserPackageEntitlement>()
+            .HasOne(e => e.OutcomePackageDefinition)
+            .WithMany(p => p.Entitlements)
+            .HasForeignKey(e => e.OutcomePackageDefinitionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<UserPackageEntitlement>()
+            .HasOne(e => e.SourcePaymentTransaction)
+            .WithMany()
+            .HasForeignKey(e => e.SourcePaymentTransactionId)
+            .OnDelete(DeleteBehavior.NoAction);
     }
 
     private void ConfigureAdminRelationships(ModelBuilder builder)
@@ -378,6 +442,20 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(cp => cp.PurchaseDate)
             .HasDatabaseName("IX_CreditPurchases_PurchaseDate");
 
+        builder.Entity<OutcomePackageDefinition>()
+            .HasIndex(op => new { op.IsActive, op.DisplayOrder })
+            .HasDatabaseName("IX_OutcomePackageDefinitions_IsActive_DisplayOrder");
+
+        builder.Entity<UserPackageEntitlement>()
+            .HasIndex(e => new { e.UserId, e.Status, e.CreatedAt })
+            .HasDatabaseName("IX_UserPackageEntitlements_User_Status_CreatedAt");
+
+        builder.Entity<UserPackageEntitlement>()
+            .HasIndex(e => e.SourcePaymentTransactionId)
+            .HasFilter("[SourcePaymentTransactionId] IS NOT NULL")
+            .IsUnique()
+            .HasDatabaseName("IX_UserPackageEntitlements_SourcePaymentTransactionId_Unique");
+
         // ModelCreationRequest indexes for background service performance
         builder.Entity<ModelCreationRequest>()
             .HasIndex(mcr => mcr.Status)
@@ -420,6 +498,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<CreditPurchase>()
             .Property(p => p.AmountPaid)
+            .HasPrecision(10, 2);
+
+        builder.Entity<OutcomePackageDefinition>()
+            .Property(p => p.Price)
             .HasPrecision(10, 2);
 
         builder.Entity<Coupon>()
@@ -509,6 +591,66 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 DisplayOrder = 3,
                 BonusCredits = 100, // Great value with bonus credits
                 IsActive = true,
+                CreatedAt = SeedTimestamp
+            }
+        );
+    }
+
+    private void SeedOutcomePackageDefinitions(ModelBuilder builder)
+    {
+        builder.Entity<OutcomePackageDefinition>().HasData(
+            new OutcomePackageDefinition
+            {
+                Id = 1,
+                Code = "free_preview",
+                Name = "Free Preview",
+                Description = "Score your source photo and try a same-quality watermarked preview before buying a package.",
+                Price = 0m,
+                Currency = "USD",
+                InternalCreditPackageId = null,
+                IncludedCandidateCount = 1,
+                IncludedRefinementCount = 0,
+                IncludedPremiumAugmentationCount = 0,
+                IncludesPlatformExportKit = false,
+                IncludesScoreDelta = false,
+                IsActive = true,
+                DisplayOrder = 1,
+                CreatedAt = SeedTimestamp
+            },
+            new OutcomePackageDefinition
+            {
+                Id = 2,
+                Code = "starter_package",
+                Name = "Starter Package",
+                Description = "Three profile-photo candidates, best shot selector, basic adjustment, and selected platform exports.",
+                Price = 9.99m,
+                Currency = "USD",
+                InternalCreditPackageId = 1,
+                IncludedCandidateCount = 3,
+                IncludedRefinementCount = 2,
+                IncludedPremiumAugmentationCount = 0,
+                IncludesPlatformExportKit = true,
+                IncludesScoreDelta = false,
+                IsActive = true,
+                DisplayOrder = 2,
+                CreatedAt = SeedTimestamp
+            },
+            new OutcomePackageDefinition
+            {
+                Id = 3,
+                Code = "pro_package",
+                Name = "Pro Package",
+                Description = "Nine candidates, best shot selector, score delta, exports, refinements, and premium augmentations.",
+                Price = 19.99m,
+                Currency = "USD",
+                InternalCreditPackageId = 2,
+                IncludedCandidateCount = 9,
+                IncludedRefinementCount = 5,
+                IncludedPremiumAugmentationCount = 3,
+                IncludesPlatformExportKit = true,
+                IncludesScoreDelta = true,
+                IsActive = true,
+                DisplayOrder = 3,
                 CreatedAt = SeedTimestamp
             }
         );

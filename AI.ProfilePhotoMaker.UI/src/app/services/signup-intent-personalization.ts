@@ -29,65 +29,65 @@ const HEADSHOT_WELCOME_COPY: Record<
   linkedin: {
     title: 'Ready for your LinkedIn headshots?',
     description:
-      'Start with model training, then generate polished, profile-ready photos designed for LinkedIn.',
+      'Start with one clear photo, then generate a polished, profile-ready LinkedIn headshot instantly.',
     urgency:
-      'Your 25 free credits are waiting! Complete verification to start your LinkedIn-ready headshots.',
+      'Your Free Preview is waiting! Complete verification to start your LinkedIn-ready headshots.',
   },
   corporate: {
     title: 'Ready for your corporate headshots?',
     description:
-      'Start with model training, then generate polished business portraits for company profiles and bios.',
+      'Start with one clear photo, then generate a polished business portrait for company profiles and bios instantly.',
     urgency:
-      'Your 25 free credits are waiting! Complete verification to start your corporate headshots.',
+      'Your Free Preview is waiting! Complete verification to start your corporate headshots.',
   },
   'job-search': {
     title: 'Ready for your job-search headshots?',
     description:
-      'Start with model training, then create recruiter-ready photos for resumes, applications, and networking.',
+      'Start with one clear photo, then create a recruiter-ready headshot for resumes, applications, and networking instantly.',
     urgency:
-      'Your 25 free credits are waiting! Complete verification to start your job-search headshots.',
+      'Your Free Preview is waiting! Complete verification to start your job-search headshots.',
   },
   'real-estate': {
     title: 'Ready for your realtor headshots?',
     description:
-      'Start with model training, then generate confident, client-ready headshots for listings and agent pages.',
+      'Start with one clear photo, then generate a confident, client-ready headshot for listings and agent pages instantly.',
     urgency:
-      'Your 25 free credits are waiting! Complete verification to start your real-estate headshots.',
+      'Your Free Preview is waiting! Complete verification to start your real-estate headshots.',
   },
   legal: {
     title: 'Ready for your legal profile headshots?',
     description:
-      'Start with model training, then create polished portraits suited for law firm bios and legal directories.',
+      'Start with one clear photo, then create a polished portrait suited for law firm bios and legal directories instantly.',
     urgency:
-      'Your 25 free credits are waiting! Complete verification to start your legal-profile headshots.',
+      'Your Free Preview is waiting! Complete verification to start your legal-profile headshots.',
   },
   medical: {
     title: 'Ready for your medical professional headshots?',
     description:
-      'Start with model training, then generate trustworthy portraits for clinic profiles and healthcare directories.',
+      'Start with one clear photo, then generate a trustworthy portrait for clinic profiles and healthcare directories instantly.',
     urgency:
-      'Your 25 free credits are waiting! Complete verification to start your medical-professional headshots.',
+      'Your Free Preview is waiting! Complete verification to start your medical-professional headshots.',
   },
   education: {
     title: 'Ready for your educator headshots?',
     description:
-      'Start with model training, then create warm, professional portraits for faculty pages and school profiles.',
+      'Start with one clear photo, then create a warm, professional portrait for faculty pages and school profiles instantly.',
     urgency:
-      'Your 25 free credits are waiting! Complete verification to start your educator headshots.',
+      'Your Free Preview is waiting! Complete verification to start your educator headshots.',
   },
   dating: {
     title: 'Ready for your dating app photos?',
     description:
-      'Start with model training, then generate authentic, standout profile photos tailored for dating platforms.',
+      'Start with one clear photo, then generate an authentic, standout profile photo tailored for dating platforms instantly.',
     urgency:
-      'Your 25 free credits are waiting! Complete verification to start your dating-profile photos.',
+      'Your Free Preview is waiting! Complete verification to start your dating-profile photos.',
   },
   generic: {
     title: 'Ready for your professional headshots?',
     description:
-      'Start with model training, then generate polished photos in your preferred professional styles.',
+      'Start with one clear photo, then generate a polished professional headshot instantly.',
     urgency:
-      'Your 25 free credits are waiting! Complete verification to start your professional headshots.',
+      'Your Free Preview is waiting! Complete verification to start your professional headshots.',
   },
 };
 

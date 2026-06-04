@@ -45,7 +45,7 @@ export class AdminGuard implements CanActivate, CanActivateChild {
               return this._authService.ensureRolesLoaded().pipe(
                 map(roles => {
                   if (!roles.includes('Admin')) {
-                    this._router.navigate(['/app/dashboard'], {
+                    this._router.navigate(['/app/enhance'], {
                       queryParams: { message: 'not-authorized' },
                     });
                     return false;
@@ -66,7 +66,7 @@ export class AdminGuard implements CanActivate, CanActivateChild {
         return this._authService.ensureRolesLoaded().pipe(
           map(roles => {
             if (!roles.includes('Admin')) {
-              this._router.navigate(['/app/dashboard'], {
+              this._router.navigate(['/app/enhance'], {
                 queryParams: { message: 'not-authorized' },
               });
               return false;
