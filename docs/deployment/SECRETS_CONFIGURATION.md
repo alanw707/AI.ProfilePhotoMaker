@@ -176,7 +176,7 @@ cp parameters.staging.json parameters.staging.json.backup
 3. **Test Replicate Token**:
    ```bash
    # Test your Replicate token
-   curl -H "Authorization: Token r8_your_token_here" \
+   curl -H "Authorization: Token REPLACE_WITH_REPLICATE_TOKEN" \
         https://api.replicate.com/v1/models
    
    # Should return JSON response, not error
