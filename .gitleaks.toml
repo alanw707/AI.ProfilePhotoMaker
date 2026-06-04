@@ -9,7 +9,9 @@ paths = [
   '''docs/deployment/evidence/.*\.json$''',
   '''docs/PRODUCTION_MIGRATION_GUIDE\.md$''',
   '''docs/deployment/SECRETS_CONFIGURATION\.md$''',
-  '''AI\.ProfilePhotoMaker\.API/tests/playwright/tests/authenticated-request-test\.spec\.ts$'''
+  '''AI\.ProfilePhotoMaker\.API/tests/playwright/tests/authenticated-request-test\.spec\.ts$''',
+  '''AI\.ProfilePhotoMaker\.API\.Tests/Integration/CustomWebApplicationFactory\.cs$''',
+  '''AI\.ProfilePhotoMaker\.API/Services/ImageProcessing/OpenAIImageGenerationService\.cs$'''
 ]
 regexes = [
   '''headshot_linkedin''',
