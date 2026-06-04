@@ -7,6 +7,13 @@ import { ConfigService } from './config.service';
 export class ImageUrlService {
   constructor(private config: ConfigService) {}
 
+  private readonly storagePathPrefixes = [
+    '/generated/',
+    '/generated-private/',
+    '/enhanced/',
+    '/uploads/',
+  ];
+
   private getApiOrigin(): string | null {
     const apiUrl = this.config.getApiUrl();
     if (apiUrl?.startsWith('http')) {
@@ -33,9 +40,20 @@ export class ImageUrlService {
       return url;
     }
 
-    // If it's already a relative URL, return as-is
+    // If it's already a relative URL, return as-is unless it is a local storage path.
     if (url.startsWith('/')) {
       const apiOrigin = this.getApiOrigin();
+      if (url.startsWith('/profile-images/')) {
+        return apiOrigin && apiOrigin !== window.location.origin ? `${apiOrigin}${url}` : url;
+      }
+
+      if (this.storagePathPrefixes.some(prefix => url.startsWith(prefix))) {
+        const proxiedPath = `/profile-images${url}`;
+        return apiOrigin && apiOrigin !== window.location.origin
+          ? `${apiOrigin}${proxiedPath}`
+          : proxiedPath;
+      }
+
       // In docker-local, there is no Angular proxy; route Azurite-style paths through the API so StorageProxyMiddleware can serve them.
       if (apiOrigin && apiOrigin !== window.location.origin && url.startsWith('/devstoreaccount')) {
         return `${apiOrigin}${url}`;
@@ -57,18 +75,31 @@ export class ImageUrlService {
         return url; // do not rewrite
       }
 
-      // In localhost/ngrok development, rewrite only local/Azurite URLs to proxy through the app
+      // In localhost/ngrok development, rewrite local storage URLs through the storage proxy.
       const isLocalHost = host.includes('localhost') || host.startsWith('127.0.0.1');
+      if (
+        (env === 'localhost' || env === 'ngrok') &&
+        this.storagePathPrefixes.some(prefix => urlObj.pathname.startsWith(prefix))
+      ) {
+        const apiOrigin = this.getApiOrigin();
+        const proxiedPath = `/profile-images${urlObj.pathname}`;
+        return apiOrigin && apiOrigin !== window.location.origin
+          ? `${apiOrigin}${proxiedPath}`
+          : proxiedPath;
+      }
       if (env === 'localhost' || env === 'ngrok') {
-        const isAzuriteHost =
-          host.startsWith('azurite') || host.includes('devstoreaccount1');
+        const isAzuriteHost = host.startsWith('azurite') || host.includes('devstoreaccount1');
         const isAzuritePath = urlObj.pathname.startsWith('/devstoreaccount');
 
         // For Azurite/local blob URLs, return pathname so Angular proxy can handle `/devstoreaccount1/...`
         if (isAzuritePath && (isLocalHost || isAzuriteHost)) {
           const apiOrigin = this.getApiOrigin();
           // If we're running without a proxy (docker-local), route through the API origin.
-          if (apiOrigin && apiOrigin !== window.location.origin && urlObj.pathname.startsWith('/devstoreaccount')) {
+          if (
+            apiOrigin &&
+            apiOrigin !== window.location.origin &&
+            urlObj.pathname.startsWith('/devstoreaccount')
+          ) {
             return `${apiOrigin}${urlObj.pathname}`;
           }
 

@@ -604,7 +604,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Id = 1,
                 Code = "free_preview",
                 Name = "Free Preview",
-                Description = "Score your source photo and try a friendly low-resolution preview before buying a package.",
+                Description = "Score your source photo and try a same-quality watermarked preview before buying a package.",
                 Price = 0m,
                 Currency = "USD",
                 InternalCreditPackageId = null,

@@ -41,6 +41,14 @@ public class ProfilePhotoScoreDto
     public List<string> Strengths { get; set; } = new();
     public List<string> Improvements { get; set; } = new();
     public string Guidance { get; set; } = string.Empty;
+    public PhotoQualityGateDto QualityGate { get; set; } = new();
+}
+
+public class PhotoQualityGateDto
+{
+    public string Status { get; set; } = "pass";
+    public List<string> Reasons { get; set; } = new();
+    public List<string> Recommendations { get; set; } = new();
 }
 
 public class ProfilePhotoSubscoreDto

@@ -347,6 +347,77 @@
     font-size: 0.85rem
     color: var(--text-secondary)
 
+:host-context([data-theme='dark'])
+  .payment-container
+    .card-block,
+    .billing-block
+      background: linear-gradient(180deg, rgba(17, 24, 39, 0.94), rgba(13, 19, 32, 0.92))
+      border-color: rgba(51, 65, 85, 0.72)
+      box-shadow: 0 18px 42px rgba(4, 9, 20, 0.3)
+
+    .section-heading
+      padding: 0.9rem 1rem
+      margin: -0.25rem -0.25rem 0
+      border-radius: 12px
+      background: rgba(15, 23, 42, 0.72)
+      border: 1px solid rgba(51, 65, 85, 0.62)
+
+    .section-subtitle,
+    .card-supporting-text
+      color: rgba(148, 163, 184, 0.78)
+
+    .stripe-card-container
+      border-color: rgba(51, 65, 85, 0.9)
+      background: rgba(3, 7, 18, 0.74)
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease
+
+      &.focused
+        border-color: rgba(94, 234, 212, 0.82)
+        box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.15)
+
+    .billing-field
+      span
+        color: rgba(203, 213, 225, 0.86)
+
+        small
+          color: rgba(148, 163, 184, 0.72)
+
+      input
+        padding: 0.8rem 0.9rem
+        border-color: rgba(51, 65, 85, 0.9)
+        background: rgba(3, 7, 18, 0.74)
+        color: rgba(248, 250, 252, 0.94)
+
+        &::placeholder
+          color: rgba(148, 163, 184, 0.38)
+          opacity: 1
+
+        &::-webkit-input-placeholder
+          color: rgba(148, 163, 184, 0.38)
+          -webkit-text-fill-color: rgba(148, 163, 184, 0.38)
+          opacity: 1
+
+        &:placeholder-shown
+          -webkit-text-fill-color: rgba(148, 163, 184, 0.38)
+
+        &:hover
+          border-color: rgba(100, 116, 139, 0.8)
+
+        &:focus
+          border-color: rgba(94, 234, 212, 0.82)
+          box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.15)
+          background: rgba(2, 6, 23, 0.9)
+
+      &.invalid input
+        border-color: rgba(248, 113, 113, 0.5)
+        box-shadow: inset 3px 0 0 rgba(248, 113, 113, 0.72)
+
+    .billing-hint
+      margin: -0.15rem 0 0
+      font-size: 0.8rem
+      line-height: 1.45
+      color: rgba(148, 163, 184, 0.72)
+
 
 .packages-grid
   display: grid
@@ -673,48 +744,60 @@
 
     .card-block,
     .billing-block
-      background: rgba(20, 28, 48, 0.85) !important
-      border-color: rgba(82, 208, 255, 0.25) !important
+      background: linear-gradient(180deg, rgba(17, 24, 39, 0.94), rgba(13, 19, 32, 0.92)) !important
+      border-color: rgba(51, 65, 85, 0.72) !important
 
     .section-label
       color: #f4f8ff !important
 
     .section-subtitle
-      color: #8793a9 !important
+      color: rgba(148, 163, 184, 0.78) !important
 
     .stripe-card-container
-      background: linear-gradient(135deg, rgba(24, 36, 64, 0.95), rgba(12, 20, 40, 0.9)) !important
-      border-color: rgba(82, 208, 255, 0.35) !important
-      box-shadow: 0 18px 40px rgba(9, 17, 39, 0.7) !important
+      background: rgba(3, 7, 18, 0.74) !important
+      border-color: rgba(51, 65, 85, 0.9) !important
+      box-shadow: none !important
 
       &.focused
-        border-color: rgba(82, 208, 255, 0.9) !important
-        box-shadow: 0 24px 48px rgba(7, 18, 40, 0.85) !important
+        border-color: rgba(94, 234, 212, 0.82) !important
+        box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.15) !important
 
     .card-supporting-text
-      color: #a8b3bd !important
+      color: rgba(148, 163, 184, 0.78) !important
 
     .billing-field span
-      color: #c7d3e6 !important
+      color: rgba(203, 213, 225, 0.86) !important
 
       small
-        color: #8793a9 !important
+        color: rgba(148, 163, 184, 0.72) !important
 
     .billing-field input
-      background: rgba(11, 19, 38, 0.85) !important
-      border-color: rgba(82, 208, 255, 0.3) !important
-      color: #f4f8ff !important
+      background: rgba(3, 7, 18, 0.74) !important
+      border-color: rgba(51, 65, 85, 0.9) !important
+      color: rgba(248, 250, 252, 0.94) !important
 
       &::placeholder
-        color: rgba(175, 192, 220, 0.7) !important
+        color: rgba(148, 163, 184, 0.38) !important
+        opacity: 1
+
+      &::-webkit-input-placeholder
+        color: rgba(148, 163, 184, 0.38) !important
+        -webkit-text-fill-color: rgba(148, 163, 184, 0.38) !important
+        opacity: 1
+
+      &:placeholder-shown
+        -webkit-text-fill-color: rgba(148, 163, 184, 0.38) !important
+
+      &:hover
+        border-color: rgba(100, 116, 139, 0.8) !important
 
       &:focus
-        border-color: rgba(82, 208, 255, 0.85) !important
-        box-shadow: 0 0 0 3px rgba(82, 208, 255, 0.2) !important
-        background: rgba(18, 30, 54, 0.95) !important
+        border-color: rgba(94, 234, 212, 0.82) !important
+        box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.15) !important
+        background: rgba(2, 6, 23, 0.9) !important
 
     .billing-hint
-      color: #8793a9 !important
+      color: rgba(148, 163, 184, 0.72) !important
 
     .stripe-status
       background: rgba(102, 126, 234, 0.2) !important

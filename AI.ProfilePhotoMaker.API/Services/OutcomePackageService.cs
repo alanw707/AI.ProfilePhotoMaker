@@ -88,7 +88,13 @@ public class OutcomePackageService : IOutcomePackageService
     {
         return await QueryActiveEntitlements(userId)
             .Where(e => e.OutcomePackageDefinition.Code == packageCode)
-            .OrderBy(e => e.ExpiresAt ?? DateTime.MaxValue)
+            .Where(e => e.RemainingPackageUses > 0 ||
+                        e.RemainingCandidates > 0 ||
+                        e.RemainingRefinements > 0 ||
+                        e.RemainingPremiumAugmentations > 0 ||
+                        e.PlatformExportKitAvailable)
+            .OrderByDescending(e => e.RemainingPackageUses > 0 && e.RemainingCandidates > 0)
+            .ThenBy(e => e.ExpiresAt ?? DateTime.MaxValue)
             .ThenBy(e => e.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -113,10 +119,15 @@ public class OutcomePackageService : IOutcomePackageService
         return true;
     }
 
-    public async Task<bool> ConsumeRefinementAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<bool> ConsumeRefinementAsync(string userId, string? packageCode = null, CancellationToken cancellationToken = default)
     {
-        var entitlement = await QueryActiveEntitlements(userId)
-            .Where(e => e.RemainingRefinements > 0)
+        var query = QueryActiveEntitlements(userId).Where(e => e.RemainingRefinements > 0);
+        if (!string.IsNullOrWhiteSpace(packageCode))
+        {
+            query = query.Where(e => e.OutcomePackageDefinition.Code == packageCode);
+        }
+
+        var entitlement = await query
             .OrderBy(e => e.ExpiresAt ?? DateTime.MaxValue)
             .ThenBy(e => e.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);

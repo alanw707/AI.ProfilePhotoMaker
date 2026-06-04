@@ -188,7 +188,9 @@
             </label>
           </div>
 
-          <p class="billing-hint">Your billing country should use the two-letter code (e.g., US, CA, GB).</p>
+          <p class="billing-hint">
+            Country uses a two-letter code, for example US, CA, or GB. Use the postal code that matches that country.
+          </p>
           <div class="billing-validation" *ngIf="billingDetailsTouched && !isBillingDetailsValid">
             Please complete all required fields to continue.
           </div>

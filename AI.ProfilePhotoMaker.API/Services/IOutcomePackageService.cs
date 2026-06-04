@@ -10,7 +10,7 @@ public interface IOutcomePackageService
     Task<UserPackageEntitlement?> GrantEntitlementForCreditPackageAsync(string userId, int creditPackageId, string? paymentTransactionId, CancellationToken cancellationToken = default);
     Task<UserPackageEntitlement?> GetActiveEntitlementAsync(string userId, string packageCode, CancellationToken cancellationToken = default);
     Task<bool> ConsumeCandidatesAsync(string userId, string packageCode, int candidateCount, CancellationToken cancellationToken = default);
-    Task<bool> ConsumeRefinementAsync(string userId, CancellationToken cancellationToken = default);
+    Task<bool> ConsumeRefinementAsync(string userId, string? packageCode = null, CancellationToken cancellationToken = default);
     Task<bool> ConsumePremiumAugmentationAsync(string userId, CancellationToken cancellationToken = default);
     Task<bool> ConsumeExportKitAsync(string userId, CancellationToken cancellationToken = default);
 }

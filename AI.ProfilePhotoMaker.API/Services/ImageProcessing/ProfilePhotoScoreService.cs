@@ -82,7 +82,75 @@ public class ProfilePhotoScoreService : IProfilePhotoScoreService
             Subscores = subscores,
             Strengths = strengths.Count > 0 ? strengths : new List<string> { "Clear enough to start a profile-photo workflow" },
             Improvements = improvements.Count > 0 ? improvements : new List<string> { "Use photo adjustment or refinement to tune the final result." },
-            Guidance = rubric?.OverallFeedback ?? BuildGuidance(overall, rubric != null)
+            Guidance = rubric?.OverallFeedback ?? BuildGuidance(overall, rubric != null),
+            QualityGate = BuildQualityGate(image.Width, image.Height, resolutionScore, framingScore, lightingScore, sharpnessScore, facePresenceScore, platformFitScore)
+        };
+    }
+
+    private static PhotoQualityGateDto BuildQualityGate(
+        int width,
+        int height,
+        int resolutionScore,
+        int framingScore,
+        int lightingScore,
+        int sharpnessScore,
+        int facePresenceScore,
+        int platformFitScore)
+    {
+        var blocked = new List<string>();
+        var warnings = new List<string>();
+        var recommendations = new List<string>();
+
+        if (width < 512 || height < 512 || resolutionScore < 45)
+        {
+            blocked.Add("Image resolution is too low for reliable portrait generation.");
+            recommendations.Add("Upload a larger photo, ideally at least 1024×1024.");
+        }
+
+        if (facePresenceScore < 35)
+        {
+            blocked.Add("No clear single portrait subject was detected.");
+            recommendations.Add("Upload a clear front-facing photo with one person visible.");
+        }
+        else if (facePresenceScore < 58)
+        {
+            warnings.Add("Face presence is weak; the face may be too small, obstructed, or off-center.");
+            recommendations.Add("Use a photo where your face is larger and unobstructed.");
+        }
+
+        if (sharpnessScore < 35)
+        {
+            blocked.Add("Image appears too blurry for reliable generation.");
+            recommendations.Add("Upload a sharper source photo.");
+        }
+        else if (sharpnessScore < 62)
+        {
+            warnings.Add("Image sharpness is below ideal quality.");
+            recommendations.Add("Use a less blurry photo for better facial detail.");
+        }
+
+        if (lightingScore < 35)
+        {
+            blocked.Add("Lighting is too poor for reliable generation.");
+            recommendations.Add("Upload a brighter, evenly lit photo.");
+        }
+        else if (lightingScore < 62)
+        {
+            warnings.Add("Lighting may be uneven or too dim.");
+            recommendations.Add("Try softer, brighter lighting with fewer harsh shadows.");
+        }
+
+        if (framingScore < 45 || platformFitScore < 45)
+        {
+            warnings.Add("Framing may not work well for a single professional portrait.");
+            recommendations.Add("Use a centered head-and-shoulders photo with one person.");
+        }
+
+        return new PhotoQualityGateDto
+        {
+            Status = blocked.Count > 0 ? "blocked" : warnings.Count > 0 ? "warning" : "pass",
+            Reasons = blocked.Count > 0 ? blocked : warnings,
+            Recommendations = recommendations.Distinct().Take(4).ToList()
         };
     }
 

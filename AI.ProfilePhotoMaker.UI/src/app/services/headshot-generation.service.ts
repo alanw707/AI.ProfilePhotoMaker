@@ -9,6 +9,12 @@ export interface HeadshotGenerationRequest {
   background?: 'auto' | 'neutral' | 'office' | 'studio' | string;
   packageCode?: 'free_preview' | 'starter_package' | 'pro_package' | string;
   numOutputs?: number;
+  isRegeneration?: boolean;
+  reusedPreviewProcessedImageId?: number;
+  reusedPreviewSourcePath?: string;
+  reusedPreviewStyle?: string;
+  useCaseCode?: string;
+  recipeCode?: string;
   turnstileToken?: string;
   clientRequestId?: string;
 }
@@ -20,6 +26,9 @@ export interface HeadshotCandidate {
   provider: string;
   model: string;
   correlationId: string;
+  useCaseCode?: string | null;
+  recipeCode?: string | null;
+  label?: string | null;
 }
 
 export interface HeadshotGenerationResponse {
@@ -37,7 +46,30 @@ export interface HeadshotGenerationResponse {
     remainingCredits: number;
     correlationId: string;
     candidates?: HeadshotCandidate[];
+    useCaseCode?: string | null;
+    recipeCode?: string | null;
+    label?: string | null;
   } | null;
+  error: { code: string; message: string } | null;
+}
+
+export interface ResumableHeadshotPreview {
+  processedImageId: number;
+  imageUrl: string;
+  storagePath: string;
+  sourceStoragePath: string;
+  style: string;
+  createdAt: string;
+  hasRawPreview: boolean;
+  canPromotePreview: boolean;
+  activePackageCode?: 'starter_package' | 'pro_package' | string | null;
+  remainingCandidateCount: number;
+  message?: string | null;
+}
+
+export interface ResumableHeadshotPreviewResponse {
+  success: boolean;
+  data: ResumableHeadshotPreview | null;
   error: { code: string; message: string } | null;
 }
 
@@ -58,6 +90,13 @@ export class HeadshotGenerationService {
         clientRequestId: request.clientRequestId || this.createClientRequestId(),
       }
     );
+  }
+
+  getResumablePreview(previewId?: number): Observable<ResumableHeadshotPreviewResponse> {
+    const url = previewId
+      ? `/headshots/resumable-preview?previewId=${encodeURIComponent(previewId)}`
+      : '/headshots/resumable-preview';
+    return this.http.get<ResumableHeadshotPreviewResponse>(this.config.getFullUrl(url));
   }
 
   private createClientRequestId(): string {

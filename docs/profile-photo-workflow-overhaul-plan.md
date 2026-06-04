@@ -67,7 +67,7 @@ Role is selected before generation and remains editable after the first result.
 ### Free Preview
 
 - Source photo score
-- One low-resolution or watermarked instant preview
+- One same-quality watermarked instant preview
 - Creative style pack access
 - No platform export package
 

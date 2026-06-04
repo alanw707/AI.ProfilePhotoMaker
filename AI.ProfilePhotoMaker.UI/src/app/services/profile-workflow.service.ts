@@ -41,6 +41,12 @@ export interface ProfilePhotoSubscore {
   feedback: string;
 }
 
+export interface PhotoQualityGate {
+  status: 'pass' | 'warning' | 'blocked';
+  reasons: string[];
+  recommendations: string[];
+}
+
 export interface ProfilePhotoScore {
   overallScore: number;
   ratingLabel: string;
@@ -48,6 +54,7 @@ export interface ProfilePhotoScore {
   strengths: string[];
   improvements: string[];
   guidance: string;
+  qualityGate?: PhotoQualityGate;
 }
 
 export interface PlatformExportOption {
@@ -114,8 +121,6 @@ export class ProfileWorkflowService {
       brightnessPercent: number;
       contrastPercent: number;
       sharpnessPercent: number;
-      cropOffsetXPercent: number;
-      cropOffsetYPercent: number;
     }
   ): Observable<Blob> {
     return this.http.post(

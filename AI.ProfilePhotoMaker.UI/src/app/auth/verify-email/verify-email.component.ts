@@ -196,7 +196,7 @@ export class VerifyEmailComponent implements OnInit {
 
   getUrgencyMessage(): string {
     if (!this.signupIntent) {
-      return 'Your 25 free credits are waiting! Complete verification to get started.';
+      return 'Your Free Preview is waiting! Complete verification to get started.';
     }
 
     if (this.signupIntent.ctaType === 'headshots') {
@@ -204,10 +204,10 @@ export class VerifyEmailComponent implements OnInit {
     }
 
     if (this.signupIntent.ctaType === 'enhance') {
-      return 'Your 25 free credits are waiting! Complete verification to enhance your photos.';
+      return 'Your Free Preview is waiting! Complete verification to enhance your photos.';
     }
 
-    return 'Your 25 free credits are waiting! Complete verification to start creating your profile photos.';
+    return 'Your Free Preview is waiting! Complete verification to start creating your profile photos.';
   }
 
   getPreviewImages(): { src: string; alt: string }[] {

@@ -192,6 +192,10 @@ public class OpenAIImageGenerationService : IImageProcessingService
             "professional_polish",
             "outfit_upgrade",
             "background_upgrade",
+            "skin_tone_polish",
+            "sharpen_detail",
+            "skin_smoothing",
+            "wrinkle_softening",
             "chibi",
             "pixar_3d",
             "studio_ghibli",
@@ -219,7 +223,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
         try
         {
             _logger.LogInformation("Loading enhancement source image from storage path: {StoragePath}", S(storagePath));
-            await using var imageStream = await _storageService.GetImageAsync(storagePath);
+            await using var imageStream = await OpenStorageImageWithEnvironmentFallbackAsync(storagePath);
             if (imageStream == null)
             {
                 throw new FileNotFoundException("Enhancement source image was not found in storage.", storagePath);
@@ -237,6 +241,24 @@ public class OpenAIImageGenerationService : IImageProcessingService
             _logger.LogError(ex, "Failed to prepare image and mask from storage path: {StoragePath}", S(storagePath));
             throw new InvalidOperationException($"Failed to process image from storage: {ex.Message}", ex);
         }
+    }
+
+    private async Task<Stream?> OpenStorageImageWithEnvironmentFallbackAsync(string storagePath)
+    {
+        var imageStream = await _storageService.GetImageAsync(storagePath);
+        if (imageStream != null)
+        {
+            return imageStream;
+        }
+
+        var parts = storagePath.Split('/', 2, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 2 && (parts[0] is "dev" or "staging" or "prod" or "development" or "production"))
+        {
+            _logger.LogWarning("Storage image not found at environment-prefixed path. Retrying without prefix: {StoragePath}", S(storagePath));
+            return await _storageService.GetImageAsync(parts[1]);
+        }
+
+        return null;
     }
 
     private async Task<(byte[] imageBytes, byte[] maskBytes)> PrepareImageAndMaskFromUrlAsync(string imageUrl)
@@ -426,7 +448,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
     private static string GenerateTransformationPrompt(string enhancementType)
     {
         var preserveIdentity =
-            "Preserve the person's identity, age, facial structure, skin tone, expression, hairstyle, and clothing unless specifically requested. ";
+            "Preserve the person's identity, age, facial structure, skin tone, expression, hairstyle, and clothing unless specifically requested. Preserve the exact crop, pose, camera angle, head position, body position, and overall composition unless the requested edit explicitly requires changing them. ";
         var basePrompt = preserveIdentity + "Transform this portrait into ";
 
         return enhancementType.ToLower() switch
@@ -440,6 +462,10 @@ public class OpenAIImageGenerationService : IImageProcessingService
             "professional_polish" => preserveIdentity + "Apply subtle professional photo polish. Reduce shine and minor distractions, improve clarity and color balance, lightly soften under-eye shadows, preserve age and natural skin texture, and avoid beauty-filter or plastic-skin effects.",
             "outfit_upgrade" => preserveIdentity + "Upgrade visible clothing to neutral role-appropriate professional attire such as a blazer, collared shirt, or polished business-casual top. Preserve body shape, face, age, and identity. Avoid credential-specific uniforms, sexualized clothing, logos, luxury/status deception, or drastic body changes.",
             "background_upgrade" => preserveIdentity + "Replace or improve the background with a clean professional setting such as a neutral studio backdrop, tasteful office, or warm uncluttered interior. Preserve the person exactly and keep lighting natural.",
+            "skin_tone_polish" => preserveIdentity + "Apply subtle natural skin tone polish. Balance redness, shadows, and uneven color while preserving realistic skin texture, age, identity, facial structure, crop, framing, and subject position. Avoid changing ethnicity, face shape, camera angle, pose, body position, or creating a beauty-filter look.",
+            "sharpen_detail" => preserveIdentity + "Improve perceived sharpness and detail for a professional profile photo. Enhance crisp focus around eyes, hair, facial contours, and clothing edges while reducing camera softness. Keep lighting, color, face shape, identity, skin texture, crop, framing, subject position, and background composition natural. Avoid halos, over-sharpening, gritty texture, artificial HDR effects, or repositioning the person.",
+            "skin_smoothing" => preserveIdentity + "Make a minimal localized skin-retouch edit only. Preserve the exact crop, pose, expression, clothing, background, lighting direction, camera angle, and overall composition. Lightly reduce minor blotchiness and camera noise on skin while preserving pores, natural texture, age, identity, and facial structure. Do not change wardrobe, background, face shape, hairstyle, smile, body position, or framing. Avoid waxy or plastic skin.",
+            "wrinkle_softening" => preserveIdentity + "Subtly soften harsh wrinkle shadows and under-eye creases for a polished professional profile photo while preserving age, identity, natural expression, facial structure, and realistic skin texture.",
             "headshot_linkedin" => preserveIdentity + "Create a realistic LinkedIn-ready professional headshot with head-and-shoulders framing, clean neutral background, confident approachable expression, crisp focus, natural color correction, and subtle realistic retouching. Avoid changing facial features or creating plastic skin.",
             "headshot_creator" => preserveIdentity + "Create a polished creator/founder profile headshot with warm natural lighting, clean modern background, approachable expression, realistic skin texture, and professional social-profile framing. Avoid exaggerated edits, beauty-filter effects, and identity drift.",
             "headshot_office" => preserveIdentity + "Create a realistic professional headshot with tasteful office-style background, balanced lighting, head-and-shoulders framing, crisp focus, and subtle retouching. Keep the person recognizable and avoid over-smoothing.",

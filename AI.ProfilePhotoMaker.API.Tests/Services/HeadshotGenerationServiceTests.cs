@@ -49,7 +49,7 @@ public class HeadshotGenerationServiceTests
         Assert.Equal("openai", image.Provider);
         Assert.Equal("gpt-image-2", image.ProviderModel);
         Assert.Equal("instant_headshot", image.GenerationMode);
-        Assert.Equal("prompt-v1", image.PromptVersion);
+        Assert.StartsWith("prompt-v1", image.PromptVersion);
         Assert.Equal(1, image.CreditCost);
         Assert.Equal("succeeded", image.GenerationStatus);
         Assert.StartsWith("instant_headshot_generation:", image.CorrelationId);
@@ -84,6 +84,195 @@ public class HeadshotGenerationServiceTests
         Assert.Equal(2, profile.Credits);
         Assert.Single(context.ProcessedImages);
         Assert.Single(context.UsageLogs.Where(l => l.Action == "instant_headshot_generation"));
+    }
+
+    [Fact]
+    public async Task GenerateHeadshotAsync_AppliesUseCaseRecipesDeterministically()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, credits: 6);
+        var provider = new FakeHeadshotProvider("data:image/png;base64," + Convert.ToBase64String([1, 2, 3]));
+        var service = CreateService(context, new FakeStorageService(), provider);
+        var request = new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = $"dev/enhanced/{userId}/source.png",
+            Style = "linkedin",
+            Background = "auto",
+            PackageCode = "starter_package",
+            NumOutputs = 3,
+            UseCaseCode = "realtor",
+            ClientRequestId = "realtor-recipes"
+        };
+
+        var response = await service.GenerateHeadshotAsync(request, userId);
+
+        Assert.Equal(3, provider.Requests.Count);
+        Assert.Equal(new[] { "realtor_trust", "luxury_listing", "social_flyer" }, provider.Requests.Select(r => r.RecipeCode));
+        Assert.All(provider.Requests, r => Assert.Equal("realtor", r.UseCaseCode));
+        Assert.Contains("real-estate", provider.Requests[0].PromptTemplate);
+        Assert.Equal(new[] { "Best Zillow/Realtor profile", "Best luxury listing vibe", "Best social flyer image" }, response.Candidates.Select(c => c.Label));
+    }
+
+    [Fact]
+    public async Task GenerateHeadshotAsync_DoesNotApplyUseCaseRecipeToFreePreview()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, credits: 6);
+        var provider = new FakeHeadshotProvider("data:image/png;base64," + Convert.ToBase64String([1, 2, 3]));
+        var service = CreateService(context, new FakeStorageService(), provider);
+
+        var response = await service.GenerateHeadshotAsync(new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = $"dev/enhanced/{userId}/source.png",
+            Style = "linkedin",
+            Background = "auto",
+            PackageCode = "free_preview",
+            NumOutputs = 1,
+            UseCaseCode = "realtor",
+            ClientRequestId = "free-preview-no-recipe"
+        }, userId);
+
+        Assert.Single(provider.Requests);
+        Assert.Equal("realtor", provider.Requests[0].UseCaseCode);
+        Assert.Equal(string.Empty, provider.Requests[0].RecipeCode);
+        Assert.DoesNotContain("Use-case recipe:", provider.Requests[0].PromptTemplate);
+        Assert.Null(response.Candidates[0].RecipeCode);
+        Assert.Null(response.Candidates[0].Label);
+    }
+
+    [Fact]
+    public async Task GenerateHeadshotAsync_ReturnsExistingMultiCandidateResultForDuplicateClientRequestWithoutConsumingCreditsAgain()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, credits: 6);
+        var sourcePath = $"dev/enhanced/{userId}/source.png";
+        var provider = new FakeHeadshotProvider("data:image/png;base64," + Convert.ToBase64String([1, 2, 3]));
+        var service = CreateService(context, new FakeStorageService(), provider);
+        var request = new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = sourcePath,
+            Style = "professional",
+            Background = "auto",
+            PackageCode = "starter_package",
+            NumOutputs = 2,
+            ClientRequestId = "multi-candidate-retry"
+        };
+
+        var first = await service.GenerateHeadshotAsync(request, userId);
+        var second = await service.GenerateHeadshotAsync(request, userId);
+
+        Assert.Equal(2, first.Candidates.Count);
+        Assert.Equal(2, second.Candidates.Count);
+        Assert.Equal(first.Candidates.Select(c => c.ProcessedImageId), second.Candidates.Select(c => c.ProcessedImageId));
+        Assert.Equal(0, second.CreditsCost);
+        Assert.Equal(4, second.RemainingCredits);
+        Assert.Equal(2, provider.CallCount);
+        var profile = await context.UserProfiles.SingleAsync(p => p.UserId == userId);
+        Assert.Equal(4, profile.Credits);
+        Assert.Equal(2, context.ProcessedImages.Count());
+        Assert.Single(context.UsageLogs.Where(l => l.Action == "instant_headshot_generation"));
+    }
+
+    [Fact]
+    public async Task GenerateHeadshotAsync_ReturnsPromotedPreviewAndGeneratedCandidatesForDuplicatePaidContinuation()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, credits: 6);
+        var profile = await context.UserProfiles.SingleAsync(p => p.UserId == userId);
+        var sourcePath = $"dev/uploads/{userId}/source.png";
+        var preview = new ProcessedImage
+        {
+            OriginalImageUrl = sourcePath,
+            ProcessedImageUrl = $"dev/generated/{userId}/preview-watermarked.png",
+            Style = "linkedin",
+            UserProfileId = profile.Id,
+            CreatedAt = DateTime.UtcNow,
+            IsGenerated = true,
+            IsOriginalUpload = false,
+            Provider = "openai",
+            ProviderModel = "gpt-image-2",
+            GenerationMode = "instant_headshot",
+            PromptVersion = "prompt-v1",
+            CreditCost = 0,
+            GenerationStatus = "succeeded",
+            CorrelationId = "free-preview-correlation",
+            FailureReason = $"raw-preview:dev/generated-private/{userId}/preview-raw.png"
+        };
+        context.ProcessedImages.Add(preview);
+        await context.SaveChangesAsync();
+
+        var provider = new FakeHeadshotProvider("data:image/png;base64," + Convert.ToBase64String([1, 2, 3]));
+        var entitlement = new UserPackageEntitlement
+        {
+            UserId = userId,
+            RemainingPackageUses = 1,
+            RemainingCandidates = 2,
+            RemainingRefinements = 1,
+            RemainingPremiumAugmentations = 1,
+            Status = PackageEntitlementStatus.Active
+        };
+        var service = CreateService(context, new FakeStorageService(), provider, new FakeOutcomePackageService(entitlement));
+        var request = new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = sourcePath,
+            Style = "linkedin",
+            Background = "auto",
+            PackageCode = "starter_package",
+            NumOutputs = 2,
+            ClientRequestId = "paid-continuation-retry",
+            ReusedPreviewProcessedImageId = preview.Id,
+            ReusedPreviewSourcePath = sourcePath,
+            ReusedPreviewStyle = "linkedin"
+        };
+
+        var first = await service.GenerateHeadshotAsync(request, userId);
+        var second = await service.GenerateHeadshotAsync(request, userId);
+
+        Assert.Equal(3, first.Candidates.Count);
+        Assert.Equal(3, second.Candidates.Count);
+        Assert.Equal(first.Candidates.Select(c => c.ProcessedImageId), second.Candidates.Select(c => c.ProcessedImageId));
+        Assert.Equal(0, second.CreditsCost);
+        Assert.Equal("dev/generated-private/" + userId + "/preview-raw.png", first.Candidates[0].StoragePath);
+        Assert.Equal(2, provider.CallCount);
+        Assert.Equal(0, entitlement.RemainingPackageUses);
+        Assert.Equal(0, entitlement.RemainingCandidates);
+        Assert.Single(context.ProcessedImages.Where(i => i.GenerationMode == "instant_headshot_promoted_preview"));
+        Assert.Equal(3, context.ProcessedImages.Count(i => i.GenerationStatus == "succeeded" && (i.GenerationMode == "instant_headshot" || i.GenerationMode == "instant_headshot_promoted_preview")) - 1);
+    }
+
+    [Fact]
+    public async Task GenerateHeadshotAsync_DoesNotReturnPersistedCandidatesWhenPackageConsumptionFails()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, credits: 6);
+        var provider = new FakeHeadshotProvider("data:image/png;base64," + Convert.ToBase64String([1, 2, 3]));
+        var entitlement = new UserPackageEntitlement
+        {
+            UserId = userId,
+            RemainingPackageUses = 1,
+            RemainingCandidates = 2,
+            Status = PackageEntitlementStatus.Active
+        };
+        var packageService = new FakeOutcomePackageService(entitlement) { FailConsumeCandidates = true };
+        var service = CreateService(context, new FakeStorageService(), provider, packageService);
+        var request = new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = $"dev/uploads/{userId}/source.png",
+            Style = "linkedin",
+            Background = "auto",
+            PackageCode = "starter_package",
+            NumOutputs = 2,
+            ClientRequestId = "package-consumption-race"
+        };
+
+        var first = await Assert.ThrowsAsync<HeadshotGenerationException>(() => service.GenerateHeadshotAsync(request, userId));
+        var second = await Assert.ThrowsAsync<HeadshotGenerationException>(() => service.GenerateHeadshotAsync(request, userId));
+
+        Assert.Equal("PackageEntitlementRequired", first.Code);
+        Assert.Equal("PackageEntitlementRequired", second.Code);
+        Assert.Equal(4, provider.CallCount);
+        Assert.Empty(context.ProcessedImages.Where(i => i.GenerationStatus == "succeeded"));
+        Assert.All(context.ProcessedImages, i => Assert.Equal("package-entitlement-consumption-failed", i.FailureReason));
     }
 
     [Fact]
@@ -161,7 +350,8 @@ public class HeadshotGenerationServiceTests
     private static HeadshotGenerationService CreateService(
         ApplicationDbContext context,
         IStorageService storage,
-        IHeadshotGenerationProvider provider)
+        IHeadshotGenerationProvider provider,
+        IOutcomePackageService? outcomePackageService = null)
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -179,7 +369,8 @@ public class HeadshotGenerationServiceTests
             resolver,
             new FakeHttpClientFactory(),
             config,
-            NullLogger<HeadshotGenerationService>.Instance);
+            NullLogger<HeadshotGenerationService>.Instance,
+            outcomePackageService);
     }
 
     private static ApplicationDbContext CreateContext()
@@ -240,8 +431,13 @@ public class HeadshotGenerationServiceTests
         public string ProviderName => "openai";
         public string ModelName => "gpt-image-2";
 
+        public int CallCount { get; private set; }
+        public List<HeadshotGenerationRequest> Requests { get; } = new();
+
         public Task<HeadshotGenerationResult> GenerateAsync(HeadshotGenerationRequest request, CancellationToken cancellationToken = default)
         {
+            CallCount++;
+            Requests.Add(request);
             return Task.FromResult(new HeadshotGenerationResult
             {
                 Success = _success,
@@ -271,6 +467,34 @@ public class HeadshotGenerationServiceTests
         public Task<string> SaveZipAsync(Stream zipStream, string storagePath) => Task.FromResult(storagePath);
         public Task<bool> DeleteDirectoryAsync(string directoryPath) => Task.FromResult(true);
         public Task<List<string>> ListFilesAsync(string prefix) => Task.FromResult(new List<string>());
+    }
+
+    private sealed class FakeOutcomePackageService : IOutcomePackageService
+    {
+        private readonly UserPackageEntitlement _entitlement;
+
+        public FakeOutcomePackageService(UserPackageEntitlement entitlement)
+        {
+            _entitlement = entitlement;
+        }
+
+        public Task<IReadOnlyList<OutcomePackageDefinitionDto>> GetActivePackageDefinitionsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<OutcomePackageDefinitionDto>>(Array.Empty<OutcomePackageDefinitionDto>());
+        public Task<IReadOnlyList<UserPackageEntitlementDto>> GetUserEntitlementsAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<UserPackageEntitlementDto>>(Array.Empty<UserPackageEntitlementDto>());
+        public Task<UserPackageEntitlement?> GrantEntitlementForCreditPackageAsync(string userId, int creditPackageId, string? paymentTransactionId, CancellationToken cancellationToken = default) => Task.FromResult<UserPackageEntitlement?>(_entitlement);
+        public Task<UserPackageEntitlement?> GetActiveEntitlementAsync(string userId, string packageCode, CancellationToken cancellationToken = default) => Task.FromResult(_entitlement.RemainingPackageUses > 0 || _entitlement.RemainingCandidates > 0 ? _entitlement : null);
+        public bool FailConsumeCandidates { get; init; }
+
+        public Task<bool> ConsumeCandidatesAsync(string userId, string packageCode, int candidateCount, CancellationToken cancellationToken = default)
+        {
+            if (FailConsumeCandidates) return Task.FromResult(false);
+            if (_entitlement.RemainingPackageUses <= 0 || _entitlement.RemainingCandidates < candidateCount) return Task.FromResult(false);
+            _entitlement.RemainingPackageUses = Math.Max(0, _entitlement.RemainingPackageUses - 1);
+            _entitlement.RemainingCandidates -= candidateCount;
+            return Task.FromResult(true);
+        }
+        public Task<bool> ConsumeRefinementAsync(string userId, string? packageCode = null, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<bool> ConsumePremiumAugmentationAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<bool> ConsumeExportKitAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(false);
     }
 
     private sealed class FakeHttpClientFactory : IHttpClientFactory

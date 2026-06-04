@@ -58,6 +58,65 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
     }
 
     [Fact]
+    public async Task GetResumablePreview_ReturnsLatestOwnedRawPreviewWithPackageContinuation()
+    {
+        var userId = $"headshot-resume-{Guid.NewGuid():N}";
+        await SeedUserAsync(userId, credits: 3);
+        await GrantPackageEntitlementAsync(userId, "starter_package", candidates: 3, refinements: 1, premiumAugmentations: 0, exportKit: true);
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
+
+        var generate = await client.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = $"testing/enhanced/{userId}/source.png",
+            style = "professional",
+            background = "auto",
+            numOutputs = 1
+        });
+        generate.EnsureSuccessStatusCode();
+
+        var response = await client.GetAsync("/api/headshots/resumable-preview");
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, responseBody);
+        var json = await response.Content.ReadFromJsonAsync<ResumablePreviewApiResponse>();
+        Assert.NotNull(json?.Data);
+        Assert.True(json!.Data!.HasRawPreview);
+        Assert.True(json.Data.CanPromotePreview);
+        Assert.Equal("starter_package", json.Data.ActivePackageCode);
+        Assert.Equal(2, json.Data.RemainingCandidateCount);
+        Assert.Equal($"testing/enhanced/{userId}/source.png", json.Data.SourceStoragePath);
+    }
+
+    [Fact]
+    public async Task GetResumablePreview_ByIdRejectsAnotherUsersPreview()
+    {
+        var ownerUserId = $"headshot-owner-{Guid.NewGuid():N}";
+        var otherUserId = $"headshot-other-{Guid.NewGuid():N}";
+        await SeedUserAsync(ownerUserId, credits: 3);
+        await SeedUserAsync(otherUserId, credits: 3);
+        var ownerClient = _factory.CreateClient();
+        ownerClient.DefaultRequestHeaders.Add("X-Test-UserId", ownerUserId);
+        var generate = await ownerClient.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = $"testing/enhanced/{ownerUserId}/source.png",
+            style = "professional",
+            background = "auto",
+            numOutputs = 1
+        });
+        generate.EnsureSuccessStatusCode();
+        var generated = await generate.Content.ReadFromJsonAsync<HeadshotApiResponse>();
+
+        var otherClient = _factory.CreateClient();
+        otherClient.DefaultRequestHeaders.Add("X-Test-UserId", otherUserId);
+        var response = await otherClient.GetAsync($"/api/headshots/resumable-preview?previewId={generated!.Data!.ProcessedImageId}");
+
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadFromJsonAsync<ResumablePreviewApiResponse>();
+        Assert.Null(json!.Data);
+    }
+
+    [Fact]
     public async Task GenerateHeadshot_StarterPackage_RequiresEntitlementAndConsumesCandidateAllowance()
     {
         var userId = $"headshot-starter-{Guid.NewGuid():N}";
@@ -177,6 +236,23 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
     {
         public bool Success { get; set; }
         public HeadshotApiData? Data { get; set; }
+    }
+
+    private sealed class ResumablePreviewApiResponse
+    {
+        public bool Success { get; set; }
+        public ResumablePreviewApiData? Data { get; set; }
+    }
+
+    private sealed class ResumablePreviewApiData
+    {
+        public int ProcessedImageId { get; set; }
+        public string SourceStoragePath { get; set; } = string.Empty;
+        public string Style { get; set; } = string.Empty;
+        public bool HasRawPreview { get; set; }
+        public bool CanPromotePreview { get; set; }
+        public string? ActivePackageCode { get; set; }
+        public int RemainingCandidateCount { get; set; }
     }
 
     private sealed class HeadshotApiData

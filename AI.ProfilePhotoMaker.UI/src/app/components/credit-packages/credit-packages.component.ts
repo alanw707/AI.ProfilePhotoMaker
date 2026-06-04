@@ -29,7 +29,7 @@ import {
   StripeCardElementOptions,
   PaymentMethodCreateParams,
 } from '@stripe/stripe-js';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import {
   OutcomePackageDefinition,
   ProfileWorkflowService,
@@ -110,6 +110,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     private _authService: AuthService,
     private _notificationService: NotificationService,
     private _themeService: ThemeService,
+    private _route: ActivatedRoute,
     private _cdr: ChangeDetectorRef
   ) {}
 
@@ -178,6 +179,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
           'No profile photo packages are currently available.'
         );
       }
+      this._preselectPackageFromQuery();
     } else {
       console.error('Failed to load packages:', response?.error);
       this.packages = [];
@@ -207,6 +209,20 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       includesScoreDelta: pkg.includesScoreDelta,
       highlights: pkg.highlights,
     };
+  }
+
+  private _preselectPackageFromQuery(): void {
+    const packageId = Number(this._route.snapshot.queryParamMap.get('packageId'));
+    if (!Number.isFinite(packageId) || packageId <= 0) {
+      return;
+    }
+
+    const pkg = this.packages.find(
+      item => item.id === packageId || item.internalCreditPackageId === packageId
+    );
+    if (pkg && !this.selectedPackage) {
+      setTimeout(() => void this.purchasePackage(pkg), 0);
+    }
   }
 
   private _handlePackagesError(error: {
@@ -402,8 +418,8 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     this._teardownStripeCardElement();
 
     const baseTextColor = isDarkTheme ? '#f4f8ff' : '#0f172a';
-    const placeholderColor = isDarkTheme ? 'rgba(175, 192, 220, 0.7)' : 'rgba(105, 125, 155, 0.7)';
-    const completionColor = isDarkTheme ? '#7ef29d' : '#1ea672';
+    const placeholderColor = isDarkTheme ? 'rgba(148, 163, 184, 0.38)' : 'rgba(105, 125, 155, 0.7)';
+    const completionColor = isDarkTheme ? '#5eead4' : '#1ea672';
 
     const cardElementOptions: StripeCardElementOptions = {
       hidePostalCode: true,
@@ -415,7 +431,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
           fontSmoothing: 'antialiased',
           letterSpacing: '0.2px',
           lineHeight: '24px',
-          iconColor: '#55d0ff',
+          iconColor: isDarkTheme ? '#5eead4' : '#55d0ff',
           backgroundColor: 'transparent',
           // eslint-disable-next-line @typescript-eslint/naming-convention -- Stripe style token uses CSS syntax
           '::placeholder': {
@@ -430,8 +446,8 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
           },
         },
         invalid: {
-          color: '#ff8080',
-          iconColor: '#ff8080',
+          color: '#f87171',
+          iconColor: '#f87171',
         },
         complete: {
           color: completionColor,
@@ -513,7 +529,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
 
     this._notificationService.success(
       'Payment Submitted',
-      'Payment received. Finalizing your credits now.'
+      'Payment received. Finalizing your package now.'
     );
 
     const paymentTransactionId = this.stripeTransactionId || paymentIntent?.id || undefined;
@@ -543,8 +559,8 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
             this._clearPendingPaymentWatch();
             this.isAwaitingWebhookConfirmation = false;
             this._notificationService.success(
-              'Credits Added',
-              `${this.selectedPackage?.totalCredits ?? ''} credits added to your account!`
+              'Package Unlocked',
+              `${this.selectedPackage?.name ?? 'Your package'} is ready for your profile photo workflow.`
             );
             this._finalizeSuccess(response.data.updatedCredits ?? null);
             return;
@@ -607,8 +623,8 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
           next: response => {
             if (response.success) {
               this._notificationService.success(
-                'Credits Added',
-                `${this.selectedPackage?.totalCredits ?? ''} credits added to your account!`
+                'Package Unlocked',
+                `${this.selectedPackage?.name ?? 'Your package'} is ready for your profile photo workflow.`
               );
               this._finalizeSuccess(response.data.updatedCredits ?? null);
               this._clearPendingPaymentWatch();
@@ -627,7 +643,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
             if (errorCode === 'PaymentPending') {
               this._notificationService.info(
                 'Payment Processing',
-                'Stripe is still confirming your payment. Credits will update shortly.'
+                'Stripe is still confirming your payment. Your package will unlock shortly.'
               );
               this.isAwaitingWebhookConfirmation = false;
               this._resetStripeState();
@@ -722,7 +738,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
             if (response.success) {
               this._notificationService.success(
                 'Payment Simulated Successfully!',
-                `${pkg.totalCredits} credits added to your account!`
+                `${pkg.name} is ready for your profile photo workflow.`
               );
               this.isPurchasing = false;
               this.selectedPackage = null;

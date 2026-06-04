@@ -94,7 +94,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 columns: new[] { "Id", "Code", "CreatedAt", "Currency", "Description", "DisplayOrder", "IncludedCandidateCount", "IncludedPremiumAugmentationCount", "IncludedRefinementCount", "IncludesPlatformExportKit", "IncludesScoreDelta", "InternalCreditPackageId", "IsActive", "Name", "Price", "StripePriceId", "UpdatedAt" },
                 values: new object[,]
                 {
-                    { 1, "free_preview", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "USD", "Score your source photo and try a friendly low-resolution preview before buying a package.", 1, 1, 0, 0, false, false, null, true, "Free Preview", 0m, null, null },
+                    { 1, "free_preview", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "USD", "Score your source photo and try a same-quality watermarked preview before buying a package.", 1, 1, 0, 0, false, false, null, true, "Free Preview", 0m, null, null },
                     { 2, "starter_package", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "USD", "Three profile-photo candidates, best shot selector, basic adjustment, and selected platform exports.", 2, 3, 0, 2, true, false, 1, true, "Starter Package", 9.99m, null, null },
                     { 3, "pro_package", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "USD", "Nine candidates, best shot selector, score delta, exports, refinements, and premium augmentations.", 3, 9, 3, 5, true, true, 2, true, "Pro Package", 19.99m, null, null }
                 });

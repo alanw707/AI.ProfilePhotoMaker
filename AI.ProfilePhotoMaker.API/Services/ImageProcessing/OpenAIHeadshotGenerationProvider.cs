@@ -44,7 +44,7 @@ public class OpenAIHeadshotGenerationProvider : IHeadshotGenerationProvider
                 DataUrlOrUrl = output,
                 Provider = ProviderName,
                 Model = ModelName,
-                PromptVersion = PromptVersion
+                PromptVersion = string.IsNullOrWhiteSpace(request.RecipeCode) ? PromptVersion : $"{PromptVersion}:{request.RecipeCode}"
             };
         }
         catch (Exception ex)

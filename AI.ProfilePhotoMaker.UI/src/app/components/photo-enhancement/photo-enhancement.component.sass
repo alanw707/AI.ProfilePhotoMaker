@@ -1,16 +1,42 @@
 .gallery-page-container
+  width: 100%
+  max-width: 100vw
   min-height: 100vh
+  overflow-x: hidden
   background: radial-gradient(circle at 15% 10%, rgba(var(--primary-rgb), .20), transparent 34%), radial-gradient(circle at 85% 0%, rgba(14, 165, 233, .16), transparent 30%), var(--bg-gradient)
   font-family: 'Inter', sans-serif
 
 .gallery-main
-  padding: 32px 20px 56px
+  width: 100%
   max-width: 1240px
+  min-width: 0
+  padding: 32px 20px 56px
   margin: 0 auto
 
 .gallery-content
   display: grid
+  width: 100%
+  min-width: 0
   gap: 28px
+
+.has-active-file
+  .hero-panel
+    padding: 26px 30px
+
+  .page-header
+    h2
+      max-width: 640px
+      font-size: clamp(28px, 3.4vw, 44px)
+      line-height: 1.04
+
+    p
+      max-width: 620px
+      font-size: 15px
+
+  .hero-preview-strip
+    opacity: .72
+    transform: rotate(1deg) scale(.86)
+    transform-origin: right center
 
 .hero-panel, .credits-card, .verification-card, .upload-area, .file-preview, .enhancement-options, .processing-card, .no-credits-card, .error-card, .results-section
   background: color-mix(in srgb, var(--surface-primary) 92%, transparent)
@@ -28,6 +54,7 @@
   overflow: hidden
 
 .hero-copy
+  min-width: 0
   text-align: left
 
 .eyebrow, .section-kicker
@@ -55,6 +82,7 @@
     font-weight: 800
     line-height: .98
     letter-spacing: -.05em
+    overflow-wrap: anywhere
 
   p
     max-width: 720px
@@ -79,6 +107,53 @@
 
     &:nth-child(2)
       margin-top: 28px
+
+.workflow-rail
+  display: grid
+  grid-template-columns: repeat(3, minmax(0, 1fr))
+  gap: 12px
+
+.workflow-step
+  position: relative
+  display: grid
+  grid-template-columns: auto 1fr
+  gap: 2px 10px
+  align-items: center
+  padding: 14px 16px
+  border: 1px solid color-mix(in srgb, var(--border-color) 78%, transparent)
+  border-radius: 18px
+  background: color-mix(in srgb, var(--surface-primary) 78%, transparent)
+  color: var(--text-secondary)
+
+  span
+    grid-row: span 2
+    width: 34px
+    height: 34px
+    display: grid
+    place-items: center
+    border-radius: 999px
+    background: color-mix(in srgb, var(--surface-secondary) 82%, transparent)
+    color: var(--text-primary)
+    font-weight: 900
+
+  strong
+    color: var(--text-primary)
+    font-size: 14px
+
+  small
+    font-size: 12px
+
+  &.active
+    border-color: color-mix(in srgb, var(--primary) 54%, transparent)
+    background: color-mix(in srgb, var(--primary) 10%, var(--surface-primary))
+
+    span
+      background: var(--primary-gradient)
+      color: #fff
+
+  &.complete span
+    background: color-mix(in srgb, var(--success) 88%, #000 4%)
+    color: #fff
 
 .credits-section, .verification-section, .processing-section, .no-credits, .error-section
   display: flex
@@ -223,15 +298,16 @@
 
 .file-preview-section
   display: grid
-  grid-template-columns: minmax(280px, 420px) minmax(0, 1fr)
+  grid-template-columns: minmax(240px, 360px) minmax(0, 1fr)
   gap: 28px
   align-items: start
 
 .file-preview
   position: sticky
   top: 24px
-  padding: 18px
+  padding: 14px
   grid-row: span 3
+  box-shadow: 0 14px 42px rgba(15, 23, 42, .08)
 
   .preview-image-frame
     position: relative
@@ -241,26 +317,36 @@
 
   .preview-image
     width: 100%
-    aspect-ratio: 4 / 5
+    aspect-ratio: 4 / 4.45
     object-fit: cover
     display: block
 
 .score-loading-overlay
   position: absolute
-  inset: auto 14px 14px
+  inset: 0
   display: flex
+  flex-direction: column
   align-items: center
   justify-content: center
-  gap: 10px
-  padding: 12px 14px
+  gap: 12px
+  padding: 18px
   border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent)
-  border-radius: 16px
-  background: color-mix(in srgb, var(--surface-primary) 88%, transparent)
-  color: var(--text-primary)
-  font-size: 13px
-  font-weight: 800
-  box-shadow: var(--shadow-md)
-  backdrop-filter: blur(12px)
+  border-radius: 22px
+  background: linear-gradient(135deg, rgba(15, 23, 42, .46), rgba(15, 118, 110, .30)), color-mix(in srgb, var(--surface-primary) 42%, transparent)
+  color: #fff
+  font-size: 15px
+  font-weight: 900
+  text-align: center
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12), var(--shadow-md)
+  backdrop-filter: blur(8px)
+
+  &::after
+    content: ''
+    position: absolute
+    inset: 18px
+    border: 1px dashed rgba(255, 255, 255, .34)
+    border-radius: 18px
+    pointer-events: none
 
 .mini-spinner
   width: 18px
@@ -302,9 +388,25 @@
     letter-spacing: .08em
     text-transform: uppercase
 
+  &.is-loading
+    border-color: color-mix(in srgb, var(--primary) 46%, transparent)
+    background: color-mix(in srgb, var(--primary) 12%, var(--surface-secondary))
+
   .summary-loading
-    color: var(--text-secondary)
+    display: flex
+    align-items: center
+    gap: 12px
+    color: var(--text-primary)
     font-weight: 700
+
+    strong
+      display: block
+      margin-bottom: 2px
+
+    span
+      color: var(--text-secondary)
+      font-size: 13px
+      line-height: 1.35
 
   .summary-score
     display: flex
@@ -327,6 +429,34 @@
     font-size: 13px
     line-height: 1.45
 
+.quality-gate-card
+  display: grid
+  gap: 8px
+  margin-top: 12px
+  padding: 12px
+  border: 1px solid color-mix(in srgb, var(--success) 38%, transparent)
+  border-radius: 16px
+  background: color-mix(in srgb, var(--success) 10%, transparent)
+
+  strong
+    color: var(--text-primary)
+    font-size: 13px
+
+  ul
+    margin: 0
+    padding-left: 18px
+    color: var(--text-secondary)
+    font-size: 12px
+    line-height: 1.4
+
+  &.warning
+    border-color: color-mix(in srgb, var(--warning) 48%, transparent)
+    background: color-mix(in srgb, var(--warning) 10%, transparent)
+
+  &.blocked
+    border-color: color-mix(in srgb, var(--error) 48%, transparent)
+    background: color-mix(in srgb, var(--error) 10%, transparent)
+
 .score-section, .file-preview-section > .enhancement-options
   grid-column: 2
 
@@ -335,7 +465,9 @@
   gap: 18px
 
 .enhancement-options
-  padding: 24px
+  padding: 28px
+  border-color: color-mix(in srgb, var(--primary) 24%, var(--border-color))
+  box-shadow: 0 28px 90px rgba(15, 23, 42, .14)
 
   > h3
     margin: 0
@@ -347,10 +479,13 @@
   gap: 14px
 
 .section-heading
+  max-width: 720px
+
   h3
     margin: 0 0 6px
     color: var(--text-primary)
-    font-size: 22px
+    font-size: 26px
+    letter-spacing: -.035em
 
   p
     margin: 0
@@ -401,7 +536,7 @@
 .workflow-grid
   display: grid
   grid-template-columns: repeat(2, minmax(240px, 1fr))
-  gap: 16px
+  gap: 18px
 
 .workflow-card
   position: relative
@@ -427,6 +562,7 @@
 
   &.selected
     border-color: var(--primary)
+    background: color-mix(in srgb, var(--primary) 8%, var(--surface-secondary))
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent), 0 22px 54px rgba(15, 23, 42, .18)
 
     &::after
@@ -445,10 +581,43 @@
     position: absolute
     opacity: 0
 
+.vertical-pack-picker
+  display: flex
+  flex-wrap: wrap
+  gap: 10px
+  margin-bottom: 8px
+
+.vertical-pack-card
+  display: inline-flex
+  align-items: center
+  justify-content: center
+  min-height: 44px
+  padding: 0 18px
+  border: 1px solid color-mix(in srgb, var(--border-color) 80%, transparent)
+  border-radius: 999px
+  background: color-mix(in srgb, var(--surface-secondary) 88%, transparent)
+  color: var(--text-secondary)
+  text-align: center
+  cursor: pointer
+  transition: background .2s ease, border-color .2s ease, transform .2s ease
+
+  strong
+    color: var(--text-primary)
+    font-weight: 900
+
+  span
+    display: none
+
+  &.selected, &:hover
+    border-color: var(--primary)
+    background: color-mix(in srgb, var(--primary) 14%, var(--surface-secondary))
+    transform: translateY(-1px)
+
 .style-tabs
   display: flex
   flex-wrap: wrap
   gap: 10px
+  padding-top: 8px
 
 .style-tab
   min-height: 42px
@@ -466,8 +635,20 @@
     color: var(--text-primary)
 
 .portrait-style-card
-  border: 0
+  grid-template-rows: auto 1fr
+  border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent)
   font: inherit
+
+  .workflow-preview
+    aspect-ratio: 16 / 9
+    height: auto
+    object-fit: contain
+    object-position: center
+    background: color-mix(in srgb, var(--surface-primary) 92%, #000 8%)
+
+  &.selected
+    .workflow-preview
+      filter: saturate(1.06) contrast(1.03)
 
 .style-loading
   padding: 18px
@@ -500,15 +681,36 @@
     letter-spacing: .06em
 
   h4
+    display: flex
+    align-items: center
+    justify-content: space-between
+    gap: 8px
     margin: 6px 0
     color: var(--text-primary)
-    font-size: 17px
+    font-size: 18px
 
   p
+    display: -webkit-box
+    -webkit-line-clamp: 2
+    -webkit-box-orient: vertical
+    overflow: hidden
     margin: 0
     color: var(--text-secondary)
     font-size: 14px
     line-height: 1.45
+
+.selected-check
+  flex: 0 0 auto
+  width: 24px
+  height: 24px
+  display: inline-grid
+  place-items: center
+  border-radius: 999px
+  background: var(--primary)
+  color: #fff !important
+  font-size: 14px !important
+  font-weight: 900 !important
+  letter-spacing: 0 !important
 
 .btn
   min-height: 44px
@@ -558,12 +760,12 @@
   grid-template-columns: minmax(0, 1fr) minmax(180px, 240px) auto
   align-items: center
   gap: 16px
-  margin-top: 4px
+  margin-top: 6px
   padding: 14px
-  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border-color))
+  border: 1px solid color-mix(in srgb, var(--primary) 42%, var(--border-color))
   border-radius: 22px
-  background: color-mix(in srgb, var(--surface-primary) 94%, transparent)
-  box-shadow: 0 18px 48px rgba(15, 23, 42, .18)
+  background: color-mix(in srgb, var(--surface-primary) 96%, transparent)
+  box-shadow: 0 22px 64px rgba(15, 23, 42, .24)
   backdrop-filter: blur(18px)
 
 .action-summary
@@ -604,9 +806,9 @@
 
 .biometric-consent
   padding: 14px
-  border: 1px solid var(--border-color)
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border-color))
   border-radius: 18px
-  background: color-mix(in srgb, var(--surface-secondary) 82%, transparent)
+  background: color-mix(in srgb, var(--surface-secondary) 86%, transparent)
 
 .consent-checkbox
   display: flex
@@ -640,30 +842,74 @@
 .retention-period
   color: var(--text-secondary)
 
+.processing-section
+  position: fixed
+  inset: 0
+  z-index: 1000
+  display: grid
+  place-items: center
+  padding: 22px
+  isolation: isolate
+
+.processing-backdrop
+  position: absolute
+  inset: 0
+  background: rgba(2, 6, 23, .68)
+  backdrop-filter: blur(10px)
+
 .processing-card
-  max-width: 460px
-  padding: 42px 30px
+  position: relative
+  z-index: 1
+  width: min(520px, 100%)
+  max-width: 520px
+  padding: clamp(32px, 6vw, 54px) clamp(24px, 5vw, 38px)
   text-align: center
+  border: 1px solid rgba(94, 234, 212, .28)
+  border-radius: 28px
+  background: linear-gradient(180deg, rgba(15, 23, 42, .97), rgba(15, 23, 42, .92))
+  color: #f8fafc
+  box-shadow: 0 28px 90px rgba(2, 6, 23, .5), 0 0 0 1px rgba(255, 255, 255, .06), 0 0 48px rgba(94, 234, 212, .18)
+
+  h3
+    margin: 0 0 12px
+    color: #f8fafc
+    font-size: clamp(26px, 4vw, 36px)
+    letter-spacing: -.035em
+
+  p
+    color: rgba(226, 232, 240, .86)
+
+.processing-eyebrow
+  margin: 0 0 10px
+  color: #5eead4 !important
+  font-size: 12px
+  font-weight: 800
+  letter-spacing: .14em
+  text-transform: uppercase
 
 .processing-spinner
-  width: 58px
-  height: 58px
-  margin: 0 auto 22px
-  border: 4px solid var(--border-color)
-  border-top-color: var(--primary)
+  width: 64px
+  height: 64px
+  margin: 0 auto 24px
+  border: 5px solid rgba(148, 163, 184, 0.34)
+  border-top-color: #5eead4
+  border-right-color: rgba(94, 234, 212, 0.72)
   border-radius: 50%
-  animation: spin 1s linear infinite
+  box-shadow: 0 0 0 1px rgba(94, 234, 212, 0.18), 0 0 24px rgba(94, 234, 212, 0.32)
+  animation: spin 0.85s linear infinite
 
 .processing-progress
-  height: 9px
+  height: 10px
   overflow: hidden
   border-radius: 99px
-  background: var(--border-color)
+  background: rgba(15, 23, 42, 0.78)
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.24)
 
 .progress-bar
   height: 100%
   border-radius: inherit
-  background: var(--primary-gradient)
+  background: linear-gradient(90deg, #5eead4, #22d3ee)
+  box-shadow: 0 0 18px rgba(94, 234, 212, 0.45)
 
 @keyframes spin
   to
@@ -681,6 +927,33 @@
 
 .retention-info
   margin-top: 14px
+
+.augmentation-progress
+  position: sticky
+  top: 88px
+  z-index: 20
+  display: flex
+  align-items: center
+  gap: 14px
+  max-width: 560px
+  margin: 18px auto 22px
+  padding: 16px 18px
+  border: 1px solid color-mix(in srgb, var(--primary) 42%, transparent)
+  border-radius: 18px
+  background: color-mix(in srgb, var(--surface-primary) 94%, transparent)
+  color: var(--text-primary)
+  box-shadow: 0 18px 44px rgba(15, 23, 42, .22)
+  backdrop-filter: blur(14px)
+
+  strong
+    display: block
+    margin-bottom: 2px
+    font-weight: 900
+
+  span
+    display: block
+    color: var(--text-secondary)
+    font-size: 14px
 
 .before-after
   display: grid
@@ -708,8 +981,27 @@
   box-shadow: var(--shadow-lg)
 
 .comparison-image-frame
+  position: relative
   overflow: hidden
   background: color-mix(in srgb, var(--surface-secondary) 88%, #000 12%)
+
+.preview-watermark
+  position: absolute
+  right: 16px
+  bottom: 16px
+  padding: 8px 12px
+  border: 1px solid rgba(255, 255, 255, .48)
+  border-radius: 999px
+  background: rgba(15, 23, 42, .42)
+  color: rgba(255, 255, 255, .86)
+  font-size: 13px
+  font-weight: 900
+  letter-spacing: .12em
+  text-transform: uppercase
+  text-shadow: 0 1px 8px rgba(0, 0, 0, .45)
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .22)
+  backdrop-filter: blur(8px)
+  pointer-events: none
 
 .comparison-image
   display: block
@@ -719,9 +1011,93 @@
   background: color-mix(in srgb, var(--surface-secondary) 88%, #000 12%)
   transform-origin: center
 
+.before-fallback
+  border: 1px dashed color-mix(in srgb, var(--text-secondary) 36%, var(--border-color))
+
 .after-item
   .comparison-image-frame, .image-fallback
     border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border-color))
+
+.package-state-card
+  margin: 24px auto
+  padding: 20px 22px
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border-color))
+  border-radius: 22px
+  background: color-mix(in srgb, var(--surface-secondary) 78%, transparent)
+  text-align: left
+
+  h3
+    margin: 0 0 8px
+    color: var(--text-primary)
+    font-size: 22px
+
+  p
+    margin: 0
+    color: var(--text-secondary)
+    line-height: 1.5
+
+.add-on-comparison
+  margin: 28px auto
+  padding: clamp(18px, 3vw, 24px)
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border-color))
+  border-radius: 24px
+  background: color-mix(in srgb, var(--surface-secondary) 76%, transparent)
+  text-align: left
+
+.add-on-compare-grid
+  display: grid
+  grid-template-columns: repeat(2, minmax(240px, 1fr))
+  gap: 18px
+  margin-top: 18px
+  text-align: center
+
+  .comparison-image
+    width: min(320px, 100%)
+    aspect-ratio: 4 / 5
+    object-fit: contain
+    border-radius: 20px
+    box-shadow: var(--shadow-lg)
+
+  .add-on-image
+    background: color-mix(in srgb, var(--surface-primary) 92%, #000 8%)
+
+.upgrade-card-grid
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))
+  gap: 18px
+  margin: 26px 0
+
+.upgrade-card
+  display: grid
+  gap: 12px
+  padding: 22px
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border-color))
+  border-radius: 24px
+  background: color-mix(in srgb, var(--surface-primary) 94%, transparent)
+  box-shadow: var(--shadow-md)
+
+  h3, p, ul
+    margin: 0
+
+  ul
+    padding-left: 20px
+    color: var(--text-secondary)
+
+.upgrade-continuity
+  color: var(--text-primary)
+  font-weight: 800
+
+.confirmation-card
+  align-items: flex-start
+
+.resume-preview-card
+  margin-bottom: 20px
+
+.resume-preview-actions
+  display: flex
+  flex-wrap: wrap
+  gap: 12px
+  margin-top: 14px
 
 .image-fallback
   display: grid
@@ -820,6 +1196,82 @@
     input
       width: 100%
 
+  .control-hint
+    grid-column: 1 / -1
+    width: 100%
+    color: var(--text-muted)
+    font-size: 12px
+    text-align: left
+
+.add-on-heading
+  margin-top: 28px
+  text-align: left
+
+.add-on-grid
+  display: grid
+  grid-template-columns: repeat(4, minmax(150px, 1fr))
+  gap: 12px
+
+.add-on-card
+  min-height: 142px
+  padding: 16px
+  border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent)
+  border-radius: 18px
+  background: color-mix(in srgb, var(--surface-secondary) 84%, transparent)
+  color: var(--text-primary)
+  text-align: left
+  cursor: pointer
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease
+
+  &:hover:not(:disabled)
+    transform: translateY(-3px)
+    border-color: var(--primary)
+    box-shadow: 0 16px 34px rgba(15, 23, 42, .14)
+
+  &:focus-visible
+    outline: 3px solid color-mix(in srgb, var(--primary) 28%, transparent)
+    outline-offset: 2px
+
+  &:disabled
+    opacity: .55
+    cursor: not-allowed
+
+  .add-on-icon
+    display: grid
+    place-items: center
+    width: 34px
+    height: 34px
+    margin-bottom: 12px
+    border-radius: 12px
+    background: color-mix(in srgb, var(--primary) 16%, transparent)
+
+  strong
+    display: block
+    margin-bottom: 6px
+    font-size: 15px
+
+  small
+    display: block
+    color: var(--text-secondary)
+    font-size: 12px
+    line-height: 1.4
+
+  em
+    display: inline-flex
+    width: fit-content
+    margin-top: 12px
+    padding: 5px 9px
+    border-radius: 999px
+    background: color-mix(in srgb, var(--primary) 10%, transparent)
+    color: var(--primary)
+    font-size: 11px
+    font-style: normal
+    font-weight: 900
+
+  &:disabled em
+    background: color-mix(in srgb, var(--border-color) 46%, transparent)
+    color: var(--text-secondary)
+
 .result-actions, .key-features
   display: flex
   flex-wrap: wrap
@@ -849,7 +1301,40 @@
 
   .hero-panel
     grid-template-columns: 1fr
-    padding: 26px
+    width: 100%
+    max-width: 100%
+    padding: 24px 20px
+    min-width: 0
+    gap: 20px
+
+  .enhancement-options, .results-section, .package-state-card, .add-on-comparison, .error-card
+    width: 100%
+    max-width: 100%
+    min-width: 0
+    overflow: hidden
+
+  .retention-details, .retention-item, .data-type, .retention-period, .error-card p, .error-card h3
+    max-width: 100%
+    min-width: 0
+    overflow-wrap: anywhere
+
+  .retention-item
+    align-items: center
+    text-align: center
+
+  .data-type
+    display: inline-flex
+    flex-wrap: wrap
+    align-items: center
+    justify-content: center
+    gap: 6px
+
+  .has-active-file
+    .hero-panel
+      padding: 20px
+
+    .hero-preview-strip
+      display: none
 
   .hero-preview-strip
     grid-template-columns: repeat(3, 1fr)
@@ -860,15 +1345,17 @@
       width: 100%
       height: 108px
 
-  .workflow-grid, .score-grid
+  .workflow-grid, .score-grid, .workflow-rail, .add-on-grid
     grid-template-columns: 1fr
 
   .score-card
     flex-direction: column
 
   .action-footer
-    position: static
+    position: sticky
+    bottom: 10px
     grid-template-columns: 1fr
+    padding: 12px
 
   .action-package-select
     width: 100%
@@ -877,7 +1364,7 @@
     width: 100%
     min-width: 0
 
-  .before-after, .adjustment-workspace
+  .before-after, .adjustment-workspace, .add-on-compare-grid
     grid-template-columns: 1fr
 
   .adjustment-preview-card
@@ -899,14 +1386,41 @@
 
   .btn
     width: 100%
+    max-width: 100%
+    white-space: normal
+
+  .vertical-pack-picker
+    flex-wrap: nowrap
+    overflow-x: auto
+    padding-bottom: 4px
+
+  .vertical-pack-card
+    flex: 0 0 auto
+
+  .option-content
+    padding: 14px
 
 @media (max-width: 480px)
   .hero-panel, .enhancement-options, .results-section
     border-radius: 22px
     padding: 20px
 
+  .eyebrow
+    margin-bottom: 10px
+    padding: 5px 11px
+    font-size: 11px
+
   .page-header h2
-    font-size: 32px
+    font-size: clamp(30px, 8.4vw, 36px)
+    line-height: 1.02
+    letter-spacing: -.045em
+
+  .page-header p
+    font-size: 15px
+    line-height: 1.55
+
+  .workflow-step
+    padding: 16px 18px
 
   .retention-item
     flex-direction: column

@@ -1,4 +1,4 @@
-<div class="gallery-page-container">
+<div class="gallery-page-container" [class.has-active-file]="selectedFile || enhancedImage">
   <!-- Shared Header Navigation -->
   <app-header-navigation></app-header-navigation>
 
@@ -49,8 +49,8 @@
         <div class="credits-card error-card" *ngIf="!isLoadingCredits && !userCreditStatus">
           <div class="credits-icon">⚠️</div>
           <div class="credits-content">
-            <h3>Credits Unavailable</h3>
-            <p>Unable to load internal credits. Please try refreshing.</p>
+            <h3>Package Status Unavailable</h3>
+            <p>Unable to load package status. Please try refreshing.</p>
           </div>
         </div>
       </section>
@@ -76,8 +76,47 @@
         </div>
       </section>
 
+      <section class="workflow-rail" *ngIf="isHeadshotMvpEnabled" aria-label="Enhancement steps">
+        <div class="workflow-step" [class.active]="!selectedFile" [class.complete]="!!selectedFile">
+          <span>1</span>
+          <strong>Upload</strong>
+          <small>Add one source photo</small>
+        </div>
+        <div class="workflow-step" [class.active]="selectedFile && !enhancedImage" [class.complete]="!!enhancedImage">
+          <span>2</span>
+          <strong>Style</strong>
+          <small>Choose your portrait look</small>
+        </div>
+        <div class="workflow-step" [class.active]="!!enhancedImage">
+          <span>3</span>
+          <strong>Review</strong>
+          <small>Adjust, refine, export</small>
+        </div>
+      </section>
+
+      <section
+        class="resume-preview-section"
+        *ngIf="isHeadshotMvpEnabled && !selectedFile && !enhancedImage && resumablePreview && !isProcessing">
+        <div class="credits-card confirmation-card resume-preview-card">
+          <div class="credits-icon">↩️</div>
+          <div class="credits-content">
+            <h3>Resume your last preview</h3>
+            <p>{{ resumablePreview.message || 'Continue from the preview saved in your photo workspace.' }}</p>
+            <small>Style: {{ resumablePreview.style }} • {{ resumablePreview.createdAt | date: 'medium' }}</small>
+            <div class="resume-preview-actions">
+              <button class="btn btn-primary" type="button" (click)="resumePreview(resumablePreview)">
+                {{ resumablePreview.canPromotePreview ? 'Resume and generate paid candidates' : 'Resume preview' }}
+              </button>
+              <button class="btn btn-secondary" type="button" (click)="startOverFromResumablePreview()">
+                Start over
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Upload Section -->
-      <section class="upload-section" *ngIf="!selectedFile && !isProcessing">
+      <section class="upload-section" *ngIf="!selectedFile && !isProcessing && !resumablePreview">
         <div
           class="upload-area"
           (click)="triggerFileUpload()"
@@ -112,14 +151,51 @@
             <p>{{ selectedFile.size | number }} bytes</p>
             <button class="btn btn-secondary" (click)="removeFile()">Choose Different Photo</button>
           </div>
-          <div class="photo-score-summary" *ngIf="isProfilePhotoScoreVisible">
+          <div class="photo-score-summary" *ngIf="isProfilePhotoScoreVisible" [class.is-loading]="isScoringPhoto">
             <span class="summary-label">Photo score</span>
-            <div class="summary-loading" *ngIf="isScoringPhoto">Scoring photo…</div>
+            <div class="summary-loading" *ngIf="isScoringPhoto">
+              <div class="mini-spinner" aria-hidden="true"></div>
+              <div>
+                <strong>Scoring photo…</strong>
+                <span>Checking lighting, sharpness, framing, and face clarity.</span>
+              </div>
+            </div>
             <div class="summary-score" *ngIf="profileScore && !isScoringPhoto">
               <strong>{{ profileScore.overallScore }}/100</strong>
               <span>{{ profileScore.ratingLabel }}</span>
             </div>
             <p *ngIf="profileScore && !isScoringPhoto">{{ profileScore.guidance }}</p>
+            <ng-container *ngIf="profileScore?.qualityGate as qualityGate">
+              <div
+                class="quality-gate-card"
+                *ngIf="!isScoringPhoto"
+                [class.warning]="qualityGate.status === 'warning'"
+                [class.blocked]="qualityGate.status === 'blocked'"
+                [class.pass]="qualityGate.status === 'pass'">
+                <strong>
+                  {{
+                    qualityGate.status === 'pass'
+                      ? 'Photo quality passed'
+                      : qualityGate.status === 'warning'
+                        ? 'Quality warning'
+                        : 'Upload a better photo'
+                  }}
+                </strong>
+                <ul *ngIf="qualityGate.reasons.length">
+                  <li *ngFor="let reason of qualityGate.reasons">{{ reason }}</li>
+                </ul>
+                <p *ngIf="qualityGate.recommendations.length">
+                  {{ qualityGate.recommendations[0] }}
+                </p>
+                <button
+                  class="btn btn-secondary"
+                  type="button"
+                  *ngIf="qualityGate.status === 'warning' && !qualityGateOverrideAccepted"
+                  (click)="acceptQualityGateWarning()">
+                  Continue anyway
+                </button>
+              </div>
+            </ng-container>
           </div>
         </div>
 
@@ -132,7 +208,9 @@
             </div>
           </div>
 
-          <div class="credits-card score-card" *ngIf="isProfilePhotoScoreVisible && profileScore && !isScoringPhoto">
+          <div
+            class="credits-card score-card"
+            *ngIf="!isHeadshotMvpEnabled && isProfilePhotoScoreVisible && profileScore && !isScoringPhoto">
             <div class="score-ring" [style.--score]="profileScore.overallScore">
               <span>{{ profileScore.overallScore }}</span>
               <small>/100</small>
@@ -168,6 +246,18 @@
           </div>
 
           <ng-container *ngIf="isHeadshotMvpEnabled; else creativeWorkflowOptions">
+            <div class="vertical-pack-picker" aria-label="Profile photo use case">
+              <button
+                type="button"
+                class="vertical-pack-card"
+                *ngFor="let useCase of packUseCases"
+                [class.selected]="selectedUseCaseCode === useCase.code"
+                (click)="selectUseCase(useCase.code)">
+                <strong>{{ useCase.shortLabel || useCase.label }}</strong>
+                <span>{{ useCase.description }}</span>
+              </button>
+            </div>
+
             <div class="style-tabs" role="tablist" aria-label="Portrait style groups">
               <button
                 type="button"
@@ -217,7 +307,15 @@
                 <div class="option-content">
                   <div class="option-text">
                     <span>{{ option.badgeLabel }}</span>
-                    <h4>{{ option.name }}</h4>
+                    <h4>
+                      {{ option.name }}
+                      <span
+                        class="selected-check"
+                        *ngIf="selectedPortraitStyle?.key === option.key"
+                        aria-label="Selected">
+                        ✓
+                      </span>
+                    </h4>
                     <p>{{ option.description }}</p>
                   </div>
                 </div>
@@ -279,8 +377,15 @@
               </strong>
               <span>{{ isHeadshotMvpEnabled ? getSelectedPackageStatus() : '1 credit workflow' }}</span>
             </div>
-            <label class="action-package-select" *ngIf="isHeadshotMvpEnabled && areOutcomePackagesVisible">
-              <span>Package</span>
+            <label
+              class="action-package-select"
+              *ngIf="
+                isHeadshotMvpEnabled &&
+                areOutcomePackagesVisible &&
+                hasSelectedPackageEntitlement() &&
+                selectedPackageCode !== 'free_preview'
+              ">
+              <span>Unlocked package</span>
               <select [(ngModel)]="selectedPackageCode" class="form-control compact-control">
                 <option
                   *ngFor="let option of packageOptions"
@@ -295,24 +400,21 @@
               type="button"
               (click)="startEnhancement()"
               [disabled]="!isEmailConfirmed || !canStartEnhancement()">
-              <span *ngIf="!isEmailConfirmed">Verify Email to Continue</span>
-              <span *ngIf="isEmailConfirmed && canStartEnhancement()">
-                {{ isHeadshotMvpEnabled ? 'Generate headshot' : 'Transform Photo' }}
-              </span>
-              <span *ngIf="isEmailConfirmed && !canStartEnhancement()">
-                {{ isHeadshotMvpEnabled ? 'Package Entitlement Needed' : 'Package Needed' }}
-              </span>
+              <span *ngIf="isEmailConfirmed && canStartEnhancement()">{{ getPrimaryCtaLabel() }}</span>
+              <span *ngIf="!isEmailConfirmed || !canStartEnhancement()">{{ getDisabledCtaLabel() }}</span>
             </button>
           </div>
         </div>
       </section>
 
       <!-- Processing Section -->
-      <section class="processing-section" *ngIf="isProcessing">
-        <div class="processing-card">
-          <div class="processing-spinner"></div>
+      <section class="processing-section" *ngIf="isProcessing" role="dialog" aria-modal="true" aria-live="assertive">
+        <div class="processing-backdrop" aria-hidden="true"></div>
+        <div class="processing-card" role="document">
+          <div class="processing-spinner" aria-hidden="true"></div>
+          <p class="processing-eyebrow">Generation in progress</p>
           <h3>{{ isHeadshotMvpEnabled ? 'Creating Your Profile Photo' : 'Transforming Your Photo' }}</h3>
-          <p>AI is working carefully... This usually takes 30-60 seconds.</p>
+          <p>Keep this tab open. AI is working carefully... This usually takes 30-60 seconds.</p>
           <div class="processing-progress">
             <div class="progress-bar" [style.width.%]="processingProgress"></div>
           </div>
@@ -322,6 +424,13 @@
 
       <!-- Results Section -->
       <section class="results-section" *ngIf="enhancedImage">
+        <div class="augmentation-progress" *ngIf="isApplyingPremiumAugmentation" aria-live="polite">
+          <div class="mini-spinner" aria-hidden="true"></div>
+          <div>
+            <strong>Applying premium add-on</strong>
+            <span>{{ processingStatus }}</span>
+          </div>
+        </div>
         <h3>{{ isHeadshotMvpEnabled ? 'Candidate Ready' : 'Transform Complete!' }}</h3>
         <div class="retention-info">
           <small class="text-muted">
@@ -331,7 +440,14 @@
         <div class="before-after">
           <div class="comparison-item">
             <span class="comparison-label">Before</span>
-            <img [src]="imagePreview" alt="Original" class="comparison-image" />
+            <div class="comparison-image-frame" *ngIf="imagePreview && !beforeImageLoadFailed">
+              <img [src]="imagePreview" alt="Original" class="comparison-image" (error)="onBeforeImageError()" />
+            </div>
+            <div class="image-fallback before-fallback" *ngIf="!imagePreview || beforeImageLoadFailed">
+              <div class="fallback-icon">🖼️</div>
+              <strong>Original unavailable</strong>
+              <span>The generated candidate was saved, but the source preview could not be loaded.</span>
+            </div>
           </div>
           <div class="comparison-arrow" aria-hidden="true">→</div>
           <div class="comparison-item after-item">
@@ -343,6 +459,7 @@
                 class="comparison-image"
                 (error)="onEnhancedImageError()"
                 [ngStyle]="isHeadshotMvpEnabled ? getAdjustedImageStyle() : null" />
+              <div class="preview-watermark" *ngIf="selectedPackageCode === 'free_preview'">Preview</div>
             </div>
             <div class="image-fallback" *ngIf="enhancedImage.loadFailed">
               <div class="fallback-icon">🖼️</div>
@@ -350,6 +467,36 @@
               <span>Your generated photo was saved. Use download or regenerate if the preview stays blank.</span>
             </div>
           </div>
+        </div>
+
+        <div class="add-on-comparison" *ngIf="enhancedImage.previousDisplayUrl">
+          <div class="section-heading">
+            <span class="section-kicker">Add-on result</span>
+            <h3>{{ enhancedImage.augmentationLabel || 'Premium add-on' }} applied</h3>
+            <p>Compare the selected candidate against the add-on result before exporting.</p>
+          </div>
+          <div class="add-on-compare-grid">
+            <div>
+              <span class="comparison-label">Before add-on</span>
+              <img
+                [src]="enhancedImage.previousDisplayUrl"
+                alt="Candidate before premium add-on"
+                class="comparison-image add-on-image" />
+            </div>
+            <div>
+              <span class="comparison-label">After add-on</span>
+              <img
+                [src]="enhancedImage.displayUrl"
+                alt="Candidate after premium add-on"
+                class="comparison-image add-on-image" />
+            </div>
+          </div>
+        </div>
+
+        <div class="package-state-card" *ngIf="isHeadshotMvpEnabled && areOutcomePackagesVisible">
+          <span class="section-kicker">Package state</span>
+          <h3>{{ getPackageStateLabel() }}</h3>
+          <p>{{ getSelectedPackageStatus() }}</p>
         </div>
 
         <div class="enhancement-options" *ngIf="isProfileWorkflowEnabled">
@@ -366,7 +513,7 @@
               <span class="retention-period">
                 {{
                   candidate.recommendationScore
-                    ? candidate.recommendationScore + '/100 role fit'
+                    ? candidate.recommendationScore + '/100 ' + (candidate.label || 'fit')
                     : candidate.score
                       ? candidate.score.overallScore + '/100'
                       : 'Scoring...'
@@ -393,6 +540,67 @@
             </div>
           </div>
 
+          <div
+            class="upgrade-card-grid"
+            *ngIf="selectedPackageCode === 'free_preview' && getPaidUpgradeOptions().length">
+            <article class="upgrade-card" *ngFor="let option of getPaidUpgradeOptions()">
+              <span class="section-kicker">Upgrade</span>
+              <h3>{{ option.name }}</h3>
+              <p>{{ option.description }}</p>
+              <ul>
+                <li>{{ option.includedCandidateCount }} total candidates</li>
+                <li *ngIf="option.includesPlatformExportKit">Platform export kit included</li>
+                <li *ngIf="option.includedRefinementCount">
+                  {{ option.includedRefinementCount }} refinements included
+                </li>
+              </ul>
+              <p class="upgrade-continuity">{{ getUpgradeContinuityMessage(option.code) }}</p>
+              <button class="btn btn-primary" type="button" (click)="upgradeToPackage(option.code)">
+                Upgrade to {{ option.name }}
+              </button>
+            </article>
+          </div>
+
+          <div
+            class="credits-card confirmation-card"
+            *ngIf="pendingUpgradePackageCode && hasPendingUpgradeEntitlement()">
+            <div class="credits-icon">✅</div>
+            <div class="credits-content">
+              <h3>{{ getPackageLabel(pendingUpgradePackageCode) }} unlocked</h3>
+              <p>
+                {{ getUpgradeContinuityMessage(pendingUpgradePackageCode) }} No paid generation starts until you
+                confirm.
+              </p>
+              <div class="biometric-consent compact-consent" *ngIf="isEmailConfirmed">
+                <label class="consent-checkbox">
+                  <input
+                    type="checkbox"
+                    [ngModel]="biometricConsentAccepted"
+                    (ngModelChange)="onBiometricConsentChange($event)" />
+                  <span>
+                    I consent to the collection and use of my biometric data (face geometry) to generate paid candidates
+                    from this photo.
+                  </span>
+                </label>
+                <p class="consent-hint" *ngIf="!biometricConsentAccepted">
+                  Consent is required before generating paid candidates.
+                </p>
+              </div>
+              <button
+                class="btn btn-primary"
+                type="button"
+                (click)="confirmPaidPackageGeneration(pendingUpgradePackageCode)"
+                [disabled]="!biometricConsentAccepted">
+                <span *ngIf="biometricConsentAccepted">
+                  Generate {{ getRemainingCandidateCount(pendingUpgradePackageCode) }} more candidate{{
+                    getRemainingCandidateCount(pendingUpgradePackageCode) === 1 ? '' : 's'
+                  }}
+                </span>
+                <span *ngIf="!biometricConsentAccepted">Accept Consent to Continue</span>
+              </button>
+            </div>
+          </div>
+
           <div class="adjustment-workspace">
             <div class="adjustment-preview-card">
               <span class="section-kicker">Live preview</span>
@@ -405,7 +613,14 @@
                   (error)="onEnhancedImageError()"
                   [ngStyle]="getAdjustedImageStyle()" />
               </div>
-              <p>Use crop sliders while the edited photo stays visible.</p>
+              <p *ngIf="selectedPackageCode === 'free_preview' || isPaidPackagePendingConfirmation()">
+                Preview basic framing and color tweaks. Generate your paid candidates to unlock unwatermarked add-ons
+                and exports.
+              </p>
+              <p *ngIf="selectedPackageCode !== 'free_preview' && !isPaidPackagePendingConfirmation()">
+                Preview basic framing and color tweaks on your paid, unwatermarked candidate. Skin tuning is available
+                in Premium Add-ons.
+              </p>
             </div>
 
             <div class="adjustment-controls-card">
@@ -426,20 +641,6 @@
                   </span>
                 </label>
                 <label class="retention-item adjustment-control">
-                  <span class="data-type">Crop left/right</span>
-                  <span class="retention-period">
-                    <input type="range" min="-30" max="30" [(ngModel)]="cropOffsetX" />
-                    {{ cropOffsetX }}%
-                  </span>
-                </label>
-                <label class="retention-item adjustment-control">
-                  <span class="data-type">Crop up/down</span>
-                  <span class="retention-period">
-                    <input type="range" min="-30" max="30" [(ngModel)]="cropOffsetY" />
-                    {{ cropOffsetY }}%
-                  </span>
-                </label>
-                <label class="retention-item adjustment-control">
                   <span class="data-type">Brightness</span>
                   <span class="retention-period">
                     <input type="range" min="70" max="130" [(ngModel)]="adjustmentBrightness" />
@@ -453,37 +654,54 @@
                     {{ adjustmentContrast }}%
                   </span>
                 </label>
-                <label class="retention-item adjustment-control">
-                  <span class="data-type">Sharpness</span>
-                  <span class="retention-period">
-                    <input type="range" min="80" max="130" [(ngModel)]="adjustmentSharpness" />
-                    {{ adjustmentSharpness }}%
-                  </span>
-                </label>
               </div>
               <button class="btn btn-secondary" type="button" (click)="resetAdjustments()">Reset Adjustments</button>
             </div>
           </div>
 
           <ng-container *ngIf="arePremiumAugmentationsVisible">
-            <h3>Premium Augmentation Add-ons</h3>
-            <div class="key-features">
+            <div class="section-heading add-on-heading">
+              <span class="section-kicker">Premium Add-ons</span>
+              <h3>Targeted finishing touches</h3>
+              <p>{{ getPremiumAddOnStatusText() }} Results stay in the workspace so you can compare and export.</p>
+            </div>
+            <div class="add-on-grid">
               <button
-                class="btn btn-secondary"
+                class="add-on-card"
                 type="button"
                 *ngFor="let augmentation of premiumAugmentations"
                 (click)="applyPremiumAugmentation(augmentation.type)"
                 [disabled]="!canApplyPremiumAugmentation()">
-                ✨ Apply {{ augmentation.label }}
+                <span class="add-on-icon">{{ isPremiumAddOnUnlockedForCurrentCandidate() ? '✨' : '🔒' }}</span>
+                <strong>{{ augmentation.label }}</strong>
+                <small>{{ augmentation.description }}</small>
+                <em>{{ getPremiumAddOnBadgeText() }}</em>
+              </button>
+              <button
+                class="btn btn-secondary"
+                type="button"
+                (click)="regenerateCurrentCandidate()"
+                [disabled]="!canStartEnhancement()"
+                *ngIf="isPaidGenerationConfirmed() && selectedPackageCode !== 'free_preview'">
+                🔁 Regenerate (uses 1 refinement)
+              </button>
+              <button
+                class="btn btn-secondary"
+                type="button"
+                (click)="
+                  errorMessage = 'Regenerate is a premium feature. Upgrade to Starter or Pro to use refinements.'
+                "
+                *ngIf="selectedPackageCode === 'free_preview'">
+                🔁 Regenerate with Starter or Pro
               </button>
             </div>
           </ng-container>
 
-          <h3 *ngIf="selectedPackageCode !== 'free_preview'">Choose Platform Exports</h3>
+          <h3 *ngIf="selectedPackageCode !== 'free_preview' && isPaidGenerationConfirmed()">Choose Platform Exports</h3>
           <p *ngIf="selectedPackageCode === 'free_preview'">
             Free Preview does not include the platform export kit. Unlock Starter or Pro to download a package.
           </p>
-          <div class="retention-details" *ngIf="selectedPackageCode !== 'free_preview'">
+          <div class="retention-details" *ngIf="selectedPackageCode !== 'free_preview' && isPaidGenerationConfirmed()">
             <label class="retention-item" *ngFor="let option of exportOptions">
               <span class="data-type">
                 <input
@@ -502,7 +720,7 @@
         <div class="result-actions">
           <button
             class="btn btn-primary"
-            *ngIf="isProfileWorkflowEnabled && selectedPackageCode !== 'free_preview'"
+            *ngIf="isProfileWorkflowEnabled && selectedPackageCode !== 'free_preview' && isPaidGenerationConfirmed()"
             (click)="downloadPackage()"
             [disabled]="isDownloadingPackage">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -561,13 +779,6 @@
             </svg>
             {{ saveSuccessMessage }}
           </div>
-          <button
-            class="btn btn-secondary"
-            type="button"
-            (click)="startEnhancement()"
-            [disabled]="!canStartEnhancement()">
-            Regenerate
-          </button>
           <button class="btn btn-outline" (click)="enhanceAnother()">Enhance Another Photo</button>
         </div>
       </section>

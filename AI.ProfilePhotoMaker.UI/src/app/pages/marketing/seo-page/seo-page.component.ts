@@ -60,6 +60,7 @@ export class SeoPageComponent implements OnInit, OnDestroy {
         this.page = data['seoPage'] as SeoPageContent | undefined;
         if (this.page) {
           this.applySeo(this.page);
+          this.trackVerticalPackPageView(this.page);
         }
       })
     );
@@ -74,6 +75,28 @@ export class SeoPageComponent implements OnInit, OnDestroy {
     this._subscriptions.unsubscribe();
     this.removeStructuredData(this.structuredDataId);
     this.removeStructuredData(this.faqStructuredDataId);
+  }
+
+  private trackVerticalPackPageView(page: SeoPageContent): void {
+    const verticalUseCase = this.getVerticalUseCaseForPage(page.slug);
+    if (!verticalUseCase) {
+      return;
+    }
+
+    this._analytics.trackEvent('vertical_pack_page_view', {
+      page: page.slug,
+      useCaseCode: verticalUseCase,
+      ...this.utmParams,
+    });
+  }
+
+  private getVerticalUseCaseForPage(slug: string): string | null {
+    const map: Record<string, string> = {
+      'linkedin-executive-profile-photo': 'linkedin_executive',
+      'realtor-profile-photo-pack': 'realtor',
+      'founder-press-kit-photo-pack': 'founder_press_kit',
+    };
+    return map[slug] ?? null;
   }
 
   onCtaClick(position: string, label: string, href?: string, ctaIntent?: SignupCtaType): void {
@@ -110,8 +133,12 @@ export class SeoPageComponent implements OnInit, OnDestroy {
     }
 
     // Intent is stored in sessionStorage via onCtaClick — never put it in the URL
-    // (avoids Googlebot crawling /auth/register?intent={...} URLs)
-    const queryParams: Record<string, string> = { ...this.utmParams };
+    // (avoids Googlebot crawling /auth/register?intent={...} URLs). Existing product
+    // query params such as /app/enhance?useCase=realtor must still survive routerLink.
+    const queryParams: Record<string, string> = {
+      ...this.extractQueryParamsFromHref(href),
+      ...this.utmParams,
+    };
 
     return Object.keys(queryParams).length > 0 ? queryParams : null;
   }
@@ -124,7 +151,20 @@ export class SeoPageComponent implements OnInit, OnDestroy {
     if (this.isPricingLink(href) && resolvedIntent && resolvedIntent !== 'pricing') {
       return '/auth/register';
     }
-    return this.isReviewsLink(href) ? '/' : href;
+    if (this.isReviewsLink(href)) {
+      return '/';
+    }
+
+    return href.split(/[?#]/, 1)[0] || '/';
+  }
+
+  private extractQueryParamsFromHref(href: string): Record<string, string> {
+    const query = href.split('#', 1)[0].split('?')[1];
+    if (!query) {
+      return {};
+    }
+
+    return Object.fromEntries(new URLSearchParams(query).entries());
   }
 
   getFragmentForHref(href?: string): string | undefined {

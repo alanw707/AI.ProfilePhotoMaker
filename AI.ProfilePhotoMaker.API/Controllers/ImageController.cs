@@ -431,7 +431,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     correlationId = i.CorrelationId,
                     creditCost = i.CreditCost,
                     generationStatus = i.GenerationStatus,
-                    failureReason = i.FailureReason
+                    failureReason = i.FailureReason != null && i.FailureReason.StartsWith("raw-preview:") ? null : i.FailureReason
                 });
             }
 

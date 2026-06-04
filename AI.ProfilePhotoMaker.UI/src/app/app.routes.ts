@@ -493,6 +493,33 @@ export const routes: Routes = [
       seoPage: seoPages['teacher-headshots'],
     },
   },
+  {
+    path: 'use-cases/linkedin-executive-profile-photo',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['linkedin-executive-profile-photo'].title,
+    data: {
+      seoPage: seoPages['linkedin-executive-profile-photo'],
+    },
+  },
+  {
+    path: 'use-cases/realtor-profile-photo-pack',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['realtor-profile-photo-pack'].title,
+    data: {
+      seoPage: seoPages['realtor-profile-photo-pack'],
+    },
+  },
+  {
+    path: 'use-cases/founder-press-kit-photo-pack',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['founder-press-kit-photo-pack'].title,
+    data: {
+      seoPage: seoPages['founder-press-kit-photo-pack'],
+    },
+  },
 
   // Help & Support
   {

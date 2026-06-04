@@ -7,6 +7,9 @@ public class HeadshotGenerationRequest
     public string Style { get; set; } = "professional";
     public string Background { get; set; } = "auto";
     public string? PromptTemplate { get; set; }
+    public string? UseCaseCode { get; set; }
+    public string? RecipeCode { get; set; }
+    public string? Label { get; set; }
     public string CorrelationId { get; set; } = string.Empty;
 }
 

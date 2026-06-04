@@ -1,12 +1,15 @@
 using System.Security.Claims;
+using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Security;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
@@ -18,6 +21,8 @@ public class HeadshotsController : ControllerBase
     private readonly IHeadshotGenerationService _headshotGenerationService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITurnstileVerificationService _turnstile;
+    private readonly ApplicationDbContext _dbContext;
+    private readonly IStorageService _storageService;
     private readonly IConfiguration _configuration;
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<HeadshotsController> _logger;
@@ -29,6 +34,8 @@ public class HeadshotsController : ControllerBase
         IHeadshotGenerationService headshotGenerationService,
         UserManager<ApplicationUser> userManager,
         ITurnstileVerificationService turnstile,
+        ApplicationDbContext dbContext,
+        IStorageService storageService,
         IConfiguration configuration,
         IWebHostEnvironment environment,
         ILogger<HeadshotsController> logger)
@@ -36,9 +43,115 @@ public class HeadshotsController : ControllerBase
         _headshotGenerationService = headshotGenerationService;
         _userManager = userManager;
         _turnstile = turnstile;
+        _dbContext = dbContext;
+        _storageService = storageService;
         _configuration = configuration;
         _environment = environment;
         _logger = logger;
+    }
+
+    [HttpGet("resumable-preview")]
+    public async Task<IActionResult> GetResumablePreview([FromQuery] int? previewId = null)
+    {
+        if (!IsOpenAIHeadshotMvpEnabled())
+        {
+            return BadRequest(new { success = false, data = (object?)null, error = new { code = "FeatureDisabled", message = "Instant headshot generation is not enabled." } });
+        }
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized(new { success = false, data = (object?)null, error = new { code = "Unauthorized", message = "User authentication required." } });
+        }
+
+        var query = _dbContext.ProcessedImages
+            .Include(i => i.UserProfile)
+            .Where(i =>
+                i.UserProfile.UserId == userId &&
+                i.GenerationStatus == "succeeded" &&
+                i.GenerationMode == "instant_headshot" &&
+                i.FailureReason != null &&
+                i.FailureReason.StartsWith("raw-preview:"));
+
+        var preview = previewId.HasValue
+            ? await query.FirstOrDefaultAsync(i => i.Id == previewId.Value, HttpContext.RequestAborted)
+            : await query.OrderByDescending(i => i.CreatedAt).FirstOrDefaultAsync(HttpContext.RequestAborted);
+
+        if (preview == null)
+        {
+            return Ok(new { success = true, data = (object?)null, error = (object?)null });
+        }
+
+        var styleActive = await _dbContext.Styles.AnyAsync(s => s.IsActive && s.Name == preview.Style, HttpContext.RequestAborted);
+        if (!styleActive || !await StorageImageExistsAsync(preview.ProcessedImageUrl))
+        {
+            return Ok(new { success = true, data = (object?)null, error = (object?)null });
+        }
+
+        var rawStoragePath = preview.FailureReason!["raw-preview:".Length..];
+        var rawPreviewExists = await StorageImageExistsAsync(rawStoragePath);
+        var sourceExists = await StorageImageExistsAsync(preview.OriginalImageUrl);
+
+        var entitlement = rawPreviewExists
+            ? await _dbContext.UserPackageEntitlements
+            .Include(e => e.OutcomePackageDefinition)
+            .Where(e => e.UserId == userId &&
+                        e.Status == PackageEntitlementStatus.Active &&
+                        (e.ExpiresAt == null || e.ExpiresAt > DateTime.UtcNow) &&
+                        (e.OutcomePackageDefinition.Code == "starter_package" || e.OutcomePackageDefinition.Code == "pro_package") &&
+                        e.RemainingPackageUses > 0 &&
+                        e.RemainingCandidates > 0)
+            .OrderByDescending(e => e.OutcomePackageDefinition.Code == "pro_package")
+            .ThenBy(e => e.ExpiresAt ?? DateTime.MaxValue)
+            .ThenBy(e => e.CreatedAt)
+            .FirstOrDefaultAsync(HttpContext.RequestAborted)
+            : null;
+
+        var totalCandidates = entitlement?.OutcomePackageDefinition.IncludedCandidateCount ?? 0;
+        var remainingCandidateCount = entitlement == null ? 0 : Math.Max(totalCandidates - 1, 0);
+        var dto = new ResumableHeadshotPreviewDto
+        {
+            ProcessedImageId = preview.Id,
+            ImageUrl = preview.ProcessedImageUrl,
+            StoragePath = preview.ProcessedImageUrl,
+            SourceStoragePath = preview.OriginalImageUrl,
+            Style = preview.Style,
+            CreatedAt = preview.CreatedAt,
+            HasRawPreview = rawPreviewExists,
+            CanPromotePreview = entitlement != null && rawPreviewExists,
+            ActivePackageCode = entitlement?.OutcomePackageDefinition.Code,
+            RemainingCandidateCount = remainingCandidateCount,
+            Message = entitlement == null
+                ? (rawPreviewExists
+                    ? "Resume this preview, then unlock Starter or Pro to generate paid candidates."
+                    : "This preview can be viewed, but its generation source expired. Start over to create paid candidates.")
+                : (sourceExists ? "Resume this preview and generate the remaining paid candidates." : "Original upload expired; we will continue from the protected raw preview.")
+        };
+
+        return Ok(new { success = true, data = dto, error = (object?)null });
+    }
+
+    private async Task<bool> StorageImageExistsAsync(string storagePath)
+    {
+        if (string.IsNullOrWhiteSpace(storagePath))
+        {
+            return false;
+        }
+
+        try
+        {
+            await using var stream = await _storageService.GetImageAsync(storagePath);
+            return stream != null;
+        }
+        catch (FileNotFoundException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unable to verify resumable preview storage path {StoragePath}", S(storagePath));
+            return false;
+        }
     }
 
     [HttpPost("generate")]

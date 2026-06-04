@@ -43,6 +43,23 @@ After upload, `/enhance` becomes a style-first chooser:
 - Hide empty groups.
 - Send selected active style name to `/headshots/generate`.
 
+## Upgrade workflow plan
+
+V1 uses a preview-first paid upgrade path.
+
+1. Hide the pre-generation paid package selector for users without an active Starter or Pro entitlement.
+2. Generate Free Preview first by default.
+3. Render the Free Preview at the same underlying generation quality as paid candidates, but gate user value with watermarking and export restrictions.
+4. After preview, show clear Starter and Pro upgrade cards instead of a locked package dropdown.
+5. Use the existing CreditPackage payment flow as the temporary checkout bridge through `OutcomePackageDefinition.InternalCreditPackageId`.
+6. Return from payment to `/app/enhance` with the outcome package context and reload entitlements.
+7. Show a confirmation CTA before spending the paid entitlement: “Generate 2 more Starter candidates” or “Generate 8 more Pro candidates.”
+8. If the user keeps the same source photo and portrait style, promote the Free Preview candidate to candidate #1 and generate only the remaining paid candidate slots.
+9. If the user changes portrait style before paid generation, start a new paid candidate set and clearly state that the preview no longer counts toward the paid package.
+10. Show regeneration cost before action: user-requested regenerate consumes one refinement; provider/storage failures get a free retry.
+
+V1.1 should add stricter cost controls: same image hash + style preview reuse, daily free preview caps, entitlement reservation/finalization, and hardened watermark generation.
+
 ## Verification plan
 
 - API build.
@@ -64,7 +81,7 @@ After upload, `/enhance` becomes a style-first chooser:
 
 - Style card copy should use curated frontend copy for mapped styles and fall back to `Style.Description` only for unmapped styles.
 - Existing preview images are acceptable for the vertical slice, but the premium chooser should later get consistent portrait-preview crops and lighting.
-- Package selection should move into the sticky action bar as a compact selector, with Free Preview selected by default.
+- Package selection should not be the default pre-generation decision for users without an active entitlement; Free Preview should be generated first, then Starter/Pro should be offered as explicit upgrade cards after preview.
 - Post-result upsell copy should be redesigned around visible value: more candidates, best shot selector, export kit, and refinements.
 - Fun styles should stay hidden unless active API styles exist for them; do not create fake fun styles client-side.
 - Empty style groups should be hidden.

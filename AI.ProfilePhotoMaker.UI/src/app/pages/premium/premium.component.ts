@@ -253,6 +253,16 @@ export class PremiumComponent implements OnInit, OnDestroy {
       'Your profile photo package is ready. Start from the workspace to score, generate, and export your best shot.'
     );
 
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    const outcomePackage = this.route.snapshot.queryParamMap.get('outcomePackage');
+    if (returnUrl?.startsWith('/app/enhance') && outcomePackage) {
+      const [path, query = ''] = returnUrl.split('?');
+      const params = new URLSearchParams(query);
+      params.set('upgraded', outcomePackage);
+      this.router.navigate([path], { queryParams: Object.fromEntries(params.entries()) });
+      return;
+    }
+
     // Redirect to Photo Workspace to start the workflow
     this.router.navigate(['/app/enhance']);
   }

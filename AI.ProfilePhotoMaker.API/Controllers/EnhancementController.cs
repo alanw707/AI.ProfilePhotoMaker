@@ -312,7 +312,7 @@ public class EnhancementController : ControllerBase
                 return StatusCode(409, new { success = false, error = new { code = "PremiumAugmentationEntitlementUnavailable", message = "Premium augmentation allowance was already used. Your credit was refunded." } });
             }
 
-            if (isProfessionalRefinement && _outcomePackageService != null && !await _outcomePackageService.ConsumeRefinementAsync(userId, HttpContext?.RequestAborted ?? CancellationToken.None))
+            if (isProfessionalRefinement && _outcomePackageService != null && !await _outcomePackageService.ConsumeRefinementAsync(userId, cancellationToken: HttpContext?.RequestAborted ?? CancellationToken.None))
             {
                 await HandleEnhancementRefundAsync(userId, creditConsumptionResult, "refinement entitlement race", "Refinement allowance was no longer available after generation.");
                 return StatusCode(409, new { success = false, error = new { code = "RefinementEntitlementUnavailable", message = "Refinement allowance was already used. Your credit was refunded." } });
@@ -516,7 +516,7 @@ public class EnhancementController : ControllerBase
     private static bool IsPremiumAugmentation(string? enhancementType)
     {
         var normalized = (enhancementType ?? string.Empty).Trim().ToLowerInvariant();
-        return normalized is "relighting" or "professional_polish" or "outfit_upgrade" or "background_upgrade";
+        return normalized is "relighting" or "professional_polish" or "outfit_upgrade" or "background_upgrade" or "skin_tone_polish" or "sharpen_detail" or "skin_smoothing" or "wrinkle_softening";
     }
 
     private static bool IsProfessionalRefinement(string? enhancementType)
@@ -566,15 +566,20 @@ public class EnhancementController : ControllerBase
             return InvalidStoragePathResponse();
         }
 
-        var expectedPrefix = _pathResolver.GetDirectoryPrefix(StorageType.Enhanced, userId);
-        if (!storagePath.StartsWith(expectedPrefix, StringComparison.Ordinal) ||
-            storagePath.Length <= expectedPrefix.Length)
+        var allowedPrefixes = new[]
+        {
+            _pathResolver.GetDirectoryPrefix(StorageType.Enhanced, userId),
+            _pathResolver.GetDirectoryPrefix(StorageType.Generated, userId),
+            $"enhanced/{userId}/",
+            $"generated/{userId}/"
+        };
+        if (!allowedPrefixes.Any(prefix => storagePath.StartsWith(prefix, StringComparison.Ordinal) && storagePath.Length > prefix.Length))
         {
             _logger.LogWarning(
-                "Rejected enhancement storage path for user {UserId}. Path={StoragePath}, ExpectedPrefix={ExpectedPrefix}",
+                "Rejected enhancement storage path for user {UserId}. Path={StoragePath}, ExpectedPrefixes={ExpectedPrefixes}",
                 Sid(userId),
                 S(storagePath),
-                S(expectedPrefix));
+                string.Join(",", allowedPrefixes.Select(S)));
             return InvalidStoragePathResponse();
         }
 

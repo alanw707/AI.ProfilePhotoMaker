@@ -28,9 +28,13 @@ A premium augmentation that changes visible clothing into role-appropriate profe
 
 The user-facing pricing unit. Users buy a concrete result, such as one professional profile photo package, rather than buying raw generation credits. Initial package names are Free Preview, Starter Package, and Pro Package. OutcomePackageDefinition should become the source of truth for user-facing package content, while CreditPackage remains the temporary checkout/ledger bridge during migration.
 
+## Vertical outcome pack
+
+A guided use-case layer inside an outcome package, such as LinkedIn / Executive, Realtor, or Founder / Press Kit. In the first implementation slice, vertical outcome packs do not replace Starter Package or Pro Package checkout. They influence workflow copy, generation recipes, result labels, and export recommendations while preserving the Free Preview -> Starter/Pro upgrade path.
+
 OutcomePackageDefinition V1 fields should include Id, Code, Name, Description, Price, Currency, StripePriceId, nullable InternalCreditPackageId, IncludedCandidateCount, IncludedRefinementCount, IncludedPremiumAugmentationCount, IncludesPlatformExportKit, IncludesScoreDelta, IsActive, and DisplayOrder.
 
-Free Preview is the default pre-generation package choice and includes a source photo score, one low-resolution or watermarked instant preview, creative style pack access, and no export package.
+Free Preview is the default pre-generation package choice and includes a source photo score, one same-quality watermarked instant preview, creative style pack access, and no export package. A Free Preview candidate can be promoted into a paid package so Starter and Pro generate only the remaining candidate slots after upgrade.
 
 Starter Package includes three generated candidates, best shot selector, basic photo adjustment, selected platform export kit, and one or two refinements.
 

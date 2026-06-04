@@ -707,7 +707,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                             Code = "free_preview",
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Currency = "USD",
-                            Description = "Score your source photo and try a friendly low-resolution preview before buying a package.",
+                            Description = "Score your source photo and try a same-quality watermarked preview before buying a package.",
                             DisplayOrder = 1,
                             IncludedCandidateCount = 1,
                             IncludedPremiumAugmentationCount = 0,

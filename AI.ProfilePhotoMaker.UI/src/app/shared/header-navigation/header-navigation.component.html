@@ -122,22 +122,12 @@
     <div class="user-section">
       <!-- Authenticated User Section -->
       <ng-container *ngIf="isAuthenticated; else guestSection">
-        <!-- Credit Display -->
-        <div
-          class="credit-display"
-          *ngIf="userCreditStatus"
-          routerLink="/app/settings"
-          [attr.title]="getHeaderCreditLabel() + ': ' + getHeaderCreditCount()">
-          <div class="credit-icon">{{ isHeadshotContext ? '💰' : '💎' }}</div>
-          <div class="credit-amount">{{ getHeaderCreditCount() }}</div>
-        </div>
-
         <div class="user-info">
           <span class="user-name">Welcome, {{ userName || 'User' }}!</span>
           <span class="user-email">{{ userEmail }}</span>
         </div>
-        <button class="btn btn-logout" (click)="logout()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <button class="btn btn-logout" type="button" (click)="logout()" aria-label="Logout">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
               d="M16 17L21 12M21 12L16 7M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9"
               stroke="currentColor"
@@ -145,7 +135,7 @@
               stroke-linecap="round"
               stroke-linejoin="round" />
           </svg>
-          Logout
+          <span>Logout</span>
         </button>
       </ng-container>
 

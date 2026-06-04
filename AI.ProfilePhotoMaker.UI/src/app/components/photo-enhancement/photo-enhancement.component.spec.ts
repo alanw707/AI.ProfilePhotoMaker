@@ -124,7 +124,11 @@ xdescribe('PhotoEnhancementComponent', () => {
 
   describe('Component State', () => {
     it('should handle enhanced image result', () => {
-      const mockResult = { url: 'enhanced-image.jpg', status: 'completed' };
+      const mockResult = {
+        url: 'enhanced-image.jpg',
+        displayUrl: 'enhanced-image.jpg',
+        status: 'completed',
+      };
 
       component.enhancedImage = mockResult;
 

@@ -23,6 +23,18 @@
         <p>Loading your photos...</p>
       </div>
 
+      <section class="resume-preview-section" *ngIf="!isLoading && resumablePreviewImages.length">
+        <div class="resume-preview-card" *ngFor="let image of resumablePreviewImages.slice(0, 3)">
+          <div>
+            <strong>Continue this profile photo session</strong>
+            <p>{{ image.title }} • {{ image.createdAt | date: 'medium' }}</p>
+          </div>
+          <button class="btn btn-primary" type="button" (click)="continueInPhotoWorkspace(image)">
+            Continue in Photo Workspace
+          </button>
+        </div>
+      </section>
+
       <!-- Photo Workspace Component -->
       <section class="gallery-section" *ngIf="!isLoading" [class.downloading]="isDownloading">
         <app-photo-gallery

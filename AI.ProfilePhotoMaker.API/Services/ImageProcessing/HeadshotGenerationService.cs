@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -88,28 +87,38 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             "pro_package" => Math.Min(requestedOutputs, 9),
             _ => 1
         };
-        if (_outcomePackageService != null)
-        {
-            var hasPackageAllowance = packageCode == "free_preview"
-                ? requestedOutputs == 1
-                : await _outcomePackageService.GetActiveEntitlementAsync(userId, packageCode, cancellationToken) is { RemainingPackageUses: > 0 } entitlement && entitlement.RemainingCandidates >= requestedOutputs;
-            if (!hasPackageAllowance)
-            {
-                throw new HeadshotGenerationException("PackageEntitlementRequired", "Choose or unlock a profile photo package before generating these candidates.");
-            }
-        }
-
         var requiredCredits = packageCode == "free_preview" && _outcomePackageService != null ? 0 : CreditCostConfig.GetCreditCost(ActionName) * requestedOutputs;
         var correlationId = BuildDeterministicCorrelationId(userId, sourcePath, request);
-        var existingImages = await _dbContext.ProcessedImages
-            .Where(i => i.UserProfileId == profile.Id && i.CorrelationId == correlationId && i.GenerationStatus == "succeeded")
-            .OrderBy(i => i.CreatedAt)
+        var candidateCorrelationPrefix = $"{correlationId}:candidate:";
+        var existingGeneratedImages = await _dbContext.ProcessedImages
+            .Where(i =>
+                i.UserProfileId == profile.Id &&
+                i.GenerationStatus == "succeeded" &&
+                i.GenerationMode == "instant_headshot" &&
+                (i.CorrelationId == correlationId || (i.CorrelationId != null && i.CorrelationId.StartsWith(candidateCorrelationPrefix))))
+            .OrderBy(i => i.CorrelationId)
             .Take(requestedOutputs)
             .ToListAsync(cancellationToken);
-        if (existingImages.Count >= requestedOutputs)
+        var existingPromotedPreview = packageCode != "free_preview" && request.ReusedPreviewProcessedImageId.HasValue
+            ? await _dbContext.ProcessedImages
+                .FirstOrDefaultAsync(i =>
+                    i.UserProfileId == profile.Id &&
+                    i.GenerationStatus == "succeeded" &&
+                    i.GenerationMode == "instant_headshot_promoted_preview" &&
+                    i.CorrelationId == $"{correlationId}:promoted-preview",
+                    cancellationToken)
+            : null;
+        var hasCompleteIdempotentResult = existingGeneratedImages.Count >= requestedOutputs &&
+            (request.ReusedPreviewProcessedImageId.HasValue ? existingPromotedPreview != null : existingPromotedPreview == null);
+        if (hasCompleteIdempotentResult)
         {
             var existingRemainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
-            var existingCandidates = existingImages.Select(ToCandidateDto).ToList();
+            var existingCandidates = new List<HeadshotCandidateDto>();
+            if (existingPromotedPreview != null)
+            {
+                existingCandidates.Add(ToCandidateDto(existingPromotedPreview));
+            }
+            existingCandidates.AddRange(existingGeneratedImages.Select(ToCandidateDto));
             var primary = existingCandidates[0];
             _logger.LogInformation(
                 "Returning idempotent instant headshot candidates for user {UserId}, count={Count}, correlation={CorrelationId}",
@@ -130,6 +139,24 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                 CorrelationId = correlationId,
                 Candidates = existingCandidates
             };
+        }
+
+        if (_outcomePackageService != null)
+        {
+            var entitlement = packageCode == "free_preview"
+                ? null
+                : await _outcomePackageService.GetActiveEntitlementAsync(userId, packageCode, cancellationToken);
+            var allowance = PackageEntitlementPolicy.CheckGenerationAllowance(
+                packageCode,
+                requestedOutputs,
+                request.IsRegeneration,
+                entitlement);
+            if (!allowance.Allowed)
+            {
+                throw new HeadshotGenerationException(
+                    allowance.FailureCode ?? "PackageEntitlementRequired",
+                    allowance.FailureMessage ?? "Choose or unlock a profile photo package before generating these candidates.");
+            }
         }
 
         var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
@@ -163,19 +190,42 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                 Sid(userId), S(_provider.ProviderName), S(_provider.ModelName), S(correlationId));
 
             var candidates = new List<HeadshotCandidateDto>();
+            var generationSourcePath = sourcePath;
+            if (packageCode != "free_preview" && request.ReusedPreviewProcessedImageId is int previewImageId)
+            {
+                var promotedPreview = await BuildPromotedPreviewCandidateAsync(previewImageId, profile.Id, sourcePath, portraitStyle.Name, correlationId, request, cancellationToken);
+                if (promotedPreview != null)
+                {
+                    candidates.Add(promotedPreview);
+                    if (!await StorageImageExistsAsync(sourcePath, cancellationToken) && !string.IsNullOrWhiteSpace(promotedPreview.StoragePath))
+                    {
+                        _logger.LogWarning(
+                            "Preview source image missing for paid continuation. Falling back to promoted preview raw image. SourcePath={SourcePath}, FallbackPath={FallbackPath}",
+                            S(sourcePath),
+                            S(promotedPreview.StoragePath));
+                        generationSourcePath = promotedPreview.StoragePath;
+                    }
+                }
+            }
 
             for (var outputIndex = 0; outputIndex < requestedOutputs; outputIndex++)
             {
                 var candidateCorrelationId = requestedOutputs == 1
                     ? correlationId
                     : $"{correlationId}:candidate:{outputIndex + 1}";
+                var recipe = packageCode == "free_preview"
+                    ? HeadshotRecipeRegistry.None(request.UseCaseCode)
+                    : HeadshotRecipeRegistry.Resolve(request.UseCaseCode, request.RecipeCode, outputIndex);
                 var result = await _provider.GenerateAsync(new HeadshotGenerationRequest
                 {
                     UserId = userId,
-                    ImageStoragePath = sourcePath,
+                    ImageStoragePath = generationSourcePath,
                     Style = portraitStyle.Name,
                     Background = request.Background,
-                    PromptTemplate = BuildInstantHeadshotPrompt(portraitStyle.PromptTemplate, profile),
+                    PromptTemplate = ApplyRecipeToPrompt(BuildInstantHeadshotPrompt(portraitStyle.PromptTemplate, profile), recipe),
+                    UseCaseCode = recipe.UseCaseCode,
+                    RecipeCode = recipe.Code,
+                    Label = recipe.Label,
                     CorrelationId = candidateCorrelationId
                 }, cancellationToken);
 
@@ -186,12 +236,12 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                         result.FailureMessage ?? "Headshot provider failed to generate an image.");
                 }
 
-                var storedPath = await StoreProviderOutputAsync(result.DataUrlOrUrl, userId, packageCode == "free_preview" && _outcomePackageService != null, cancellationToken);
+                var storedOutput = await StoreProviderOutputAsync(result.DataUrlOrUrl, userId, packageCode == "free_preview" && _outcomePackageService != null, cancellationToken);
 
                 var processedImage = new ProcessedImage
                 {
                     OriginalImageUrl = sourcePath,
-                    ProcessedImageUrl = storedPath,
+                    ProcessedImageUrl = storedOutput.DisplayPath,
                     Style = NormalizeStyle(request.Style),
                     UserProfileId = profile.Id,
                     CreatedAt = DateTime.UtcNow,
@@ -200,10 +250,11 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                     Provider = result.Provider,
                     ProviderModel = result.Model,
                     GenerationMode = "instant_headshot",
-                    PromptVersion = result.PromptVersion,
                     CreditCost = CreditCostConfig.GetCreditCost(ActionName),
                     GenerationStatus = "succeeded",
-                    CorrelationId = correlationId
+                    CorrelationId = candidateCorrelationId,
+                    FailureReason = storedOutput.RawPath == null ? null : $"raw-preview:{storedOutput.RawPath}",
+                    PromptVersion = string.IsNullOrWhiteSpace(recipe.Code) ? result.PromptVersion : $"{result.PromptVersion}:{recipe.Code}"
                 };
                 processedImage.SetScheduledDeletionDate();
 
@@ -212,11 +263,18 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                 candidates.Add(ToCandidateDto(processedImage));
             }
 
-            if (packageCode != "free_preview" &&
-                _outcomePackageService != null &&
-                !await _outcomePackageService.ConsumeCandidatesAsync(userId, packageCode, requestedOutputs, cancellationToken))
+            if (packageCode != "free_preview" && _outcomePackageService != null)
             {
-                throw new HeadshotGenerationException("PackageEntitlementRequired", "Unable to consume profile photo package allowance.");
+                var consumedPackageAllowance = request.IsRegeneration
+                    ? await _outcomePackageService.ConsumeRefinementAsync(userId, packageCode, cancellationToken)
+                    : await _outcomePackageService.ConsumeCandidatesAsync(userId, packageCode, requestedOutputs, cancellationToken);
+                if (!consumedPackageAllowance)
+                {
+                    await MarkPersistedCandidatesFailedAsync(profile.Id, correlationId, cancellationToken);
+                    throw new HeadshotGenerationException("PackageEntitlementRequired", request.IsRegeneration
+                        ? "Unable to consume package refinement allowance."
+                        : "Unable to consume profile photo package allowance.");
+                }
             }
 
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
@@ -255,6 +313,108 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         }
     }
 
+    private async Task MarkPersistedCandidatesFailedAsync(int userProfileId, string correlationId, CancellationToken cancellationToken)
+    {
+        var candidateCorrelationPrefix = $"{correlationId}:candidate:";
+        var promotedPreviewCorrelationId = $"{correlationId}:promoted-preview";
+        var persistedCandidates = await _dbContext.ProcessedImages
+            .Where(i =>
+                i.UserProfileId == userProfileId &&
+                i.GenerationStatus == "succeeded" &&
+                (i.CorrelationId == correlationId ||
+                 i.CorrelationId == promotedPreviewCorrelationId ||
+                 (i.CorrelationId != null && i.CorrelationId.StartsWith(candidateCorrelationPrefix))))
+            .ToListAsync(cancellationToken);
+
+        foreach (var candidate in persistedCandidates)
+        {
+            candidate.GenerationStatus = "failed";
+            candidate.FailureReason = "package-entitlement-consumption-failed";
+        }
+
+        if (persistedCandidates.Count > 0)
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private async Task<HeadshotCandidateDto?> BuildPromotedPreviewCandidateAsync(
+        int processedImageId,
+        int userProfileId,
+        string sourcePath,
+        string portraitStyleName,
+        string paidCorrelationId,
+        HeadshotGenerationRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        var image = await _dbContext.ProcessedImages
+            .FirstOrDefaultAsync(i => i.Id == processedImageId && i.UserProfileId == userProfileId && i.GenerationStatus == "succeeded", cancellationToken);
+        if (image?.FailureReason?.StartsWith("raw-preview:", StringComparison.Ordinal) != true ||
+            !string.Equals(image.OriginalImageUrl, sourcePath, StringComparison.Ordinal) ||
+            !string.Equals(NormalizeStyle(image.Style), NormalizeStyle(portraitStyleName), StringComparison.Ordinal) ||
+            !string.Equals(request.ReusedPreviewSourcePath, sourcePath, StringComparison.Ordinal) ||
+            !string.Equals(NormalizeStyle(request.ReusedPreviewStyle), NormalizeStyle(portraitStyleName), StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var rawStoragePath = image.FailureReason["raw-preview:".Length..];
+        var existingPromotion = await _dbContext.ProcessedImages
+            .FirstOrDefaultAsync(i =>
+                i.UserProfileId == image.UserProfileId &&
+                i.ProcessedImageUrl == rawStoragePath &&
+                i.GenerationMode == "instant_headshot_promoted_preview" &&
+                i.GenerationStatus == "succeeded" &&
+                i.CorrelationId == $"{paidCorrelationId}:promoted-preview",
+                cancellationToken);
+        if (existingPromotion != null)
+        {
+            return ToCandidateDto(existingPromotion);
+        }
+
+        var promotedImage = new ProcessedImage
+        {
+            OriginalImageUrl = image.OriginalImageUrl,
+            ProcessedImageUrl = rawStoragePath,
+            Style = image.Style,
+            UserProfileId = image.UserProfileId,
+            CreatedAt = DateTime.UtcNow,
+            IsGenerated = true,
+            IsOriginalUpload = false,
+            Provider = image.Provider,
+            ProviderModel = image.ProviderModel,
+            GenerationMode = "instant_headshot_promoted_preview",
+            PromptVersion = image.PromptVersion,
+            CreditCost = 0,
+            GenerationStatus = "succeeded",
+            CorrelationId = $"{paidCorrelationId}:promoted-preview"
+        };
+        promotedImage.SetScheduledDeletionDate();
+        _dbContext.ProcessedImages.Add(promotedImage);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return ToCandidateDto(promotedImage);
+    }
+
+    private async Task<bool> StorageImageExistsAsync(string storagePath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var stream = await _storageService.GetImageAsync(storagePath);
+            cancellationToken.ThrowIfCancellationRequested();
+            return stream != null;
+        }
+        catch (FileNotFoundException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unable to verify storage image existence for {StoragePath}", S(storagePath));
+            return false;
+        }
+    }
+
     private HeadshotCandidateDto ToCandidateDto(ProcessedImage image)
     {
         return new HeadshotCandidateDto
@@ -264,8 +424,33 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             ProcessedImageId = image.Id,
             Provider = image.Provider ?? _provider.ProviderName,
             Model = image.ProviderModel ?? _provider.ModelName,
-            CorrelationId = image.CorrelationId ?? string.Empty
+            CorrelationId = image.CorrelationId ?? string.Empty,
+            UseCaseCode = ExtractUseCaseCode(image.PromptVersion),
+            RecipeCode = ExtractRecipeCode(image.PromptVersion),
+            Label = ExtractRecipeLabel(image.PromptVersion)
         };
+    }
+
+    private static string? ExtractUseCaseCode(string? promptVersion)
+    {
+        var recipeCode = ExtractRecipeCode(promptVersion);
+        return string.IsNullOrWhiteSpace(recipeCode) ? null : HeadshotRecipeRegistry.FindByCode(recipeCode)?.UseCaseCode;
+    }
+
+    private static string? ExtractRecipeCode(string? promptVersion)
+    {
+        if (string.IsNullOrWhiteSpace(promptVersion) || !promptVersion.Contains(':', StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return promptVersion.Split(':', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+    }
+
+    private static string? ExtractRecipeLabel(string? promptVersion)
+    {
+        var recipeCode = ExtractRecipeCode(promptVersion);
+        return string.IsNullOrWhiteSpace(recipeCode) ? null : HeadshotRecipeRegistry.FindByCode(recipeCode)?.Label;
     }
 
     private static string BuildDeterministicCorrelationId(string userId, string sourcePath, HeadshotGenerationRequestDto request)
@@ -280,9 +465,22 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             NormalizeBackground(request.Background),
             NormalizePackageCode(request.PackageCode),
             request.NumOutputs.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            NormalizeUseCaseCode(request.UseCaseCode),
+            NormalizeRecipeCode(request.RecipeCode),
+            request.IsRegeneration ? "regenerate" : "generate",
             clientRequestId);
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
         return $"{ActionName}:{hash[..32]}";
+    }
+
+    private static string ApplyRecipeToPrompt(string basePrompt, HeadshotRecipe recipe)
+    {
+        if (string.IsNullOrWhiteSpace(recipe.PromptModifier))
+        {
+            return basePrompt;
+        }
+
+        return $"{basePrompt}\n\nUse-case recipe: {recipe.PromptModifier}\nKeep the same person, facial structure, and natural skin texture. Avoid over-smoothing, synthetic-looking features, distorted hands, text artifacts, logos, badges, or misleading professional credentials.";
     }
 
     private string ValidateAndNormalizeSourcePath(string storagePath, string userId)
@@ -326,28 +524,28 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         return trimmed;
     }
 
-    private async Task<string> StoreProviderOutputAsync(string output, string userId, bool freePreview, CancellationToken cancellationToken)
+    private sealed record StoredProviderOutput(string DisplayPath, string? RawPath);
+
+    private async Task<StoredProviderOutput> StoreProviderOutputAsync(string output, string userId, bool freePreview, CancellationToken cancellationToken)
     {
         var bytes = await ReadOutputBytesAsync(output, cancellationToken);
+        string? rawPath = null;
         if (freePreview)
         {
+            await using var rawStream = new MemoryStream(bytes);
+            rawPath = await _storageService.SaveImageAsync(rawStream, $"headshot-raw-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}.png", userId, "generated-private");
             bytes = await CreateFreePreviewAsync(bytes, cancellationToken);
         }
 
         var fileName = $"headshot-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}.png";
         await using var stream = new MemoryStream(bytes);
-        return await _storageService.SaveImageAsync(stream, fileName, userId, "generated");
+        var displayPath = await _storageService.SaveImageAsync(stream, fileName, userId, "generated");
+        return new StoredProviderOutput(displayPath, rawPath);
     }
 
     private static async Task<byte[]> CreateFreePreviewAsync(byte[] bytes, CancellationToken cancellationToken)
     {
         using var image = Image.Load<Rgba32>(bytes);
-        image.Mutate(ctx => ctx.Resize(new ResizeOptions
-        {
-            Mode = ResizeMode.Max,
-            Size = new Size(512, 512)
-        }));
-
         image.ProcessPixelRows(accessor =>
         {
             for (var y = 0; y < accessor.Height; y++)
@@ -355,14 +553,18 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                 var row = accessor.GetRowSpan(y);
                 for (var x = 0; x < row.Length; x++)
                 {
-                    var stripe = ((x + y) / 28) % 7 == 0;
-                    var lowerBand = y > accessor.Height * 3 / 4;
-                    if (!stripe && !lowerBand) continue;
+                    var bandWidth = Math.Max(12, accessor.Width / 44);
+                    var diagonalBand = ((x + y) % Math.Max(140, accessor.Width / 3)) < bandWidth;
+                    var reverseDiagonalBand = ((x - y + accessor.Height) % Math.Max(170, accessor.Width / 2)) < Math.Max(8, bandWidth / 2);
+                    var bottomLogoBar = y > accessor.Height * 0.84 && y < accessor.Height * 0.91 && x > accessor.Width * 0.58 && x < accessor.Width * 0.94;
+                    var cornerLogo = x > accessor.Width * 0.68 && y > accessor.Height * 0.72 && ((x / Math.Max(8, accessor.Width / 42) + y / Math.Max(8, accessor.Height / 42)) % 2 == 0);
+                    if (!diagonalBand && !reverseDiagonalBand && !bottomLogoBar && !cornerLogo) continue;
 
                     ref var pixel = ref row[x];
-                    pixel.R = (byte)(pixel.R * 0.72);
-                    pixel.G = (byte)(pixel.G * 0.72);
-                    pixel.B = (byte)(pixel.B * 0.72);
+                    var strength = bottomLogoBar || cornerLogo ? 0.36 : 0.24;
+                    pixel.R = (byte)Math.Min(255, pixel.R * (1 - strength) + 255 * strength);
+                    pixel.G = (byte)Math.Min(255, pixel.G * (1 - strength) + 255 * strength);
+                    pixel.B = (byte)Math.Min(255, pixel.B * (1 - strength) + 255 * strength);
                 }
             }
         });
@@ -445,6 +647,70 @@ public class HeadshotGenerationService : IHeadshotGenerationService
 
     private static string NormalizeBackground(string? background) =>
         string.IsNullOrWhiteSpace(background) ? "auto" : background.Trim().ToLowerInvariant();
+
+    private static string NormalizeUseCaseCode(string? useCaseCode) => HeadshotRecipeRegistry.NormalizeUseCaseCode(useCaseCode);
+
+    private static string NormalizeRecipeCode(string? recipeCode) => HeadshotRecipeRegistry.NormalizeRecipeCode(recipeCode);
+}
+
+public sealed record HeadshotRecipe(string UseCaseCode, string Code, string Label, string PromptModifier);
+
+public static class HeadshotRecipeRegistry
+{
+    public static HeadshotRecipe None(string? useCaseCode) => new(NormalizeUseCaseCode(useCaseCode), string.Empty, string.Empty, string.Empty);
+
+    private static readonly IReadOnlyDictionary<string, HeadshotRecipe[]> Recipes = new Dictionary<string, HeadshotRecipe[]>(StringComparer.Ordinal)
+    {
+        ["linkedin_executive"] = new[]
+        {
+            new HeadshotRecipe("linkedin_executive", "linkedin_studio", "Best LinkedIn profile", "clean studio or soft office background, confident approachable expression, modern professional wardrobe, shoulders-up crop for LinkedIn profile use"),
+            new HeadshotRecipe("linkedin_executive", "executive_presence", "Best executive look", "premium office or boardroom-adjacent background, composed executive presence, polished business formal wardrobe, trustworthy senior-leader tone"),
+            new HeadshotRecipe("linkedin_executive", "approachable_resume", "Best resume/avatar", "neutral uncluttered background, warm approachable expression, business-casual wardrobe, crisp crop that works for resume and avatar uploads")
+        },
+        ["realtor"] = new[]
+        {
+            new HeadshotRecipe("realtor", "realtor_trust", "Best Zillow/Realtor profile", "bright modern real-estate office feel, warm trustworthy expression, polished but approachable wardrobe, square profile crop suitable for Zillow and Realtor.com"),
+            new HeadshotRecipe("realtor", "luxury_listing", "Best luxury listing vibe", "upscale home interior or premium neutral background, confident expert tone, refined wardrobe, high-end but realistic real estate marketing feel"),
+            new HeadshotRecipe("realtor", "social_flyer", "Best social flyer image", "clean background with room for flyer/social cropping, friendly client-facing expression, professional wardrobe, vertical-crop friendly framing")
+        },
+        ["founder_press_kit"] = new[]
+        {
+            new HeadshotRecipe("founder_press_kit", "press_bio", "Best press bio", "editorial business portrait, confident founder expression, polished but authentic wardrobe, suitable for press bio and podcast guest pages"),
+            new HeadshotRecipe("founder_press_kit", "website_hero", "Best website hero", "wider composition feel with clean negative space, founder/entrepreneur presence, modern startup or premium office mood, website hero friendly framing"),
+            new HeadshotRecipe("founder_press_kit", "linkedin_founder", "Best founder LinkedIn", "professional LinkedIn-ready founder portrait, approachable thought-leader tone, clean premium background, crisp square-avatar crop")
+        }
+    };
+
+    public static HeadshotRecipe? FindByCode(string recipeCode)
+    {
+        var normalizedRecipe = NormalizeRecipeCode(recipeCode);
+        return Recipes.Values.SelectMany(recipe => recipe).FirstOrDefault(recipe => recipe.Code == normalizedRecipe);
+    }
+
+    public static HeadshotRecipe Resolve(string? useCaseCode, string? recipeCode, int candidateIndex)
+    {
+        var normalizedUseCase = NormalizeUseCaseCode(useCaseCode);
+        var recipes = Recipes[normalizedUseCase];
+        var normalizedRecipe = NormalizeRecipeCode(recipeCode);
+        if (!string.IsNullOrWhiteSpace(normalizedRecipe))
+        {
+            var match = recipes.FirstOrDefault(recipe => recipe.Code == normalizedRecipe);
+            if (match != null)
+            {
+                return match;
+            }
+        }
+
+        return recipes[Math.Abs(candidateIndex) % recipes.Length];
+    }
+
+    public static string NormalizeUseCaseCode(string? useCaseCode)
+    {
+        var normalized = (useCaseCode ?? "linkedin_executive").Trim().ToLowerInvariant().Replace('-', '_');
+        return Recipes.ContainsKey(normalized) ? normalized : "linkedin_executive";
+    }
+
+    public static string NormalizeRecipeCode(string? recipeCode) => string.IsNullOrWhiteSpace(recipeCode) ? string.Empty : recipeCode.Trim().ToLowerInvariant().Replace('-', '_');
 }
 
 public class HeadshotGenerationException : Exception

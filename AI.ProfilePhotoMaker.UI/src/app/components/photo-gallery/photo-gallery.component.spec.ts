@@ -27,7 +27,7 @@ describe('PhotoGalleryComponent', () => {
 
     it('should initialize with default values', () => {
       expect(component.images).toEqual([]);
-      expect(component.title).toBe('Photo Gallery');
+      expect(component.title).toBe('Photo Workspace');
       expect(component.viewMode).toBe('grid');
       expect(component.filterType).toBe('generated');
       expect(component.selectedImages).toEqual([]);

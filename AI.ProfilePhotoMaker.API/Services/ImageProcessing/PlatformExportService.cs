@@ -16,6 +16,10 @@ public class PlatformExportService : IPlatformExportService
         new() { Code = "slack_teams_avatar", Label = "Slack / Teams avatar", Width = 512, Height = 512, FileNameSuffix = "slack-teams-avatar" },
         new() { Code = "github_avatar", Label = "GitHub avatar", Width = 460, Height = 460, FileNameSuffix = "github-avatar" },
         new() { Code = "resume_headshot", Label = "Resume headshot", Width = 600, Height = 750, FileNameSuffix = "resume-headshot" },
+        new() { Code = "realtor_square", Label = "Zillow / Realtor square", Width = 800, Height = 800, FileNameSuffix = "realtor-square" },
+        new() { Code = "realtor_flyer", Label = "Realtor flyer crop", Width = 1200, Height = 1500, FileNameSuffix = "realtor-flyer" },
+        new() { Code = "podcast_avatar", Label = "Podcast / press avatar", Width = 1000, Height = 1000, FileNameSuffix = "podcast-avatar" },
+        new() { Code = "founder_banner", Label = "Founder LinkedIn/X banner crop", Width = 1584, Height = 396, FileNameSuffix = "founder-banner" },
         new() { Code = "website_bio", Label = "Website bio / speaker profile", Width = 1200, Height = 1200, FileNameSuffix = "website-bio" },
         new() { Code = "original_high_res", Label = "Original high-resolution image", Width = 0, Height = 0, FileNameSuffix = "original-high-res" }
     };
