@@ -235,6 +235,11 @@ export class StylePreviewService {
       normalizedBase.includes('/profile-images') ||
       normalizedBase.startsWith('/devstoreaccount1');
 
+    const proxyBase = this.getStylePreviewProxyBase();
+    if (proxyBase) {
+      return `${proxyBase}/profile-images/style-previews/${fileName}?v=${this._cacheVersion}`;
+    }
+
     const storageUrl = isInvalidBase
       ? 'https://aipmstv16j74jubocuukg.blob.core.windows.net'
       : configuredBase;
@@ -245,5 +250,19 @@ export class StylePreviewService {
       : `${cleanBase}/style-previews`;
 
     return `${baseWithContainer}/${fileName}?v=${this._cacheVersion}`;
+  }
+
+  private getStylePreviewProxyBase(): string | null {
+    const configuredBase = (
+      ((environment.azure as { backendUrl?: string } | undefined)?.backendUrl ||
+        environment.baseUrl ||
+        '') as string
+    ).trim();
+    if (!configuredBase || !configuredBase.startsWith('http')) {
+      return null;
+    }
+
+    const cleanBase = configuredBase.endsWith('/') ? configuredBase.slice(0, -1) : configuredBase;
+    return cleanBase.endsWith('/api') ? cleanBase.slice(0, -4) : cleanBase;
   }
 }

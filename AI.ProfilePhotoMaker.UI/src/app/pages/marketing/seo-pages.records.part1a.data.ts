@@ -1,6 +1,6 @@
 import type { SeoPageContent } from './seo-pages.types';
 
-const STYLE_PREVIEW_BASE_URL = 'https://aipmstv16j74jubocuukg.blob.core.windows.net/style-previews';
+const STYLE_PREVIEW_BASE_URL = 'https://api.aiprofilephotomaker.com/profile-images/style-previews';
 const STYLE_PREVIEW_CACHE_VERSION = '20260110';
 
 const buildRoleStylePreviewUrl = (styleName: 'medical' | 'executive'): string =>
