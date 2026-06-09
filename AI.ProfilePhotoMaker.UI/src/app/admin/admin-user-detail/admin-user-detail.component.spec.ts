@@ -40,6 +40,7 @@ describe('AdminUserDetailComponent', () => {
       hasUsageHistory: true,
     },
     recentPurchases: [],
+    packageEntitlements: [],
     recentImages: [],
     activityHistory: [],
     recentAdminActions: [],
