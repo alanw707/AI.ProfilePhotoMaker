@@ -649,57 +649,77 @@ public class AdminService : IAdminService
             _ => toUtc.AddDays(-7)
         };
 
-        var imagesInWindow = _context.ProcessedImages.AsNoTracking()
-            .Where(image => image.CreatedAt >= fromUtc && image.CreatedAt <= toUtc);
-        var entitlementsInWindow = _context.UserPackageEntitlements.AsNoTracking()
-            .Include(entitlement => entitlement.OutcomePackageDefinition)
-            .Where(entitlement => entitlement.CreatedAt >= fromUtc && entitlement.CreatedAt <= toUtc);
+        // Keep Product Health responsive in production by scanning each source table once.
+        // Multiple independent aggregate queries caused the admin page to sit on the loading state against larger datasets.
+        var imageRows = await _context.ProcessedImages.AsNoTracking()
+            .Where(image => image.CreatedAt >= fromUtc && image.CreatedAt <= toUtc)
+            .Select(image => new
+            {
+                image.IsOriginalUpload,
+                image.IsGenerated,
+                image.GenerationStatus,
+                image.GenerationMode,
+                image.FailureReason,
+                Provider = image.Provider ?? "unknown",
+                Model = image.ProviderModel ?? "unknown"
+            })
+            .ToListAsync();
 
-        var uploads = await imagesInWindow.CountAsync(image => image.IsOriginalUpload);
-        var successfulPreviewGenerations = await imagesInWindow.CountAsync(image =>
+        var entitlementRows = await _context.UserPackageEntitlements.AsNoTracking()
+            .Where(entitlement => entitlement.CreatedAt >= fromUtc && entitlement.CreatedAt <= toUtc)
+            .Select(entitlement => new
+            {
+                entitlement.Status,
+                entitlement.RemainingCandidates,
+                entitlement.RemainingRefinements,
+                entitlement.RemainingPremiumAugmentations,
+                entitlement.PlatformExportKitAvailable,
+                PackageCode = entitlement.OutcomePackageDefinition.Code,
+                PackageName = entitlement.OutcomePackageDefinition.Name,
+                PackagePrice = entitlement.OutcomePackageDefinition.Price
+            })
+            .ToListAsync();
+
+        var uploads = imageRows.Count(image => image.IsOriginalUpload);
+        var successfulPreviewGenerations = imageRows.Count(image =>
             image.IsGenerated &&
             image.GenerationStatus != "failed" &&
             image.GenerationMode == "instant_headshot" &&
             image.FailureReason != null &&
-            image.FailureReason.StartsWith("raw-preview:"));
-        var generatedImages = await imagesInWindow.CountAsync(image => image.IsGenerated && image.GenerationStatus != "failed");
-        var failedGenerations = await imagesInWindow.CountAsync(image => image.IsGenerated && image.GenerationStatus == "failed");
-        var paidPackagePurchases = await entitlementsInWindow.CountAsync(entitlement => entitlement.OutcomePackageDefinition.Price > 0);
-        var starterPurchases = await entitlementsInWindow.CountAsync(entitlement =>
-            entitlement.OutcomePackageDefinition.Price > 0 &&
-            (entitlement.OutcomePackageDefinition.Code.ToLower().Contains("starter") ||
-             entitlement.OutcomePackageDefinition.Name.ToLower().Contains("starter")));
-        var proPurchases = await entitlementsInWindow.CountAsync(entitlement =>
-            entitlement.OutcomePackageDefinition.Price > 0 &&
-            (entitlement.OutcomePackageDefinition.Code.ToLower().Contains("pro") ||
-             entitlement.OutcomePackageDefinition.Name.ToLower().Contains("pro")));
+            image.FailureReason.StartsWith("raw-preview:", StringComparison.Ordinal));
+        var generatedImages = imageRows.Count(image => image.IsGenerated && image.GenerationStatus != "failed");
+        var failedGenerations = imageRows.Count(image => image.IsGenerated && image.GenerationStatus == "failed");
+        var paidPackagePurchases = entitlementRows.Count(entitlement => entitlement.PackagePrice > 0);
+        var starterPurchases = entitlementRows.Count(entitlement =>
+            entitlement.PackagePrice > 0 &&
+            ((entitlement.PackageCode?.Contains("starter", StringComparison.OrdinalIgnoreCase) ?? false) ||
+             (entitlement.PackageName?.Contains("starter", StringComparison.OrdinalIgnoreCase) ?? false)));
+        var proPurchases = entitlementRows.Count(entitlement =>
+            entitlement.PackagePrice > 0 &&
+            ((entitlement.PackageCode?.Contains("pro", StringComparison.OrdinalIgnoreCase) ?? false) ||
+             (entitlement.PackageName?.Contains("pro", StringComparison.OrdinalIgnoreCase) ?? false)));
 
-        var packageMix = await entitlementsInWindow
-            .Where(entitlement => entitlement.OutcomePackageDefinition.Price > 0)
+        var packageMix = entitlementRows
+            .Where(entitlement => entitlement.PackagePrice > 0)
             .GroupBy(entitlement => new
             {
-                entitlement.OutcomePackageDefinition.Code,
-                entitlement.OutcomePackageDefinition.Name,
-                entitlement.OutcomePackageDefinition.Price
+                entitlement.PackageCode,
+                entitlement.PackageName,
+                entitlement.PackagePrice
             })
             .Select(group => new AdminPackageMixDto
             {
-                Code = group.Key.Code,
-                Name = group.Key.Name,
+                Code = group.Key.PackageCode,
+                Name = group.Key.PackageName,
                 Purchases = group.Count(),
-                RevenueProxy = group.Count() * group.Key.Price
+                RevenueProxy = group.Count() * group.Key.PackagePrice
             })
             .OrderByDescending(package => package.Purchases)
-            .ToListAsync();
+            .ToList();
 
-        var fulfillmentRows = await entitlementsInWindow.ToListAsync();
-        var providerHealth = await imagesInWindow
+        var providerHealth = imageRows
             .Where(image => image.IsGenerated)
-            .GroupBy(image => new
-            {
-                Provider = image.Provider ?? "unknown",
-                Model = image.ProviderModel ?? "unknown"
-            })
+            .GroupBy(image => new { image.Provider, image.Model })
             .Select(group => new AdminProviderHealthDto
             {
                 Provider = group.Key.Provider,
@@ -708,7 +728,7 @@ public class AdminService : IAdminService
                 FailedImages = group.Count(image => image.GenerationStatus == "failed")
             })
             .OrderByDescending(provider => provider.GeneratedImages + provider.FailedImages)
-            .ToListAsync();
+            .ToList();
 
         foreach (var provider in providerHealth)
         {
@@ -716,13 +736,13 @@ public class AdminService : IAdminService
             provider.FailureRate = total == 0 ? 0 : Math.Round((decimal)provider.FailedImages / total, 4);
         }
 
-        var topFailureReasons = await imagesInWindow
+        var topFailureReasons = imageRows
             .Where(image => image.IsGenerated && image.GenerationStatus == "failed")
             .GroupBy(image => image.FailureReason ?? "unknown")
             .Select(group => new AdminFailureReasonDto { Reason = group.Key, Count = group.Count() })
             .OrderByDescending(reason => reason.Count)
             .Take(5)
-            .ToListAsync();
+            .ToList();
 
         var openAiGenerated = providerHealth
             .Where(provider => provider.Provider.Equals("openai", StringComparison.OrdinalIgnoreCase))
@@ -774,14 +794,14 @@ public class AdminService : IAdminService
             PackageMix = packageMix,
             PackageFulfillment = new AdminPackageFulfillmentDto
             {
-                ActiveEntitlements = fulfillmentRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Active),
-                ConsumedEntitlements = fulfillmentRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Consumed),
-                ExpiredEntitlements = fulfillmentRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Expired),
-                RefundedEntitlements = fulfillmentRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Refunded),
-                RemainingCandidates = fulfillmentRows.Sum(entitlement => entitlement.RemainingCandidates),
-                RemainingRefinements = fulfillmentRows.Sum(entitlement => entitlement.RemainingRefinements),
-                RemainingPremiumAugmentations = fulfillmentRows.Sum(entitlement => entitlement.RemainingPremiumAugmentations),
-                ExportKitsAvailable = fulfillmentRows.Count(entitlement => entitlement.PlatformExportKitAvailable)
+                ActiveEntitlements = entitlementRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Active),
+                ConsumedEntitlements = entitlementRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Consumed),
+                ExpiredEntitlements = entitlementRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Expired),
+                RefundedEntitlements = entitlementRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Refunded),
+                RemainingCandidates = entitlementRows.Sum(entitlement => entitlement.RemainingCandidates),
+                RemainingRefinements = entitlementRows.Sum(entitlement => entitlement.RemainingRefinements),
+                RemainingPremiumAugmentations = entitlementRows.Sum(entitlement => entitlement.RemainingPremiumAugmentations),
+                ExportKitsAvailable = entitlementRows.Count(entitlement => entitlement.PlatformExportKitAvailable)
             },
             ProviderHealth = providerHealth,
             FailureQueue = new AdminFailureQueueDto
