@@ -558,6 +558,14 @@ export const routes: Routes = [
         title: 'Admin Dashboard',
       },
       {
+        path: 'product-health',
+        loadComponent: () =>
+          import('./admin/admin-product-health/admin-product-health.component').then(
+            m => m.AdminProductHealthComponent
+          ),
+        title: 'Product Health',
+      },
+      {
         path: 'users',
         loadComponent: () =>
           import('./admin/admin-users/admin-users.component').then(m => m.AdminUsersComponent),

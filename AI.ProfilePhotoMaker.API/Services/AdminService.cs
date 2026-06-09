@@ -117,6 +117,27 @@ public class AdminService : IAdminService
             .OrderByDescending(log => log.CreatedAt)
             .Take(8)
             .ToListAsync();
+        var packageEntitlements = await _context.UserPackageEntitlements
+            .AsNoTracking()
+            .Include(entitlement => entitlement.OutcomePackageDefinition)
+            .Where(entitlement => entitlement.UserId == userId)
+            .OrderByDescending(entitlement => entitlement.CreatedAt)
+            .Take(8)
+            .Select(entitlement => new AdminPackageEntitlementDto
+            {
+                Id = entitlement.Id,
+                PackageCode = entitlement.OutcomePackageDefinition.Code,
+                PackageName = entitlement.OutcomePackageDefinition.Name,
+                Status = entitlement.Status.ToString(),
+                RemainingCandidates = entitlement.RemainingCandidates,
+                RemainingRefinements = entitlement.RemainingRefinements,
+                RemainingPremiumAugmentations = entitlement.RemainingPremiumAugmentations,
+                PlatformExportKitAvailable = entitlement.PlatformExportKitAvailable,
+                ActivatedAt = entitlement.ActivatedAt,
+                ConsumedAt = entitlement.ConsumedAt,
+                ExpiresAt = entitlement.ExpiresAt
+            })
+            .ToListAsync();
         var roles = await _userManager.GetRolesAsync(user) ?? Array.Empty<string>();
         var adminEmails = await ResolveAdminEmailsAsync(adminAuditLogs);
 
@@ -146,7 +167,11 @@ public class AdminService : IAdminService
                 Style = string.IsNullOrWhiteSpace(image.Style) ? null : image.Style,
                 CreatedAt = image.CreatedAt,
                 IsGenerated = image.IsGenerated,
-                IsOriginalUpload = image.IsOriginalUpload
+                IsOriginalUpload = image.IsOriginalUpload,
+                Provider = image.Provider,
+                ProviderModel = image.ProviderModel,
+                GenerationStatus = image.GenerationStatus,
+                FailureReason = image.FailureReason
             })
             .ToList() ?? new List<AdminRecentImageDto>();
 
@@ -208,6 +233,7 @@ public class AdminService : IAdminService
                 HasUsageHistory = usageLogs.Count > 0 || recentPurchases.Count > 0 || recentImages.Count > 0
             },
             RecentPurchases = recentPurchases,
+            PackageEntitlements = packageEntitlements,
             RecentImages = recentImages,
             ActivityHistory = activityHistory,
             RecentAdminActions = recentAdminActions
@@ -608,6 +634,208 @@ public class AdminService : IAdminService
             TotalCreditsOutstanding = totalCreditsOutstanding,
             TotalCreditsPurchased = totalCreditsPurchased,
             ActiveCoupons = activeCoupons
+        };
+    }
+
+    public async Task<AdminProductHealthDto> GetProductHealthAsync(string window)
+    {
+        var toUtc = DateTime.UtcNow;
+        var normalizedWindow = NormalizeProductHealthWindow(window);
+        var fromUtc = normalizedWindow switch
+        {
+            "24h" => toUtc.AddHours(-24),
+            "30d" => toUtc.AddDays(-30),
+            "all" => DateTime.MinValue,
+            _ => toUtc.AddDays(-7)
+        };
+
+        var imagesInWindow = _context.ProcessedImages.AsNoTracking()
+            .Where(image => image.CreatedAt >= fromUtc && image.CreatedAt <= toUtc);
+        var entitlementsInWindow = _context.UserPackageEntitlements.AsNoTracking()
+            .Include(entitlement => entitlement.OutcomePackageDefinition)
+            .Where(entitlement => entitlement.CreatedAt >= fromUtc && entitlement.CreatedAt <= toUtc);
+
+        var uploads = await imagesInWindow.CountAsync(image => image.IsOriginalUpload);
+        var successfulPreviewGenerations = await imagesInWindow.CountAsync(image =>
+            image.IsGenerated &&
+            image.GenerationStatus != "failed" &&
+            image.GenerationMode == "instant_headshot" &&
+            image.FailureReason != null &&
+            image.FailureReason.StartsWith("raw-preview:"));
+        var generatedImages = await imagesInWindow.CountAsync(image => image.IsGenerated && image.GenerationStatus != "failed");
+        var failedGenerations = await imagesInWindow.CountAsync(image => image.IsGenerated && image.GenerationStatus == "failed");
+        var paidPackagePurchases = await entitlementsInWindow.CountAsync(entitlement => entitlement.OutcomePackageDefinition.Price > 0);
+        var starterPurchases = await entitlementsInWindow.CountAsync(entitlement =>
+            entitlement.OutcomePackageDefinition.Price > 0 &&
+            (entitlement.OutcomePackageDefinition.Code.ToLower().Contains("starter") ||
+             entitlement.OutcomePackageDefinition.Name.ToLower().Contains("starter")));
+        var proPurchases = await entitlementsInWindow.CountAsync(entitlement =>
+            entitlement.OutcomePackageDefinition.Price > 0 &&
+            (entitlement.OutcomePackageDefinition.Code.ToLower().Contains("pro") ||
+             entitlement.OutcomePackageDefinition.Name.ToLower().Contains("pro")));
+
+        var packageMix = await entitlementsInWindow
+            .Where(entitlement => entitlement.OutcomePackageDefinition.Price > 0)
+            .GroupBy(entitlement => new
+            {
+                entitlement.OutcomePackageDefinition.Code,
+                entitlement.OutcomePackageDefinition.Name,
+                entitlement.OutcomePackageDefinition.Price
+            })
+            .Select(group => new AdminPackageMixDto
+            {
+                Code = group.Key.Code,
+                Name = group.Key.Name,
+                Purchases = group.Count(),
+                RevenueProxy = group.Count() * group.Key.Price
+            })
+            .OrderByDescending(package => package.Purchases)
+            .ToListAsync();
+
+        var fulfillmentRows = await entitlementsInWindow.ToListAsync();
+        var providerHealth = await imagesInWindow
+            .Where(image => image.IsGenerated)
+            .GroupBy(image => new
+            {
+                Provider = image.Provider ?? "unknown",
+                Model = image.ProviderModel ?? "unknown"
+            })
+            .Select(group => new AdminProviderHealthDto
+            {
+                Provider = group.Key.Provider,
+                Model = group.Key.Model,
+                GeneratedImages = group.Count(image => image.GenerationStatus != "failed"),
+                FailedImages = group.Count(image => image.GenerationStatus == "failed")
+            })
+            .OrderByDescending(provider => provider.GeneratedImages + provider.FailedImages)
+            .ToListAsync();
+
+        foreach (var provider in providerHealth)
+        {
+            var total = provider.GeneratedImages + provider.FailedImages;
+            provider.FailureRate = total == 0 ? 0 : Math.Round((decimal)provider.FailedImages / total, 4);
+        }
+
+        var topFailureReasons = await imagesInWindow
+            .Where(image => image.IsGenerated && image.GenerationStatus == "failed")
+            .GroupBy(image => image.FailureReason ?? "unknown")
+            .Select(group => new AdminFailureReasonDto { Reason = group.Key, Count = group.Count() })
+            .OrderByDescending(reason => reason.Count)
+            .Take(5)
+            .ToListAsync();
+
+        var openAiGenerated = providerHealth
+            .Where(provider => provider.Provider.Equals("openai", StringComparison.OrdinalIgnoreCase))
+            .Sum(provider => provider.GeneratedImages);
+        var replicateGenerated = providerHealth
+            .Where(provider => provider.Provider.Equals("replicate", StringComparison.OrdinalIgnoreCase))
+            .Sum(provider => provider.GeneratedImages);
+        var providerTotal = openAiGenerated + replicateGenerated;
+        var replicateShare = providerTotal == 0 ? 0 : Math.Round((decimal)replicateGenerated / providerTotal, 4);
+        var fallbackGenerated = providerHealth
+            .Where(provider => !provider.Provider.Equals("openai", StringComparison.OrdinalIgnoreCase) &&
+                               !provider.Provider.Equals("replicate", StringComparison.OrdinalIgnoreCase))
+            .Sum(provider => provider.GeneratedImages);
+        var advancedPhotoshootRequests = await _context.ModelCreationRequests.AsNoTracking()
+            .CountAsync(request => request.CreatedAt >= fromUtc && request.CreatedAt <= toUtc);
+        var latencySignalAvailable = false;
+        var qualityComplaintSignalAvailable = false;
+        var retirementRecommendation = BuildReplicateRetirementRecommendation(
+            replicateShare,
+            openAiGenerated,
+            replicateGenerated,
+            fallbackGenerated,
+            advancedPhotoshootRequests,
+            latencySignalAvailable,
+            qualityComplaintSignalAvailable);
+
+        return new AdminProductHealthDto
+        {
+            Window = normalizedWindow,
+            FromUtc = fromUtc,
+            ToUtc = toUtc,
+            Funnel = new AdminProductFunnelDto
+            {
+                Uploads = uploads,
+                SuccessfulPreviewGenerations = successfulPreviewGenerations,
+                PaidPackagePurchases = paidPackagePurchases,
+                StarterPurchases = starterPurchases,
+                ProPurchases = proPurchases,
+                ExportDownloads = null,
+                ExportDownloadsAvailable = false,
+                MedianGenerationTimeMs = null,
+                P95GenerationTimeMs = null,
+                GenerationLatencyAvailable = false,
+                PreviewGenerationSuccessRate = null,
+                PreviewGenerationSuccessRateAvailable = false,
+                PreviewToPaidConversionRate = successfulPreviewGenerations == 0 ? null : Math.Round((decimal)paidPackagePurchases / successfulPreviewGenerations, 4),
+                PreviewToPaidConversionRateAvailable = successfulPreviewGenerations > 0
+            },
+            PackageMix = packageMix,
+            PackageFulfillment = new AdminPackageFulfillmentDto
+            {
+                ActiveEntitlements = fulfillmentRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Active),
+                ConsumedEntitlements = fulfillmentRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Consumed),
+                ExpiredEntitlements = fulfillmentRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Expired),
+                RefundedEntitlements = fulfillmentRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Refunded),
+                RemainingCandidates = fulfillmentRows.Sum(entitlement => entitlement.RemainingCandidates),
+                RemainingRefinements = fulfillmentRows.Sum(entitlement => entitlement.RemainingRefinements),
+                RemainingPremiumAugmentations = fulfillmentRows.Sum(entitlement => entitlement.RemainingPremiumAugmentations),
+                ExportKitsAvailable = fulfillmentRows.Count(entitlement => entitlement.PlatformExportKitAvailable)
+            },
+            ProviderHealth = providerHealth,
+            FailureQueue = new AdminFailureQueueDto
+            {
+                FailedGenerations = failedGenerations,
+                TopReasons = topFailureReasons
+            },
+            ReplicateRetirement = new AdminReplicateRetirementDto
+            {
+                OpenAiGeneratedImages = openAiGenerated,
+                ReplicateGeneratedImages = replicateGenerated,
+                ReplicateUsageShare = replicateShare,
+                LatencySignalAvailable = latencySignalAvailable,
+                FallbackGeneratedImages = fallbackGenerated,
+                FallbackUseSignalAvailable = true,
+                AdvancedPhotoshootRequests = advancedPhotoshootRequests,
+                AdvancedPhotoshootUsageSignalAvailable = true,
+                QualityComplaintSignalAvailable = qualityComplaintSignalAvailable,
+                Recommendation = retirementRecommendation
+            }
+        };
+    }
+
+    private static string BuildReplicateRetirementRecommendation(
+        decimal replicateShare,
+        int openAiGenerated,
+        int replicateGenerated,
+        int fallbackGenerated,
+        int advancedPhotoshootRequests,
+        bool latencySignalAvailable,
+        bool qualityComplaintSignalAvailable)
+    {
+        var blockers = new List<string>();
+        if (replicateShare > 0.05m) blockers.Add("Replicate usage remains above 5%");
+        if (replicateGenerated > 0) blockers.Add("Replicate still produced images in this window");
+        if (fallbackGenerated > 0) blockers.Add("fallback provider usage is present");
+        if (advancedPhotoshootRequests > 0) blockers.Add("advanced custom photoshoot requests are present");
+        if (!latencySignalAvailable) blockers.Add("OpenAI median/p95 latency is not instrumented yet");
+        if (!qualityComplaintSignalAvailable) blockers.Add("quality complaint baseline is not instrumented yet");
+        if (openAiGenerated == 0) blockers.Add("OpenAI usage is not established in this window");
+
+        return blockers.Count == 0
+            ? "Replicate retirement looks safe for this window. Confirm support and quality trends before disabling fallback."
+            : $"Do not retire Replicate yet: {string.Join("; ", blockers)}.";
+    }
+
+    private static string NormalizeProductHealthWindow(string? window)
+    {
+        return window?.Trim().ToLowerInvariant() switch
+        {
+            "24h" => "24h",
+            "30d" => "30d",
+            "all" or "all-time" or "alltime" => "all",
+            _ => "7d"
         };
     }
 

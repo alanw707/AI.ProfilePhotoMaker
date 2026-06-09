@@ -129,7 +129,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     LastName = dto.LastName,
                     Gender = dto.Gender,
                     Ethnicity = dto.Ethnicity,
-                    Credits = 5, // Start with basic tier credits
+                    Credits = 0, // Free Preview replaces signup credits
                     LastCreditReset = DateTime.UtcNow,
                     SubscriptionTier = SubscriptionTier.Basic
                 };

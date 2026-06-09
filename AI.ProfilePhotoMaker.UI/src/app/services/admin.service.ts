@@ -51,6 +51,20 @@ export interface AdminCreditPurchaseHistoryDto {
   completedAt: string | null;
 }
 
+export interface AdminPackageEntitlementDto {
+  id: number;
+  packageCode: string;
+  packageName: string;
+  status: string;
+  remainingCandidates: number;
+  remainingRefinements: number;
+  remainingPremiumAugmentations: number;
+  platformExportKitAvailable: boolean;
+  activatedAt: string | null;
+  consumedAt: string | null;
+  expiresAt: string | null;
+}
+
 export interface AdminRecentImageDto {
   id: number;
   imageUrl: string;
@@ -59,6 +73,10 @@ export interface AdminRecentImageDto {
   createdAt: string;
   isGenerated: boolean;
   isOriginalUpload: boolean;
+  provider: string | null;
+  providerModel: string | null;
+  generationStatus: string | null;
+  failureReason: string | null;
 }
 
 export interface AdminUserActivityDto {
@@ -86,6 +104,7 @@ export interface AdminUserDiagnosticsDto {
   user: AdminUserDetailDto;
   metrics: AdminUserMetricsDto;
   recentPurchases: AdminCreditPurchaseHistoryDto[];
+  packageEntitlements: AdminPackageEntitlementDto[];
   recentImages: AdminRecentImageDto[];
   activityHistory: AdminUserActivityDto[];
   recentAdminActions: AdminUserAdminActionDto[];
@@ -141,6 +160,84 @@ export interface AdminDashboardDto {
   totalCreditsOutstanding: number;
   totalCreditsPurchased: number;
   activeCoupons: number;
+}
+
+export interface AdminProductHealthDto {
+  window: string;
+  fromUtc: string;
+  toUtc: string;
+  funnel: AdminProductFunnelDto;
+  packageMix: AdminPackageMixDto[];
+  packageFulfillment: AdminPackageFulfillmentDto;
+  providerHealth: AdminProviderHealthDto[];
+  failureQueue: AdminFailureQueueDto;
+  replicateRetirement: AdminReplicateRetirementDto;
+}
+
+export interface AdminProductFunnelDto {
+  uploads: number;
+  successfulPreviewGenerations: number;
+  paidPackagePurchases: number;
+  starterPurchases: number;
+  proPurchases: number;
+  exportDownloads: number | null;
+  exportDownloadsAvailable: boolean;
+  medianGenerationTimeMs: number | null;
+  p95GenerationTimeMs: number | null;
+  generationLatencyAvailable: boolean;
+  previewGenerationSuccessRate: number | null;
+  previewGenerationSuccessRateAvailable: boolean;
+  previewToPaidConversionRate: number | null;
+  previewToPaidConversionRateAvailable: boolean;
+}
+
+export interface AdminPackageMixDto {
+  code: string;
+  name: string;
+  purchases: number;
+  revenueProxy: number;
+}
+
+export interface AdminPackageFulfillmentDto {
+  activeEntitlements: number;
+  consumedEntitlements: number;
+  expiredEntitlements: number;
+  refundedEntitlements: number;
+  remainingCandidates: number;
+  remainingRefinements: number;
+  remainingPremiumAugmentations: number;
+  exportKitsAvailable: number;
+}
+
+export interface AdminProviderHealthDto {
+  provider: string;
+  model: string;
+  generatedImages: number;
+  failedImages: number;
+  failureRate: number;
+}
+
+export interface AdminFailureQueueDto {
+  failedGenerations: number;
+  topReasons: AdminFailureReasonDto[];
+}
+
+export interface AdminFailureReasonDto {
+  reason: string;
+  count: number;
+}
+
+export interface AdminReplicateRetirementDto {
+  openAiGeneratedImages: number;
+  replicateGeneratedImages: number;
+  replicateUsageShare: number;
+  latencySignalAvailable: boolean;
+  fallbackGeneratedImages: number;
+  fallbackUseSignalAvailable: boolean;
+  advancedPhotoshootRequests: number;
+  advancedPhotoshootUsageSignalAvailable: boolean;
+  qualityComplaintSignalAvailable: boolean;
+  recommendation: string;
 }
 
 export interface PaginatedResult<T> {
@@ -241,5 +338,12 @@ export class AdminService extends BaseHttpService {
 
   getDashboard(): Observable<AdminDashboardDto> {
     return this.get<AdminDashboardDto>('admin/dashboard', { withCredentials: true });
+  }
+
+  getProductHealth(window = '7d'): Observable<AdminProductHealthDto> {
+    return this.get<AdminProductHealthDto>(
+      `admin/product-health?window=${encodeURIComponent(window)}`,
+      { withCredentials: true }
+    );
   }
 }

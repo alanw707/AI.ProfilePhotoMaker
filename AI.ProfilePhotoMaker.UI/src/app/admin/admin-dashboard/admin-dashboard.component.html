@@ -3,12 +3,13 @@
     <div>
       <p class="admin-kicker">Operations Center</p>
       <h1>Admin Dashboard</h1>
-      <p class="admin-subtitle">Manage users, credits, coupons, and operational audits.</p>
+      <p class="admin-subtitle">Manage account operations, promotions, campaigns, and audit controls.</p>
     </div>
   </header>
 
   <nav class="admin-nav">
     <a routerLink="/admin/dashboard" routerLinkActive="is-active">Overview</a>
+    <a routerLink="/admin/product-health" routerLinkActive="is-active">Product Health</a>
     <a routerLink="/admin/users" routerLinkActive="is-active">Users</a>
     <a routerLink="/admin/coupons" routerLinkActive="is-active">Coupons</a>
     <a routerLink="/admin/audit-log" routerLinkActive="is-active">Audit Log</a>
@@ -36,11 +37,11 @@
       <p>Active Users</p>
       <h2>{{ dashboard.activeUsers }}</h2>
     </article>
-    <article class="metric-card">
+    <article class="metric-card metric-card-secondary">
       <p>Credits Outstanding</p>
       <h2>{{ dashboard.totalCreditsOutstanding }}</h2>
     </article>
-    <article class="metric-card">
+    <article class="metric-card metric-card-secondary">
       <p>Credits Purchased</p>
       <h2>{{ dashboard.totalCreditsPurchased }}</h2>
     </article>
@@ -50,10 +51,22 @@
     </article>
   </div>
 
+  <section class="admin-panel product-health-summary" *ngIf="!isLoading && !error">
+    <div class="panel-heading">
+      <div>
+        <h2>Product Health</h2>
+        <p>
+          Track upload-to-preview conversion, package fulfillment, provider health, and Replicate retirement signals.
+        </p>
+      </div>
+      <a routerLink="/admin/product-health" class="btn btn-primary">Open Product Health</a>
+    </div>
+  </section>
+
   <section class="quick-actions">
     <a routerLink="/admin/users" class="action-card">
       <h3>User Management</h3>
-      <p>Search accounts, lock/unlock users, and adjust credit balances.</p>
+      <p>Search accounts, inspect package state, resolve access issues, and apply controlled account actions.</p>
     </a>
     <a routerLink="/admin/coupons" class="action-card">
       <h3>Coupon Management</h3>

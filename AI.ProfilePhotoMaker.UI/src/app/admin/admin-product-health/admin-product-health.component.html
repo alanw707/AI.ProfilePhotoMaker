@@ -1,0 +1,245 @@
+<section class="admin-shell">
+  <header class="admin-header">
+    <div>
+      <p class="admin-kicker">Product Health</p>
+      <h1>Product Health</h1>
+      <p class="admin-subtitle">
+        Monitor upload-to-preview conversion, package fulfillment, provider health, and Replicate retirement signals.
+      </p>
+    </div>
+  </header>
+
+  <nav class="admin-nav">
+    <a routerLink="/admin/dashboard" routerLinkActive="is-active">Overview</a>
+    <a routerLink="/admin/product-health" routerLinkActive="is-active">Product Health</a>
+    <a routerLink="/admin/users" routerLinkActive="is-active">Users</a>
+    <a routerLink="/admin/coupons" routerLinkActive="is-active">Coupons</a>
+    <a routerLink="/admin/audit-log" routerLinkActive="is-active">Audit Log</a>
+    <a routerLink="/admin/campaigns" routerLinkActive="is-active">Campaigns</a>
+  </nav>
+
+  <section class="admin-panel window-panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Reporting window</h2>
+        <p>Default is 7 days; switch to inspect incident windows or all-time package signal.</p>
+      </div>
+      <div class="window-toggle" role="group" aria-label="Product health reporting window">
+        <button
+          *ngFor="let window of windows"
+          type="button"
+          class="btn"
+          [class.btn-primary]="selectedWindow === window.value"
+          [class.btn-ghost]="selectedWindow !== window.value"
+          (click)="selectWindow(window.value)">
+          {{ window.label }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <div *ngIf="isLoading" class="empty-state">
+    <p>Loading product health...</p>
+  </div>
+
+  <div *ngIf="error" class="error-text admin-panel" role="alert" aria-live="polite">
+    <p>{{ error }}</p>
+    <button class="btn btn-primary" (click)="loadProductHealth()" [disabled]="isLoading">Retry</button>
+  </div>
+
+  <ng-container *ngIf="!isLoading && !error && productHealth as health">
+    <section class="metrics-grid product-health-grid">
+      <article class="metric-card">
+        <p>Uploads</p>
+        <h2>{{ health.funnel.uploads }}</h2>
+      </article>
+      <article class="metric-card">
+        <p>Preview generations</p>
+        <h2>{{ health.funnel.successfulPreviewGenerations }}</h2>
+      </article>
+      <article class="metric-card">
+        <p>Preview success rate</p>
+        <h2>
+          {{
+            health.funnel.previewGenerationSuccessRateAvailable
+              ? formatRate(health.funnel.previewGenerationSuccessRate)
+              : 'Unavailable'
+          }}
+        </h2>
+      </article>
+      <article class="metric-card">
+        <p>Preview → paid</p>
+        <h2>
+          {{
+            health.funnel.previewToPaidConversionRateAvailable
+              ? formatRate(health.funnel.previewToPaidConversionRate)
+              : 'Unavailable'
+          }}
+        </h2>
+      </article>
+      <article class="metric-card">
+        <p>Starter purchases</p>
+        <h2>{{ health.funnel.starterPurchases }}</h2>
+      </article>
+      <article class="metric-card">
+        <p>Pro purchases</p>
+        <h2>{{ health.funnel.proPurchases }}</h2>
+      </article>
+      <article class="metric-card">
+        <p>Export downloads</p>
+        <h2>{{ health.funnel.exportDownloadsAvailable ? health.funnel.exportDownloads : 'Unavailable' }}</h2>
+      </article>
+      <article class="metric-card">
+        <p>Median generation time</p>
+        <h2>
+          {{ health.funnel.generationLatencyAvailable ? health.funnel.medianGenerationTimeMs + ' ms' : 'Unavailable' }}
+        </h2>
+      </article>
+      <article class="metric-card">
+        <p>P95 generation time</p>
+        <h2>
+          {{ health.funnel.generationLatencyAvailable ? health.funnel.p95GenerationTimeMs + ' ms' : 'Unavailable' }}
+        </h2>
+      </article>
+    </section>
+
+    <section class="panel-grid">
+      <article class="admin-panel">
+        <div class="panel-heading">
+          <h2>Package Mix</h2>
+          <span class="pill">{{ health.packageMix.length }} packages</span>
+        </div>
+        <div *ngIf="health.packageMix.length; else noPackages" class="stack-list">
+          <div class="stack-row" *ngFor="let pkg of health.packageMix">
+            <div>
+              <strong>{{ pkg.name }}</strong>
+              <p>{{ pkg.code }}</p>
+            </div>
+            <div class="row-metrics">
+              <span>{{ pkg.purchases }} purchases</span>
+              <span>{{ pkg.revenueProxy | currency }}</span>
+            </div>
+          </div>
+        </div>
+        <ng-template #noPackages>
+          <div class="empty-state">No paid package purchases in this window.</div>
+        </ng-template>
+      </article>
+
+      <article class="admin-panel">
+        <h2>Package Fulfillment</h2>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span>Active</span>
+            <strong>{{ health.packageFulfillment.activeEntitlements }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Consumed</span>
+            <strong>{{ health.packageFulfillment.consumedEntitlements }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Expired</span>
+            <strong>{{ health.packageFulfillment.expiredEntitlements }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Refunded</span>
+            <strong>{{ health.packageFulfillment.refundedEntitlements }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Remaining candidates</span>
+            <strong>{{ health.packageFulfillment.remainingCandidates }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Remaining refinements</span>
+            <strong>{{ health.packageFulfillment.remainingRefinements }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Remaining augmentations</span>
+            <strong>{{ health.packageFulfillment.remainingPremiumAugmentations }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Export kits available</span>
+            <strong>{{ health.packageFulfillment.exportKitsAvailable }}</strong>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel-grid">
+      <article class="admin-panel">
+        <div class="panel-heading">
+          <h2>Provider Health</h2>
+          <span class="pill">OpenAI vs Replicate</span>
+        </div>
+        <div *ngIf="health.providerHealth.length; else noProviders" class="stack-list">
+          <div class="stack-row" *ngFor="let provider of health.providerHealth">
+            <div>
+              <strong>{{ provider.provider }}</strong>
+              <p>{{ provider.model }}</p>
+            </div>
+            <div class="row-metrics">
+              <span>{{ provider.generatedImages }} generated</span>
+              <span>{{ provider.failedImages }} failed</span>
+              <span>{{ formatRate(provider.failureRate) }} failure</span>
+            </div>
+          </div>
+        </div>
+        <ng-template #noProviders>
+          <div class="empty-state">No provider generation data in this window.</div>
+        </ng-template>
+      </article>
+
+      <article class="admin-panel">
+        <h2>Failure Queue</h2>
+        <p class="hero-copy">{{ health.failureQueue.failedGenerations }} failed generations in this window.</p>
+        <div *ngIf="health.failureQueue.topReasons.length; else noFailures" class="stack-list">
+          <div class="stack-row" *ngFor="let reason of health.failureQueue.topReasons">
+            <strong>{{ reason.reason }}</strong>
+            <span>{{ reason.count }}</span>
+          </div>
+        </div>
+        <ng-template #noFailures>
+          <div class="empty-state">No failed generations in this window.</div>
+        </ng-template>
+      </article>
+    </section>
+
+    <section class="admin-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Replicate Retirement Signal</h2>
+          <p>{{ health.replicateRetirement.recommendation }}</p>
+        </div>
+        <span class="pill">{{ formatRate(health.replicateRetirement.replicateUsageShare) }} Replicate share</span>
+      </div>
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span>OpenAI generated</span>
+          <strong>{{ health.replicateRetirement.openAiGeneratedImages }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Replicate generated</span>
+          <strong>{{ health.replicateRetirement.replicateGeneratedImages }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Fallback generated</span>
+          <strong>{{ health.replicateRetirement.fallbackGeneratedImages }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Advanced photoshoot requests</span>
+          <strong>{{ health.replicateRetirement.advancedPhotoshootRequests }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>OpenAI latency signal</span>
+          <strong>{{ health.replicateRetirement.latencySignalAvailable ? 'Available' : 'Unavailable' }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Quality complaint baseline</span>
+          <strong>
+            {{ health.replicateRetirement.qualityComplaintSignalAvailable ? 'Available' : 'Unavailable' }}
+          </strong>
+        </div>
+      </div>
+    </section>
+  </ng-container>
+</section>

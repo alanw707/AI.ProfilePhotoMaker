@@ -12,6 +12,7 @@
 
   <nav class="admin-nav">
     <a routerLink="/admin/dashboard" routerLinkActive="is-active">Overview</a>
+    <a routerLink="/admin/product-health" routerLinkActive="is-active">Product Health</a>
     <a routerLink="/admin/users" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: false }">Users</a>
     <a routerLink="/admin/coupons" routerLinkActive="is-active">Coupons</a>
     <a routerLink="/admin/audit-log" routerLinkActive="is-active">Audit Log</a>
@@ -166,12 +167,53 @@
               diagnostics.metrics.currentCredits === 0 && diagnostics.metrics.hasUsageHistory
                 ? 'Credits likely consumed through usage'
                 : diagnostics.metrics.currentCredits === 0
-                  ? 'No usage history visible yet'
+                  ? 'Expected for new signups: Free Preview replaces signup credits'
                   : 'Credits remain available'
             }}
           </strong>
         </div>
       </div>
+    </section>
+
+    <section class="admin-panel">
+      <div class="panel-heading">
+        <h2>Package Entitlements</h2>
+        <span class="pill">{{ diagnostics.packageEntitlements.length }} records</span>
+      </div>
+      <div class="table-wrap" *ngIf="diagnostics.packageEntitlements.length; else noEntitlements">
+        <table>
+          <thead>
+            <tr>
+              <th>Package</th>
+              <th>Status</th>
+              <th>Candidates</th>
+              <th>Refinements</th>
+              <th>Augmentations</th>
+              <th>Export kit</th>
+              <th>Activated</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let entitlement of diagnostics.packageEntitlements">
+              <td>
+                {{ entitlement.packageName }}
+                <span class="mono-text">{{ entitlement.packageCode }}</span>
+              </td>
+              <td>{{ entitlement.status }}</td>
+              <td>{{ entitlement.remainingCandidates }}</td>
+              <td>{{ entitlement.remainingRefinements }}</td>
+              <td>{{ entitlement.remainingPremiumAugmentations }}</td>
+              <td>{{ entitlement.platformExportKitAvailable ? 'Available' : 'Unavailable' }}</td>
+              <td>{{ entitlement.activatedAt ? (entitlement.activatedAt | date: 'medium') : 'Not activated' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noEntitlements>
+        <div class="empty-state">
+          No package entitlements yet. New users should start with Free Preview rather than signup credits.
+        </div>
+      </ng-template>
     </section>
 
     <section class="panel-grid">
@@ -260,8 +302,12 @@
             <div class="badge-row">
               <span class="pill">{{ image.kind }}</span>
               <span class="pill" *ngIf="image.style">{{ image.style }}</span>
+              <span class="pill" *ngIf="image.provider">{{ image.provider }}</span>
+              <span class="pill" *ngIf="image.providerModel">{{ image.providerModel }}</span>
+              <span class="pill" *ngIf="image.generationStatus">{{ image.generationStatus }}</span>
             </div>
             <p>{{ image.createdAt | date: 'medium' }}</p>
+            <p *ngIf="image.failureReason" class="error-text">Failure: {{ image.failureReason }}</p>
           </div>
         </article>
       </div>

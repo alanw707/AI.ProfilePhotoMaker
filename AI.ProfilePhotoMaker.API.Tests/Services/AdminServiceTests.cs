@@ -313,6 +313,55 @@ public class AdminServiceTests
     }
 
     [Fact]
+    public async Task GetProductHealthAsync_ReportsPivotMetricsAndUnavailableSignals()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserWithProfileAsync(context, credits: 0);
+        var profile = await context.UserProfiles.FirstAsync(p => p.UserId == userId);
+        var now = DateTime.UtcNow;
+
+        var starter = new OutcomePackageDefinition { Code = "starter", Name = "Starter Package", Price = 9m, Currency = "USD", IncludedCandidateCount = 3 };
+        var pro = new OutcomePackageDefinition { Code = "pro", Name = "Pro Package", Price = 19m, Currency = "USD", IncludedCandidateCount = 9 };
+        context.OutcomePackageDefinitions.AddRange(starter, pro);
+        await context.SaveChangesAsync();
+
+        context.ProcessedImages.AddRange(
+            new ProcessedImage { UserProfileId = profile.Id, OriginalImageUrl = "upload", ProcessedImageUrl = "upload", Style = "source", IsOriginalUpload = true, CreatedAt = now.AddDays(-1), ScheduledDeletionDate = now.AddDays(29) },
+            new ProcessedImage { UserProfileId = profile.Id, OriginalImageUrl = "o", ProcessedImageUrl = "openai", Style = "linkedin", IsGenerated = true, Provider = "openai", ProviderModel = "gpt-image-2", GenerationMode = "instant_headshot", GenerationStatus = "succeeded", FailureReason = "raw-preview:protected/raw.png", CreatedAt = now.AddDays(-1), ScheduledDeletionDate = now.AddDays(29) },
+            new ProcessedImage { UserProfileId = profile.Id, OriginalImageUrl = "o", ProcessedImageUrl = "failed", Style = "linkedin", IsGenerated = true, Provider = "openai", ProviderModel = "gpt-image-2", GenerationMode = "instant_headshot", GenerationStatus = "failed", FailureReason = "ProviderTimeout", CreatedAt = now.AddDays(-1), ScheduledDeletionDate = now.AddDays(29) },
+            new ProcessedImage { UserProfileId = profile.Id, OriginalImageUrl = "o", ProcessedImageUrl = "replicate", Style = "executive", IsGenerated = true, Provider = "replicate", ProviderModel = "legacy", GenerationStatus = "succeeded", CreatedAt = now.AddDays(-1), ScheduledDeletionDate = now.AddDays(29) });
+        context.UserPackageEntitlements.AddRange(
+            new UserPackageEntitlement { UserId = userId, OutcomePackageDefinitionId = starter.Id, Status = PackageEntitlementStatus.Active, RemainingCandidates = 2, RemainingRefinements = 1, CreatedAt = now.AddDays(-1), UpdatedAt = now.AddDays(-1) },
+            new UserPackageEntitlement { UserId = userId, OutcomePackageDefinitionId = pro.Id, Status = PackageEntitlementStatus.Consumed, RemainingCandidates = 0, RemainingRefinements = 0, CreatedAt = now.AddDays(-20), UpdatedAt = now.AddDays(-20) });
+        context.ModelCreationRequests.Add(new ModelCreationRequest { UserId = userId, ModelName = "advanced", CreatedAt = now.AddDays(-1) });
+        await context.SaveChangesAsync();
+
+        var userManager = UserManagerMockFactory.Create();
+        var service = CreateService(context, userManager.Object);
+
+        var health = await service.GetProductHealthAsync("7d");
+
+        Assert.Equal(1, health.Funnel.Uploads);
+        Assert.Equal(1, health.Funnel.SuccessfulPreviewGenerations);
+        Assert.Equal(1, health.Funnel.StarterPurchases);
+        Assert.Equal(0, health.Funnel.ProPurchases);
+        Assert.False(health.Funnel.PreviewGenerationSuccessRateAvailable);
+        Assert.Null(health.Funnel.PreviewGenerationSuccessRate);
+        Assert.True(health.Funnel.PreviewToPaidConversionRateAvailable);
+        Assert.Equal(1m, health.Funnel.PreviewToPaidConversionRate);
+        Assert.False(health.Funnel.ExportDownloadsAvailable);
+        Assert.Null(health.Funnel.ExportDownloads);
+        Assert.False(health.Funnel.GenerationLatencyAvailable);
+        Assert.Equal(1, health.PackageFulfillment.ActiveEntitlements);
+        Assert.Equal(0, health.PackageFulfillment.ConsumedEntitlements);
+        Assert.Equal(1, health.FailureQueue.FailedGenerations);
+        Assert.Equal(1, health.ReplicateRetirement.ReplicateGeneratedImages);
+        Assert.Equal(1, health.ReplicateRetirement.AdvancedPhotoshootRequests);
+        Assert.False(health.ReplicateRetirement.LatencySignalAvailable);
+        Assert.False(health.ReplicateRetirement.QualityComplaintSignalAvailable);
+    }
+
+    [Fact]
     public async Task GetUserDiagnosticsAsync_ResolvesRetentionActorLabel()
     {
         using var context = CreateContext();
