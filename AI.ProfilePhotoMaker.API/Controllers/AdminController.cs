@@ -198,6 +198,21 @@ public class AdminController : BaseController
         }
     }
 
+    [HttpGet("product-health")]
+    public async Task<IActionResult> GetProductHealth([FromQuery] string window = "7d")
+    {
+        try
+        {
+            var productHealth = await _adminService.GetProductHealthAsync(window);
+            return SuccessResponse(productHealth);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load admin product health for window {Window}", S(window));
+            return ErrorResponse("InternalError", "Failed to load product health", 500);
+        }
+    }
+
     [HttpPost("cleanup-orphaned-model")]
     public async Task<IActionResult> CleanupOrphanedModel([FromBody] CleanupRequest request)
     {

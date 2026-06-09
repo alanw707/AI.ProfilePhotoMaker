@@ -8,8 +8,7 @@ public class BasicTierService : IBasicTierService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<BasicTierService> _logger;
-    private const int WeeklyCredits = 5; // Weekly top-up amount (unchanged)
-    private const int SignupCredits = 25; // Free trial: 15 (train) + 5x2 (2 headshots)
+    private const int WeeklyCredits = 5; // Weekly top-up amount for legacy credit flows
     private const int DaysInWeek = 7;
     public BasicTierService(ApplicationDbContext context, ILogger<BasicTierService> logger)
     {

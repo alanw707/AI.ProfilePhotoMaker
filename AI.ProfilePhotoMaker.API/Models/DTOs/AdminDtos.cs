@@ -29,6 +29,7 @@ public class AdminUserDiagnosticsDto
     public AdminUserDetailDto User { get; set; } = new();
     public AdminUserMetricsDto Metrics { get; set; } = new();
     public List<AdminCreditPurchaseHistoryDto> RecentPurchases { get; set; } = new();
+    public List<AdminPackageEntitlementDto> PackageEntitlements { get; set; } = new();
     public List<AdminRecentImageDto> RecentImages { get; set; } = new();
     public List<AdminUserActivityDto> ActivityHistory { get; set; } = new();
     public List<AdminUserAdminActionDto> RecentAdminActions { get; set; } = new();
@@ -62,6 +63,21 @@ public class AdminCreditPurchaseHistoryDto
     public DateTime? CompletedAt { get; set; }
 }
 
+public class AdminPackageEntitlementDto
+{
+    public int Id { get; set; }
+    public string PackageCode { get; set; } = string.Empty;
+    public string PackageName { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public int RemainingCandidates { get; set; }
+    public int RemainingRefinements { get; set; }
+    public int RemainingPremiumAugmentations { get; set; }
+    public bool PlatformExportKitAvailable { get; set; }
+    public DateTime? ActivatedAt { get; set; }
+    public DateTime? ConsumedAt { get; set; }
+    public DateTime? ExpiresAt { get; set; }
+}
+
 public class AdminRecentImageDto
 {
     public int Id { get; set; }
@@ -71,6 +87,10 @@ public class AdminRecentImageDto
     public DateTime CreatedAt { get; set; }
     public bool IsGenerated { get; set; }
     public bool IsOriginalUpload { get; set; }
+    public string? Provider { get; set; }
+    public string? ProviderModel { get; set; }
+    public string? GenerationStatus { get; set; }
+    public string? FailureReason { get; set; }
 }
 
 public class AdminUserActivityDto
@@ -170,6 +190,92 @@ public class AdminDashboardDto
     public int TotalCreditsOutstanding { get; set; }
     public long TotalCreditsPurchased { get; set; }
     public int ActiveCoupons { get; set; }
+}
+
+public class AdminProductHealthDto
+{
+    public string Window { get; set; } = "7d";
+    public DateTime FromUtc { get; set; }
+    public DateTime ToUtc { get; set; }
+    public AdminProductFunnelDto Funnel { get; set; } = new();
+    public List<AdminPackageMixDto> PackageMix { get; set; } = new();
+    public AdminPackageFulfillmentDto PackageFulfillment { get; set; } = new();
+    public List<AdminProviderHealthDto> ProviderHealth { get; set; } = new();
+    public AdminFailureQueueDto FailureQueue { get; set; } = new();
+    public AdminReplicateRetirementDto ReplicateRetirement { get; set; } = new();
+}
+
+public class AdminProductFunnelDto
+{
+    public int Uploads { get; set; }
+    public int SuccessfulPreviewGenerations { get; set; }
+    public int PaidPackagePurchases { get; set; }
+    public int StarterPurchases { get; set; }
+    public int ProPurchases { get; set; }
+    public int? ExportDownloads { get; set; }
+    public bool ExportDownloadsAvailable { get; set; }
+    public int? MedianGenerationTimeMs { get; set; }
+    public int? P95GenerationTimeMs { get; set; }
+    public bool GenerationLatencyAvailable { get; set; }
+    public decimal? PreviewGenerationSuccessRate { get; set; }
+    public bool PreviewGenerationSuccessRateAvailable { get; set; }
+    public decimal? PreviewToPaidConversionRate { get; set; }
+    public bool PreviewToPaidConversionRateAvailable { get; set; }
+}
+
+public class AdminPackageMixDto
+{
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public int Purchases { get; set; }
+    public decimal RevenueProxy { get; set; }
+}
+
+public class AdminPackageFulfillmentDto
+{
+    public int ActiveEntitlements { get; set; }
+    public int ConsumedEntitlements { get; set; }
+    public int ExpiredEntitlements { get; set; }
+    public int RefundedEntitlements { get; set; }
+    public int RemainingCandidates { get; set; }
+    public int RemainingRefinements { get; set; }
+    public int RemainingPremiumAugmentations { get; set; }
+    public int ExportKitsAvailable { get; set; }
+}
+
+public class AdminProviderHealthDto
+{
+    public string Provider { get; set; } = "unknown";
+    public string Model { get; set; } = "unknown";
+    public int GeneratedImages { get; set; }
+    public int FailedImages { get; set; }
+    public decimal FailureRate { get; set; }
+}
+
+public class AdminFailureQueueDto
+{
+    public int FailedGenerations { get; set; }
+    public List<AdminFailureReasonDto> TopReasons { get; set; } = new();
+}
+
+public class AdminFailureReasonDto
+{
+    public string Reason { get; set; } = "unknown";
+    public int Count { get; set; }
+}
+
+public class AdminReplicateRetirementDto
+{
+    public int OpenAiGeneratedImages { get; set; }
+    public int ReplicateGeneratedImages { get; set; }
+    public decimal ReplicateUsageShare { get; set; }
+    public bool LatencySignalAvailable { get; set; }
+    public int FallbackGeneratedImages { get; set; }
+    public bool FallbackUseSignalAvailable { get; set; }
+    public int AdvancedPhotoshootRequests { get; set; }
+    public bool AdvancedPhotoshootUsageSignalAvailable { get; set; }
+    public bool QualityComplaintSignalAvailable { get; set; }
+    public string Recommendation { get; set; } = string.Empty;
 }
 
 public class AdminActionReasonDto

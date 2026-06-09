@@ -64,6 +64,10 @@ public class ProcessedImageDto
     public DateTime CreatedAt { get; set; }
     public bool IsGenerated { get; set; }
     public bool IsOriginalUpload { get; set; }
+    public string? Provider { get; set; }
+    public string? ProviderModel { get; set; }
+    public string? GenerationStatus { get; set; }
+    public string? FailureReason { get; set; }
 }
 
 public class UserProfileStatsDto

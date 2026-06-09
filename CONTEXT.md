@@ -20,6 +20,11 @@ An optional secondary area for non-professional transformations such as cartoon,
 
 The internal accounting mechanism for provider cost, package consumption, refunds, and admin/debug visibility. It should not be part of the primary user-facing pricing language.
 
+## Signup credit grant
+
+A legacy onboarding credit balance given to new users before the outcome-package pivot; new signups should receive a Free Preview path instead.
+_Avoid_: Free credits, welcome credits.
+
 ## Outfit upgrade
 
 A premium augmentation that changes visible clothing into role-appropriate professional attire while preserving identity and avoiding credential impersonation, sexualized clothing, drastic body changes, or status deception.
@@ -57,6 +62,21 @@ A non-generative post-generation edit applied to a final result, such as crop, z
 ## Photo workspace
 
 The user-facing workspace for a profile photo package. It contains the source photo, generated variants, scores, selected best shot, refinements, premium augmentations, platform exports, and package download. It replaces gallery as the primary user-facing concept.
+
+## Product health
+
+The operational view of whether the profile-photo workflow is converting, generating successfully, fulfilling package entitlements, and controlling provider cost.
+_Avoid_: Admin dashboard when referring specifically to pivot funnel and generation health.
+
+## Product funnel
+
+The measurable path from source photo upload to Free Preview generation, paid outcome package purchase, and platform export download.
+_Avoid_: Sales funnel when referring to in-product workflow conversion.
+
+## Package fulfillment
+
+The completion state of a package entitlement as candidates, refinements, premium augmentations, best-shot selection, and platform exports are consumed.
+_Avoid_: Credit usage when referring to user-facing package completion.
 
 ## Platform export kit
 
@@ -100,3 +120,5 @@ The legacy implementation behind the advanced custom photoshoot pack. It remains
 - A **Portrait style** is classified by frontend-derived metadata from the existing active style name into a recommended professional group, a more styles group, or a fun styles group until merchandising metadata moves server-side.
 - A **Creative style pack** contains styles classified as fun and remains separate from professional **Portrait styles**.
 - A **Professional profile photo package** contains one or more generated candidates from an **Instant headshot** plus optional **Photo adjustment**, **Best shot selector**, **Premium augmentation**, and **Platform export kit**.
+- **Product health** observes the **Product funnel** and **Package fulfillment** without replacing account operations.
+- **Package fulfillment** belongs to exactly one **Package entitlement**.

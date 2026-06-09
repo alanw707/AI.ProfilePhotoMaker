@@ -17,7 +17,7 @@ public class UserProfile
 
     // Basic tier and subscription management
     public SubscriptionTier SubscriptionTier { get; set; } = SubscriptionTier.Basic;
-    public int Credits { get; set; } = 25; // Unified credits balance (tops up to 5 weekly if below)
+    public int Credits { get; set; } = 0; // Internal credit ledger balance; new users start with Free Preview instead
     public DateTime LastCreditReset { get; set; } = DateTime.UtcNow;
 
     public List<ProcessedImage> ProcessedImages { get; set; } = new List<ProcessedImage>();

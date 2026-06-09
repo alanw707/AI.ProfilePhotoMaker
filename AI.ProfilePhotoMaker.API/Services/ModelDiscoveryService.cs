@@ -396,7 +396,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 {
                     UserId = userId,
                     SubscriptionTier = SubscriptionTier.Basic,
-                    Credits = 5,
+                    Credits = 0,
                     LastCreditReset = DateTime.UtcNow
                 };
                 _context.UserProfiles.Add(userProfile);
@@ -595,7 +595,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 {
                     UserId = userId,
                     SubscriptionTier = SubscriptionTier.Basic,
-                    Credits = 5,
+                    Credits = 0,
                     LastCreditReset = DateTime.UtcNow
                 };
                 _context.UserProfiles.Add(userProfile);

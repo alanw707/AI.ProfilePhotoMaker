@@ -112,7 +112,11 @@ public class UserProfileRepository : IUserProfileRepository
                 Style = i.Style,
                 CreatedAt = i.CreatedAt,
                 IsGenerated = i.IsGenerated,
-                IsOriginalUpload = i.IsOriginalUpload
+                IsOriginalUpload = i.IsOriginalUpload,
+                Provider = i.Provider,
+                ProviderModel = i.ProviderModel,
+                GenerationStatus = i.GenerationStatus,
+                FailureReason = i.FailureReason
             })
             .ToListAsync();
 
@@ -165,7 +169,11 @@ public class UserProfileRepository : IUserProfileRepository
                 Style = i.Style,
                 CreatedAt = i.CreatedAt,
                 IsGenerated = i.IsGenerated,
-                IsOriginalUpload = i.IsOriginalUpload
+                IsOriginalUpload = i.IsOriginalUpload,
+                Provider = i.Provider,
+                ProviderModel = i.ProviderModel,
+                GenerationStatus = i.GenerationStatus,
+                FailureReason = i.FailureReason
             })
             .ToListAsync();
 
@@ -210,7 +218,11 @@ public class UserProfileRepository : IUserProfileRepository
                 Style = i.Style,
                 CreatedAt = i.CreatedAt,
                 IsGenerated = i.IsGenerated,
-                IsOriginalUpload = i.IsOriginalUpload
+                IsOriginalUpload = i.IsOriginalUpload,
+                Provider = i.Provider,
+                ProviderModel = i.ProviderModel,
+                GenerationStatus = i.GenerationStatus,
+                FailureReason = i.FailureReason
             })
             .ToListAsync();
 

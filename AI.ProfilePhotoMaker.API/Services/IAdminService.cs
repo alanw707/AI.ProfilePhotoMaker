@@ -17,4 +17,5 @@ public interface IAdminService
     Task<bool> DeleteCouponAsync(int couponId, string adminUserId);
     Task<(List<AdminAuditLogDto> Logs, int TotalCount)> GetAuditLogsAsync(int page, int pageSize, string? actionFilter);
     Task<AdminDashboardDto> GetDashboardAsync();
+    Task<AdminProductHealthDto> GetProductHealthAsync(string window);
 }
