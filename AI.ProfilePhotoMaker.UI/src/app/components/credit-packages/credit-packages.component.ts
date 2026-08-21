@@ -34,6 +34,7 @@ import {
   OutcomePackageDefinition,
   ProfileWorkflowService,
 } from '../../services/profile-workflow.service';
+import { AnalyticsService } from '../../services/analytics.service';
 
 interface BillingDetailsForm {
   name: string;
@@ -111,6 +112,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     private _notificationService: NotificationService,
     private _themeService: ThemeService,
     private _route: ActivatedRoute,
+    private _analytics: AnalyticsService,
     private _cdr: ChangeDetectorRef
   ) {}
 
@@ -687,6 +689,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   }
 
   private _finalizeSuccess(updatedCredits: UserCreditStatus | null): void {
+    this._trackPurchase();
     this.loadCreditStatus();
 
     if (updatedCredits) {
@@ -696,6 +699,33 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     this._resetStripeState();
     this.selectedPackage = null;
     this._cdr.detectChanges();
+  }
+
+  private _trackPurchase(): void {
+    const purchasedPackage = this.selectedPackage;
+    if (!purchasedPackage) {
+      return;
+    }
+
+    const transactionId = this.stripeTransactionId ?? this._pendingPaymentTransactionId;
+    this._analytics.trackEvent('purchase', {
+      // eslint-disable-next-line @typescript-eslint/naming-convention -- GA4 ecommerce field name
+      transaction_id: transactionId,
+      value: this.getFinalPrice(),
+      currency: 'USD',
+      items: [
+        {
+          // eslint-disable-next-line @typescript-eslint/naming-convention -- GA4 ecommerce field name
+          item_id: String(purchasedPackage.id),
+          // eslint-disable-next-line @typescript-eslint/naming-convention -- GA4 ecommerce field name
+          item_name: purchasedPackage.name,
+          // eslint-disable-next-line @typescript-eslint/naming-convention -- GA4 ecommerce field name
+          item_category: 'Credit Package',
+          price: this.getFinalPrice(),
+          quantity: 1,
+        },
+      ],
+    });
   }
 
   private _resetStripeState(): void {
