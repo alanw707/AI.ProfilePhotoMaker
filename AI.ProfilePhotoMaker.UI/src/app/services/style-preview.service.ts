@@ -255,6 +255,7 @@ export class StylePreviewService {
   private getStylePreviewProxyBase(): string | null {
     const configuredBase = (
       ((environment.azure as { backendUrl?: string } | undefined)?.backendUrl ||
+        (environment.ngrok as { backendUrl?: string } | undefined)?.backendUrl ||
         environment.baseUrl ||
         '') as string
     ).trim();

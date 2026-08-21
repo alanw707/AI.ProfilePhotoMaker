@@ -62,8 +62,7 @@ public class StylePreviewController : ControllerBase
 
             if (exists)
             {
-                // Get the public URL from storage service
-                var url = _storageService.GetImageUrl(storagePath);
+                var url = GetPreviewUrl(storagePath);
                 return Ok(new
                 {
                     success = true,
@@ -73,26 +72,13 @@ public class StylePreviewController : ControllerBase
                 });
             }
 
-            // Fallback to direct Azure Blob Storage URL if file doesn't exist in storage
-            var azureBlobUrl = GetDirectAzureBlobUrl(styleName);
-            if (!string.IsNullOrEmpty(azureBlobUrl))
-            {
-                return Ok(new
-                {
-                    success = true,
-                    styleName = styleName,
-                    url = azureBlobUrl,
-                    fileName = fileName
-                });
-            }
-
-            // Return placeholder URL as last resort
+            // Keep preview URLs behind the API so private blob containers work.
             return Ok(new
             {
                 success = true,
                 styleName = styleName,
-                url = "/api/placeholder/style-preview",
-                fileName = "placeholder.jpg"
+                url = GetPreviewUrl(storagePath),
+                fileName = fileName
             });
         }
         catch (Exception ex)
@@ -149,14 +135,12 @@ public class StylePreviewController : ControllerBase
 
                 if (fileInfo != null)
                 {
-                    // File exists in storage, get its URL
-                    url = _storageService.GetImageUrl(storagePath);
+                    url = GetPreviewUrl(storagePath);
                     size = fileInfo.Size;
                 }
                 else
                 {
-                    // Use direct Azure Blob URL as fallback
-                    url = GetDirectAzureBlobUrl(style) ?? "/api/placeholder/style-preview";
+                    url = GetPreviewUrl(storagePath);
                 }
 
                 if (url.Contains("devstoreaccount1", StringComparison.OrdinalIgnoreCase))
@@ -223,45 +207,14 @@ public class StylePreviewController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Generate direct Azure Blob Storage URL for a style
-    /// </summary>
-    private string? GetDirectAzureBlobUrl(string styleName)
+    private string GetPreviewUrl(string storagePath)
     {
-        if (string.IsNullOrEmpty(styleName))
-            return null;
-
-        // Convert style name to filename format
-        var fileName = $"{styleName.ToLower().Replace(" ", "-").Replace("/", "-")}.jpg";
-
-        // Use the correct Azure storage account from configuration
-        var azureStorageConnection = _configuration.GetConnectionString("AzureStorage") ??
-                                    _configuration["AzureStorage:ConnectionString"];
-
-        // Extract storage account name from connection string if available
-        string storageAccountName = "aipmstv16j74jubocuukg"; // Default known account
-
-        if (!string.IsNullOrEmpty(azureStorageConnection))
+        var apiBaseUrl = _configuration["ExternalApiBaseUrl"]?.TrimEnd('/');
+        if (string.IsNullOrWhiteSpace(apiBaseUrl))
         {
-            var isDevStorage = azureStorageConnection.Contains("UseDevelopmentStorage=true", StringComparison.OrdinalIgnoreCase)
-                               || azureStorageConnection.Contains("AccountName=devstoreaccount1", StringComparison.OrdinalIgnoreCase);
-
-            if (!isDevStorage)
-            {
-                // Parse storage account name from connection string
-                var accountNameMatch = System.Text.RegularExpressions.Regex.Match(
-                    azureStorageConnection,
-                    @"AccountName=([^;]+)",
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-                if (accountNameMatch.Success)
-                {
-                    storageAccountName = accountNameMatch.Groups[1].Value;
-                }
-            }
+            apiBaseUrl = $"{Request.Scheme}://{Request.Host}";
         }
 
-        // Direct Azure Blob Storage URL
-        return $"https://{storageAccountName}.blob.core.windows.net/style-previews/{fileName}";
+        return $"{apiBaseUrl}/profile-images/{storagePath.TrimStart('/')}";
     }
 }

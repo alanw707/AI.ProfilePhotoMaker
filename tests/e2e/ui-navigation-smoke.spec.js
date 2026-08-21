@@ -188,25 +188,28 @@ test.describe('UI navigation smoke - public', () => {
     await reviewsButton.click();
     await waitForSectionInView(page, 'testimonials');
 
-    const viewExamples = page.getByRole('button', { name: /view examples/i }).first();
-    await viewExamples.click();
-    await waitForSectionInView(page, 'examples');
+    const examplesLink = page.getByRole('link', { name: /^Examples$/i }).first();
+    await Promise.all([
+      page.waitForURL('**/examples', { timeout: 15000 }),
+      examplesLink.click(),
+    ]);
+    await expect(page.getByRole('heading', { name: /AI Headshot Examples/i })).toBeVisible();
   });
 
   test('enhancement CTAs route guests to login', async ({ page }) => {
     await page.context().clearCookies();
     await page.goto(buildAppUrl('/'));
     await page.evaluate(() => localStorage.clear());
-    const ctaButtons = page.getByRole('button', { name: /^Start with enhancements$/i });
+    const ctaButtons = page.getByRole('button', { name: /^Get (My Profile Photo Score|Your Headshots)$/i });
     const count = await ctaButtons.count();
     expect(count).toBeGreaterThan(0);
 
     for (let i = 0; i < count; i += 1) {
       await page.goto(buildAppUrl('/'));
-      const button = page.getByRole('button', { name: /^Start with enhancements$/i }).nth(i);
+      const button = page.getByRole('button', { name: /^Get (My Profile Photo Score|Your Headshots)$/i }).nth(i);
       await button.scrollIntoViewIfNeeded();
       await Promise.all([
-        page.waitForURL(/\/auth\/login/, { timeout: 15000 }),
+        page.waitForURL(/\/auth\/register/, { timeout: 15000 }),
         button.click(),
       ]);
       const returnUrl = new URL(page.url()).searchParams.get('returnUrl');
@@ -216,7 +219,11 @@ test.describe('UI navigation smoke - public', () => {
 
   test('footer links land on the right pages or sections', async ({ page }) => {
     await page.goto(buildAppUrl('/'));
-    const footer = page.locator('footer');
+    const rejectNonEssential = page.getByRole('button', { name: /Reject Non-Essential/i });
+    if (await rejectNonEssential.count()) {
+      await rejectNonEssential.click();
+    }
+    const footer = page.getByRole('contentinfo');
     await footer.scrollIntoViewIfNeeded();
 
     await Promise.all([
@@ -253,7 +260,7 @@ test.describe('UI navigation smoke - public', () => {
       page.waitForURL('**/pricing**', { timeout: 15000 }),
       footer.getByRole('link', { name: /pricing/i }).click(),
     ]);
-    await expect(page.getByRole('heading', { name: /pricing plans/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /Choose Your Profile Photo Package/i })).toBeVisible({
       timeout: 15000,
     });
 
