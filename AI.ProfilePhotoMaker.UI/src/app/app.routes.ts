@@ -1,5 +1,4 @@
-import { inject } from '@angular/core';
-import { Router, Routes } from '@angular/router';
+import { Routes } from '@angular/router';
 import { LoginComponent } from './auth/login/login.component';
 import { RegisterComponent } from './auth/register/register.component';
 import { guestGuard } from './guards/guest.guard';
@@ -152,17 +151,7 @@ export const routes: Routes = [
   // Legacy protected routes (for backwards compatibility)
   {
     path: 'dashboard',
-    canActivate: [
-      (): Promise<boolean> => {
-        const router = inject(Router);
-        const queryParams = new URLSearchParams(window.location.search);
-        const params: Record<string, string> = {};
-        queryParams.forEach((value, key) => {
-          params[key] = value;
-        });
-        return router.navigate(['/app/enhance'], { queryParams: params });
-      },
-    ],
+    redirectTo: 'app/enhance',
     pathMatch: 'full',
   },
   {
