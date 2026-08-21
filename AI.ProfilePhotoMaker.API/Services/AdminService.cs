@@ -129,6 +129,7 @@ public class AdminService : IAdminService
                 PackageCode = entitlement.OutcomePackageDefinition.Code,
                 PackageName = entitlement.OutcomePackageDefinition.Name,
                 Status = entitlement.Status.ToString(),
+                RemainingPackageUses = entitlement.RemainingPackageUses,
                 RemainingCandidates = entitlement.RemainingCandidates,
                 RemainingRefinements = entitlement.RemainingRefinements,
                 RemainingPremiumAugmentations = entitlement.RemainingPremiumAugmentations,
@@ -238,6 +239,226 @@ public class AdminService : IAdminService
             ActivityHistory = activityHistory,
             RecentAdminActions = recentAdminActions
         };
+    }
+
+    public async Task<IReadOnlyList<AdminOutcomePackageDefinitionDto>> GetPackageDefinitionsAsync()
+    {
+        return await _context.OutcomePackageDefinitions
+            .AsNoTracking()
+            .OrderBy(definition => definition.DisplayOrder)
+            .ThenBy(definition => definition.Id)
+            .Select(definition => new AdminOutcomePackageDefinitionDto
+            {
+                Id = definition.Id,
+                Code = definition.Code,
+                Name = definition.Name,
+                Description = definition.Description,
+                Price = definition.Price,
+                Currency = definition.Currency,
+                IsActive = definition.IsActive,
+                InternalCreditPackageId = definition.InternalCreditPackageId,
+                IncludedCandidateCount = definition.IncludedCandidateCount,
+                IncludedRefinementCount = definition.IncludedRefinementCount,
+                IncludedPremiumAugmentationCount = definition.IncludedPremiumAugmentationCount,
+                IncludesPlatformExportKit = definition.IncludesPlatformExportKit,
+                IncludesScoreDelta = definition.IncludesScoreDelta,
+                DisplayOrder = definition.DisplayOrder
+            })
+            .ToListAsync();
+    }
+
+    public async Task<AdminPackageOperationResult> GrantPackageEntitlementAsync(
+        string userId,
+        AdminGrantPackageEntitlementDto dto,
+        string adminUserId)
+    {
+        var reason = dto.Reason?.Trim();
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return new(false, "ReasonRequired", "A reason is required for every package grant.");
+        }
+
+        var now = DateTime.UtcNow;
+        if (dto.ExpiresAt.HasValue && dto.ExpiresAt.Value <= now)
+        {
+            return new(false, "InvalidExpiry", "The expiry date must be in the future.");
+        }
+
+        var user = await _context.Users.FirstOrDefaultAsync(candidate => candidate.Id == userId);
+        if (user == null)
+        {
+            return new(false, "UserNotFound", "User not found.");
+        }
+
+        if (user.LockoutEnd.HasValue && user.LockoutEnd.Value.UtcDateTime > now)
+        {
+            return new(false, "UserDeactivated", "Deactivated users cannot receive package grants.");
+        }
+
+        var definition = await _context.OutcomePackageDefinitions
+            .Include(package => package.InternalCreditPackage)
+            .FirstOrDefaultAsync(package => package.Id == dto.PackageDefinitionId);
+        if (definition == null)
+        {
+            return new(false, "PackageDefinitionNotFound", "Package definition not found.");
+        }
+
+        if (!definition.IsActive && !dto.ConfirmInactive)
+        {
+            return new(false, "InactivePackageConfirmationRequired", "This package definition is inactive. Confirm the grant explicitly.");
+        }
+
+        if (definition.Price > 0 && (definition.InternalCreditPackageId == null || definition.InternalCreditPackage == null))
+        {
+            return new(false, "InternalCreditMappingMissing", "This paid package has no internal credit mapping and cannot be granted.");
+        }
+
+        var hasActiveDuplicate = await _context.UserPackageEntitlements
+            .Include(entitlement => entitlement.OutcomePackageDefinition)
+            .AnyAsync(entitlement =>
+                entitlement.UserId == userId &&
+                entitlement.OutcomePackageDefinition.Code == definition.Code &&
+                entitlement.Status == PackageEntitlementStatus.Active &&
+                (entitlement.ExpiresAt == null || entitlement.ExpiresAt > now));
+        if (hasActiveDuplicate)
+        {
+            return new(false, "DuplicateActiveEntitlement", "The user already has an active entitlement for this package.");
+        }
+
+        var isSqlServer = _context.Database.IsSqlServer();
+        var strategy = _context.Database.CreateExecutionStrategy();
+        try
+        {
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var transaction = isSqlServer
+                    ? await _context.Database.BeginTransactionAsync()
+                    : null;
+
+                var profile = definition.InternalCreditPackageId.HasValue
+                    ? await _context.UserProfiles.FirstOrDefaultAsync(candidate => candidate.UserId == userId)
+                    : null;
+                if (definition.Price > 0 && profile == null)
+                {
+                    return new AdminPackageOperationResult(false, "UserProfileNotFound", "User profile not found.");
+                }
+
+                var entitlement = new UserPackageEntitlement
+                {
+                    UserId = userId,
+                    OutcomePackageDefinitionId = definition.Id,
+                    Status = PackageEntitlementStatus.Active,
+                    RemainingPackageUses = 1,
+                    RemainingCandidates = definition.IncludedCandidateCount,
+                    RemainingRefinements = definition.IncludedRefinementCount,
+                    RemainingPremiumAugmentations = definition.IncludedPremiumAugmentationCount,
+                    PlatformExportKitAvailable = definition.IncludesPlatformExportKit,
+                    ActivatedAt = now,
+                    ExpiresAt = dto.ExpiresAt,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+
+                var oldBalance = profile?.Credits;
+                if (profile != null && definition.InternalCreditPackage != null)
+                {
+                    profile.Credits += definition.InternalCreditPackage.TotalCredits;
+                    profile.UpdatedAt = now;
+                }
+
+                _context.UserPackageEntitlements.Add(entitlement);
+                AddAuditLog(
+                    adminUserId,
+                    "PackageEntitlementGranted",
+                    userId,
+                    reason,
+                    null,
+                    JsonSerializer.Serialize(new
+                    {
+                        entitlement.OutcomePackageDefinitionId,
+                        PackageCode = definition.Code,
+                        entitlement.Status,
+                        entitlement.RemainingPackageUses,
+                        entitlement.RemainingCandidates,
+                        entitlement.RemainingRefinements,
+                        entitlement.RemainingPremiumAugmentations,
+                        entitlement.PlatformExportKitAvailable,
+                        CreditBalanceBefore = oldBalance,
+                        CreditBalanceAfter = profile?.Credits
+                    }));
+
+                await _context.SaveChangesAsync();
+                if (transaction != null)
+                {
+                    await transaction.CommitAsync();
+                }
+
+                return new AdminPackageOperationResult(
+                    true,
+                    string.Empty,
+                    "Package entitlement granted.",
+                    ToAdminPackageEntitlementDto(entitlement, definition),
+                    profile?.Credits);
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to grant package {PackageDefinitionId} to user {UserId}", dto.PackageDefinitionId, LoggingSanitizer.SanitizeId(userId));
+            return new(false, "GrantFailed", "Package entitlement grant failed.");
+        }
+    }
+
+    public async Task<AdminPackageOperationResult> RevokePackageEntitlementAsync(
+        string userId,
+        int entitlementId,
+        string reason,
+        string adminUserId)
+    {
+        reason = reason?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return new(false, "ReasonRequired", "A reason is required for every package revocation.");
+        }
+
+        var entitlement = await _context.UserPackageEntitlements
+            .Include(item => item.OutcomePackageDefinition)
+            .FirstOrDefaultAsync(item => item.Id == entitlementId && item.UserId == userId);
+        if (entitlement == null)
+        {
+            return new(false, "EntitlementNotFound", "Package entitlement not found.");
+        }
+
+        if (entitlement.Status != PackageEntitlementStatus.Active)
+        {
+            return new(false, "EntitlementNotActive", "Only active package entitlements can be revoked.");
+        }
+
+        if (entitlement.ExpiresAt.HasValue && entitlement.ExpiresAt.Value <= DateTime.UtcNow)
+        {
+            return new(false, "EntitlementExpired", "Expired package entitlements cannot be revoked.");
+        }
+
+        var oldValue = JsonSerializer.Serialize(new
+        {
+            entitlement.Status,
+            entitlement.RemainingPackageUses,
+            entitlement.RemainingCandidates,
+            entitlement.RemainingRefinements,
+            entitlement.RemainingPremiumAugmentations,
+            entitlement.PlatformExportKitAvailable
+        });
+        entitlement.Status = PackageEntitlementStatus.Revoked;
+        entitlement.UpdatedAt = DateTime.UtcNow;
+        AddAuditLog(
+            adminUserId,
+            "PackageEntitlementRevoked",
+            userId,
+            reason,
+            oldValue,
+            JsonSerializer.Serialize(new { Status = entitlement.Status.ToString() }));
+        await _context.SaveChangesAsync();
+
+        return new(true, string.Empty, "Package entitlement revoked.", ToAdminPackageEntitlementDto(entitlement, entitlement.OutcomePackageDefinition));
     }
 
     public async Task<bool> DeactivateUserAsync(string userId, string adminUserId, string reason)
@@ -675,10 +896,62 @@ public class AdminService : IAdminService
                 entitlement.RemainingPremiumAugmentations,
                 entitlement.PlatformExportKitAvailable,
                 PackageCode = entitlement.OutcomePackageDefinition.Code,
-                PackageName = entitlement.OutcomePackageDefinition.Name,
-                PackagePrice = entitlement.OutcomePackageDefinition.Price
+                PackageName = entitlement.OutcomePackageDefinition.Name
             })
             .ToListAsync();
+
+        var paidPurchaseRows = await _context.CreditPurchases.AsNoTracking()
+            .Where(purchase =>
+                purchase.PurchaseDate >= fromUtc &&
+                purchase.PurchaseDate <= toUtc &&
+                purchase.Status == PaymentStatus.Completed)
+            .Select(purchase => new
+            {
+                purchase.PaymentTransactionId,
+                purchase.PackageId,
+                purchase.AmountPaid,
+                PackageCode = _context.OutcomePackageDefinitions
+                    .Where(definition => definition.InternalCreditPackageId == purchase.PackageId)
+                    .Select(definition => definition.Code)
+                    .FirstOrDefault(),
+                PackageName = _context.OutcomePackageDefinitions
+                    .Where(definition => definition.InternalCreditPackageId == purchase.PackageId)
+                    .Select(definition => definition.Name)
+                    .FirstOrDefault()
+            })
+            .ToListAsync();
+
+        var paidTransactionRows = await _context.PaymentTransactions.AsNoTracking()
+            .Where(transaction =>
+                transaction.CreatedAt >= fromUtc &&
+                transaction.CreatedAt <= toUtc &&
+                transaction.Type == PaymentType.OneTime &&
+                transaction.Status == PaymentStatus.Completed)
+            .Select(transaction => new
+            {
+                TransactionId = transaction.Id.ToString(),
+                transaction.Amount,
+                PackageCode = _context.UserPackageEntitlements
+                    .Where(entitlement => entitlement.SourcePaymentTransactionId == transaction.Id)
+                    .Select(entitlement => entitlement.OutcomePackageDefinition.Code)
+                    .FirstOrDefault(),
+                PackageName = _context.UserPackageEntitlements
+                    .Where(entitlement => entitlement.SourcePaymentTransactionId == transaction.Id)
+                    .Select(entitlement => entitlement.OutcomePackageDefinition.Name)
+                    .FirstOrDefault()
+            })
+            .ToListAsync();
+
+        var representedTransactionIds = paidPurchaseRows
+            .Where(purchase => !string.IsNullOrWhiteSpace(purchase.PaymentTransactionId))
+            .Select(purchase => purchase.PaymentTransactionId!)
+            .ToHashSet(StringComparer.Ordinal);
+        var paidProductRows = paidPurchaseRows
+            .Select(purchase => (purchase.PaymentTransactionId, purchase.PackageId, purchase.AmountPaid, purchase.PackageCode, purchase.PackageName))
+            .ToList();
+        paidProductRows.AddRange(paidTransactionRows
+            .Where(transaction => !representedTransactionIds.Contains(transaction.TransactionId))
+            .Select(transaction => ((string?)transaction.TransactionId, 0, transaction.Amount, transaction.PackageCode, transaction.PackageName)));
 
         var uploads = imageRows.Count(image => image.IsOriginalUpload);
         var successfulPreviewGenerations = imageRows.Count(image =>
@@ -689,30 +962,22 @@ public class AdminService : IAdminService
             image.FailureReason.StartsWith("raw-preview:", StringComparison.Ordinal));
         var generatedImages = imageRows.Count(image => image.IsGenerated && image.GenerationStatus != "failed");
         var failedGenerations = imageRows.Count(image => image.IsGenerated && image.GenerationStatus == "failed");
-        var paidPackagePurchases = entitlementRows.Count(entitlement => entitlement.PackagePrice > 0);
-        var starterPurchases = entitlementRows.Count(entitlement =>
-            entitlement.PackagePrice > 0 &&
-            ((entitlement.PackageCode?.Contains("starter", StringComparison.OrdinalIgnoreCase) ?? false) ||
-             (entitlement.PackageName?.Contains("starter", StringComparison.OrdinalIgnoreCase) ?? false)));
-        var proPurchases = entitlementRows.Count(entitlement =>
-            entitlement.PackagePrice > 0 &&
-            ((entitlement.PackageCode?.Contains("pro", StringComparison.OrdinalIgnoreCase) ?? false) ||
-             (entitlement.PackageName?.Contains("pro", StringComparison.OrdinalIgnoreCase) ?? false)));
+        var paidPackagePurchases = paidProductRows.Count;
+        var starterPurchases = paidProductRows.Count(purchase =>
+            (purchase.PackageCode?.Contains("starter", StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (purchase.PackageName?.Contains("starter", StringComparison.OrdinalIgnoreCase) ?? false));
+        var proPurchases = paidProductRows.Count(purchase =>
+            (purchase.PackageCode?.Contains("pro", StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (purchase.PackageName?.Contains("pro", StringComparison.OrdinalIgnoreCase) ?? false));
 
-        var packageMix = entitlementRows
-            .Where(entitlement => entitlement.PackagePrice > 0)
-            .GroupBy(entitlement => new
-            {
-                entitlement.PackageCode,
-                entitlement.PackageName,
-                entitlement.PackagePrice
-            })
+        var packageMix = paidProductRows
+            .GroupBy(purchase => new { purchase.PackageCode, purchase.PackageName })
             .Select(group => new AdminPackageMixDto
             {
-                Code = group.Key.PackageCode,
-                Name = group.Key.PackageName,
+                Code = group.Key.PackageCode ?? $"credit-package-{group.First().PackageId}",
+                Name = group.Key.PackageName ?? $"Credit package {group.First().PackageId}",
                 Purchases = group.Count(),
-                RevenueProxy = group.Count() * group.Key.PackagePrice
+                RevenueProxy = group.Sum(purchase => purchase.AmountPaid)
             })
             .OrderByDescending(package => package.Purchases)
             .ToList();
@@ -798,6 +1063,7 @@ public class AdminService : IAdminService
                 ConsumedEntitlements = entitlementRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Consumed),
                 ExpiredEntitlements = entitlementRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Expired),
                 RefundedEntitlements = entitlementRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Refunded),
+                RevokedEntitlements = entitlementRows.Count(entitlement => entitlement.Status == PackageEntitlementStatus.Revoked),
                 RemainingCandidates = entitlementRows.Sum(entitlement => entitlement.RemainingCandidates),
                 RemainingRefinements = entitlementRows.Sum(entitlement => entitlement.RemainingRefinements),
                 RemainingPremiumAugmentations = entitlementRows.Sum(entitlement => entitlement.RemainingPremiumAugmentations),
@@ -1026,6 +1292,27 @@ public class AdminService : IAdminService
         }
 
         return builder.ToString();
+    }
+
+    private static AdminPackageEntitlementDto ToAdminPackageEntitlementDto(
+        UserPackageEntitlement entitlement,
+        OutcomePackageDefinition definition)
+    {
+        return new AdminPackageEntitlementDto
+        {
+            Id = entitlement.Id,
+            PackageCode = definition.Code,
+            PackageName = definition.Name,
+            Status = entitlement.Status.ToString(),
+            RemainingPackageUses = entitlement.RemainingPackageUses,
+            RemainingCandidates = entitlement.RemainingCandidates,
+            RemainingRefinements = entitlement.RemainingRefinements,
+            RemainingPremiumAugmentations = entitlement.RemainingPremiumAugmentations,
+            PlatformExportKitAvailable = entitlement.PlatformExportKitAvailable,
+            ActivatedAt = entitlement.ActivatedAt,
+            ConsumedAt = entitlement.ConsumedAt,
+            ExpiresAt = entitlement.ExpiresAt
+        };
     }
 
     /// <summary>

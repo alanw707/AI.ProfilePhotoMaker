@@ -177,15 +177,79 @@
 
     <section class="admin-panel">
       <div class="panel-heading">
-        <h2>Package Entitlements</h2>
-        <span class="pill">{{ diagnostics.packageEntitlements.length }} records</span>
+        <div>
+          <h2>Package Entitlements</h2>
+          <span class="pill">{{ diagnostics.packageEntitlements.length }} records</span>
+        </div>
+        <button
+          class="btn btn-primary"
+          type="button"
+          (click)="beginGrant()"
+          [disabled]="isMutating || isLoadingPackages">
+          {{ isLoadingPackages ? 'Loading packages...' : 'Grant package' }}
+        </button>
       </div>
+      <div *ngIf="mutationSuccess" class="success-text" role="status">{{ mutationSuccess }}</div>
+      <div *ngIf="mutationError" class="error-text" role="alert">{{ mutationError }}</div>
+      <form *ngIf="showGrantForm" class="admin-panel grant-form" (ngSubmit)="grantPackage()">
+        <label>
+          Package
+          <select
+            name="package"
+            [value]="selectedPackageDefinitionId || ''"
+            (change)="selectedPackageDefinitionId = +$any($event.target).value">
+            <option value="">Select a package</option>
+            <option *ngFor="let definition of packageDefinitions" [value]="definition.id">
+              {{ definition.name }}{{ definition.isActive ? '' : ' (inactive)' }}
+            </option>
+          </select>
+        </label>
+        <div *ngIf="selectedPackageDefinition as definition" class="detail-grid">
+          <div class="detail-item">
+            <span>Candidates</span>
+            <strong>{{ definition.includedCandidateCount }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Refinements</span>
+            <strong>{{ definition.includedRefinementCount }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Premium augmentations</span>
+            <strong>{{ definition.includedPremiumAugmentationCount }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Export kit</span>
+            <strong>{{ definition.includesPlatformExportKit ? 'Included' : 'Not included' }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Score delta</span>
+            <strong>{{ definition.includesScoreDelta ? 'Included' : 'Not included' }}</strong>
+          </div>
+        </div>
+        <label>
+          Expiry (optional)
+          <input name="expiresAt" type="datetime-local" [(ngModel)]="grantExpiresAt" />
+        </label>
+        <label>
+          Required reason
+          <textarea name="reason" rows="2" maxlength="500" [(ngModel)]="grantReason"></textarea>
+        </label>
+        <label *ngIf="selectedPackageIsInactive">
+          <input name="confirmInactive" type="checkbox" [(ngModel)]="confirmInactiveGrant" />
+          I confirm this inactive package grant is intentional.
+        </label>
+        <div class="button-row">
+          <button class="btn btn-primary" type="submit" [disabled]="isMutating">Grant entitlement</button>
+          <button class="btn btn-ghost" type="button" (click)="cancelGrant()" [disabled]="isMutating">Cancel</button>
+        </div>
+      </form>
       <div class="table-wrap" *ngIf="diagnostics.packageEntitlements.length; else noEntitlements">
         <table>
           <thead>
             <tr>
               <th>Package</th>
               <th>Status</th>
+              <th>Uses</th>
               <th>Candidates</th>
               <th>Refinements</th>
               <th>Augmentations</th>
@@ -200,11 +264,22 @@
                 <span class="mono-text">{{ entitlement.packageCode }}</span>
               </td>
               <td>{{ entitlement.status }}</td>
+              <td>{{ entitlement.remainingPackageUses }}</td>
               <td>{{ entitlement.remainingCandidates }}</td>
               <td>{{ entitlement.remainingRefinements }}</td>
               <td>{{ entitlement.remainingPremiumAugmentations }}</td>
               <td>{{ entitlement.platformExportKitAvailable ? 'Available' : 'Unavailable' }}</td>
-              <td>{{ entitlement.activatedAt ? (entitlement.activatedAt | date: 'medium') : 'Not activated' }}</td>
+              <td>
+                {{ entitlement.activatedAt ? (entitlement.activatedAt | date: 'medium') : 'Not activated' }}
+                <button
+                  *ngIf="entitlement.status === 'Active'"
+                  class="btn btn-ghost"
+                  type="button"
+                  (click)="revokePackage(entitlement)"
+                  [disabled]="isMutating">
+                  Revoke
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>

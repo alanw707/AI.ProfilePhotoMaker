@@ -49,14 +49,21 @@
     </p>
 
     <div class="action-row">
-      <button class="btn btn-primary" (click)="createCoupon()">Create Coupon</button>
+      <button class="btn btn-primary" (click)="createCoupon()" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Creating...' : 'Create Coupon' }}
+      </button>
+      <p *ngIf="error" class="error-text" role="alert">
+        {{ error }}
+        <button class="btn btn-primary" (click)="loadCoupons()">Retry</button>
+      </p>
     </div>
     <p class="success-text" *ngIf="warning">{{ warning }}</p>
   </section>
 
   <section class="admin-panel">
     <h2>Existing Coupons</h2>
-    <div class="table-wrap">
+    <div *ngIf="isLoading" class="empty-state">Loading coupons...</div>
+    <div class="table-wrap" *ngIf="!isLoading && !error">
       <table>
         <thead>
           <tr>

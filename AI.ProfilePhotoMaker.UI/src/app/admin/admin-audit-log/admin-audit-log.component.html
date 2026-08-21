@@ -25,7 +25,12 @@
       <button class="btn btn-primary" (click)="loadLogs()">Apply</button>
     </div>
 
-    <div class="table-wrap">
+    <div *ngIf="isLoading" class="empty-state">Loading audit log...</div>
+    <div *ngIf="error" class="error-text" role="alert">
+      {{ error }}
+      <button class="btn btn-primary" (click)="loadLogs()">Retry</button>
+    </div>
+    <div class="table-wrap" *ngIf="!isLoading && !error">
       <table>
         <thead>
           <tr>

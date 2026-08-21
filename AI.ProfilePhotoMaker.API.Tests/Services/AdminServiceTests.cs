@@ -320,9 +320,22 @@ public class AdminServiceTests
         var profile = await context.UserProfiles.FirstAsync(p => p.UserId == userId);
         var now = DateTime.UtcNow;
 
-        var starter = new OutcomePackageDefinition { Code = "starter", Name = "Starter Package", Price = 9m, Currency = "USD", IncludedCandidateCount = 3 };
-        var pro = new OutcomePackageDefinition { Code = "pro", Name = "Pro Package", Price = 19m, Currency = "USD", IncludedCandidateCount = 9 };
+        var starterCreditPackage = new CreditPackage { Id = 101, Name = "Starter credits", Credits = 3, Price = 9m };
+        var proCreditPackage = new CreditPackage { Id = 102, Name = "Pro credits", Credits = 9, Price = 19m };
+        var starter = new OutcomePackageDefinition { Code = "starter", Name = "Starter Package", Price = 9m, Currency = "USD", IncludedCandidateCount = 3, InternalCreditPackageId = starterCreditPackage.Id };
+        var pro = new OutcomePackageDefinition { Code = "pro", Name = "Pro Package", Price = 19m, Currency = "USD", IncludedCandidateCount = 9, InternalCreditPackageId = proCreditPackage.Id };
+        context.CreditPackages.AddRange(starterCreditPackage, proCreditPackage);
         context.OutcomePackageDefinitions.AddRange(starter, pro);
+        context.CreditPurchases.Add(new CreditPurchase
+        {
+            UserId = userId,
+            PackageId = starterCreditPackage.Id,
+            AmountPaid = starter.Price,
+            CreditsAwarded = starterCreditPackage.TotalCredits,
+            Status = PaymentStatus.Completed,
+            PurchaseDate = now.AddDays(-1),
+            CompletedAt = now.AddDays(-1)
+        });
         await context.SaveChangesAsync();
 
         context.ProcessedImages.AddRange(
@@ -359,6 +372,74 @@ public class AdminServiceTests
         Assert.Equal(1, health.ReplicateRetirement.AdvancedPhotoshootRequests);
         Assert.False(health.ReplicateRetirement.LatencySignalAvailable);
         Assert.False(health.ReplicateRetirement.QualityComplaintSignalAvailable);
+    }
+
+    [Fact]
+    public async Task GrantPackageEntitlementAsync_ProvisionsDefinitionAllowancesAndCredits()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserWithProfileAsync(context, credits: 2);
+        var creditPackage = new CreditPackage { Id = 201, Name = "Starter credits", Credits = 3, BonusCredits = 1, Price = 9m };
+        var definition = new OutcomePackageDefinition
+        {
+            Code = "starter_package",
+            Name = "Starter Package",
+            Price = 9m,
+            InternalCreditPackageId = creditPackage.Id,
+            IncludedCandidateCount = 3,
+            IncludedRefinementCount = 2,
+            IncludesPlatformExportKit = true
+        };
+        context.CreditPackages.Add(creditPackage);
+        context.OutcomePackageDefinitions.Add(definition);
+        await context.SaveChangesAsync();
+
+        var service = CreateService(context, UserManagerMockFactory.Create().Object);
+        var result = await service.GrantPackageEntitlementAsync(
+            userId,
+            new AdminGrantPackageEntitlementDto { PackageDefinitionId = definition.Id, Reason = "QA setup" },
+            "admin-1");
+
+        Assert.True(result.Success);
+        Assert.Equal(6, result.CreditBalance);
+        var entitlement = await context.UserPackageEntitlements.SingleAsync();
+        Assert.Equal(3, entitlement.RemainingCandidates);
+        Assert.Equal(2, entitlement.RemainingRefinements);
+        Assert.True(entitlement.PlatformExportKitAvailable);
+        Assert.Contains(context.AdminAuditLogs, log => log.Action == "PackageEntitlementGranted" && log.TargetUserId == userId);
+    }
+
+    [Fact]
+    public async Task RevokePackageEntitlementAsync_PreservesCountersAndCredits()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserWithProfileAsync(context, credits: 7);
+        var definition = new OutcomePackageDefinition { Code = "starter_package", Name = "Starter Package", Price = 9m };
+        context.OutcomePackageDefinitions.Add(definition);
+        await context.SaveChangesAsync();
+        var entitlement = new UserPackageEntitlement
+        {
+            UserId = userId,
+            OutcomePackageDefinitionId = definition.Id,
+            Status = PackageEntitlementStatus.Active,
+            RemainingPackageUses = 1,
+            RemainingCandidates = 2,
+            RemainingRefinements = 1,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.UserPackageEntitlements.Add(entitlement);
+        await context.SaveChangesAsync();
+
+        var service = CreateService(context, UserManagerMockFactory.Create().Object);
+        var result = await service.RevokePackageEntitlementAsync(userId, entitlement.Id, "Support correction", "admin-1");
+
+        Assert.True(result.Success);
+        var saved = await context.UserPackageEntitlements.SingleAsync();
+        Assert.Equal(PackageEntitlementStatus.Revoked, saved.Status);
+        Assert.Equal(2, saved.RemainingCandidates);
+        Assert.Equal(7, (await context.UserProfiles.SingleAsync(p => p.UserId == userId)).Credits);
+        Assert.Contains(context.AdminAuditLogs, log => log.Action == "PackageEntitlementRevoked" && log.TargetUserId == userId);
     }
 
     [Fact]

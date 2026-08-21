@@ -19,6 +19,8 @@ export class AdminUsersComponent implements OnInit {
     private _cdr: ChangeDetectorRef
   ) {}
   users: any[] = [];
+  isLoading = false;
+  error: string | null = null;
   search = '';
   page = 1;
   pageSize = 20;
@@ -41,12 +43,18 @@ export class AdminUsersComponent implements OnInit {
   }
 
   loadUsers(): void {
-    this._adminService.getUsers(this.page, this.pageSize, this.search).subscribe({
-      next: data => {
-        this.users = data.users || [];
-        this.totalCount = data.totalCount || 0;
-      },
-    });
+    this.isLoading = true;
+    this.error = null;
+    this._adminService
+      .getUsers(this.page, this.pageSize, this.search)
+      .pipe(finalize(() => (this.isLoading = false)))
+      .subscribe({
+        next: data => {
+          this.users = data.users || [];
+          this.totalCount = data.totalCount || 0;
+        },
+        error: err => (this.error = err?.message || 'Failed to load users. Please retry.'),
+      });
   }
 
   onSearch(): void {

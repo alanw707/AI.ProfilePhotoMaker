@@ -7,6 +7,9 @@ public interface IAdminService
 {
     Task<(List<AdminUserListDto> Users, int TotalCount)> GetUsersAsync(int page, int pageSize, string? searchTerm);
     Task<AdminUserDiagnosticsDto?> GetUserDiagnosticsAsync(string userId);
+    Task<IReadOnlyList<AdminOutcomePackageDefinitionDto>> GetPackageDefinitionsAsync();
+    Task<AdminPackageOperationResult> GrantPackageEntitlementAsync(string userId, AdminGrantPackageEntitlementDto dto, string adminUserId);
+    Task<AdminPackageOperationResult> RevokePackageEntitlementAsync(string userId, int entitlementId, string reason, string adminUserId);
     Task<bool> DeactivateUserAsync(string userId, string adminUserId, string reason);
     Task<bool> ReactivateUserAsync(string userId, string adminUserId, string reason);
     Task<(bool Success, string Message)> DeleteUserAsync(string userId, string adminUserId, string reason);
@@ -19,3 +22,10 @@ public interface IAdminService
     Task<AdminDashboardDto> GetDashboardAsync();
     Task<AdminProductHealthDto> GetProductHealthAsync(string window);
 }
+
+public sealed record AdminPackageOperationResult(
+    bool Success,
+    string Code,
+    string Message,
+    AdminPackageEntitlementDto? Entitlement = null,
+    int? CreditBalance = null);

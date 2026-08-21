@@ -52,6 +52,39 @@ public class AdminController : BaseController
         return SuccessResponse(diagnostics);
     }
 
+    [HttpGet("package-definitions")]
+    public async Task<IActionResult> GetPackageDefinitions()
+    {
+        var authCheck = ValidateAuthentication();
+        if (authCheck != null) return authCheck;
+
+        return SuccessResponse(await _adminService.GetPackageDefinitionsAsync());
+    }
+
+    [HttpPost("users/{userId}/package-entitlements")]
+    public async Task<IActionResult> GrantPackageEntitlement(string userId, [FromBody] AdminGrantPackageEntitlementDto dto)
+    {
+        var authCheck = ValidateAuthentication();
+        if (authCheck != null) return authCheck;
+
+        var result = await _adminService.GrantPackageEntitlementAsync(userId, dto, GetCurrentUserId()!);
+        return PackageOperationResponse(result, "Package entitlement granted");
+    }
+
+    [HttpPost("users/{userId}/package-entitlements/{entitlementId:int}/revoke")]
+    public async Task<IActionResult> RevokePackageEntitlement(string userId, int entitlementId, [FromBody] AdminActionReasonDto dto)
+    {
+        var authCheck = ValidateAuthentication();
+        if (authCheck != null) return authCheck;
+
+        var result = await _adminService.RevokePackageEntitlementAsync(
+            userId,
+            entitlementId,
+            dto.Reason,
+            GetCurrentUserId()!);
+        return PackageOperationResponse(result, "Package entitlement revoked");
+    }
+
     [HttpPost("users/{userId}/deactivate")]
     public async Task<IActionResult> DeactivateUser(string userId, [FromBody] AdminActionReasonDto dto)
     {
@@ -211,6 +244,22 @@ public class AdminController : BaseController
             _logger.LogError(ex, "Failed to load admin product health for window {Window}", S(window));
             return ErrorResponse("InternalError", "Failed to load product health", 500);
         }
+    }
+
+    private IActionResult PackageOperationResponse(AdminPackageOperationResult result, string successMessage)
+    {
+        if (result.Success)
+        {
+            return SuccessResponse(new { entitlement = result.Entitlement, creditBalance = result.CreditBalance }, successMessage);
+        }
+
+        var statusCode = result.Code switch
+        {
+            "UserNotFound" or "EntitlementNotFound" => 404,
+            "DuplicateActiveEntitlement" or "InactivePackageConfirmationRequired" or "AlreadyRevoked" => 409,
+            _ => 400
+        };
+        return ErrorResponse(result.Code, result.Message, statusCode);
     }
 
     [HttpPost("cleanup-orphaned-model")]

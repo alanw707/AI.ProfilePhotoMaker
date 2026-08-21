@@ -51,11 +51,36 @@ export interface AdminCreditPurchaseHistoryDto {
   completedAt: string | null;
 }
 
+export interface AdminOutcomePackageDefinitionDto {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  isActive: boolean;
+  internalCreditPackageId: number | null;
+  includedCandidateCount: number;
+  includedRefinementCount: number;
+  includedPremiumAugmentationCount: number;
+  includesPlatformExportKit: boolean;
+  includesScoreDelta: boolean;
+  displayOrder: number;
+}
+
+export interface AdminGrantPackageEntitlementDto {
+  packageDefinitionId: number;
+  expiresAt?: string | null;
+  reason: string;
+  confirmInactive?: boolean;
+}
+
 export interface AdminPackageEntitlementDto {
   id: number;
   packageCode: string;
   packageName: string;
   status: string;
+  remainingPackageUses: number;
   remainingCandidates: number;
   remainingRefinements: number;
   remainingPremiumAugmentations: number;
@@ -203,6 +228,7 @@ export interface AdminPackageFulfillmentDto {
   consumedEntitlements: number;
   expiredEntitlements: number;
   refundedEntitlements: number;
+  revokedEntitlements: number;
   remainingCandidates: number;
   remainingRefinements: number;
   remainingPremiumAugmentations: number;
@@ -268,6 +294,35 @@ export class AdminService extends BaseHttpService {
 
   getUserDetail(userId: string): Observable<AdminUserDiagnosticsDto> {
     return this.get<AdminUserDiagnosticsDto>(`admin/users/${userId}`, { withCredentials: true });
+  }
+
+  getPackageDefinitions(): Observable<AdminOutcomePackageDefinitionDto[]> {
+    return this.get<AdminOutcomePackageDefinitionDto[]>('admin/package-definitions', {
+      withCredentials: true,
+    });
+  }
+
+  grantPackageEntitlement(
+    userId: string,
+    dto: AdminGrantPackageEntitlementDto
+  ): Observable<{ entitlement: AdminPackageEntitlementDto; creditBalance: number | null }> {
+    return this.post<{ entitlement: AdminPackageEntitlementDto; creditBalance: number | null }>(
+      `admin/users/${userId}/package-entitlements`,
+      dto,
+      { withCredentials: true }
+    );
+  }
+
+  revokePackageEntitlement(
+    userId: string,
+    entitlementId: number,
+    reason: string
+  ): Observable<{ entitlement: AdminPackageEntitlementDto }> {
+    return this.post<{ entitlement: AdminPackageEntitlementDto }>(
+      `admin/users/${userId}/package-entitlements/${entitlementId}/revoke`,
+      { reason },
+      { withCredentials: true }
+    );
   }
 
   deactivateUser(userId: string, reason: string): Observable<{ userId: string }> {

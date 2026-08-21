@@ -1,20 +1,37 @@
 import { ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { Subject } from 'rxjs';
 import { finalize, takeUntil, timeout } from 'rxjs/operators';
-import { AdminService, AdminUserDiagnosticsDto } from '../../services/admin.service';
+import {
+  AdminGrantPackageEntitlementDto,
+  AdminOutcomePackageDefinitionDto,
+  AdminPackageEntitlementDto,
+  AdminService,
+  AdminUserDiagnosticsDto,
+} from '../../services/admin.service';
 
 @Component({
   selector: 'app-admin-user-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './admin-user-detail.component.html',
   styleUrls: ['../admin-shared.sass', './admin-user-detail.component.sass'],
 })
 export class AdminUserDetailComponent implements OnInit, OnDestroy {
   diagnostics: AdminUserDiagnosticsDto | null = null;
+  packageDefinitions: AdminOutcomePackageDefinitionDto[] = [];
   isLoading = false;
+  isLoadingPackages = false;
+  isMutating = false;
+  showGrantForm = false;
+  selectedPackageDefinitionId: number | null = null;
+  grantExpiresAt = '';
+  grantReason = '';
+  confirmInactiveGrant = false;
+  mutationError: string | null = null;
+  mutationSuccess: string | null = null;
   error: string | null = null;
 
   private readonly destroy$ = new Subject<void>();
@@ -115,8 +132,124 @@ export class AdminUserDetailComponent implements OnInit, OnDestroy {
     this.cancelLoad$.next();
   }
 
+  beginGrant(): void {
+    this.showGrantForm = true;
+    this.mutationError = null;
+    if (this.packageDefinitions.length || this.isLoadingPackages) {
+      return;
+    }
+
+    this.isLoadingPackages = true;
+    this._adminService
+      .getPackageDefinitions()
+      .pipe(
+        finalize(() => (this.isLoadingPackages = false)),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: definitions => (this.packageDefinitions = definitions),
+        error: err => (this.mutationError = err?.message || 'Failed to load package definitions.'),
+      });
+  }
+
+  cancelGrant(): void {
+    this.showGrantForm = false;
+    this.mutationError = null;
+  }
+
+  grantPackage(): void {
+    const userId = this._route.snapshot.paramMap.get('userId');
+    if (
+      !userId ||
+      !this.selectedPackageDefinitionId ||
+      !this.grantReason.trim() ||
+      this.isMutating
+    ) {
+      this.mutationError = 'Select a package and provide a reason before granting access.';
+      return;
+    }
+
+    const selected = this.packageDefinitions.find(
+      item => item.id === this.selectedPackageDefinitionId
+    );
+    if (selected && !selected.isActive && !this.confirmInactiveGrant) {
+      this.mutationError = 'Confirm the inactive package before granting it.';
+      return;
+    }
+
+    const dto: AdminGrantPackageEntitlementDto = {
+      packageDefinitionId: this.selectedPackageDefinitionId,
+      expiresAt: this.grantExpiresAt ? new Date(this.grantExpiresAt).toISOString() : null,
+      reason: this.grantReason.trim(),
+      confirmInactive: this.confirmInactiveGrant,
+    };
+
+    this.isMutating = true;
+    this.mutationError = null;
+    this.mutationSuccess = null;
+    this._adminService
+      .grantPackageEntitlement(userId, dto)
+      .pipe(
+        finalize(() => (this.isMutating = false)),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: () => {
+          this.showGrantForm = false;
+          this.grantReason = '';
+          this.grantExpiresAt = '';
+          this.confirmInactiveGrant = false;
+          this.mutationSuccess = 'Package entitlement granted.';
+          this.loadUserDiagnostics(userId);
+        },
+        error: err => (this.mutationError = err?.message || 'Failed to grant package entitlement.'),
+      });
+  }
+
+  revokePackage(entitlement: AdminPackageEntitlementDto): void {
+    const userId = this._route.snapshot.paramMap.get('userId');
+    if (
+      !window.confirm(
+        `Revoke ${entitlement.packageName}? This preserves history but stops future package use.`
+      )
+    ) {
+      return;
+    }
+
+    const reason = window.prompt('Reason for revoking this package entitlement:')?.trim();
+    if (!userId || !reason || this.isMutating) {
+      return;
+    }
+
+    this.isMutating = true;
+    this.mutationError = null;
+    this.mutationSuccess = null;
+    this._adminService
+      .revokePackageEntitlement(userId, entitlement.id, reason)
+      .pipe(
+        finalize(() => (this.isMutating = false)),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: () => {
+          this.mutationSuccess = 'Package entitlement revoked.';
+          this.loadUserDiagnostics(userId);
+        },
+        error: err =>
+          (this.mutationError = err?.message || 'Failed to revoke package entitlement.'),
+      });
+  }
+
   get hasDiagnostics(): boolean {
     return !!this.diagnostics;
+  }
+
+  get selectedPackageDefinition(): AdminOutcomePackageDefinitionDto | undefined {
+    return this.packageDefinitions.find(item => item.id === this.selectedPackageDefinitionId);
+  }
+
+  get selectedPackageIsInactive(): boolean {
+    return this.selectedPackageDefinition?.isActive === false;
   }
 
   private clearLoadWatchdog(): void {

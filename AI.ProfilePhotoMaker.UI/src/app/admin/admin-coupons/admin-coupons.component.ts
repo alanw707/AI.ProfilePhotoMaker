@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { AdminService } from '../../services/admin.service';
+import { finalize } from 'rxjs/operators';
 
 @Component({
   selector: 'app-admin-coupons',
@@ -21,6 +22,9 @@ export class AdminCouponsComponent implements OnInit {
     expiresAt: '',
   };
   warning = '';
+  error: string | null = null;
+  isLoading = false;
+  isSubmitting = false;
   editCouponId: number | null = null;
   editModel = {
     maxUsages: 0,
@@ -36,15 +40,25 @@ export class AdminCouponsComponent implements OnInit {
   }
 
   loadCoupons(): void {
-    this._adminService.getCoupons().subscribe({
-      next: data => {
-        this.coupons = data || [];
-      },
-    });
+    this.isLoading = true;
+    this.error = null;
+    this._adminService
+      .getCoupons()
+      .pipe(finalize(() => (this.isLoading = false)))
+      .subscribe({
+        next: data => {
+          this.coupons = data || [];
+        },
+        error: err => (this.error = err?.message || 'Failed to load coupons. Please retry.'),
+      });
   }
 
   createCoupon(): void {
+    if (this.isSubmitting) {
+      return;
+    }
     this.warning = '';
+    this.error = null;
     const payload = {
       code: this.model.code.trim(),
       discountType: this.model.discountType,
@@ -53,12 +67,17 @@ export class AdminCouponsComponent implements OnInit {
       expiresAt: this.model.expiresAt ? new Date(this.model.expiresAt).toISOString() : null,
     };
 
-    this._adminService.createCoupon(payload).subscribe({
-      next: response => {
-        this.warning = response.warning || '';
-        this.loadCoupons();
-      },
-    });
+    this.isSubmitting = true;
+    this._adminService
+      .createCoupon(payload)
+      .pipe(finalize(() => (this.isSubmitting = false)))
+      .subscribe({
+        next: response => {
+          this.warning = response.warning || '';
+          this.loadCoupons();
+        },
+        error: err => (this.error = err?.message || 'Failed to create coupon.'),
+      });
   }
 
   deleteCoupon(id: number): void {

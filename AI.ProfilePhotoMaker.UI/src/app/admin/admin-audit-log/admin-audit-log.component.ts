@@ -17,6 +17,8 @@ export class AdminAuditLogComponent implements OnInit {
   page = 1;
   pageSize = 50;
   expanded: Record<number, boolean> = {};
+  isLoading = false;
+  error: string | null = null;
 
   constructor(private _adminService: AdminService) {}
 
@@ -25,9 +27,16 @@ export class AdminAuditLogComponent implements OnInit {
   }
 
   loadLogs(): void {
+    this.isLoading = true;
+    this.error = null;
     this._adminService.getAuditLogs(this.page, this.pageSize, this.actionFilter).subscribe({
       next: data => {
         this.logs = data.logs || [];
+        this.isLoading = false;
+      },
+      error: err => {
+        this.error = err?.message || 'Failed to load audit log. Please retry.';
+        this.isLoading = false;
       },
     });
   }

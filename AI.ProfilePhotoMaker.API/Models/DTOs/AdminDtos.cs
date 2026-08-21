@@ -63,12 +63,46 @@ public class AdminCreditPurchaseHistoryDto
     public DateTime? CompletedAt { get; set; }
 }
 
+public class AdminOutcomePackageDefinitionDto
+{
+    public int Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public decimal Price { get; set; }
+    public string Currency { get; set; } = "USD";
+    public bool IsActive { get; set; }
+    public int? InternalCreditPackageId { get; set; }
+    public int IncludedCandidateCount { get; set; }
+    public int IncludedRefinementCount { get; set; }
+    public int IncludedPremiumAugmentationCount { get; set; }
+    public bool IncludesPlatformExportKit { get; set; }
+    public bool IncludesScoreDelta { get; set; }
+    public int DisplayOrder { get; set; }
+}
+
+public class AdminGrantPackageEntitlementDto
+{
+    [Required]
+    public int PackageDefinitionId { get; set; }
+
+    public DateTime? ExpiresAt { get; set; }
+
+    [Required(ErrorMessage = "Reason is required")]
+    [MinLength(1, ErrorMessage = "Reason cannot be empty")]
+    [MaxLength(500)]
+    public string Reason { get; set; } = string.Empty;
+
+    public bool ConfirmInactive { get; set; }
+}
+
 public class AdminPackageEntitlementDto
 {
     public int Id { get; set; }
     public string PackageCode { get; set; } = string.Empty;
     public string PackageName { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    public int RemainingPackageUses { get; set; }
     public int RemainingCandidates { get; set; }
     public int RemainingRefinements { get; set; }
     public int RemainingPremiumAugmentations { get; set; }
@@ -237,6 +271,7 @@ public class AdminPackageFulfillmentDto
     public int ConsumedEntitlements { get; set; }
     public int ExpiredEntitlements { get; set; }
     public int RefundedEntitlements { get; set; }
+    public int RevokedEntitlements { get; set; }
     public int RemainingCandidates { get; set; }
     public int RemainingRefinements { get; set; }
     public int RemainingPremiumAugmentations { get; set; }

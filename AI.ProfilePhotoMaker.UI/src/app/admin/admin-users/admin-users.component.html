@@ -28,7 +28,12 @@
       <button class="btn btn-primary" (click)="onSearch()">Search</button>
     </div>
 
-    <div class="table-wrap desktop-table-wrap">
+    <div *ngIf="isLoading" class="empty-state">Loading users...</div>
+    <div *ngIf="error" class="error-text" role="alert">
+      {{ error }}
+      <button class="btn btn-primary" (click)="loadUsers()">Retry</button>
+    </div>
+    <div class="table-wrap desktop-table-wrap" *ngIf="!isLoading && !error">
       <table>
         <thead>
           <tr>
@@ -72,7 +77,7 @@
       </table>
     </div>
 
-    <div class="mobile-user-list">
+    <div class="mobile-user-list" *ngIf="!isLoading && !error">
       <article class="mobile-user-card" *ngFor="let user of users">
         <div class="mobile-user-row">
           <h3>{{ user.firstName }} {{ user.lastName }}</h3>

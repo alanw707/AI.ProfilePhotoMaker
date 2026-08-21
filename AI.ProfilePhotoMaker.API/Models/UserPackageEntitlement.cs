@@ -27,5 +27,6 @@ public enum PackageEntitlementStatus
     Active = 0,
     Consumed = 1,
     Expired = 2,
-    Refunded = 3
+    Refunded = 3,
+    Revoked = 4
 }
