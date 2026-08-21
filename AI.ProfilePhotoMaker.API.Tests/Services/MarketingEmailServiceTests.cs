@@ -132,7 +132,10 @@ public class MarketingEmailServiceTests
     public void MarketingUnsubscribeTokenService_RejectsTamperedTokens()
     {
         var token = MarketingUnsubscribeTokenService.CreateToken("user-1", Guid.NewGuid(), "secret-key");
-        var tamperedToken = $"{token[..^1]}{(token[^1] == 'A' ? 'B' : 'A')}";
+        var separator = token.IndexOf('.');
+        var signatureStart = separator + 1;
+        var tamperedSignature = $"{(token[signatureStart] == 'A' ? 'B' : 'A')}{token[(signatureStart + 1)..]}";
+        var tamperedToken = $"{token[..signatureStart]}{tamperedSignature}";
 
         var valid = MarketingUnsubscribeTokenService.TryReadUserId(tamperedToken, "secret-key", out _);
 
