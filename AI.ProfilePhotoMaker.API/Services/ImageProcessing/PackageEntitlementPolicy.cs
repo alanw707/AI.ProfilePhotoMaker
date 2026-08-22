@@ -6,6 +6,7 @@ public sealed record PackageGenerationAllowance(bool Allowed, string? FailureCod
 {
     public static PackageGenerationAllowance Allow() => new(true, null, null);
     public static PackageGenerationAllowance Deny(string message) => new(false, "PackageEntitlementRequired", message);
+    public static PackageGenerationAllowance Deny(string failureCode, string message) => new(false, failureCode, message);
 }
 
 /// <summary>
@@ -23,9 +24,14 @@ public static class PackageEntitlementPolicy
     {
         if (packageCode == "free_preview")
         {
-            return requestedCandidateCount == 1 && !isRegeneration
-                ? PackageGenerationAllowance.Allow()
-                : PackageGenerationAllowance.Deny("Choose or unlock a profile photo package before generating these candidates.");
+            if (requestedCandidateCount == 1 && !isRegeneration)
+            {
+                return PackageGenerationAllowance.Allow();
+            }
+
+            return PackageGenerationAllowance.Deny(
+                "FreePreviewExhausted",
+                "Free Preview includes one image. Unlock Starter to generate more.");
         }
 
         if (entitlement == null)

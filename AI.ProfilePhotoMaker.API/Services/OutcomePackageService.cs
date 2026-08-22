@@ -1,6 +1,7 @@
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Services;
@@ -9,11 +10,16 @@ public class OutcomePackageService : IOutcomePackageService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<OutcomePackageService> _logger;
+    private readonly IStorageService? _storageService;
 
-    public OutcomePackageService(ApplicationDbContext context, ILogger<OutcomePackageService> logger)
+    public OutcomePackageService(
+        ApplicationDbContext context,
+        ILogger<OutcomePackageService> logger,
+        IStorageService? storageService = null)
     {
         _context = context;
         _logger = logger;
+        _storageService = storageService;
     }
 
     public async Task<IReadOnlyList<OutcomePackageDefinitionDto>> GetActivePackageDefinitionsAsync(CancellationToken cancellationToken = default)
@@ -37,8 +43,50 @@ public class OutcomePackageService : IOutcomePackageService
         return entitlements.Select(ToDto).ToList();
     }
 
-    public async Task<UserPackageEntitlement?> GrantEntitlementForCreditPackageAsync(string userId, int creditPackageId, string? paymentTransactionId, CancellationToken cancellationToken = default)
+    public async Task<bool> CanPromotePreviewAsync(
+        string userId,
+        int previewProcessedImageId,
+        CancellationToken cancellationToken = default)
     {
+        var preview = await _context.ProcessedImages
+            .Include(i => i.UserProfile)
+            .FirstOrDefaultAsync(i =>
+                i.Id == previewProcessedImageId &&
+                i.UserProfile.UserId == userId &&
+                i.GenerationStatus == "succeeded" &&
+                i.GenerationMode == "instant_headshot" &&
+                i.RawImageStoragePath != null,
+                cancellationToken);
+
+        if (preview?.RawImageStoragePath is not { Length: > 0 } rawPath || _storageService == null)
+        {
+            return preview?.RawImageStoragePath is { Length: > 0 };
+        }
+
+        try
+        {
+            return await _storageService.ExistsAsync(rawPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unable to verify preview promotion path {StoragePath}", rawPath);
+            return false;
+        }
+    }
+
+    public async Task<UserPackageEntitlement?> GrantEntitlementForCreditPackageAsync(
+        string userId,
+        int creditPackageId,
+        string? paymentTransactionId,
+        int? previewProcessedImageId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (previewProcessedImageId.HasValue &&
+            !await CanPromotePreviewAsync(userId, previewProcessedImageId.Value, cancellationToken))
+        {
+            throw new InvalidOperationException("The selected preview is unavailable for promotion.");
+        }
+
         var definition = await _context.OutcomePackageDefinitions
             .Where(p => p.IsActive && p.InternalCreditPackageId == creditPackageId)
             .OrderBy(p => p.DisplayOrder)
@@ -55,9 +103,15 @@ public class OutcomePackageService : IOutcomePackageService
         {
             transactionId = parsedTransactionId;
             var existing = await _context.UserPackageEntitlements
+                .Include(e => e.OutcomePackageDefinition)
                 .FirstOrDefaultAsync(e => e.SourcePaymentTransactionId == parsedTransactionId, cancellationToken);
             if (existing != null)
             {
+                var promoted = await PromotePreviewAsync(existing, userId, previewProcessedImageId, cancellationToken);
+                if (!promoted)
+                {
+                    throw new InvalidOperationException("The available preview could not be promoted.");
+                }
                 return existing;
             }
         }
@@ -80,8 +134,215 @@ public class OutcomePackageService : IOutcomePackageService
 
         _context.UserPackageEntitlements.Add(entitlement);
         await _context.SaveChangesAsync(cancellationToken);
+        var previewPromoted = await PromotePreviewAsync(entitlement, userId, previewProcessedImageId, cancellationToken);
+        if (!previewPromoted)
+        {
+            throw new InvalidOperationException("The available preview could not be promoted.");
+        }
 
         return entitlement;
+    }
+
+    public async Task<ResumableHeadshotPreviewDto?> GetResumablePreviewAsync(
+        string userId,
+        int? previewId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var previews = _context.ProcessedImages
+            .Include(i => i.UserProfile)
+            .Where(i =>
+                i.UserProfile.UserId == userId &&
+                i.GenerationStatus == "succeeded" &&
+                i.GenerationMode == "instant_headshot" &&
+                i.RawImageStoragePath != null);
+        var preview = previewId.HasValue
+            ? await previews.FirstOrDefaultAsync(i => i.Id == previewId.Value, cancellationToken)
+            : await previews.OrderByDescending(i => i.CreatedAt).FirstOrDefaultAsync(cancellationToken);
+
+        if (preview == null ||
+            !await _context.Styles.AnyAsync(s => s.IsActive && s.Name == preview.Style, cancellationToken) ||
+            !await StorageImageExistsAsync(preview.ProcessedImageUrl))
+        {
+            return null;
+        }
+
+        var rawStoragePath = preview.RawImageStoragePath!;
+        var rawPreviewExists = await StorageImageExistsAsync(rawStoragePath);
+        var sourceExists = await StorageImageExistsAsync(preview.OriginalImageUrl);
+        var entitlement = await QueryActiveEntitlements(userId)
+            .Where(e =>
+                (e.OutcomePackageDefinition.Code == "starter_package" || e.OutcomePackageDefinition.Code == "pro_package") &&
+                (e.RemainingPackageUses > 0 || e.RemainingCandidates > 0 || e.RemainingRefinements > 0 || e.RemainingPremiumAugmentations > 0 || e.PlatformExportKitAvailable))
+            .OrderByDescending(e => e.OutcomePackageDefinition.Code == "pro_package")
+            .ThenBy(e => e.ExpiresAt ?? DateTime.MaxValue)
+            .ThenBy(e => e.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+        var promotedImage = rawPreviewExists
+            ? await _context.ProcessedImages.FirstOrDefaultAsync(i =>
+                i.UserProfileId == preview.UserProfileId &&
+                i.GenerationMode == "instant_headshot_promoted_preview" &&
+                i.GenerationStatus == "succeeded" &&
+                i.ProcessedImageUrl == rawStoragePath,
+                cancellationToken)
+            : null;
+
+        return new ResumableHeadshotPreviewDto
+        {
+            ProcessedImageId = preview.Id,
+            ImageUrl = preview.ProcessedImageUrl,
+            StoragePath = preview.ProcessedImageUrl,
+            SourceStoragePath = preview.OriginalImageUrl,
+            Style = preview.Style,
+            CreatedAt = preview.CreatedAt,
+            HasRawPreview = rawPreviewExists,
+            CanPromotePreview = entitlement != null && entitlement.RemainingCandidates > 0 && rawPreviewExists && promotedImage == null,
+            ActivePackageCode = entitlement?.OutcomePackageDefinition.Code,
+            RemainingCandidateCount = entitlement == null
+                ? 0
+                : Math.Max(entitlement.RemainingCandidates - (rawPreviewExists && promotedImage == null ? 1 : 0), 0),
+            PromotedCandidate = promotedImage == null ? null : ToCandidateDto(promotedImage),
+            Message = entitlement == null
+                ? (rawPreviewExists
+                    ? "Resume this preview, then unlock Starter or Pro to generate paid candidates."
+                    : "This preview can be viewed, but its generation source expired. Start over to create paid candidates.")
+                : promotedImage != null
+                    ? (sourceExists ? "Your preview is unlocked. Generate the remaining paid candidates when ready." : "Your preview is unlocked. The original upload expired; remaining candidates will continue from it.")
+                    : rawPreviewExists
+                        ? "Your package is active. Your preview will be unlocked in the workspace."
+                        : "Your package is active, but this preview asset expired. Start a new photo set."
+        };
+    }
+
+    public async Task<PromotedPreviewDownload?> GetPromotedPreviewDownloadAsync(
+        string userId,
+        int imageId,
+        CancellationToken cancellationToken = default)
+    {
+        var image = await _context.ProcessedImages
+            .Include(i => i.UserProfile)
+            .FirstOrDefaultAsync(i =>
+                i.Id == imageId &&
+                i.UserProfile.UserId == userId &&
+                i.GenerationMode == "instant_headshot_promoted_preview" &&
+                i.GenerationStatus == "succeeded" &&
+                EF.Functions.Like(i.ProcessedImageUrl, "%generated-private/%"),
+                cancellationToken);
+        if (image == null)
+        {
+            return null;
+        }
+
+        var ownsPackage = await _context.UserPackageEntitlements
+            .Include(e => e.OutcomePackageDefinition)
+            .AnyAsync(e =>
+                e.UserId == userId &&
+                (e.OutcomePackageDefinition.Code == "starter_package" || e.OutcomePackageDefinition.Code == "pro_package") &&
+                e.Status != PackageEntitlementStatus.Refunded &&
+                e.Status != PackageEntitlementStatus.Revoked,
+                cancellationToken);
+        if (!ownsPackage || _storageService == null)
+        {
+            return null;
+        }
+
+        var stream = await _storageService.GetImageAsync(image.ProcessedImageUrl);
+        return stream == null ? null : new PromotedPreviewDownload(stream, image.Id);
+    }
+
+    private async Task<bool> StorageImageExistsAsync(string storagePath)
+    {
+        if (_storageService == null || string.IsNullOrWhiteSpace(storagePath))
+        {
+            return false;
+        }
+
+        try
+        {
+            return await _storageService.ExistsAsync(storagePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unable to verify preview storage path {StoragePath}", storagePath);
+            return false;
+        }
+    }
+
+    private static HeadshotCandidateDto ToCandidateDto(ProcessedImage image) => new()
+    {
+        ImageUrl = $"/api/headshots/images/{image.Id}/original",
+        StoragePath = image.ProcessedImageUrl,
+        ProcessedImageId = image.Id,
+        Provider = image.Provider ?? string.Empty,
+        Model = image.ProviderModel ?? string.Empty,
+        CorrelationId = image.CorrelationId ?? string.Empty
+    };
+
+    private async Task<bool> PromotePreviewAsync(
+        UserPackageEntitlement entitlement,
+        string userId,
+        int? previewProcessedImageId,
+        CancellationToken cancellationToken)
+    {
+        if (entitlement.Status != PackageEntitlementStatus.Active || entitlement.RemainingCandidates <= 0)
+        {
+            return false;
+        }
+
+        var previews = _context.ProcessedImages
+            .Include(i => i.UserProfile)
+            .Where(i =>
+                i.UserProfile.UserId == userId &&
+                i.GenerationStatus == "succeeded" &&
+                i.GenerationMode == "instant_headshot" &&
+                i.RawImageStoragePath != null);
+        var preview = previewProcessedImageId.HasValue
+            ? await previews.FirstOrDefaultAsync(i => i.Id == previewProcessedImageId.Value, cancellationToken)
+            : await previews.OrderByDescending(i => i.CreatedAt).FirstOrDefaultAsync(cancellationToken);
+
+        if (preview == null)
+        {
+            return !previewProcessedImageId.HasValue;
+        }
+
+        if (preview.RawImageStoragePath is not { Length: > 0 } rawPath ||
+            (_storageService != null && await _storageService.ExistsAsync(rawPath) == false))
+        {
+            return false;
+        }
+
+        var existingPromotion = await _context.ProcessedImages.FirstOrDefaultAsync(i =>
+            i.UserProfileId == preview.UserProfileId &&
+            i.GenerationMode == "instant_headshot_promoted_preview" &&
+            i.GenerationStatus == "succeeded" &&
+            i.ProcessedImageUrl == rawPath,
+            cancellationToken);
+        if (existingPromotion != null)
+        {
+            return true;
+        }
+
+        var promotedImage = new ProcessedImage
+        {
+            OriginalImageUrl = preview.OriginalImageUrl,
+            ProcessedImageUrl = rawPath,
+            Style = preview.Style,
+            UserProfileId = preview.UserProfileId,
+            CreatedAt = DateTime.UtcNow,
+            IsGenerated = true,
+            Provider = preview.Provider,
+            ProviderModel = preview.ProviderModel,
+            GenerationMode = "instant_headshot_promoted_preview",
+            PromptVersion = preview.PromptVersion,
+            CreditCost = 0,
+            GenerationStatus = "succeeded",
+            CorrelationId = $"purchase:{entitlement.Id}:promoted-preview"
+        };
+        promotedImage.SetScheduledDeletionDate();
+        _context.ProcessedImages.Add(promotedImage);
+        entitlement.RemainingCandidates--;
+        entitlement.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<UserPackageEntitlement?> GetActiveEntitlementAsync(string userId, string packageCode, CancellationToken cancellationToken = default)

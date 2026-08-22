@@ -31,6 +31,7 @@ export interface UserCreditStatus {
 export interface PurchaseCreditPackageRequest {
   packageId: number;
   paymentTransactionId?: string;
+  previewProcessedImageId?: number;
 }
 
 export interface CreditPurchase {

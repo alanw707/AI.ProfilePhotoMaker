@@ -39,13 +39,26 @@ A guided use-case layer inside an outcome package, such as LinkedIn / Executive,
 
 OutcomePackageDefinition V1 fields should include Id, Code, Name, Description, Price, Currency, StripePriceId, nullable InternalCreditPackageId, IncludedCandidateCount, IncludedRefinementCount, IncludedPremiumAugmentationCount, IncludesPlatformExportKit, IncludesScoreDelta, IsActive, and DisplayOrder.
 
-Free Preview is the default pre-generation package choice and includes a source photo score, one same-quality watermarked instant preview, creative style pack access, and no export package. A Free Preview candidate can be promoted into a paid package so Starter and Pro generate only the remaining candidate slots after upgrade.
+Free Preview is the default pre-generation package choice and includes a source photo score, one same-quality watermarked instant preview, creative style pack access, and no export package. At purchase, the Free Preview's raw preview asset is promoted into candidate #1, so Starter and Pro generate only the remaining candidate slots after upgrade.
 
 Starter Package includes three generated candidates, best shot selector, basic photo adjustment, selected platform export kit, and one or two refinements.
 
 Pro Package includes nine generated candidates, best shot selector, profile score delta, selected platform export kit, three to five refinements, two or three premium augmentations, and extra role or vibe attempts.
 
 Outcome packages should not compete on raw headshot volume. They should compete on helping the user choose and export their best professional profile photo. Starter and Pro should be upsold after the first preview when the user can see the value of additional candidates and export kits.
+
+## Raw preview asset
+
+The unwatermarked original of a Free Preview generation, stored privately and released only to a user holding a package entitlement. It is what a Starter or Pro purchase delivers first.
+_Avoid_: Raw image, private preview.
+
+## Watermarked preview
+
+The public display copy of a Free Preview generation, with the watermark burned in at generation time by the server. It is the only preview copy a user without a package entitlement can obtain, including by download.
+
+## Promoted candidate
+
+The raw preview asset delivered as candidate #1 of a paid outcome package. Promotion happens server-side at purchase, consumes one candidate slot, and never depends on browser state or a later generation request.
 
 ## Best shot selector
 

@@ -6,7 +6,7 @@ namespace AI.ProfilePhotoMaker.API.Services;
 public interface ICreditPackageService
 {
     Task<IEnumerable<CreditPackageDto>> GetActiveCreditPackagesAsync();
-    Task<CreditPurchaseResult> PurchaseCreditPackageAsync(string userId, int packageId, string? paymentTransactionId = null);
+    Task<CreditPurchaseResult> PurchaseCreditPackageAsync(string userId, int packageId, string? paymentTransactionId = null, int? previewProcessedImageId = null);
     Task<IEnumerable<CreditPurchase>> GetUserPurchaseHistoryAsync(string userId);
 }
 

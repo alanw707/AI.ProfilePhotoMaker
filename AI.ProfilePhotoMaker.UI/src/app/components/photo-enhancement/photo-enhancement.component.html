@@ -561,46 +561,6 @@
             </article>
           </div>
 
-          <div
-            class="credits-card confirmation-card"
-            *ngIf="pendingUpgradePackageCode && hasPendingUpgradeEntitlement()">
-            <div class="credits-icon">✅</div>
-            <div class="credits-content">
-              <h3>{{ getPackageLabel(pendingUpgradePackageCode) }} unlocked</h3>
-              <p>
-                {{ getUpgradeContinuityMessage(pendingUpgradePackageCode) }} No paid generation starts until you
-                confirm.
-              </p>
-              <div class="biometric-consent compact-consent" *ngIf="isEmailConfirmed">
-                <label class="consent-checkbox">
-                  <input
-                    type="checkbox"
-                    [ngModel]="biometricConsentAccepted"
-                    (ngModelChange)="onBiometricConsentChange($event)" />
-                  <span>
-                    I consent to the collection and use of my biometric data (face geometry) to generate paid candidates
-                    from this photo.
-                  </span>
-                </label>
-                <p class="consent-hint" *ngIf="!biometricConsentAccepted">
-                  Consent is required before generating paid candidates.
-                </p>
-              </div>
-              <button
-                class="btn btn-primary"
-                type="button"
-                (click)="confirmPaidPackageGeneration(pendingUpgradePackageCode)"
-                [disabled]="!biometricConsentAccepted">
-                <span *ngIf="biometricConsentAccepted">
-                  Generate {{ getRemainingCandidateCount(pendingUpgradePackageCode) }} more candidate{{
-                    getRemainingCandidateCount(pendingUpgradePackageCode) === 1 ? '' : 's'
-                  }}
-                </span>
-                <span *ngIf="!biometricConsentAccepted">Accept Consent to Continue</span>
-              </button>
-            </div>
-          </div>
-
           <div class="adjustment-workspace">
             <div class="adjustment-preview-card">
               <span class="section-kicker">Live preview</span>
@@ -613,11 +573,11 @@
                   (error)="onEnhancedImageError()"
                   [ngStyle]="getAdjustedImageStyle()" />
               </div>
-              <p *ngIf="selectedPackageCode === 'free_preview' || isPaidPackagePendingConfirmation()">
-                Preview basic framing and color tweaks. Generate your paid candidates to unlock unwatermarked add-ons
-                and exports.
+              <p *ngIf="selectedPackageCode === 'free_preview'">
+                Preview basic framing and color tweaks. Upgrade to unlock the unwatermarked preview, paid add-ons, and
+                exports.
               </p>
-              <p *ngIf="selectedPackageCode !== 'free_preview' && !isPaidPackagePendingConfirmation()">
+              <p *ngIf="selectedPackageCode !== 'free_preview'">
                 Preview basic framing and color tweaks on your paid, unwatermarked candidate. Skin tuning is available
                 in Premium Add-ons.
               </p>
@@ -682,7 +642,7 @@
                 type="button"
                 (click)="regenerateCurrentCandidate()"
                 [disabled]="!canStartEnhancement()"
-                *ngIf="isPaidGenerationConfirmed() && selectedPackageCode !== 'free_preview'">
+                *ngIf="selectedPackageCode !== 'free_preview'">
                 🔁 Regenerate (uses 1 refinement)
               </button>
               <button
@@ -697,11 +657,11 @@
             </div>
           </ng-container>
 
-          <h3 *ngIf="selectedPackageCode !== 'free_preview' && isPaidGenerationConfirmed()">Choose Platform Exports</h3>
+          <h3 *ngIf="selectedPackageCode !== 'free_preview'">Choose Platform Exports</h3>
           <p *ngIf="selectedPackageCode === 'free_preview'">
             Free Preview does not include the platform export kit. Unlock Starter or Pro to download a package.
           </p>
-          <div class="retention-details" *ngIf="selectedPackageCode !== 'free_preview' && isPaidGenerationConfirmed()">
+          <div class="retention-details" *ngIf="selectedPackageCode !== 'free_preview'">
             <label class="retention-item" *ngFor="let option of exportOptions">
               <span class="data-type">
                 <input
@@ -720,7 +680,7 @@
         <div class="result-actions">
           <button
             class="btn btn-primary"
-            *ngIf="isProfileWorkflowEnabled && selectedPackageCode !== 'free_preview' && isPaidGenerationConfirmed()"
+            *ngIf="isProfileWorkflowEnabled && selectedPackageCode !== 'free_preview'"
             (click)="downloadPackage()"
             [disabled]="isDownloadingPackage">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

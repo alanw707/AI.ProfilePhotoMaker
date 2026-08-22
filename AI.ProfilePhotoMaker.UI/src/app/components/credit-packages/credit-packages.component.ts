@@ -372,6 +372,11 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       });
   }
 
+  private _getReturnPreviewId(): number | undefined {
+    const previewId = Number(this._route.snapshot.queryParamMap.get('previewId'));
+    return Number.isInteger(previewId) && previewId > 0 ? previewId : undefined;
+  }
+
   private _shouldUsePaymentSimulation(): boolean {
     return !!(
       this.paymentConfig?.paymentSimulation?.enabled &&
@@ -552,6 +557,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       .purchaseCreditPackage({
         packageId: this.selectedPackage.id,
         paymentTransactionId: this._pendingPaymentTransactionId ?? paymentTransactionId,
+        previewProcessedImageId: this._getReturnPreviewId(),
       })
       .subscribe({
         next: response => {
@@ -620,6 +626,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
         .purchaseCreditPackage({
           packageId: this._pendingPaymentPackageId!,
           paymentTransactionId: this._pendingPaymentTransactionId!,
+          previewProcessedImageId: this._getReturnPreviewId(),
         })
         .subscribe({
           next: response => {
@@ -762,6 +769,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
         .purchaseCreditPackage({
           packageId: pkg.id,
           paymentTransactionId: mockTransactionId,
+          previewProcessedImageId: this._getReturnPreviewId(),
         })
         .subscribe({
           next: response => {

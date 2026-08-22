@@ -435,14 +435,18 @@ public class RetentionPolicyService : IRetentionPolicyService
                                    (allowLegacyInDbScan && pi.ProcessedImageUrl.StartsWith(legacyPrefix)))) ||
                                   (!string.IsNullOrEmpty(pi.OriginalImageUrl) &&
                                    (pi.OriginalImageUrl.StartsWith(envPrefix) ||
-                                    (allowLegacyInDbScan && pi.OriginalImageUrl.StartsWith(legacyPrefix)))))
-                    .Select(pi => new { pi.ProcessedImageUrl, pi.OriginalImageUrl })
+                                    (allowLegacyInDbScan && pi.OriginalImageUrl.StartsWith(legacyPrefix)))) ||
+                                  (!string.IsNullOrEmpty(pi.RawImageStoragePath) &&
+                                   (pi.RawImageStoragePath.StartsWith(envPrefix) ||
+                                    (allowLegacyInDbScan && pi.RawImageStoragePath.StartsWith(legacyPrefix)))))
+                    .Select(pi => new { pi.ProcessedImageUrl, pi.OriginalImageUrl, pi.RawImageStoragePath })
                     .ToListAsync();
 
                 foreach (var p in dbReferenced)
                 {
                     if (!string.IsNullOrEmpty(p.ProcessedImageUrl)) referencedEnhancedPaths.Add(p.ProcessedImageUrl);
                     if (!string.IsNullOrEmpty(p.OriginalImageUrl)) referencedEnhancedPaths.Add(p.OriginalImageUrl);
+                    if (!string.IsNullOrEmpty(p.RawImageStoragePath)) referencedEnhancedPaths.Add(p.RawImageStoragePath);
                 }
 
                 _logger.LogInformation("Found {Count} enhanced paths referenced in database; these will be preserved", referencedEnhancedPaths.Count);

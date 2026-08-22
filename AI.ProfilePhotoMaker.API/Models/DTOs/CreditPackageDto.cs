@@ -16,6 +16,7 @@ public class PurchaseCreditPackageRequestDto
 {
     public int PackageId { get; set; }
     public string? PaymentTransactionId { get; set; }
+    public int? PreviewProcessedImageId { get; set; }
 }
 
 public class CreatePaymentIntentRequestDto

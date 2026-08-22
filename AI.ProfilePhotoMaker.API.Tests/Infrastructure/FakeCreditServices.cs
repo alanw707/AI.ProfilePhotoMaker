@@ -20,7 +20,8 @@ public sealed class FakeCreditPackageService : ICreditPackageService
     public Task<CreditPurchaseResult> PurchaseCreditPackageAsync(
         string userId,
         int packageId,
-        string? paymentTransactionId = null)
+        string? paymentTransactionId = null,
+        int? previewProcessedImageId = null)
     {
         var result = new CreditPurchaseResult(
             false,
