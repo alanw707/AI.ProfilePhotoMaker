@@ -2,10 +2,6 @@ export interface FreePreviewPromotionInput {
   packageCode: string;
   totalCandidateCount: number;
   hasPreviewCandidate: boolean;
-  previewStyleName: string | null;
-  selectedStyleName: string | null;
-  previewSourceStoragePath: string | null;
-  currentSourceStoragePath: string | null;
 }
 
 export interface FreePreviewPromotionPlan {
@@ -17,9 +13,8 @@ export interface FreePreviewPromotionPlan {
 /**
  * Deep Free Preview promotion module.
  *
- * Interface: callers provide package/style/source facts and get the candidate reuse plan.
- * Implementation owns ADR-0003's rule that a Free Preview can become paid candidate #1 only
- * when package is paid and style/source still match.
+ * A paid package keeps an available preview as candidate #1 and generates only the
+ * remaining candidates.
  */
 export class FreePreviewPromotionModule {
   plan(input: FreePreviewPromotionInput): FreePreviewPromotionPlan {
@@ -32,19 +27,12 @@ export class FreePreviewPromotionModule {
       canPromotePreview,
       remainingCandidateCount,
       continuityMessage: canPromotePreview
-        ? `Your preview becomes candidate #1. We will generate ${remainingCandidateCount} more candidate${remainingCandidateCount === 1 ? '' : 's'}.`
-        : `Changing the source photo or style starts a new paid set and generates all ${input.totalCandidateCount} candidates.`,
+        ? `Your preview becomes candidate #1 and is unwatermarked. We will generate ${remainingCandidateCount} more candidate${remainingCandidateCount === 1 ? '' : 's'}.`
+        : `Generate all ${input.totalCandidateCount} candidates in this paid set.`,
     };
   }
 
   canPromote(input: FreePreviewPromotionInput): boolean {
-    return !!(
-      input.packageCode !== 'free_preview' &&
-      input.hasPreviewCandidate &&
-      input.previewStyleName &&
-      input.selectedStyleName === input.previewStyleName &&
-      input.previewSourceStoragePath &&
-      input.currentSourceStoragePath === input.previewSourceStoragePath
-    );
+    return input.packageCode !== 'free_preview' && input.hasPreviewCandidate;
   }
 }

@@ -59,7 +59,11 @@ public class CreditPackageService : ICreditPackageService
         return packages;
     }
 
-    public async Task<CreditPurchaseResult> PurchaseCreditPackageAsync(string userId, int packageId, string? paymentTransactionId = null)
+    public async Task<CreditPurchaseResult> PurchaseCreditPackageAsync(
+        string userId,
+        int packageId,
+        string? paymentTransactionId = null,
+        int? previewProcessedImageId = null)
     {
         var package = await _context.CreditPackages
             .FirstOrDefaultAsync(p => p.Id == packageId && p.IsActive);
@@ -68,6 +72,18 @@ public class CreditPackageService : ICreditPackageService
         {
             _logger.LogWarning("Credit package {PackageId} not found or inactive", packageId);
             return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "PackageNotFound", "Credit package not found or inactive.");
+        }
+
+        if (previewProcessedImageId is int previewId &&
+            _outcomePackageService != null &&
+            !await _outcomePackageService.CanPromotePreviewAsync(userId, previewId))
+        {
+            return new CreditPurchaseResult(
+                false,
+                PaymentStatus.Failed,
+                null,
+                "PreviewUnavailable",
+                "This preview expired before it could be unlocked. Start over with a new photo.");
         }
 
         CreditPurchase? existingPurchase = null;
@@ -82,7 +98,23 @@ public class CreditPackageService : ICreditPackageService
 
         if (existingPurchase != null)
         {
+            if (!string.Equals(existingPurchase.UserId, userId, StringComparison.Ordinal))
+            {
+                return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "TransactionMismatch", "Payment transaction does not belong to the current user.");
+            }
+
             var success = existingPurchase.Status is PaymentStatus.Completed or PaymentStatus.Succeeded;
+            if (success &&
+                _outcomePackageService != null &&
+                int.TryParse(existingPurchase.PaymentTransactionId, out _))
+            {
+                await _outcomePackageService.GrantEntitlementForCreditPackageAsync(
+                    userId,
+                    existingPurchase.PackageId,
+                    existingPurchase.PaymentTransactionId,
+                    previewProcessedImageId);
+            }
+
             return new CreditPurchaseResult(success, existingPurchase.Status, existingPurchase);
         }
 
@@ -144,7 +176,8 @@ public class CreditPackageService : ICreditPackageService
                 transaction.Id.ToString(),
                 transaction.Amount,
                 "stripe_credit_purchase",
-                transaction.ExternalTransactionId);
+                transaction.ExternalTransactionId,
+                previewProcessedImageId);
 
             var success = purchase.Status is PaymentStatus.Completed or PaymentStatus.Succeeded;
             return new CreditPurchaseResult(success, purchase.Status, purchase);
@@ -164,7 +197,9 @@ public class CreditPackageService : ICreditPackageService
             package,
             paymentTransactionId,
             package.Price,
-            "credit_package_purchase");
+            "credit_package_purchase",
+            null,
+            previewProcessedImageId);
 
         var simulatedSuccess = simulatedPurchase.Status is PaymentStatus.Completed or PaymentStatus.Succeeded;
         return new CreditPurchaseResult(simulatedSuccess, simulatedPurchase.Status, simulatedPurchase);
@@ -192,7 +227,14 @@ public class CreditPackageService : ICreditPackageService
         return false;
     }
 
-    private async Task<CreditPurchase> CreatePurchaseAndApplyCreditsAsync(string userId, CreditPackage package, string? paymentTransactionId, decimal amountPaid, string creditSource, string? externalTransactionId = null)
+    private async Task<CreditPurchase> CreatePurchaseAndApplyCreditsAsync(
+        string userId,
+        CreditPackage package,
+        string? paymentTransactionId,
+        decimal amountPaid,
+        string creditSource,
+        string? externalTransactionId = null,
+        int? previewProcessedImageId = null)
     {
         var purchase = new CreditPurchase
         {
@@ -244,7 +286,11 @@ public class CreditPackageService : ICreditPackageService
         {
             if (_outcomePackageService != null)
             {
-                await _outcomePackageService.GrantEntitlementForCreditPackageAsync(userId, package.Id, paymentTransactionId);
+                await _outcomePackageService.GrantEntitlementForCreditPackageAsync(
+                    userId,
+                    package.Id,
+                    paymentTransactionId,
+                    previewProcessedImageId);
             }
         }
 

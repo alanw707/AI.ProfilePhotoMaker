@@ -101,7 +101,11 @@ public class CreditController : BaseController
         if (authCheck != null) return authCheck;
         var userId = GetCurrentUserId()!;
 
-        var purchaseResult = await _creditPackageService.PurchaseCreditPackageAsync(userId, dto.PackageId, dto.PaymentTransactionId);
+        var purchaseResult = await _creditPackageService.PurchaseCreditPackageAsync(
+            userId,
+            dto.PackageId,
+            dto.PaymentTransactionId,
+            dto.PreviewProcessedImageId);
 
         if (!purchaseResult.Success)
         {
@@ -187,7 +191,12 @@ public class CreditController : BaseController
 
         try
         {
-            var intent = await _stripePaymentService.CreatePaymentIntentAsync(userId, dto.PackageId, dto.CouponCode, cancellationToken);
+            var intent = await _stripePaymentService.CreatePaymentIntentAsync(
+                userId,
+                dto.PackageId,
+                dto.CouponCode,
+                dto.PreviewProcessedImageId,
+                cancellationToken);
 
             return SuccessResponse(new
             {

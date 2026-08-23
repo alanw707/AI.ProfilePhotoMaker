@@ -163,11 +163,11 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   isLoadingPortraitStyles = false;
   portraitStyleError = '';
   selectedPackageCode: 'free_preview' | 'starter_package' | 'pro_package' = 'free_preview';
-  pendingUpgradePackageCode: 'starter_package' | 'pro_package' | null = null;
   pendingPaidStyleName: string | null = null;
   previewStyleName: string | null = null;
   previewSourceStoragePath: string | null = null;
   currentSourceStoragePath: string | null = null;
+  rawPreviewAvailable = false;
   previewCandidate: CandidateViewModel | null = null;
   resumablePreview: ResumableHeadshotPreview | null = null;
   isLoadingResumablePreview = false;
@@ -399,18 +399,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       return true;
     }
 
-    if (this.pendingUpgradePackageCode) {
-      return false;
-    }
-
     return this.hasPackageEntitlementForGeneration(this.selectedPackageCode);
-  }
-
-  hasPendingUpgradeEntitlement(): boolean {
-    return !!(
-      this.pendingUpgradePackageCode &&
-      this.hasPackageEntitlementForGeneration(this.pendingUpgradePackageCode)
-    );
   }
 
   private hasPackageEntitlementForGeneration(packageCode: string): boolean {
@@ -443,22 +432,10 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   isPremiumAddOnUnlockedForCurrentCandidate(): boolean {
-    return (
-      this.selectedPackageCode !== 'free_preview' &&
-      this.isPaidGenerationConfirmed() &&
-      this.hasPremiumAugmentationEntitlement()
-    );
-  }
-
-  isPaidPackagePendingConfirmation(): boolean {
-    return this.selectedPackageCode !== 'free_preview' && !this.isPaidGenerationConfirmed();
+    return this.selectedPackageCode !== 'free_preview' && this.hasPremiumAugmentationEntitlement();
   }
 
   getPremiumAddOnStatusText(): string {
-    if (this.isPaidPackagePendingConfirmation()) {
-      return `${this.getSelectedPackageLabel()} is unlocked. Generate your paid candidates first, then premium add-ons become available.`;
-    }
-
     if (this.selectedPackageCode === 'free_preview') {
       return 'Premium add-ons require Pro and apply to unwatermarked paid candidates.';
     }
@@ -468,7 +445,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     }
 
     const remaining = this.getRemainingPremiumAugmentationCount();
-    if (remaining > 0 && this.isPaidGenerationConfirmed()) {
+    if (remaining > 0) {
       return `${remaining} Pro premium add-on${remaining === 1 ? '' : 's'} available. Candidate generation does not use this allowance.`;
     }
 
@@ -482,10 +459,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   getPremiumAddOnBadgeText(): string {
     if (this.isPremiumAddOnUnlockedForCurrentCandidate()) {
       return 'Available now';
-    }
-
-    if (this.isPaidPackagePendingConfirmation()) {
-      return 'Generate paid candidates first';
     }
 
     if (this.selectedPackageCode === 'starter_package') {
@@ -550,7 +523,11 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   getPaidUpgradeOptions(): OutcomePackageDefinition[] {
-    if (this.getBestActivePaidPackageCode()) {
+    if (
+      this.getBestActivePaidPackageCode() ||
+      (this.previewCandidate && !this.rawPreviewAvailable) ||
+      (this.resumablePreview && !this.resumablePreview.hasRawPreview)
+    ) {
       return [];
     }
 
@@ -578,10 +555,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       packageCode,
       totalCandidateCount,
       hasPreviewCandidate: !!this.previewCandidate,
-      previewStyleName: this.previewStyleName,
-      selectedStyleName: this.selectedPortraitStyle?.style.name ?? null,
-      previewSourceStoragePath: this.previewSourceStoragePath,
-      currentSourceStoragePath: this.currentSourceStoragePath,
     });
   }
 
@@ -612,18 +585,10 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       return `${this.getSelectedPackageLabel()} is locked until purchase grants an entitlement.`;
     }
 
-    if (this.pendingUpgradePackageCode) {
-      return `${this.getSelectedPackageLabel()} unlocked: confirm paid generation to create unwatermarked candidates.`;
-    }
-
     return `${this.getSelectedPackageLabel()} active: ${entitlement.remainingCandidates} candidates, ${entitlement.remainingRefinements} refinements, ${entitlement.remainingPremiumAugmentations} premium add-ons, export kit ${entitlement.platformExportKitAvailable ? 'available' : 'used'}.`;
   }
 
   getPackageStateLabel(): string {
-    if (this.pendingUpgradePackageCode) {
-      return `${this.getPackageLabel(this.pendingUpgradePackageCode)} unlocked`;
-    }
-
     return this.selectedPackageCode === 'free_preview'
       ? 'Free Preview'
       : `${this.getSelectedPackageLabel()} active`;
@@ -760,15 +725,18 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
     this._route.queryParamMap.subscribe(params => {
       const upgraded = params.get('upgraded');
-      const resumePreviewId = Number(params.get('resumePreviewId'));
+      const resumePreviewId = Number(params.get('resumePreviewId') ?? params.get('previewId'));
       this.applyUseCaseFromQuery(params.get('useCase'));
       if (upgraded === 'starter_package' || upgraded === 'pro_package') {
         this.restorePreviewDraft();
-        this.pendingUpgradePackageCode = upgraded;
         this.selectedPackageCode = upgraded;
         this.trackVerticalFunnelEvent('vertical_pack_purchase_success', { packageCode: upgraded });
         this.loadPackageEntitlements();
-        this.saveSuccessMessage = `${this.getPackageLabel(upgraded)} unlocked. Confirm when you are ready to generate the remaining candidates.`;
+        this.loadResumablePreview(
+          Number.isFinite(resumePreviewId) && resumePreviewId > 0 ? resumePreviewId : undefined,
+          true
+        );
+        this.saveSuccessMessage = `${this.getPackageLabel(upgraded)} unlocked. Your preview is ready; generate the remaining candidates when ready.`;
         this._cdr.markForCheck();
       } else {
         sessionStorage.removeItem('enhanceUpgradeDraft');
@@ -803,7 +771,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       }
 
       const draft = JSON.parse(raw) as {
-        packageCode?: 'starter_package' | 'pro_package';
         styleName?: string;
         paidStyleName?: string;
         sourceStoragePath?: string;
@@ -830,9 +797,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       this.beforeImageLoadFailed = sourceState.beforeImageLoadFailed;
       this.generatedCandidates = [{ ...draft.candidate, promotedFromPreview: true }];
       this.selectCandidate(this.generatedCandidates[0]);
-      if (draft.packageCode) {
-        this.pendingUpgradePackageCode = draft.packageCode;
-      }
       this.pendingPaidStyleName = draft.paidStyleName ?? null;
     } catch (error) {
       console.warn('Failed to restore enhance upgrade draft', error);
@@ -918,14 +882,15 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   resumePreview(preview: ResumableHeadshotPreview): void {
+    const promotedCandidate = preview.promotedCandidate;
     const candidate: CandidateViewModel = {
-      imageUrl: preview.imageUrl,
-      storagePath: preview.storagePath,
-      processedImageId: preview.processedImageId,
-      provider: 'openai',
-      model: 'gpt-image-2',
-      correlationId: '',
-      promotedFromPreview: true,
+      imageUrl: promotedCandidate?.imageUrl ?? preview.imageUrl,
+      storagePath: promotedCandidate?.storagePath ?? preview.storagePath,
+      processedImageId: promotedCandidate?.processedImageId ?? preview.processedImageId,
+      provider: promotedCandidate?.provider ?? 'openai',
+      model: promotedCandidate?.model ?? 'gpt-image-2',
+      correlationId: promotedCandidate?.correlationId ?? '',
+      promotedFromPreview: !!promotedCandidate,
     };
     this.previewCandidate = candidate;
     this.resumablePreview = null;
@@ -936,6 +901,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     );
     this.previewSourceStoragePath = sourceState.previewSourceStoragePath;
     this.currentSourceStoragePath = sourceState.currentSourceStoragePath;
+    this.rawPreviewAvailable = preview.hasRawPreview;
     this.imagePreview = sourceState.imagePreview;
     this.beforeImageLoadFailed = sourceState.beforeImageLoadFailed;
     this.generatedCandidates = [candidate];
@@ -946,8 +912,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       preview.activePackageCode === 'pro_package'
     ) {
       this.selectedPackageCode = preview.activePackageCode;
-      this.pendingUpgradePackageCode = preview.activePackageCode;
-      this.saveSuccessMessage = `${this.getPackageLabel(preview.activePackageCode)} is unlocked. Generate your paid candidates when ready.`;
+      this.saveSuccessMessage = `${this.getPackageLabel(preview.activePackageCode)} is unlocked. Your preview is ready; generate the remaining candidates when ready.`;
     } else {
       this.selectedPackageCode = 'free_preview';
       this.saveSuccessMessage =
@@ -1265,25 +1230,12 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   private applyActiveEntitlementSelection(): void {
     const activePackageCode = this.getBestActivePaidPackageCode();
-    if (!activePackageCode || this.pendingUpgradePackageCode) {
+    if (!activePackageCode) {
       return;
     }
 
     if (this.selectedPackageCode === 'free_preview') {
       this.selectedPackageCode = activePackageCode;
-      if (this.previewCandidate || this.enhancedImage) {
-        this.pendingUpgradePackageCode = activePackageCode;
-        this.saveSuccessMessage = `${this.getPackageLabel(activePackageCode)} is unlocked. Confirm when you are ready to generate unwatermarked candidates.`;
-      }
-      return;
-    }
-
-    if (
-      (this.previewCandidate || this.enhancedImage) &&
-      this.hasPackageEntitlementForGeneration(this.selectedPackageCode)
-    ) {
-      this.pendingUpgradePackageCode = this.selectedPackageCode;
-      this.saveSuccessMessage = `${this.getPackageLabel(this.selectedPackageCode)} is unlocked. Confirm when you are ready to generate unwatermarked candidates.`;
     }
   }
 
@@ -1345,6 +1297,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this.generatedScore = null;
     this.qualityGateOverrideAccepted = false;
     this.currentSourceStoragePath = null;
+    this.rawPreviewAvailable = false;
     this.previewCandidate = null;
     this.previewSourceStoragePath = null;
     this.previewStyleName = null;
@@ -1416,6 +1369,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this._selectedFileToken++;
     this.selectedFile = null;
     Object.assign(this, this.photoWorkspaceSession.createClearedSourceState());
+    this.rawPreviewAvailable = false;
     sessionStorage.removeItem('enhanceUpgradeDraft');
     // Trigger change detection to update the view
     this._cdr.detectChanges();
@@ -1534,10 +1488,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
               : this.getCandidateRequestCountForSelectedPackage(),
             isRegeneration: this._nextRequestIsRegeneration,
             reusedPreviewProcessedImageId: promotedPreview?.processedImageId,
-            reusedPreviewSourcePath: promotedPreview
-              ? (this.previewSourceStoragePath ?? undefined)
-              : undefined,
-            reusedPreviewStyle: promotedPreview ? (this.previewStyleName ?? undefined) : undefined,
             useCaseCode: this.selectedUseCaseCode,
             turnstileToken: this.turnstileSiteKey ? this.turnstileToken : undefined,
           })
@@ -1554,6 +1504,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         this.generatedCandidates = this.toCandidateViewModels(headshotResponse.data);
         if (this.selectedPackageCode === 'free_preview') {
           this.previewCandidate = this.generatedCandidates[0] ?? null;
+          this.rawPreviewAvailable = true;
           this.previewStyleName = this.selectedPortraitStyle?.style.name ?? null;
           this.previewSourceStoragePath = uploadResult.storagePath;
           this.trackVerticalFunnelEvent('vertical_pack_preview_generated', {
@@ -1833,32 +1784,34 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     );
   }
 
-  isPaidGenerationConfirmed(): boolean {
-    return this.selectedPackageCode === 'free_preview' || !this.pendingUpgradePackageCode;
-  }
-
   getCandidateRequestCountForSelectedPackage(): number {
     return this.selectedPackageCode === 'free_preview'
       ? 1
       : this.getRemainingCandidateCount(this.selectedPackageCode);
   }
 
-  confirmPaidPackageGeneration(packageCode: 'starter_package' | 'pro_package'): void {
-    this.selectedPackageCode = packageCode;
-
-    if (!this.biometricConsentAccepted) {
+  upgradeToPackage(packageCode: string): void {
+    const option = this.packageOptions.find(item => item.code === packageCode);
+    if (
+      (this.previewCandidate && !this.rawPreviewAvailable) ||
+      (this.resumablePreview && !this.resumablePreview.hasRawPreview)
+    ) {
       this.errorMessage =
-        'Please accept the biometric consent notice before generating paid candidates.';
+        'This preview expired. Start over to create a new photo before upgrading.';
       this._cdr.markForCheck();
       return;
     }
 
-    this.pendingUpgradePackageCode = null;
-    void this.startEnhancement();
-  }
+    const activePackageCode = this.getBestActivePaidPackageCode();
+    if (
+      activePackageCode &&
+      !window.confirm(
+        `You already have an unused ${this.getPackageLabel(activePackageCode)}. Buy another package anyway?`
+      )
+    ) {
+      return;
+    }
 
-  upgradeToPackage(packageCode: string): void {
-    const option = this.packageOptions.find(item => item.code === packageCode);
     if (!option?.internalCreditPackageId) {
       this.errorMessage = `${option?.name ?? 'This package'} is not available for checkout yet.`;
       this._cdr.markForCheck();
@@ -1871,7 +1824,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       queryParams: {
         packageId: option.internalCreditPackageId,
         outcomePackage: option.code,
-        returnUrl: `/app/enhance?useCase=${this.selectedUseCaseCode}`,
+        previewId: this.previewCandidate?.processedImageId ?? null,
+        returnUrl: `/app/enhance?useCase=${this.selectedUseCaseCode}&previewId=${this.previewCandidate?.processedImageId ?? ''}`,
       },
     });
   }
@@ -2264,11 +2218,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     const fileName = `enhanced-photo-${Date.now()}.png`;
 
     try {
-      if (this.selectedPackageCode === 'free_preview') {
-        await this.downloadWatermarkedPreview(fileName);
-        return;
-      }
-
       if (this.enhancedImage.url.startsWith('data:image/')) {
         this.triggerDownload(this.enhancedImage.url, fileName);
         return;
@@ -2284,48 +2233,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       this.errorMessage = 'Enhanced photo is ready, but download failed. Please try again.';
       this._cdr.markForCheck();
     }
-  }
-
-  private async downloadWatermarkedPreview(fileName: string): Promise<void> {
-    const imageUrl = this.enhancedImage?.displayUrl;
-    if (!imageUrl) {
-      throw new Error('No preview image available');
-    }
-
-    const image = new Image();
-    image.crossOrigin = 'anonymous';
-    const loaded = new Promise<void>((resolve, reject) => {
-      image.onload = () => resolve();
-      image.onerror = () => reject(new Error('Unable to load preview for watermarking'));
-    });
-    image.src = imageUrl;
-    await loaded;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = image.naturalWidth || 1024;
-    canvas.height = image.naturalHeight || 1280;
-    const context = canvas.getContext('2d');
-    if (!context) {
-      throw new Error('Unable to prepare watermarked preview');
-    }
-
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    context.save();
-    context.globalAlpha = 0.28;
-    context.fillStyle = '#ffffff';
-    context.strokeStyle = 'rgba(15, 23, 42, 0.45)';
-    context.lineWidth = Math.max(2, canvas.width / 420);
-    context.font = `700 ${Math.max(28, Math.round(canvas.width / 13))}px sans-serif`;
-    context.textAlign = 'center';
-    context.translate(canvas.width / 2, canvas.height / 2);
-    context.rotate(-Math.PI / 6);
-    for (let y = -canvas.height; y <= canvas.height; y += canvas.height / 4) {
-      context.strokeText('AI PROFILE PHOTO MAKER PREVIEW', 0, y);
-      context.fillText('AI PROFILE PHOTO MAKER PREVIEW', 0, y);
-    }
-    context.restore();
-
-    this.triggerDownload(canvas.toDataURL('image/png'), fileName);
   }
 
   private toAttachmentDownloadUrl(url: string, fileName: string): string {

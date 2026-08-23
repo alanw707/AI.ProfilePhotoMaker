@@ -3,15 +3,11 @@ import { FreePreviewPromotionModule } from './free-preview-promotion';
 describe('FreePreviewPromotionModule', () => {
   const promotion = new FreePreviewPromotionModule();
 
-  it('promotes a Free Preview into paid candidate one when package, style, and source match', () => {
+  it('promotes a Free Preview into paid candidate one when a paid package is active', () => {
     const plan = promotion.plan({
       packageCode: 'pro_package',
       totalCandidateCount: 9,
       hasPreviewCandidate: true,
-      previewStyleName: 'linkedin',
-      selectedStyleName: 'linkedin',
-      previewSourceStoragePath: 'users/1/source.png',
-      currentSourceStoragePath: 'users/1/source.png',
     });
 
     expect(plan.canPromotePreview).toBeTrue();
@@ -24,29 +20,21 @@ describe('FreePreviewPromotionModule', () => {
       packageCode: 'free_preview',
       totalCandidateCount: 1,
       hasPreviewCandidate: true,
-      previewStyleName: 'linkedin',
-      selectedStyleName: 'linkedin',
-      previewSourceStoragePath: 'users/1/source.png',
-      currentSourceStoragePath: 'users/1/source.png',
     });
 
     expect(plan.canPromotePreview).toBeFalse();
     expect(plan.remainingCandidateCount).toBe(1);
   });
 
-  it('starts a full paid set when style or source changed', () => {
+  it('generates the full paid set when no preview is available', () => {
     const plan = promotion.plan({
       packageCode: 'starter_package',
       totalCandidateCount: 3,
-      hasPreviewCandidate: true,
-      previewStyleName: 'linkedin',
-      selectedStyleName: 'executive',
-      previewSourceStoragePath: 'users/1/source.png',
-      currentSourceStoragePath: 'users/1/source.png',
+      hasPreviewCandidate: false,
     });
 
     expect(plan.canPromotePreview).toBeFalse();
     expect(plan.remainingCandidateCount).toBe(3);
-    expect(plan.continuityMessage).toContain('starts a new paid set');
+    expect(plan.continuityMessage).toBe('Generate all 3 candidates in this paid set.');
   });
 });

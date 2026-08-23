@@ -1,7 +1,10 @@
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Moq;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -9,6 +12,42 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services;
 
 public class OutcomePackageServiceTests
 {
+    [Fact]
+    public async Task ReservePreviewForPurchase_VerifiesRawAssetAndExtendsRetention()
+    {
+        await using var context = CreateContext();
+        var userId = "checkout-user";
+        var profile = new UserProfile { UserId = userId };
+        context.UserProfiles.Add(profile);
+        await context.SaveChangesAsync();
+        var preview = new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = "uploads/source.png",
+            ProcessedImageUrl = "generated/preview.png",
+            RawImageStoragePath = "generated-private/raw.png",
+            Style = "linkedin",
+            GenerationMode = "instant_headshot",
+            GenerationStatus = "succeeded",
+            ScheduledDeletionDate = DateTime.UtcNow.AddMinutes(1)
+        };
+        context.ProcessedImages.Add(preview);
+        await context.SaveChangesAsync();
+        var storage = new Mock<IStorageService>();
+        storage.Setup(service => service.ExistsAsync(preview.RawImageStoragePath)).ReturnsAsync(true);
+        var service = new OutcomePackageService(
+            context,
+            NullLogger<OutcomePackageService>.Instance,
+            storage.Object);
+        var beforeReservation = DateTime.UtcNow;
+
+        var reserved = await service.ReservePreviewForPurchaseAsync(userId, preview.Id);
+
+        Assert.True(reserved);
+        Assert.True(preview.ScheduledDeletionDate >= beforeReservation.AddHours(24));
+        storage.Verify(service => service.ExistsAsync(preview.RawImageStoragePath), Times.Once);
+    }
+
     [Fact]
     public async Task ConsumeMethods_DecrementPackageAllowancesAndRejectWhenUnavailable()
     {
@@ -64,6 +103,394 @@ public class OutcomePackageServiceTests
     }
 
     [Fact]
+    public async Task GrantEntitlement_PromotesRawPreviewAndConsumesOneCandidateSlot()
+    {
+        await using var context = CreateContext();
+        var userId = "promotion-user";
+        var profile = new UserProfile { UserId = userId };
+        var package = new OutcomePackageDefinition
+        {
+            Code = "starter_package",
+            Name = "Starter Package",
+            Description = "Test package",
+            InternalCreditPackageId = 7,
+            IncludedCandidateCount = 3,
+            IsActive = true
+        };
+        context.UserProfiles.Add(profile);
+        context.OutcomePackageDefinitions.Add(package);
+        await context.SaveChangesAsync();
+
+        var preview = new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = "uploads/source.png",
+            ProcessedImageUrl = "generated/preview.png",
+            RawImageStoragePath = "generated-private/raw.png",
+            Style = "linkedin",
+            IsGenerated = true,
+            GenerationMode = "instant_headshot",
+            GenerationStatus = "succeeded",
+            Provider = "openai",
+            ProviderModel = "gpt-image-2",
+            ScheduledDeletionDate = DateTime.UtcNow.AddDays(30)
+        };
+        context.ProcessedImages.Add(preview);
+        await context.SaveChangesAsync();
+
+        var service = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance);
+        var entitlement = await service.GrantEntitlementForCreditPackageAsync(userId, 7, "42", preview.Id);
+
+        Assert.NotNull(entitlement);
+        Assert.Equal(2, entitlement!.RemainingCandidates);
+        var promoted = await context.ProcessedImages.SingleAsync(i => i.GenerationMode == "instant_headshot_promoted_preview");
+        Assert.Equal("generated-private/raw.png", promoted.ProcessedImageUrl);
+        Assert.Equal(0, promoted.CreditCost);
+    }
+
+    [Fact]
+    public async Task GrantEntitlement_RejectsExplicitPreviewWhenRawAssetIsMissing()
+    {
+        await using var context = CreateContext();
+        var userId = "expired-preview-user";
+        var profile = new UserProfile { UserId = userId };
+        context.UserProfiles.Add(profile);
+        context.OutcomePackageDefinitions.Add(new OutcomePackageDefinition
+        {
+            Code = "starter_package",
+            Name = "Starter Package",
+            Description = "Test package",
+            InternalCreditPackageId = 8,
+            IncludedCandidateCount = 3,
+            IsActive = true
+        });
+        await context.SaveChangesAsync();
+        var preview = new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = "uploads/source.png",
+            ProcessedImageUrl = "generated/preview.png",
+            RawImageStoragePath = "generated-private/missing.png",
+            Style = "linkedin",
+            GenerationMode = "instant_headshot",
+            GenerationStatus = "succeeded"
+        };
+        context.ProcessedImages.Add(preview);
+        await context.SaveChangesAsync();
+        var storage = new Mock<IStorageService>();
+        storage.Setup(s => s.ExistsAsync(preview.RawImageStoragePath)).ReturnsAsync(false);
+        var service = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance, storage.Object);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.GrantEntitlementForCreditPackageAsync(userId, 8, "43", preview.Id));
+        Assert.Empty(context.UserPackageEntitlements);
+        Assert.Empty(context.ProcessedImages.Where(i => i.GenerationMode == "instant_headshot_promoted_preview"));
+    }
+
+    [Fact]
+    public async Task GrantEntitlement_RejectsLatestPreviewWhenRawAssetIsMissingWithoutClientPreviewId()
+    {
+        await using var context = CreateContext();
+        var userId = "server-selected-preview-user";
+        var profile = new UserProfile { UserId = userId };
+        context.UserProfiles.Add(profile);
+        context.OutcomePackageDefinitions.Add(new OutcomePackageDefinition
+        {
+            Code = "starter_package",
+            Name = "Starter Package",
+            Description = "Test package",
+            InternalCreditPackageId = 11,
+            IncludedCandidateCount = 3,
+            IsActive = true
+        });
+        await context.SaveChangesAsync();
+        var preview = new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = "uploads/source.png",
+            ProcessedImageUrl = "generated/preview.png",
+            RawImageStoragePath = "generated-private/missing-latest.png",
+            Style = "linkedin",
+            GenerationMode = "instant_headshot",
+            GenerationStatus = "succeeded",
+            CreatedAt = DateTime.UtcNow
+        };
+        context.ProcessedImages.Add(preview);
+        await context.SaveChangesAsync();
+        var storage = new Mock<IStorageService>();
+        storage.Setup(s => s.ExistsAsync(preview.RawImageStoragePath)).ReturnsAsync(false);
+        var service = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance, storage.Object);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.GrantEntitlementForCreditPackageAsync(userId, 11, "46"));
+
+        Assert.Empty(context.ProcessedImages.Where(i => i.GenerationMode == "instant_headshot_promoted_preview"));
+        Assert.Equal(3, (await context.UserPackageEntitlements.SingleAsync()).RemainingCandidates);
+    }
+
+    [Fact]
+    public async Task GrantEntitlement_AllowsStandalonePurchaseWhenUserHasNoPreview()
+    {
+        await using var context = CreateContext();
+        context.OutcomePackageDefinitions.Add(new OutcomePackageDefinition
+        {
+            Code = "starter_package",
+            Name = "Starter Package",
+            Description = "Test package",
+            InternalCreditPackageId = 12,
+            IncludedCandidateCount = 3,
+            IsActive = true
+        });
+        await context.SaveChangesAsync();
+        var service = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance, Mock.Of<IStorageService>());
+
+        var entitlement = await service.GrantEntitlementForCreditPackageAsync("standalone-user", 12, "47");
+
+        Assert.NotNull(entitlement);
+        Assert.Equal(3, entitlement!.RemainingCandidates);
+        Assert.Empty(context.ProcessedImages);
+    }
+
+    [Fact]
+    public async Task GrantEntitlement_FailsExplicitlyWhenRawAssetDisappearsAfterPreflight()
+    {
+        await using var context = CreateContext();
+        var userId = "promotion-race-user";
+        var profile = new UserProfile { UserId = userId };
+        context.UserProfiles.Add(profile);
+        context.OutcomePackageDefinitions.Add(new OutcomePackageDefinition
+        {
+            Code = "starter_package",
+            Name = "Starter Package",
+            Description = "Test package",
+            InternalCreditPackageId = 10,
+            IncludedCandidateCount = 3,
+            IsActive = true
+        });
+        await context.SaveChangesAsync();
+        var preview = new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = "uploads/source.png",
+            ProcessedImageUrl = "generated/preview.png",
+            RawImageStoragePath = "generated-private/racy.png",
+            Style = "linkedin",
+            GenerationMode = "instant_headshot",
+            GenerationStatus = "succeeded"
+        };
+        context.ProcessedImages.Add(preview);
+        await context.SaveChangesAsync();
+        var storage = new Mock<IStorageService>();
+        storage.SetupSequence(s => s.ExistsAsync(preview.RawImageStoragePath))
+            .ReturnsAsync(true)
+            .ReturnsAsync(false);
+        var service = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance, storage.Object);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.GrantEntitlementForCreditPackageAsync(userId, 10, "45", preview.Id));
+
+        Assert.Empty(context.ProcessedImages.Where(i => i.GenerationMode == "instant_headshot_promoted_preview"));
+        Assert.Equal(3, (await context.UserPackageEntitlements.SingleAsync()).RemainingCandidates);
+    }
+
+    [Fact]
+    public async Task GrantEntitlement_RetryDoesNotDuplicatePromotionOrConsumeAnotherCandidate()
+    {
+        await using var context = CreateContext();
+        var userId = "promotion-retry-user";
+        var profile = new UserProfile { UserId = userId };
+        context.UserProfiles.Add(profile);
+        context.OutcomePackageDefinitions.Add(new OutcomePackageDefinition
+        {
+            Code = "starter_package",
+            Name = "Starter Package",
+            Description = "Test package",
+            InternalCreditPackageId = 9,
+            IncludedCandidateCount = 3,
+            IsActive = true
+        });
+        await context.SaveChangesAsync();
+        var preview = new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = "uploads/source.png",
+            ProcessedImageUrl = "generated/preview.png",
+            RawImageStoragePath = "generated-private/raw.png",
+            Style = "linkedin",
+            GenerationMode = "instant_headshot",
+            GenerationStatus = "succeeded"
+        };
+        context.ProcessedImages.Add(preview);
+        await context.SaveChangesAsync();
+        var storage = new Mock<IStorageService>();
+        storage.Setup(s => s.ExistsAsync(preview.RawImageStoragePath)).ReturnsAsync(true);
+        var service = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance, storage.Object);
+
+        await service.GrantEntitlementForCreditPackageAsync(userId, 9, "44", preview.Id);
+        var retried = await service.GrantEntitlementForCreditPackageAsync(userId, 9, "44", preview.Id);
+
+        Assert.NotNull(retried);
+        Assert.Equal(2, retried!.RemainingCandidates);
+        Assert.Single(context.ProcessedImages.Where(i => i.GenerationMode == "instant_headshot_promoted_preview"));
+    }
+
+    [Fact]
+    public async Task PromotedPreviewDownload_RequiresOwnerPackageEntitlement()
+    {
+        await using var context = CreateContext();
+        var userId = "download-user";
+        var profile = new UserProfile { UserId = userId };
+        var package = new OutcomePackageDefinition
+        {
+            Code = "starter_package",
+            Name = "Starter Package",
+            Description = "Test package",
+            IsActive = true
+        };
+        context.UserProfiles.Add(profile);
+        context.OutcomePackageDefinitions.Add(package);
+        await context.SaveChangesAsync();
+        var promoted = new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = "uploads/source.png",
+            ProcessedImageUrl = "generated-private/raw.png",
+            Style = "linkedin",
+            GenerationMode = "instant_headshot_promoted_preview",
+            GenerationStatus = "succeeded"
+        };
+        context.ProcessedImages.Add(promoted);
+        await context.SaveChangesAsync();
+        var storage = new Mock<IStorageService>();
+        storage.Setup(s => s.GetImageAsync(promoted.ProcessedImageUrl)).ReturnsAsync(new MemoryStream([1, 2, 3]));
+        var service = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance, storage.Object);
+
+        Assert.Null(await service.GetPromotedPreviewDownloadAsync(userId, promoted.Id));
+
+        context.UserPackageEntitlements.Add(new UserPackageEntitlement
+        {
+            UserId = userId,
+            OutcomePackageDefinitionId = package.Id,
+            Status = PackageEntitlementStatus.Active
+        });
+        await context.SaveChangesAsync();
+
+        var download = await service.GetPromotedPreviewDownloadAsync(userId, promoted.Id);
+        Assert.NotNull(download);
+        Assert.Equal(promoted.Id, download!.ImageId);
+        await download.Content.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task GrantEntitlement_ConcurrentPromotionUsesWinnerWithoutDoubleConsumption()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"promotion-race-{Guid.NewGuid():N}.db");
+        var connectionString = $"Data Source={databasePath}";
+        var winnerOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connectionString)
+            .Options;
+
+        try
+        {
+            int previewId;
+            await using (var seed = new ApplicationDbContext(winnerOptions))
+            {
+                await seed.Database.EnsureCreatedAsync();
+                var user = new ApplicationUser
+                {
+                    Id = "concurrent-user",
+                    UserName = "concurrent@example.com",
+                    Email = "concurrent@example.com"
+                };
+                var profile = new UserProfile { UserId = user.Id, User = user };
+                var creditPackage = new CreditPackage
+                {
+                    Id = 12012,
+                    Name = "Concurrent Credits",
+                    Description = "Test package",
+                    IsActive = true
+                };
+                var package = new OutcomePackageDefinition
+                {
+                    Code = "concurrent_package",
+                    Name = "Concurrent Package",
+                    Description = "Test package",
+                    InternalCreditPackage = creditPackage,
+                    IncludedCandidateCount = 3,
+                    IsActive = true
+                };
+                seed.Users.Add(user);
+                seed.CreditPackages.Add(creditPackage);
+                seed.UserProfiles.Add(profile);
+                seed.OutcomePackageDefinitions.Add(package);
+                await seed.SaveChangesAsync();
+                var preview = new ProcessedImage
+                {
+                    UserProfileId = profile.Id,
+                    OriginalImageUrl = "uploads/concurrent-source.png",
+                    ProcessedImageUrl = "generated/concurrent-preview.png",
+                    RawImageStoragePath = "generated-private/concurrent-raw.png",
+                    Style = "linkedin",
+                    GenerationMode = "instant_headshot",
+                    GenerationStatus = "succeeded"
+                };
+                seed.ProcessedImages.Add(preview);
+                seed.PaymentTransactions.Add(new PaymentTransaction
+                {
+                    Id = 77,
+                    UserId = user.Id,
+                    ExternalTransactionId = "pi_concurrent",
+                    Amount = 9.99m,
+                    Currency = "usd",
+                    PaymentProvider = "stripe",
+                    Status = PaymentStatus.Completed,
+                    Type = PaymentType.OneTime,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+                seed.UserPackageEntitlements.Add(new UserPackageEntitlement
+                {
+                    UserId = profile.UserId,
+                    OutcomePackageDefinitionId = package.Id,
+                    SourcePaymentTransactionId = 77,
+                    Status = PackageEntitlementStatus.Active,
+                    RemainingPackageUses = 1,
+                    RemainingCandidates = 3,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+                await seed.SaveChangesAsync();
+                previewId = preview.Id;
+            }
+
+            var interceptor = new ConcurrentPromotionInterceptor(winnerOptions);
+            var loserOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite(connectionString)
+                .AddInterceptors(interceptor)
+                .Options;
+            await using var loser = new ApplicationDbContext(loserOptions);
+            var service = new OutcomePackageService(loser, NullLogger<OutcomePackageService>.Instance);
+
+            var entitlement = await service.GrantEntitlementForCreditPackageAsync(
+                "concurrent-user",
+                12012,
+                "77",
+                previewId);
+
+            Assert.NotNull(entitlement);
+            await using var verification = new ApplicationDbContext(winnerOptions);
+            Assert.Single(await verification.ProcessedImages
+                .Where(image => image.GenerationMode == "instant_headshot_promoted_preview")
+                .ToListAsync());
+            Assert.Equal(2, (await verification.UserPackageEntitlements.SingleAsync()).RemainingCandidates);
+        }
+        finally
+        {
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
     public async Task ConsumeCandidates_FreePreview_AllowsOnlyOneCandidateWithoutEntitlement()
     {
         await using var context = CreateContext();
@@ -71,6 +498,46 @@ public class OutcomePackageServiceTests
 
         Assert.True(await service.ConsumeCandidatesAsync("free-user", "free_preview", 1));
         Assert.False(await service.ConsumeCandidatesAsync("free-user", "free_preview", 2));
+    }
+
+    private sealed class ConcurrentPromotionInterceptor(
+        DbContextOptions<ApplicationDbContext> winnerOptions) : SaveChangesInterceptor
+    {
+        private int _hasInjectedWinner;
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            var losingContext = (ApplicationDbContext)eventData.Context!;
+            var attemptedPromotion = losingContext.ChangeTracker.Entries<ProcessedImage>()
+                .FirstOrDefault(entry =>
+                    entry.State == EntityState.Added &&
+                    entry.Entity.GenerationMode == "instant_headshot_promoted_preview");
+            if (attemptedPromotion == null || Interlocked.Exchange(ref _hasInjectedWinner, 1) != 0)
+            {
+                return result;
+            }
+
+            await using var winner = new ApplicationDbContext(winnerOptions);
+            var entitlement = await winner.UserPackageEntitlements.SingleAsync(cancellationToken);
+            winner.ProcessedImages.Add(new ProcessedImage
+            {
+                UserProfileId = attemptedPromotion.Entity.UserProfileId,
+                OriginalImageUrl = attemptedPromotion.Entity.OriginalImageUrl,
+                ProcessedImageUrl = attemptedPromotion.Entity.ProcessedImageUrl,
+                Style = attemptedPromotion.Entity.Style,
+                GenerationMode = "instant_headshot_promoted_preview",
+                GenerationStatus = "succeeded",
+                IsGenerated = true,
+                ScheduledDeletionDate = DateTime.UtcNow.AddDays(30)
+            });
+            entitlement.RemainingCandidates--;
+            entitlement.UpdatedAt = DateTime.UtcNow;
+            await winner.SaveChangesAsync(cancellationToken);
+            return result;
+        }
     }
 
     private static ApplicationDbContext CreateContext()

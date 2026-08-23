@@ -59,8 +59,12 @@ public class RetentionPolicyService : IRetentionPolicyService
                     affectedUserIds.Add(userId);
                 }
 
-                // Delete physical files first
-                await DeletePhysicalFiles(image);
+                // Delete physical files first. Keep the database record when storage deletion
+                // fails so the next retention run can retry instead of orphaning private data.
+                if (!await DeletePhysicalFiles(image))
+                {
+                    continue;
+                }
 
                 // Then remove from database and record the reason for the admin diagnostics view
                 if (image.UserProfile?.UserId is { Length: > 0 } targetUserId)
@@ -240,43 +244,68 @@ public class RetentionPolicyService : IRetentionPolicyService
         return deletedModels;
     }
 
-    private async Task DeletePhysicalFiles(Models.ProcessedImage image)
+    private async Task<bool> DeletePhysicalFiles(Models.ProcessedImage image)
     {
-        var filesToDelete = new List<string>();
-
-        // Add original image URL if it exists and is a local file
-        if (!string.IsNullOrEmpty(image.OriginalImageUrl) && IsLocalFile(image.OriginalImageUrl))
+        var filesToDelete = new[]
         {
-            filesToDelete.Add(image.OriginalImageUrl);
+            image.OriginalImageUrl,
+            image.ProcessedImageUrl,
+            image.RawImageStoragePath
         }
+            .Where(IsStoragePath)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var allDeleted = true;
 
-        // Add processed image URL if it exists and is a local file
-        if (!string.IsNullOrEmpty(image.ProcessedImageUrl) && IsLocalFile(image.ProcessedImageUrl))
-        {
-            filesToDelete.Add(image.ProcessedImageUrl);
-        }
-
-        // Delete files using storage service
         foreach (var fileUrl in filesToDelete)
         {
+            if (await IsReferencedByLiveImageAsync(fileUrl!, image.Id))
+            {
+                _logger.LogDebug("Preserving file {FileUrl} because another live image references it", S(fileUrl));
+                continue;
+            }
+
             try
             {
-                await _storageService.DeleteImageAsync(fileUrl);
-                _logger.LogDebug("Deleted file: {FileUrl}", S(fileUrl));
+                if (await _storageService.DeleteImageAsync(fileUrl!))
+                {
+                    _logger.LogDebug("Deleted file: {FileUrl}", S(fileUrl));
+                }
+                else
+                {
+                    allDeleted = false;
+                    _logger.LogWarning("Storage did not delete file {FileUrl}; retention will retry", S(fileUrl));
+                }
             }
             catch (Exception ex)
             {
+                allDeleted = false;
                 _logger.LogWarning(ex, "Failed to delete file {FileUrl}: {Error}", S(fileUrl), S(ex.Message));
-                // Continue with other files even if one fails
             }
         }
+
+        return allDeleted;
     }
 
-    private static bool IsLocalFile(string url)
+    private Task<bool> IsReferencedByLiveImageAsync(string storagePath, int excludedImageId)
     {
-        // Check if URL is a local file (starts with / or contains localhost)
-        return !string.IsNullOrEmpty(url) &&
-               (url.StartsWith("/") || url.Contains("localhost"));
+        var now = UtcNow;
+        return _context.ProcessedImages.AnyAsync(image =>
+            image.Id != excludedImageId &&
+            image.ScheduledDeletionDate > now &&
+            (image.OriginalImageUrl == storagePath ||
+             image.ProcessedImageUrl == storagePath ||
+             image.RawImageStoragePath == storagePath));
+    }
+
+    private static bool IsStoragePath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        return !Uri.TryCreate(path, UriKind.Absolute, out var uri) || uri.IsLoopback;
     }
 
     private static string GetImageType(Models.ProcessedImage image)
@@ -384,25 +413,35 @@ public class RetentionPolicyService : IRetentionPolicyService
             _logger.LogDebug("Starting enhanced image cleanup for prefix: {Prefix}, cutoff time: {CutoffTime}",
                 S(enhancedPrefix), cutoffTime);
 
-            // List all files in the enhanced directory
+            // List transient enhanced files and private raw outputs.
             var enhancedFiles = await _storageService.ListFilesAsync(enhancedPrefix);
+            var privatePrefix = _pathResolver.GetDirectoryPrefix(StorageType.GeneratedPrivate);
+            var privateFiles = await _storageService.ListFilesAsync(privatePrefix);
 
-            // Also check for legacy enhanced files without environment prefix (for backward compatibility)
+            // Also check legacy paths without environment prefixes when enabled.
             List<string> legacyEnhancedFiles;
+            List<string> legacyPrivateFiles;
             if (_legacyOptions.EnableLegacyEnhancedPathLookup)
             {
                 legacyEnhancedFiles = await _storageService.ListFilesAsync("enhanced/");
+                legacyPrivateFiles = await _storageService.ListFilesAsync("generated-private/");
             }
             else
             {
                 legacyEnhancedFiles = new List<string>();
+                legacyPrivateFiles = new List<string>();
                 _logger.LogDebug(
-                    "Skipping legacy enhanced path lookup because LegacyCompatibility.EnableLegacyEnhancedPathLookup is disabled."
+                    "Skipping legacy transient path lookup because LegacyCompatibility.EnableLegacyEnhancedPathLookup is disabled."
                 );
             }
 
-            // Combine both lists and remove duplicates
-            var allEnhancedFiles = enhancedFiles.Concat(legacyEnhancedFiles).Distinct().ToList();
+            // Combine all transient paths and remove duplicates.
+            var allEnhancedFiles = enhancedFiles
+                .Concat(privateFiles)
+                .Concat(legacyEnhancedFiles)
+                .Concat(legacyPrivateFiles)
+                .Distinct()
+                .ToList();
 
             if (!allEnhancedFiles.Any())
             {
@@ -426,23 +465,35 @@ public class RetentionPolicyService : IRetentionPolicyService
             try
             {
                 var envPrefix = _pathResolver.GetDirectoryPrefix(StorageType.Enhanced);
+                var privateEnvPrefix = _pathResolver.GetDirectoryPrefix(StorageType.GeneratedPrivate);
                 var legacyPrefix = "enhanced/";
+                var legacyPrivatePrefix = "generated-private/";
                 var allowLegacyInDbScan = _legacyOptions.EnableLegacyEnhancedPathLookup;
 
                 var dbReferenced = await _context.ProcessedImages
                     .Where(pi => (!string.IsNullOrEmpty(pi.ProcessedImageUrl) &&
                                   (pi.ProcessedImageUrl.StartsWith(envPrefix) ||
-                                   (allowLegacyInDbScan && pi.ProcessedImageUrl.StartsWith(legacyPrefix)))) ||
+                                   pi.ProcessedImageUrl.StartsWith(privateEnvPrefix) ||
+                                   (allowLegacyInDbScan && (pi.ProcessedImageUrl.StartsWith(legacyPrefix) ||
+                                                            pi.ProcessedImageUrl.StartsWith(legacyPrivatePrefix))))) ||
                                   (!string.IsNullOrEmpty(pi.OriginalImageUrl) &&
                                    (pi.OriginalImageUrl.StartsWith(envPrefix) ||
-                                    (allowLegacyInDbScan && pi.OriginalImageUrl.StartsWith(legacyPrefix)))))
-                    .Select(pi => new { pi.ProcessedImageUrl, pi.OriginalImageUrl })
+                                    pi.OriginalImageUrl.StartsWith(privateEnvPrefix) ||
+                                    (allowLegacyInDbScan && (pi.OriginalImageUrl.StartsWith(legacyPrefix) ||
+                                                             pi.OriginalImageUrl.StartsWith(legacyPrivatePrefix))))) ||
+                                  (!string.IsNullOrEmpty(pi.RawImageStoragePath) &&
+                                   (pi.RawImageStoragePath.StartsWith(envPrefix) ||
+                                    pi.RawImageStoragePath.StartsWith(privateEnvPrefix) ||
+                                    (allowLegacyInDbScan && (pi.RawImageStoragePath.StartsWith(legacyPrefix) ||
+                                                             pi.RawImageStoragePath.StartsWith(legacyPrivatePrefix))))))
+                    .Select(pi => new { pi.ProcessedImageUrl, pi.OriginalImageUrl, pi.RawImageStoragePath })
                     .ToListAsync();
 
                 foreach (var p in dbReferenced)
                 {
                     if (!string.IsNullOrEmpty(p.ProcessedImageUrl)) referencedEnhancedPaths.Add(p.ProcessedImageUrl);
                     if (!string.IsNullOrEmpty(p.OriginalImageUrl)) referencedEnhancedPaths.Add(p.OriginalImageUrl);
+                    if (!string.IsNullOrEmpty(p.RawImageStoragePath)) referencedEnhancedPaths.Add(p.RawImageStoragePath);
                 }
 
                 _logger.LogInformation("Found {Count} enhanced paths referenced in database; these will be preserved", referencedEnhancedPaths.Count);

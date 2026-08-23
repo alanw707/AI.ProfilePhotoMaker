@@ -20,7 +20,8 @@ public sealed class FakeCreditPackageService : ICreditPackageService
     public Task<CreditPurchaseResult> PurchaseCreditPackageAsync(
         string userId,
         int packageId,
-        string? paymentTransactionId = null)
+        string? paymentTransactionId = null,
+        int? previewProcessedImageId = null)
     {
         var result = new CreditPurchaseResult(
             false,
@@ -43,6 +44,7 @@ public sealed class FakeStripePaymentService : IStripePaymentService
         string userId,
         int packageId,
         string? couponCode = null,
+        int? previewProcessedImageId = null,
         CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new PaymentIntentResponse(

@@ -21,7 +21,8 @@ public class PackageEntitlementPolicyTests
         var result = PackageEntitlementPolicy.CheckGenerationAllowance("free_preview", 1, true, null);
 
         Assert.False(result.Allowed);
-        Assert.Equal("PackageEntitlementRequired", result.FailureCode);
+        Assert.Equal("FreePreviewExhausted", result.FailureCode);
+        Assert.DoesNotContain("unlock a profile photo package", result.FailureMessage);
     }
 
     [Fact]

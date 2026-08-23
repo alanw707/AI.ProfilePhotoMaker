@@ -10,6 +10,7 @@ public enum StorageType
     Upload,      // Original user uploads
     Enhanced,    // Temporary enhanced photos for Replicate processing
     Generated,   // AI-generated profile photos
+    GeneratedPrivate, // Private raw AI outputs
     TrainingZip  // ZIP files for model training
 }
 
@@ -50,6 +51,7 @@ public class StoragePathResolver
             StorageType.Upload => $"{environmentPrefix}/uploads/{userId}/{fileName}",
             StorageType.Enhanced => $"{environmentPrefix}/enhanced/{userId}/{fileName}",
             StorageType.Generated => $"{environmentPrefix}/generated/{userId}/{fileName}",
+            StorageType.GeneratedPrivate => $"{environmentPrefix}/generated-private/{userId}/{fileName}",
             StorageType.TrainingZip => $"{environmentPrefix}/training-zips/{fileName}",
             _ => throw new ArgumentException($"Unknown storage type: {type}")
         };
@@ -78,6 +80,8 @@ public class StoragePathResolver
             StorageType.Enhanced => $"{environmentPrefix}/enhanced/",
             StorageType.Generated when userId != null => $"{environmentPrefix}/generated/{userId}/",
             StorageType.Generated => $"{environmentPrefix}/generated/",
+            StorageType.GeneratedPrivate when userId != null => $"{environmentPrefix}/generated-private/{userId}/",
+            StorageType.GeneratedPrivate => $"{environmentPrefix}/generated-private/",
             StorageType.TrainingZip => $"{environmentPrefix}/training-zips/",
             _ => throw new ArgumentException($"Unknown storage type: {type}")
         };

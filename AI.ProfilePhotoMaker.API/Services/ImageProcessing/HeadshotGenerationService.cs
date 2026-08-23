@@ -99,13 +99,18 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             .OrderBy(i => i.CorrelationId)
             .Take(requestedOutputs)
             .ToListAsync(cancellationToken);
-        var existingPromotedPreview = packageCode != "free_preview" && request.ReusedPreviewProcessedImageId.HasValue
+        var existingPromotedPreview = packageCode != "free_preview" && request.ReusedPreviewProcessedImageId is int reusedPreviewId
             ? await _dbContext.ProcessedImages
                 .FirstOrDefaultAsync(i =>
                     i.UserProfileId == profile.Id &&
                     i.GenerationStatus == "succeeded" &&
                     i.GenerationMode == "instant_headshot_promoted_preview" &&
-                    i.CorrelationId == $"{correlationId}:promoted-preview",
+                    (i.Id == reusedPreviewId ||
+                     i.CorrelationId == $"{correlationId}:promoted-preview" ||
+                     _dbContext.ProcessedImages.Any(source =>
+                         source.Id == reusedPreviewId &&
+                         source.UserProfileId == profile.Id &&
+                         source.RawImageStoragePath == i.ProcessedImageUrl)),
                     cancellationToken)
             : null;
         var hasCompleteIdempotentResult = existingGeneratedImages.Count >= requestedOutputs &&
@@ -191,19 +196,25 @@ public class HeadshotGenerationService : IHeadshotGenerationService
 
             var candidates = new List<HeadshotCandidateDto>();
             var generationSourcePath = sourcePath;
+            var promotionCreated = false;
             if (packageCode != "free_preview" && request.ReusedPreviewProcessedImageId is int previewImageId)
             {
-                var promotedPreview = await BuildPromotedPreviewCandidateAsync(previewImageId, profile.Id, sourcePath, portraitStyle.Name, correlationId, request, cancellationToken);
-                if (promotedPreview != null)
+                var promotion = await BuildPromotedPreviewCandidateAsync(
+                    previewImageId,
+                    profile.Id,
+                    correlationId,
+                    cancellationToken);
+                promotionCreated = promotion.Created;
+                if (promotion.Candidate != null)
                 {
-                    candidates.Add(promotedPreview);
-                    if (!await StorageImageExistsAsync(sourcePath, cancellationToken) && !string.IsNullOrWhiteSpace(promotedPreview.StoragePath))
+                    candidates.Add(promotion.Candidate);
+                    if (!await StorageImageExistsAsync(sourcePath, cancellationToken) && !string.IsNullOrWhiteSpace(promotion.Candidate.StoragePath))
                     {
                         _logger.LogWarning(
                             "Preview source image missing for paid continuation. Falling back to promoted preview raw image. SourcePath={SourcePath}, FallbackPath={FallbackPath}",
                             S(sourcePath),
-                            S(promotedPreview.StoragePath));
-                        generationSourcePath = promotedPreview.StoragePath;
+                            S(promotion.Candidate.StoragePath));
+                        generationSourcePath = promotion.Candidate.StoragePath;
                     }
                 }
             }
@@ -253,7 +264,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                     CreditCost = CreditCostConfig.GetCreditCost(ActionName),
                     GenerationStatus = "succeeded",
                     CorrelationId = candidateCorrelationId,
-                    FailureReason = storedOutput.RawPath == null ? null : $"raw-preview:{storedOutput.RawPath}",
+                    RawImageStoragePath = storedOutput.RawPath,
                     PromptVersion = string.IsNullOrWhiteSpace(recipe.Code) ? result.PromptVersion : $"{result.PromptVersion}:{recipe.Code}"
                 };
                 processedImage.SetScheduledDeletionDate();
@@ -267,7 +278,11 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             {
                 var consumedPackageAllowance = request.IsRegeneration
                     ? await _outcomePackageService.ConsumeRefinementAsync(userId, packageCode, cancellationToken)
-                    : await _outcomePackageService.ConsumeCandidatesAsync(userId, packageCode, requestedOutputs, cancellationToken);
+                    : await _outcomePackageService.ConsumeCandidatesAsync(
+                        userId,
+                        packageCode,
+                        requestedOutputs + (promotionCreated ? 1 : 0),
+                        cancellationToken);
                 if (!consumedPackageAllowance)
                 {
                     await MarkPersistedCandidatesFailedAsync(profile.Id, correlationId, cancellationToken);
@@ -338,38 +353,33 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         }
     }
 
-    private async Task<HeadshotCandidateDto?> BuildPromotedPreviewCandidateAsync(
+    private async Task<(HeadshotCandidateDto? Candidate, bool Created)> BuildPromotedPreviewCandidateAsync(
         int processedImageId,
         int userProfileId,
-        string sourcePath,
-        string portraitStyleName,
         string paidCorrelationId,
-        HeadshotGenerationRequestDto request,
         CancellationToken cancellationToken)
     {
         var image = await _dbContext.ProcessedImages
             .FirstOrDefaultAsync(i => i.Id == processedImageId && i.UserProfileId == userProfileId && i.GenerationStatus == "succeeded", cancellationToken);
-        if (image?.FailureReason?.StartsWith("raw-preview:", StringComparison.Ordinal) != true ||
-            !string.Equals(image.OriginalImageUrl, sourcePath, StringComparison.Ordinal) ||
-            !string.Equals(NormalizeStyle(image.Style), NormalizeStyle(portraitStyleName), StringComparison.Ordinal) ||
-            !string.Equals(request.ReusedPreviewSourcePath, sourcePath, StringComparison.Ordinal) ||
-            !string.Equals(NormalizeStyle(request.ReusedPreviewStyle), NormalizeStyle(portraitStyleName), StringComparison.Ordinal))
+        if (image?.GenerationMode == "instant_headshot_promoted_preview")
         {
-            return null;
+            return (ToCandidateDto(image), false);
         }
 
-        var rawStoragePath = image.FailureReason["raw-preview:".Length..];
+        if (image?.RawImageStoragePath is not { Length: > 0 } rawStoragePath)
+        {
+            return (null, false);
+        }
         var existingPromotion = await _dbContext.ProcessedImages
             .FirstOrDefaultAsync(i =>
                 i.UserProfileId == image.UserProfileId &&
                 i.ProcessedImageUrl == rawStoragePath &&
                 i.GenerationMode == "instant_headshot_promoted_preview" &&
-                i.GenerationStatus == "succeeded" &&
-                i.CorrelationId == $"{paidCorrelationId}:promoted-preview",
+                i.GenerationStatus == "succeeded",
                 cancellationToken);
         if (existingPromotion != null)
         {
-            return ToCandidateDto(existingPromotion);
+            return (ToCandidateDto(existingPromotion), false);
         }
 
         var promotedImage = new ProcessedImage
@@ -393,7 +403,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         _dbContext.ProcessedImages.Add(promotedImage);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return ToCandidateDto(promotedImage);
+        return (ToCandidateDto(promotedImage), true);
     }
 
     private async Task<bool> StorageImageExistsAsync(string storagePath, CancellationToken cancellationToken)
@@ -419,7 +429,9 @@ public class HeadshotGenerationService : IHeadshotGenerationService
     {
         return new HeadshotCandidateDto
         {
-            ImageUrl = _storageService.GetImageUrl(image.ProcessedImageUrl),
+            ImageUrl = image.GenerationMode == "instant_headshot_promoted_preview"
+                ? $"/api/headshots/images/{image.Id}/original"
+                : _storageService.GetImageUrl(image.ProcessedImageUrl),
             StoragePath = image.ProcessedImageUrl,
             ProcessedImageId = image.Id,
             Provider = image.Provider ?? _provider.ProviderName,

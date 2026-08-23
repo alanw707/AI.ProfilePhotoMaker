@@ -173,8 +173,10 @@ public class HeadshotGenerationServiceTests
         Assert.Single(context.UsageLogs.Where(l => l.Action == "instant_headshot_generation"));
     }
 
-    [Fact]
-    public async Task GenerateHeadshotAsync_ReturnsPromotedPreviewAndGeneratedCandidatesForDuplicatePaidContinuation()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GenerateHeadshotAsync_ReturnsPromotedPreviewAndGeneratedCandidatesForDuplicatePaidContinuation(bool usePurchasePromotedId)
     {
         using var context = CreateContext();
         var userId = await SeedUserProfileAsync(context, credits: 6);
@@ -196,9 +198,27 @@ public class HeadshotGenerationServiceTests
             CreditCost = 0,
             GenerationStatus = "succeeded",
             CorrelationId = "free-preview-correlation",
-            FailureReason = $"raw-preview:dev/generated-private/{userId}/preview-raw.png"
+            RawImageStoragePath = $"dev/generated-private/{userId}/preview-raw.png"
         };
         context.ProcessedImages.Add(preview);
+        await context.SaveChangesAsync();
+        var promotedPreview = new ProcessedImage
+        {
+            OriginalImageUrl = sourcePath,
+            ProcessedImageUrl = preview.RawImageStoragePath,
+            Style = preview.Style,
+            UserProfileId = profile.Id,
+            CreatedAt = DateTime.UtcNow,
+            IsGenerated = true,
+            Provider = preview.Provider,
+            ProviderModel = preview.ProviderModel,
+            GenerationMode = "instant_headshot_promoted_preview",
+            PromptVersion = preview.PromptVersion,
+            CreditCost = 0,
+            GenerationStatus = "succeeded",
+            CorrelationId = "purchase:42:promoted-preview"
+        };
+        context.ProcessedImages.Add(promotedPreview);
         await context.SaveChangesAsync();
 
         var provider = new FakeHeadshotProvider("data:image/png;base64," + Convert.ToBase64String([1, 2, 3]));
@@ -220,9 +240,7 @@ public class HeadshotGenerationServiceTests
             PackageCode = "starter_package",
             NumOutputs = 2,
             ClientRequestId = "paid-continuation-retry",
-            ReusedPreviewProcessedImageId = preview.Id,
-            ReusedPreviewSourcePath = sourcePath,
-            ReusedPreviewStyle = "linkedin"
+            ReusedPreviewProcessedImageId = usePurchasePromotedId ? promotedPreview.Id : preview.Id
         };
 
         var first = await service.GenerateHeadshotAsync(request, userId);
@@ -480,8 +498,12 @@ public class HeadshotGenerationServiceTests
 
         public Task<IReadOnlyList<OutcomePackageDefinitionDto>> GetActivePackageDefinitionsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<OutcomePackageDefinitionDto>>(Array.Empty<OutcomePackageDefinitionDto>());
         public Task<IReadOnlyList<UserPackageEntitlementDto>> GetUserEntitlementsAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<UserPackageEntitlementDto>>(Array.Empty<UserPackageEntitlementDto>());
-        public Task<UserPackageEntitlement?> GrantEntitlementForCreditPackageAsync(string userId, int creditPackageId, string? paymentTransactionId, CancellationToken cancellationToken = default) => Task.FromResult<UserPackageEntitlement?>(_entitlement);
+        public Task<bool> CanPromotePreviewAsync(string userId, int previewProcessedImageId, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task<bool> ReservePreviewForPurchaseAsync(string userId, int previewProcessedImageId, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task<UserPackageEntitlement?> GrantEntitlementForCreditPackageAsync(string userId, int creditPackageId, string? paymentTransactionId, int? previewProcessedImageId = null, CancellationToken cancellationToken = default) => Task.FromResult<UserPackageEntitlement?>(_entitlement);
         public Task<UserPackageEntitlement?> GetActiveEntitlementAsync(string userId, string packageCode, CancellationToken cancellationToken = default) => Task.FromResult(_entitlement.RemainingPackageUses > 0 || _entitlement.RemainingCandidates > 0 ? _entitlement : null);
+        public Task<ResumableHeadshotPreviewDto?> GetResumablePreviewAsync(string userId, int? previewId = null, CancellationToken cancellationToken = default) => Task.FromResult<ResumableHeadshotPreviewDto?>(null);
+        public Task<PromotedPreviewDownload?> GetPromotedPreviewDownloadAsync(string userId, int imageId, CancellationToken cancellationToken = default) => Task.FromResult<PromotedPreviewDownload?>(null);
         public bool FailConsumeCandidates { get; init; }
 
         public Task<bool> ConsumeCandidatesAsync(string userId, string packageCode, int candidateCount, CancellationToken cancellationToken = default)

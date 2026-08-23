@@ -5,6 +5,7 @@ using AI.ProfilePhotoMaker.API.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 using Xunit;
 
 namespace AI.ProfilePhotoMaker.API.Tests.Services;
@@ -136,11 +137,40 @@ public class CreditPackageServiceTests
     }
 
     [Fact]
+    public async Task PurchaseCreditPackageAsync_RejectsMissingRawPreviewBeforeApplyingPurchase()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context);
+        var creditPackage = await SeedCreditPackageAsync(context);
+        var packages = new Mock<IOutcomePackageService>();
+        packages.Setup(s => s.CanPromotePreviewAsync(userId, 123, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var service = CreateService(context, outcomePackageService: packages.Object);
+
+        var result = await service.PurchaseCreditPackageAsync(userId, creditPackage.PackageId, "2", 123);
+
+        Assert.False(result.Success);
+        Assert.Equal("PreviewUnavailable", result.ErrorCode);
+        Assert.Empty(context.CreditPurchases);
+        Assert.Equal(5, (await context.UserProfiles.SingleAsync(p => p.UserId == userId)).Credits);
+    }
+
+    [Fact]
     public async Task PurchaseCreditPackageAsync_AllowsSimulation_WhenStripeNotConfiguredAndSimulationEnabled()
     {
         using var context = CreateContext();
         var userId = await SeedUserProfileAsync(context);
         var creditPackage = await SeedCreditPackageAsync(context);
+        context.OutcomePackageDefinitions.Add(new OutcomePackageDefinition
+        {
+            Code = "starter_package",
+            Name = "Starter Package",
+            Description = "Test package",
+            InternalCreditPackageId = creditPackage.PackageId,
+            IncludedCandidateCount = 3,
+            IsActive = true
+        });
+        await context.SaveChangesAsync();
 
         var stripeOptions = new StripeOptions();
         var simulationOptions = new PaymentSimulationOptions
@@ -148,8 +178,10 @@ public class CreditPackageServiceTests
             Enabled = true,
             SkipStripeIntegration = true
         };
-
-        var service = CreateService(context, stripeOptions, simulationOptions);
+        var outcomePackages = new OutcomePackageService(
+            context,
+            NullLogger<OutcomePackageService>.Instance);
+        var service = CreateService(context, stripeOptions, simulationOptions, outcomePackages);
 
         var result = await service.PurchaseCreditPackageAsync(userId, creditPackage.PackageId, "sim_flow");
 
@@ -158,14 +190,19 @@ public class CreditPackageServiceTests
         Assert.Equal(PaymentStatus.Completed, result.Status);
         Assert.Equal("sim_flow", result.Purchase!.PaymentTransactionId);
 
+        var retried = await service.PurchaseCreditPackageAsync(userId, creditPackage.PackageId, "sim_flow");
+        Assert.True(retried.Success);
+
         var profile = await context.UserProfiles.FirstAsync(p => p.UserId == userId);
         Assert.Equal(5 + creditPackage.TotalCredits, profile.Credits);
+        Assert.Single(context.UserPackageEntitlements);
     }
 
     private static CreditPackageService CreateService(
         ApplicationDbContext context,
         StripeOptions? stripeOptions = null,
-        PaymentSimulationOptions? simulationOptions = null)
+        PaymentSimulationOptions? simulationOptions = null,
+        IOutcomePackageService? outcomePackageService = null)
     {
         stripeOptions ??= new StripeOptions
         {
@@ -186,7 +223,8 @@ public class CreditPackageServiceTests
             basicTierService,
             NullLogger<CreditPackageService>.Instance,
             Options.Create(stripeOptions),
-            Options.Create(simulationOptions));
+            Options.Create(simulationOptions),
+            outcomePackageService: outcomePackageService);
     }
 
     private static ApplicationDbContext CreateContext()

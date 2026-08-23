@@ -11,8 +11,6 @@ export interface HeadshotGenerationRequest {
   numOutputs?: number;
   isRegeneration?: boolean;
   reusedPreviewProcessedImageId?: number;
-  reusedPreviewSourcePath?: string;
-  reusedPreviewStyle?: string;
   useCaseCode?: string;
   recipeCode?: string;
   turnstileToken?: string;
@@ -64,6 +62,7 @@ export interface ResumableHeadshotPreview {
   canPromotePreview: boolean;
   activePackageCode?: 'starter_package' | 'pro_package' | string | null;
   remainingCandidateCount: number;
+  promotedCandidate?: HeadshotCandidate | null;
   message?: string | null;
 }
 

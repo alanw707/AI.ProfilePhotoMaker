@@ -881,6 +881,7 @@ public class AdminService : IAdminService
                 image.GenerationStatus,
                 image.GenerationMode,
                 image.FailureReason,
+                image.RawImageStoragePath,
                 Provider = image.Provider ?? "unknown",
                 Model = image.ProviderModel ?? "unknown"
             })
@@ -958,8 +959,7 @@ public class AdminService : IAdminService
             image.IsGenerated &&
             image.GenerationStatus != "failed" &&
             image.GenerationMode == "instant_headshot" &&
-            image.FailureReason != null &&
-            image.FailureReason.StartsWith("raw-preview:", StringComparison.Ordinal));
+            image.RawImageStoragePath != null);
         var generatedImages = imageRows.Count(image => image.IsGenerated && image.GenerationStatus != "failed");
         var failedGenerations = imageRows.Count(image => image.IsGenerated && image.GenerationStatus == "failed");
         var paidPackagePurchases = paidProductRows.Count;

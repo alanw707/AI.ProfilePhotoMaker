@@ -343,6 +343,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       .createPaymentIntent({
         packageId: pkg.id,
         couponCode: this.couponValidation?.isValid ? this.couponCode : undefined,
+        previewProcessedImageId: this._getReturnPreviewId(),
       })
       .subscribe({
         next: async response => {
@@ -370,6 +371,11 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
           this._handlePaymentError('Unable to initialize payment. Please try again.');
         },
       });
+  }
+
+  private _getReturnPreviewId(): number | undefined {
+    const previewId = Number(this._route.snapshot.queryParamMap.get('previewId'));
+    return Number.isInteger(previewId) && previewId > 0 ? previewId : undefined;
   }
 
   private _shouldUsePaymentSimulation(): boolean {
@@ -552,6 +558,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       .purchaseCreditPackage({
         packageId: this.selectedPackage.id,
         paymentTransactionId: this._pendingPaymentTransactionId ?? paymentTransactionId,
+        previewProcessedImageId: this._getReturnPreviewId(),
       })
       .subscribe({
         next: response => {
@@ -620,6 +627,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
         .purchaseCreditPackage({
           packageId: this._pendingPaymentPackageId!,
           paymentTransactionId: this._pendingPaymentTransactionId!,
+          previewProcessedImageId: this._getReturnPreviewId(),
         })
         .subscribe({
           next: response => {
@@ -762,6 +770,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
         .purchaseCreditPackage({
           packageId: pkg.id,
           paymentTransactionId: mockTransactionId,
+          previewProcessedImageId: this._getReturnPreviewId(),
         })
         .subscribe({
           next: response => {

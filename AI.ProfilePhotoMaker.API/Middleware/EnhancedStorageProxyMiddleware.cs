@@ -38,6 +38,13 @@ public class EnhancedStorageProxyMiddleware
         // Get storage service from request scope
         var storageService = context.RequestServices.GetRequiredService<IStorageService>();
 
+        // Raw preview assets are entitlement-gated and must never be served by any proxy route.
+        if (IsPrivateStoragePath(path))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
         // Handle CORS preflight locally for proxied storage routes.
         if (HttpMethods.IsOptions(context.Request.Method)
             && (path?.StartsWith("/devstoreaccount1/") == true || path?.StartsWith("/profile-images/") == true))
@@ -66,6 +73,10 @@ public class EnhancedStorageProxyMiddleware
         // Continue to next middleware
         await _next(context);
     }
+
+    internal static bool IsPrivateStoragePath(string? path) =>
+        path?.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Contains("generated-private", StringComparer.OrdinalIgnoreCase) == true;
 
     /// <summary>
     /// Proxy requests to Azurite (development storage emulator)
