@@ -259,6 +259,12 @@ public class RetentionPolicyService : IRetentionPolicyService
 
         foreach (var fileUrl in filesToDelete)
         {
+            if (await IsReferencedByLiveImageAsync(fileUrl!, image.Id))
+            {
+                _logger.LogDebug("Preserving file {FileUrl} because another live image references it", S(fileUrl));
+                continue;
+            }
+
             try
             {
                 if (await _storageService.DeleteImageAsync(fileUrl!))
@@ -279,6 +285,17 @@ public class RetentionPolicyService : IRetentionPolicyService
         }
 
         return allDeleted;
+    }
+
+    private Task<bool> IsReferencedByLiveImageAsync(string storagePath, int excludedImageId)
+    {
+        var now = UtcNow;
+        return _context.ProcessedImages.AnyAsync(image =>
+            image.Id != excludedImageId &&
+            image.ScheduledDeletionDate > now &&
+            (image.OriginalImageUrl == storagePath ||
+             image.ProcessedImageUrl == storagePath ||
+             image.RawImageStoragePath == storagePath));
     }
 
     private static bool IsStoragePath(string? path)

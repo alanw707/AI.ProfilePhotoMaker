@@ -112,6 +112,53 @@ public class RetentionPolicyServiceTests
     }
 
     [Fact]
+    public async Task DeleteExpiredImagesAsync_PreservesRawAssetReferencedByLivePromotion()
+    {
+        using var context = CreateContext();
+        var user = await SeedUserAsync(context, "promoted-retention@example.com");
+        var timeProvider = new TestTimeProvider(new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var rawPath = $"prod/generated-private/{user.UserId}/preview-raw.png";
+        var preview = new ProcessedImage
+        {
+            UserProfile = user,
+            UserProfileId = user.Id,
+            RawImageStoragePath = rawPath,
+            GenerationMode = "instant_headshot",
+            IsGenerated = true,
+            ScheduledDeletionDate = now.AddMinutes(-1)
+        };
+        var promotion = new ProcessedImage
+        {
+            UserProfile = user,
+            UserProfileId = user.Id,
+            ProcessedImageUrl = rawPath,
+            GenerationMode = "instant_headshot_promoted_preview",
+            IsGenerated = true,
+            ScheduledDeletionDate = now.AddDays(10)
+        };
+        context.ProcessedImages.AddRange(preview, promotion);
+        await context.SaveChangesAsync();
+        var storageService = new Mock<IStorageService>();
+        storageService.Setup(service => service.DeleteImageAsync(It.IsAny<string>())).ReturnsAsync(true);
+        var service = CreateService(context, storageService.Object, timeProvider);
+
+        var deletedCount = await service.DeleteExpiredImagesAsync();
+
+        Assert.Equal(1, deletedCount);
+        Assert.False(await context.ProcessedImages.AnyAsync(value => value.Id == preview.Id));
+        Assert.True(await context.ProcessedImages.AnyAsync(value => value.Id == promotion.Id));
+        storageService.Verify(service => service.DeleteImageAsync(rawPath), Times.Never);
+
+        timeProvider.Advance(TimeSpan.FromDays(11));
+        var finalDeletedCount = await service.DeleteExpiredImagesAsync();
+
+        Assert.Equal(1, finalDeletedCount);
+        Assert.False(await context.ProcessedImages.AnyAsync(value => value.Id == promotion.Id));
+        storageService.Verify(service => service.DeleteImageAsync(rawPath), Times.Once);
+    }
+
+    [Fact]
     public async Task DeleteExpiredImagesAsync_RetainsRecordWhenPrivateAssetDeletionFails()
     {
         using var context = CreateContext();
