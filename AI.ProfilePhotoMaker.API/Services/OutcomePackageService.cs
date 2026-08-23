@@ -48,7 +48,38 @@ public class OutcomePackageService : IOutcomePackageService
         int previewProcessedImageId,
         CancellationToken cancellationToken = default)
     {
-        var preview = await _context.ProcessedImages
+        var preview = await FindPreviewAsync(userId, previewProcessedImageId, cancellationToken);
+        return preview?.RawImageStoragePath is { Length: > 0 } rawPath &&
+               await PreviewRawExistsAsync(rawPath);
+    }
+
+    public async Task<bool> ReservePreviewForPurchaseAsync(
+        string userId,
+        int previewProcessedImageId,
+        CancellationToken cancellationToken = default)
+    {
+        var preview = await FindPreviewAsync(userId, previewProcessedImageId, cancellationToken);
+        if (preview?.RawImageStoragePath is not { Length: > 0 } rawPath ||
+            !await PreviewRawExistsAsync(rawPath))
+        {
+            return false;
+        }
+
+        var reservationExpiry = DateTime.UtcNow.AddHours(24);
+        if (preview.ScheduledDeletionDate < reservationExpiry)
+        {
+            preview.ScheduledDeletionDate = reservationExpiry;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return true;
+    }
+
+    private Task<ProcessedImage?> FindPreviewAsync(
+        string userId,
+        int previewProcessedImageId,
+        CancellationToken cancellationToken) =>
+        _context.ProcessedImages
             .Include(i => i.UserProfile)
             .FirstOrDefaultAsync(i =>
                 i.Id == previewProcessedImageId &&
@@ -58,9 +89,11 @@ public class OutcomePackageService : IOutcomePackageService
                 i.RawImageStoragePath != null,
                 cancellationToken);
 
-        if (preview?.RawImageStoragePath is not { Length: > 0 } rawPath || _storageService == null)
+    private async Task<bool> PreviewRawExistsAsync(string rawPath)
+    {
+        if (_storageService == null)
         {
-            return preview?.RawImageStoragePath is { Length: > 0 };
+            return true;
         }
 
         try

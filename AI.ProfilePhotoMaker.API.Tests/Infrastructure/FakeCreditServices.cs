@@ -44,6 +44,7 @@ public sealed class FakeStripePaymentService : IStripePaymentService
         string userId,
         int packageId,
         string? couponCode = null,
+        int? previewProcessedImageId = null,
         CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new PaymentIntentResponse(

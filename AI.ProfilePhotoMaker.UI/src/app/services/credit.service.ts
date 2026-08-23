@@ -130,7 +130,11 @@ export class CreditService {
   /**
    * Create a payment intent for Stripe
    */
-  createPaymentIntent(request: { packageId: number; couponCode?: string }): Observable<{
+  createPaymentIntent(request: {
+    packageId: number;
+    couponCode?: string;
+    previewProcessedImageId?: number;
+  }): Observable<{
     success: boolean;
     data: CreatePaymentIntentResponse;
     error?: { code: string; message: string };

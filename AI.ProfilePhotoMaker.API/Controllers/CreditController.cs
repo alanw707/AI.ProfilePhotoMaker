@@ -191,7 +191,12 @@ public class CreditController : BaseController
 
         try
         {
-            var intent = await _stripePaymentService.CreatePaymentIntentAsync(userId, dto.PackageId, dto.CouponCode, cancellationToken);
+            var intent = await _stripePaymentService.CreatePaymentIntentAsync(
+                userId,
+                dto.PackageId,
+                dto.CouponCode,
+                dto.PreviewProcessedImageId,
+                cancellationToken);
 
             return SuccessResponse(new
             {

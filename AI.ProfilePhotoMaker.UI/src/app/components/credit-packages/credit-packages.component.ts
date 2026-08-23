@@ -343,6 +343,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       .createPaymentIntent({
         packageId: pkg.id,
         couponCode: this.couponValidation?.isValid ? this.couponCode : undefined,
+        previewProcessedImageId: this._getReturnPreviewId(),
       })
       .subscribe({
         next: async response => {

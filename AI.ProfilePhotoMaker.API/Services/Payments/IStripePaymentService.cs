@@ -4,5 +4,5 @@ namespace AI.ProfilePhotoMaker.API.Services.Payments;
 
 public interface IStripePaymentService
 {
-    Task<PaymentIntentResponse> CreatePaymentIntentAsync(string userId, int packageId, string? couponCode = null, CancellationToken cancellationToken = default);
+    Task<PaymentIntentResponse> CreatePaymentIntentAsync(string userId, int packageId, string? couponCode = null, int? previewProcessedImageId = null, CancellationToken cancellationToken = default);
 }

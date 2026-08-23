@@ -12,6 +12,42 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services;
 public class OutcomePackageServiceTests
 {
     [Fact]
+    public async Task ReservePreviewForPurchase_VerifiesRawAssetAndExtendsRetention()
+    {
+        await using var context = CreateContext();
+        var userId = "checkout-user";
+        var profile = new UserProfile { UserId = userId };
+        context.UserProfiles.Add(profile);
+        await context.SaveChangesAsync();
+        var preview = new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = "uploads/source.png",
+            ProcessedImageUrl = "generated/preview.png",
+            RawImageStoragePath = "generated-private/raw.png",
+            Style = "linkedin",
+            GenerationMode = "instant_headshot",
+            GenerationStatus = "succeeded",
+            ScheduledDeletionDate = DateTime.UtcNow.AddMinutes(1)
+        };
+        context.ProcessedImages.Add(preview);
+        await context.SaveChangesAsync();
+        var storage = new Mock<IStorageService>();
+        storage.Setup(service => service.ExistsAsync(preview.RawImageStoragePath)).ReturnsAsync(true);
+        var service = new OutcomePackageService(
+            context,
+            NullLogger<OutcomePackageService>.Instance,
+            storage.Object);
+        var beforeReservation = DateTime.UtcNow;
+
+        var reserved = await service.ReservePreviewForPurchaseAsync(userId, preview.Id);
+
+        Assert.True(reserved);
+        Assert.True(preview.ScheduledDeletionDate >= beforeReservation.AddHours(24));
+        storage.Verify(service => service.ExistsAsync(preview.RawImageStoragePath), Times.Once);
+    }
+
+    [Fact]
     public async Task ConsumeMethods_DecrementPackageAllowancesAndRejectWhenUnavailable()
     {
         await using var context = CreateContext();

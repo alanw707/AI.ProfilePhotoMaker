@@ -78,6 +78,10 @@ public class StripeWebhookService : IStripeWebhookService
         }
 
         metadata.TryGetValue("payment_transaction_id", out var transactionIdRaw);
+        metadata.TryGetValue("preview_processed_image_id", out var previewProcessedImageIdRaw);
+        var previewProcessedImageId = int.TryParse(previewProcessedImageIdRaw, out var parsedPreviewId) && parsedPreviewId > 0
+            ? parsedPreviewId
+            : (int?)null;
         metadata.TryGetValue("coupon_code", out var couponCode);
         metadata.TryGetValue("original_price", out var originalPriceRaw);
         metadata.TryGetValue("discount_amount", out var discountAmountRaw);
@@ -158,7 +162,11 @@ public class StripeWebhookService : IStripeWebhookService
             return;
         }
 
-        var purchaseResult = await _creditPackageService.PurchaseCreditPackageAsync(userId, packageId, transaction.Id.ToString());
+        var purchaseResult = await _creditPackageService.PurchaseCreditPackageAsync(
+            userId,
+            packageId,
+            transaction.Id.ToString(),
+            previewProcessedImageId);
         if (!purchaseResult.Success)
         {
             _logger.LogWarning("Credit purchase not finalized after Stripe webhook for transaction {TransactionId}: Status={Status} Code={Code} Message={Message}",
@@ -166,6 +174,7 @@ public class StripeWebhookService : IStripeWebhookService
                 purchaseResult.Status,
                 LoggingSanitizer.Sanitize(purchaseResult.ErrorCode),
                 LoggingSanitizer.Sanitize(purchaseResult.ErrorMessage));
+            throw new InvalidOperationException("Paid purchase delivery is incomplete; Stripe should retry this webhook.");
         }
         else
         {

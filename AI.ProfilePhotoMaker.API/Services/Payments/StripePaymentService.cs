@@ -19,6 +19,7 @@ public class StripePaymentService : IStripePaymentService
     private readonly StripeClient _stripeClient;
     private readonly IWebHostEnvironment _environment;
     private readonly ICouponService _couponService;
+    private readonly IOutcomePackageService? _outcomePackageService;
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
@@ -28,7 +29,8 @@ public class StripePaymentService : IStripePaymentService
         IOptions<StripeOptions> options,
         StripeClient stripeClient,
         IWebHostEnvironment environment,
-        ICouponService couponService)
+        ICouponService couponService,
+        IOutcomePackageService? outcomePackageService = null)
     {
         _dbContext = dbContext;
         _logger = logger;
@@ -36,9 +38,10 @@ public class StripePaymentService : IStripePaymentService
         _stripeClient = stripeClient;
         _environment = environment;
         _couponService = couponService;
+        _outcomePackageService = outcomePackageService;
     }
 
-    public async Task<PaymentIntentResponse> CreatePaymentIntentAsync(string userId, int packageId, string? couponCode = null, CancellationToken cancellationToken = default)
+    public async Task<PaymentIntentResponse> CreatePaymentIntentAsync(string userId, int packageId, string? couponCode = null, int? previewProcessedImageId = null, CancellationToken cancellationToken = default)
     {
         if (_environment.IsDevelopment() && !_options.AllowLiveKeysInDevelopment && _options.UsesLiveMode())
         {
@@ -78,6 +81,13 @@ public class StripePaymentService : IStripePaymentService
             throw new InvalidOperationException("Credit package not found or inactive");
         }
 
+        if (previewProcessedImageId is int previewId &&
+            (_outcomePackageService == null ||
+             !await _outcomePackageService.ReservePreviewForPurchaseAsync(userId, previewId, cancellationToken)))
+        {
+            throw new InvalidOperationException("This preview expired before checkout could begin. Start over with a new photo.");
+        }
+
         var originalPrice = package.Price;
         var discountAmount = 0m;
         string? appliedCouponCode = null;
@@ -110,6 +120,10 @@ public class StripePaymentService : IStripePaymentService
         if (!string.IsNullOrWhiteSpace(appliedCouponCode))
         {
             metadata["coupon_code"] = appliedCouponCode;
+        }
+        if (previewProcessedImageId is int reservedPreviewId)
+        {
+            metadata["preview_processed_image_id"] = reservedPreviewId.ToString();
         }
 
         var createOptions = new PaymentIntentCreateOptions

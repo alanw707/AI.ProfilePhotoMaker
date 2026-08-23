@@ -11,6 +11,7 @@ using AI.ProfilePhotoMaker.API.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 using Stripe;
 using Xunit;
 
@@ -60,6 +61,92 @@ public class StripeWebhookServiceTests
             .FirstAsync(p => p.UserId == userId);
 
         Assert.Equal(5 + package.TotalCredits, profile.Credits);
+    }
+
+    [Fact]
+    public async Task HandleEventAsync_PaymentIntentSucceeded_ForwardsReservedPreviewToPurchase()
+    {
+        using var context = CreateContext();
+        var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
+        var creditPackageService = new Mock<ICreditPackageService>();
+        creditPackageService
+            .Setup(service => service.PurchaseCreditPackageAsync(
+                userId,
+                package.Id,
+                transaction.Id.ToString(),
+                It.IsAny<int?>()))
+            .ReturnsAsync(new CreditPurchaseResult(
+                true,
+                PaymentStatus.Completed,
+                new CreditPurchase
+                {
+                    UserId = userId,
+                    PackageId = package.Id,
+                    Package = package,
+                    Status = PaymentStatus.Completed
+                }));
+        var service = new StripeWebhookService(
+            context,
+            creditPackageService.Object,
+            NullLogger<StripeWebhookService>.Instance,
+            new DummyEmailNotificationService(),
+            new DummyCouponService());
+        var metadata = new Dictionary<string, string>
+        {
+            ["user_id"] = userId,
+            ["package_id"] = package.Id.ToString(),
+            ["payment_transaction_id"] = transaction.Id.ToString(),
+            ["preview_processed_image_id"] = "123"
+        };
+
+        await service.HandleEventAsync(CreateStripeEvent(
+            PaymentIntentSucceededEvent,
+            transaction.ExternalTransactionId,
+            metadata));
+
+        creditPackageService.Verify(service => service.PurchaseCreditPackageAsync(
+            userId,
+            package.Id,
+            transaction.Id.ToString(),
+            123), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleEventAsync_PaymentIntentSucceeded_IncompleteDeliveryThrowsForWebhookRetry()
+    {
+        using var context = CreateContext();
+        var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
+        var creditPackageService = new Mock<ICreditPackageService>();
+        creditPackageService
+            .Setup(service => service.PurchaseCreditPackageAsync(
+                userId,
+                package.Id,
+                transaction.Id.ToString(),
+                123))
+            .ReturnsAsync(new CreditPurchaseResult(
+                false,
+                PaymentStatus.Failed,
+                null,
+                "PreviewUnavailable",
+                "Preview storage is temporarily unavailable."));
+        var service = new StripeWebhookService(
+            context,
+            creditPackageService.Object,
+            NullLogger<StripeWebhookService>.Instance,
+            new DummyEmailNotificationService(),
+            new DummyCouponService());
+        var metadata = new Dictionary<string, string>
+        {
+            ["user_id"] = userId,
+            ["package_id"] = package.Id.ToString(),
+            ["payment_transaction_id"] = transaction.Id.ToString(),
+            ["preview_processed_image_id"] = "123"
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.HandleEventAsync(CreateStripeEvent(
+            PaymentIntentSucceededEvent,
+            transaction.ExternalTransactionId,
+            metadata)));
     }
 
     [Fact]
@@ -324,7 +411,7 @@ public class StripeWebhookServiceTests
 
 
     [Fact]
-    public async Task HandleEventAsync_PaymentIntentSucceeded_InactivePackageDoesNotAwardCredits()
+    public async Task HandleEventAsync_PaymentIntentSucceeded_InactivePackageThrowsForWebhookRetry()
     {
         using var context = CreateContext();
         var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
@@ -342,7 +429,7 @@ public class StripeWebhookServiceTests
             package.Id,
             transaction.Id);
 
-        await service.HandleEventAsync(stripeEvent);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.HandleEventAsync(stripeEvent));
 
         var updatedTransaction = await context.PaymentTransactions
             .AsNoTracking()

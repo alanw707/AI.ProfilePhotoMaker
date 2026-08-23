@@ -10,6 +10,7 @@ public interface IOutcomePackageService
     Task<IReadOnlyList<OutcomePackageDefinitionDto>> GetActivePackageDefinitionsAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<UserPackageEntitlementDto>> GetUserEntitlementsAsync(string userId, CancellationToken cancellationToken = default);
     Task<bool> CanPromotePreviewAsync(string userId, int previewProcessedImageId, CancellationToken cancellationToken = default);
+    Task<bool> ReservePreviewForPurchaseAsync(string userId, int previewProcessedImageId, CancellationToken cancellationToken = default);
     Task<UserPackageEntitlement?> GrantEntitlementForCreditPackageAsync(string userId, int creditPackageId, string? paymentTransactionId, int? previewProcessedImageId = null, CancellationToken cancellationToken = default);
     Task<ResumableHeadshotPreviewDto?> GetResumablePreviewAsync(string userId, int? previewId = null, CancellationToken cancellationToken = default);
     Task<PromotedPreviewDownload?> GetPromotedPreviewDownloadAsync(string userId, int imageId, CancellationToken cancellationToken = default);

@@ -6,6 +6,7 @@ using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Controllers;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.Payments;
+using AI.ProfilePhotoMaker.API.Services.Payments.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -25,6 +26,37 @@ public class CreditControllerPaymentConfigTests
     private readonly Mock<ICouponService> _couponService = new();
     private readonly Mock<IWebHostEnvironment> _environment = new();
     private readonly Mock<ILogger<CreditController>> _logger = new();
+
+    [Fact]
+    public async Task CreatePaymentIntent_ForwardsPreviewReservationId()
+    {
+        var controller = CreateController(
+            new StripeOptions(),
+            new PaymentSimulationOptions());
+        _stripePaymentService
+            .Setup(service => service.CreatePaymentIntentAsync(
+                "test-user",
+                7,
+                "SAVE10",
+                123,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentIntentResponse("pi_test", "secret", "pk_test", "42"));
+
+        var result = await controller.CreatePaymentIntent(new AI.ProfilePhotoMaker.API.Models.DTOs.CreatePaymentIntentRequestDto
+        {
+            PackageId = 7,
+            CouponCode = "SAVE10",
+            PreviewProcessedImageId = 123
+        }, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        _stripePaymentService.Verify(service => service.CreatePaymentIntentAsync(
+            "test-user",
+            7,
+            "SAVE10",
+            123,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
 
     [Theory]
     [MemberData(nameof(GetPaymentConfigScenarios))]
