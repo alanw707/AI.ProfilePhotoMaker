@@ -374,8 +374,33 @@ public class OutcomePackageService : IOutcomePackageService
         _context.ProcessedImages.Add(promotedImage);
         entitlement.RemainingCandidates--;
         entitlement.UpdatedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync(cancellationToken);
-        return true;
+
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateException)
+        {
+            _context.Entry(promotedImage).State = EntityState.Detached;
+            await _context.Entry(entitlement).ReloadAsync(cancellationToken);
+
+            var concurrentPromotionExists = await _context.ProcessedImages.AnyAsync(i =>
+                i.UserProfileId == preview.UserProfileId &&
+                i.GenerationMode == "instant_headshot_promoted_preview" &&
+                i.GenerationStatus == "succeeded" &&
+                i.ProcessedImageUrl == rawPath,
+                cancellationToken);
+            if (concurrentPromotionExists)
+            {
+                _logger.LogInformation(
+                    "Preview {PreviewId} was promoted concurrently; using the existing paid candidate",
+                    preview.Id);
+                return true;
+            }
+
+            throw;
+        }
     }
 
     public async Task<UserPackageEntitlement?> GetActiveEntitlementAsync(string userId, string packageCode, CancellationToken cancellationToken = default)

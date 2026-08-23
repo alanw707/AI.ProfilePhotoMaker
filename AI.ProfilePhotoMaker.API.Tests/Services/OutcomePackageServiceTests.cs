@@ -3,6 +3,7 @@ using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Moq;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -381,6 +382,115 @@ public class OutcomePackageServiceTests
     }
 
     [Fact]
+    public async Task GrantEntitlement_ConcurrentPromotionUsesWinnerWithoutDoubleConsumption()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"promotion-race-{Guid.NewGuid():N}.db");
+        var connectionString = $"Data Source={databasePath}";
+        var winnerOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connectionString)
+            .Options;
+
+        try
+        {
+            int previewId;
+            await using (var seed = new ApplicationDbContext(winnerOptions))
+            {
+                await seed.Database.EnsureCreatedAsync();
+                var user = new ApplicationUser
+                {
+                    Id = "concurrent-user",
+                    UserName = "concurrent@example.com",
+                    Email = "concurrent@example.com"
+                };
+                var profile = new UserProfile { UserId = user.Id, User = user };
+                var creditPackage = new CreditPackage
+                {
+                    Id = 12012,
+                    Name = "Concurrent Credits",
+                    Description = "Test package",
+                    IsActive = true
+                };
+                var package = new OutcomePackageDefinition
+                {
+                    Code = "concurrent_package",
+                    Name = "Concurrent Package",
+                    Description = "Test package",
+                    InternalCreditPackage = creditPackage,
+                    IncludedCandidateCount = 3,
+                    IsActive = true
+                };
+                seed.Users.Add(user);
+                seed.CreditPackages.Add(creditPackage);
+                seed.UserProfiles.Add(profile);
+                seed.OutcomePackageDefinitions.Add(package);
+                await seed.SaveChangesAsync();
+                var preview = new ProcessedImage
+                {
+                    UserProfileId = profile.Id,
+                    OriginalImageUrl = "uploads/concurrent-source.png",
+                    ProcessedImageUrl = "generated/concurrent-preview.png",
+                    RawImageStoragePath = "generated-private/concurrent-raw.png",
+                    Style = "linkedin",
+                    GenerationMode = "instant_headshot",
+                    GenerationStatus = "succeeded"
+                };
+                seed.ProcessedImages.Add(preview);
+                seed.PaymentTransactions.Add(new PaymentTransaction
+                {
+                    Id = 77,
+                    UserId = user.Id,
+                    ExternalTransactionId = "pi_concurrent",
+                    Amount = 9.99m,
+                    Currency = "usd",
+                    PaymentProvider = "stripe",
+                    Status = PaymentStatus.Completed,
+                    Type = PaymentType.OneTime,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+                seed.UserPackageEntitlements.Add(new UserPackageEntitlement
+                {
+                    UserId = profile.UserId,
+                    OutcomePackageDefinitionId = package.Id,
+                    SourcePaymentTransactionId = 77,
+                    Status = PackageEntitlementStatus.Active,
+                    RemainingPackageUses = 1,
+                    RemainingCandidates = 3,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+                await seed.SaveChangesAsync();
+                previewId = preview.Id;
+            }
+
+            var interceptor = new ConcurrentPromotionInterceptor(winnerOptions);
+            var loserOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite(connectionString)
+                .AddInterceptors(interceptor)
+                .Options;
+            await using var loser = new ApplicationDbContext(loserOptions);
+            var service = new OutcomePackageService(loser, NullLogger<OutcomePackageService>.Instance);
+
+            var entitlement = await service.GrantEntitlementForCreditPackageAsync(
+                "concurrent-user",
+                12012,
+                "77",
+                previewId);
+
+            Assert.NotNull(entitlement);
+            await using var verification = new ApplicationDbContext(winnerOptions);
+            Assert.Single(await verification.ProcessedImages
+                .Where(image => image.GenerationMode == "instant_headshot_promoted_preview")
+                .ToListAsync());
+            Assert.Equal(2, (await verification.UserPackageEntitlements.SingleAsync()).RemainingCandidates);
+        }
+        finally
+        {
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
     public async Task ConsumeCandidates_FreePreview_AllowsOnlyOneCandidateWithoutEntitlement()
     {
         await using var context = CreateContext();
@@ -388,6 +498,46 @@ public class OutcomePackageServiceTests
 
         Assert.True(await service.ConsumeCandidatesAsync("free-user", "free_preview", 1));
         Assert.False(await service.ConsumeCandidatesAsync("free-user", "free_preview", 2));
+    }
+
+    private sealed class ConcurrentPromotionInterceptor(
+        DbContextOptions<ApplicationDbContext> winnerOptions) : SaveChangesInterceptor
+    {
+        private int _hasInjectedWinner;
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            var losingContext = (ApplicationDbContext)eventData.Context!;
+            var attemptedPromotion = losingContext.ChangeTracker.Entries<ProcessedImage>()
+                .FirstOrDefault(entry =>
+                    entry.State == EntityState.Added &&
+                    entry.Entity.GenerationMode == "instant_headshot_promoted_preview");
+            if (attemptedPromotion == null || Interlocked.Exchange(ref _hasInjectedWinner, 1) != 0)
+            {
+                return result;
+            }
+
+            await using var winner = new ApplicationDbContext(winnerOptions);
+            var entitlement = await winner.UserPackageEntitlements.SingleAsync(cancellationToken);
+            winner.ProcessedImages.Add(new ProcessedImage
+            {
+                UserProfileId = attemptedPromotion.Entity.UserProfileId,
+                OriginalImageUrl = attemptedPromotion.Entity.OriginalImageUrl,
+                ProcessedImageUrl = attemptedPromotion.Entity.ProcessedImageUrl,
+                Style = attemptedPromotion.Entity.Style,
+                GenerationMode = "instant_headshot_promoted_preview",
+                GenerationStatus = "succeeded",
+                IsGenerated = true,
+                ScheduledDeletionDate = DateTime.UtcNow.AddDays(30)
+            });
+            entitlement.RemainingCandidates--;
+            entitlement.UpdatedAt = DateTime.UtcNow;
+            await winner.SaveChangesAsync(cancellationToken);
+            return result;
+        }
     }
 
     private static ApplicationDbContext CreateContext()
