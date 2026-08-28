@@ -49,6 +49,33 @@ public class OutcomePackageServiceTests
     }
 
     [Fact]
+    public async Task AbandonPreview_MarksOnlyAnUnpromotedFreePreviewAsAbandoned()
+    {
+        await using var context = CreateContext();
+        var userId = "abandon-user";
+        var profile = new UserProfile { UserId = userId };
+        context.UserProfiles.Add(profile);
+        await context.SaveChangesAsync();
+        var preview = new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = "uploads/source.png",
+            ProcessedImageUrl = "generated/watermarked.png",
+            RawImageStoragePath = "generated-private/raw.png",
+            Style = "linkedin",
+            GenerationMode = "instant_headshot",
+            GenerationStatus = "succeeded"
+        };
+        context.ProcessedImages.Add(preview);
+        await context.SaveChangesAsync();
+        var service = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance);
+
+        Assert.True(await service.AbandonPreviewAsync(userId, preview.Id));
+        Assert.Equal("abandoned", preview.GenerationStatus);
+        Assert.Null(await service.GetResumablePreviewAsync(userId, preview.Id));
+    }
+
+    [Fact]
     public async Task ConsumeMethods_DecrementPackageAllowancesAndRejectWhenUnavailable()
     {
         await using var context = CreateContext();
