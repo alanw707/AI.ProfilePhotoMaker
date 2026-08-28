@@ -71,6 +71,22 @@ public class EnhancementCreditDeductionIntegrationTests : IClassFixture<CustomWe
     }
 
     [Fact]
+    public async Task OpenAiEnhancement_WithOwnedPrivateGeneratedSource_Succeeds()
+    {
+        await SeedUserAsync(credits: 5);
+        var client = _factory.CreateAuthenticatedClient();
+
+        var response = await client.PostAsJsonAsync("/api/enhancement/enhance", new
+        {
+            imageStoragePath = "testing/generated-private/test-user-1/source.png",
+            enhancementType = "headshot",
+            turnstileToken = "test"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     public async Task OpenAiEnhancement_MissingSource_ReturnsBadRequest()
     {
         await SeedUserAsync(credits: 5);
@@ -113,6 +129,25 @@ public class EnhancementCreditDeductionIntegrationTests : IClassFixture<CustomWe
         var response = await client.PostAsJsonAsync("/api/enhancement/enhance", new
         {
             imageStoragePath = "testing/enhanced/other-user/source.png",
+            enhancementType = "headshot",
+            turnstileToken = "test"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var profile = await GetProfileAsync();
+        Assert.Equal(5, profile.Credits);
+    }
+
+    [Fact]
+    public async Task OpenAiEnhancement_CrossUserPrivateGeneratedSource_ReturnsBadRequest_WithoutDeductingCredits()
+    {
+        await SeedUserAsync(credits: 5);
+        var client = _factory.CreateAuthenticatedClient();
+
+        var response = await client.PostAsJsonAsync("/api/enhancement/enhance", new
+        {
+            imageStoragePath = "testing/generated-private/other-user/source.png",
             enhancementType = "headshot",
             turnstileToken = "test"
         });

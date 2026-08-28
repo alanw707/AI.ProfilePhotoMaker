@@ -570,8 +570,10 @@ public class EnhancementController : ControllerBase
         {
             _pathResolver.GetDirectoryPrefix(StorageType.Enhanced, userId),
             _pathResolver.GetDirectoryPrefix(StorageType.Generated, userId),
+            _pathResolver.GetDirectoryPrefix(StorageType.GeneratedPrivate, userId),
             $"enhanced/{userId}/",
-            $"generated/{userId}/"
+            $"generated/{userId}/",
+            $"generated-private/{userId}/"
         };
         if (!allowedPrefixes.Any(prefix => storagePath.StartsWith(prefix, StringComparison.Ordinal) && storagePath.Length > prefix.Length))
         {
