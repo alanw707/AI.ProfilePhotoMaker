@@ -1,212 +1,166 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PhotoEnhancementComponent } from './photo-enhancement.component';
-import {
-  MockAuthService,
-  MockWorkspaceStateService,
-  MockFileUploadService,
-  MockReplicateService,
-  TestingHelpers,
-} from '../../testing/testing-utils';
+import { throwError } from 'rxjs';
+import { HeadshotCandidate } from '../../services/headshot-generation.service';
 
-import { AuthService } from '../../services/auth.service';
-import { WorkspaceStateService } from '../../services/workspace-state.service';
-import { FileUploadService } from '../../services/file-upload.service';
-import { ReplicateService } from '../../services/replicate.service';
-import { Router } from '@angular/router';
-import { UserCreditStatus } from '../../services/credit.service';
+function candidate(id: number): HeadshotCandidate {
+  return {
+    imageUrl: `candidate-${id}.jpg`,
+    storagePath: `generated/candidate-${id}.jpg`,
+    processedImageId: id,
+    provider: 'openai',
+    model: 'gpt-image-2',
+    correlationId: `candidate-${id}`,
+  };
+}
 
-/**
- * Photo Enhancement Component Test Suite
- *
- * Simplified tests that match the actual component structure.
- * This component handles the basic tier photo enhancement workflow.
- */
-xdescribe('PhotoEnhancementComponent', () => {
-  let component: PhotoEnhancementComponent;
-  let fixture: ComponentFixture<PhotoEnhancementComponent>;
-  let mockAuthService: MockAuthService;
-  let mockWorkspaceStateService: MockWorkspaceStateService;
-  let mockFileUploadService: MockFileUploadService;
-  let mockReplicateService: MockReplicateService;
-  let mockRouter: jasmine.SpyObj<Router>;
+function createComponent(
+  packageCode: 'free_preview' | 'starter_package' | 'pro_package',
+  generatedCount: number
+): PhotoEnhancementComponent {
+  const component = Object.create(PhotoEnhancementComponent.prototype) as PhotoEnhancementComponent;
+  Object.assign(component, {
+    isHeadshotMvpEnabled: true,
+    selectedPackageCode: packageCode,
+    packageOptions: [
+      { code: 'free_preview', name: 'Free Preview', includedCandidateCount: 1 },
+      { code: 'starter_package', name: 'Starter Package', includedCandidateCount: 3 },
+      { code: 'pro_package', name: 'Pro Package', includedCandidateCount: 9 },
+    ],
+    packageEntitlements: [],
+    generatedCandidates: Array.from({ length: generatedCount }, (_, index) => candidate(index + 1)),
+    enhancedImage: null,
+    isLoadingEntitlements: false,
+  });
+  return component;
+}
 
-  beforeEach(async () => {
-    mockAuthService = new MockAuthService();
-    mockWorkspaceStateService = new MockWorkspaceStateService();
-    mockFileUploadService = new MockFileUploadService();
-    mockReplicateService = new MockReplicateService();
-    mockRouter = jasmine.createSpyObj('Router', ['navigate']);
+describe('PhotoEnhancementComponent package fulfillment', () => {
+  it('shows the remaining paid candidate slots as the primary generation action', () => {
+    const component = createComponent('pro_package', 1);
 
-    await TestBed.configureTestingModule({
-      imports: [PhotoEnhancementComponent],
-      providers: [
-        { provide: AuthService, useValue: mockAuthService },
-        { provide: WorkspaceStateService, useValue: mockWorkspaceStateService },
-        { provide: FileUploadService, useValue: mockFileUploadService },
-        { provide: ReplicateService, useValue: mockReplicateService },
-        { provide: Router, useValue: mockRouter },
-      ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(PhotoEnhancementComponent);
-    component = fixture.componentInstance;
+    expect(component.getPackageProgressText()).toBe('1 of 9 generated');
+    expect(component.getRemainingCandidateSlots()).toBe(8);
+    expect(component.getPrimaryCtaLabel()).toBe('Generate remaining 8 photos');
+    expect(component.isPaidPackageFulfillmentPending()).toBeTrue();
+    expect(component.canShowFinishingTools()).toBeFalse();
   });
 
-  describe('Component Initialization', () => {
-    it('should create the component', () => {
-      expect(component).toBeTruthy();
-    });
+  it('marks a paid candidate set complete only when every slot is restored', () => {
+    const component = createComponent('starter_package', 3);
 
-    it('should initialize with default values', () => {
-      expect(component.selectedFile).toBeNull();
-      expect(component.enhancementType).toBe('background');
-      expect(component.isProcessing).toBeFalse();
-      expect(component.enhancedImage).toBeNull();
-      expect(component.imagePreview).toBeNull();
-    });
-
-    it('should load initial state on init', () => {
-      spyOn(component, 'ngOnInit').and.callThrough();
-      component.ngOnInit();
-      expect(component.ngOnInit).toHaveBeenCalled();
-    });
+    expect(component.getPackageProgressText()).toBe('3 of 3 generated');
+    expect(component.getRemainingCandidateSlots()).toBe(0);
+    expect(component.isCandidateFulfillmentComplete()).toBeTrue();
+    expect(component.isPaidPackageFulfillmentPending()).toBeFalse();
+    expect(component.canShowFinishingTools()).toBeTrue();
   });
 
-  describe('File Selection and Upload', () => {
-    it('should handle file selection', () => {
-      const mockFile = TestingHelpers.createMockFile('test.jpg', 1024, 'image/jpeg');
+  it('keeps partial paid fulfillment resumable', () => {
+    const component = createComponent('pro_package', 4);
 
-      component.selectedFile = mockFile;
-
-      expect(component.selectedFile).toBe(mockFile);
-    });
-
-    it('should set image preview', () => {
-      const previewUrl = 'blob:mock-url';
-
-      component.imagePreview = previewUrl;
-
-      expect(component.imagePreview).toBe(previewUrl);
-    });
-
-    it('should clear selected file', () => {
-      component.selectedFile = TestingHelpers.createMockFile();
-      component.imagePreview = 'blob:mock-url';
-
-      component.selectedFile = null;
-      component.imagePreview = null;
-
-      expect(component.selectedFile).toBeNull();
-      expect(component.imagePreview).toBeNull();
-    });
+    expect(component.getPackageProgressText()).toBe('4 of 9 generated');
+    expect(component.getPrimaryCtaLabel()).toBe('Generate remaining 5 photos');
+    expect(component.isCandidateFulfillmentComplete()).toBeFalse();
   });
 
-  describe('Enhancement Type Selection', () => {
-    it('should change enhancement type', () => {
-      component.enhancementType = 'social-media';
+  it('reports an allowance mismatch without directing the user to refinements', () => {
+    const component = createComponent('pro_package', 4);
+    component.packageEntitlements = [
+      {
+        id: 1,
+        packageCode: 'pro_package',
+        packageName: 'Pro Package',
+        status: 'active',
+        remainingPackageUses: 0,
+        remainingCandidates: 0,
+        remainingRefinements: 3,
+        remainingPremiumAugmentations: 3,
+        platformExportKitAvailable: true,
+      },
+    ];
 
-      expect(component.enhancementType).toBe('social-media');
-    });
-
-    it('should track processing state', () => {
-      expect(component.isProcessing).toBeFalse();
-
-      component.isProcessing = true;
-      expect(component.isProcessing).toBeTrue();
-    });
-
-    it('should track processing progress', () => {
-      component.processingProgress = 50;
-
-      expect(component.processingProgress).toBe(50);
-    });
+    expect(component.getFulfillmentBlockerText()).toContain(
+      'candidate allowance does not match the unfinished package'
+    );
+    expect(component.getFulfillmentBlockerText()).toContain('without using a refinement');
   });
 
-  describe('Component State', () => {
-    it('should handle enhanced image result', () => {
-      const mockResult = {
-        url: 'enhanced-image.jpg',
-        displayUrl: 'enhanced-image.jpg',
-        status: 'completed',
-      };
+  it('describes candidate selection without relying on visual marks', () => {
+    const component = createComponent('starter_package', 1);
+    const scoredCandidate = {
+      ...candidate(1),
+      recommendationScore: 91,
+    };
 
-      component.enhancedImage = mockResult;
-
-      expect(component.enhancedImage).toBe(mockResult);
-    });
-
-    it('should track credits info', () => {
-      const mockCredits: UserCreditStatus = {
-        credits: 13,
-        lastCreditReset: '2024-01-01T00:00:00Z',
-        nextResetDate: '2024-01-08T00:00:00Z',
-      };
-
-      component.userCreditStatus = mockCredits;
-
-      expect(component.userCreditStatus).toBe(mockCredits);
-    });
-
-    it('should handle error messages', () => {
-      const errorMsg = 'Processing failed';
-
-      component.errorMessage = errorMsg;
-
-      expect(component.errorMessage).toBe(errorMsg);
-    });
-
-    it('should track drag over state', () => {
-      expect(component.isDragOver).toBeFalse();
-
-      component.isDragOver = true;
-      expect(component.isDragOver).toBeTrue();
-    });
-
-    it('should track loading state', () => {
-      expect(component.isLoadingCredits).toBeTrue();
-
-      component.isLoadingCredits = false;
-      expect(component.isLoadingCredits).toBeFalse();
-    });
+    expect(component.getCandidateAccessibleLabel(scoredCandidate, 0)).toBe(
+      'Candidate 1, recommended best shot, score 91 out of 100'
+    );
   });
 
-  describe('Component Cleanup', () => {
-    it('should cleanup on destroy', () => {
-      spyOn(component, 'ngOnDestroy').and.callThrough();
+  it('caps restored candidates at the package definition count', () => {
+    const component = createComponent('starter_package', 5);
 
-      component.ngOnDestroy();
-
-      expect(component.ngOnDestroy).toHaveBeenCalled();
-    });
-  });
-});
-
-/**
- * Integration Tests for Photo Enhancement Component
- */
-xdescribe('PhotoEnhancementComponent Integration Tests', () => {
-  let component: PhotoEnhancementComponent;
-  let fixture: ComponentFixture<PhotoEnhancementComponent>;
-
-  beforeEach(async () => {
-    await TestingHelpers.setupTestModule(PhotoEnhancementComponent);
-    fixture = TestBed.createComponent(PhotoEnhancementComponent);
-    component = fixture.componentInstance;
+    expect(component.getGeneratedCandidateCount()).toBe(3);
+    expect(component.getPackageProgressText()).toBe('3 of 3 generated');
   });
 
-  it('should maintain state during enhancement workflow', () => {
-    const mockFile = TestingHelpers.createMockFile();
-    component.selectedFile = mockFile;
-    component.enhancementType = 'background';
+  it('merges a partial retry response without dropping restored candidates', () => {
+    const component = createComponent('pro_package', 4);
+    component.selectedCandidateId = 1;
+    const response = [
+      candidate(1),
+      ...Array.from({ length: 5 }, (_, index) => candidate(index + 5)),
+    ];
 
-    // State should be maintained
-    expect(component.selectedFile).toBe(mockFile);
-    expect(component.enhancementType).toBe('background');
+    const selected = (component as any).mergeGeneratedCandidates(response);
+
+    expect(component.generatedCandidates.map(item => item.processedImageId)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9,
+    ]);
+    expect(selected.processedImageId).toBe(1);
+    expect(component.getPackageProgressText()).toBe('9 of 9 generated');
   });
 
-  it('should handle component initialization properly', () => {
-    expect(component).toBeTruthy();
-    expect(component.selectedFile).toBeNull();
-    expect(component.isProcessing).toBeFalse();
+  it('replaces only the selected slot after a refinement', () => {
+    const component = createComponent('pro_package', 9);
+    component.selectedCandidateId = 4;
+
+    const replacement = (component as any).replaceRegeneratedCandidate([candidate(999)], 4);
+
+    expect(component.generatedCandidates).toHaveSize(9);
+    expect(component.generatedCandidates.map(item => item.processedImageId)).not.toContain(4);
+    expect(component.generatedCandidates.map(item => item.processedImageId)).toContain(999);
+    expect(replacement.processedImageId).toBe(999);
+    expect(component.getPackageProgressText()).toBe('9 of 9 generated');
+  });
+
+  it('clears source scoring state when the scoring request errors', () => {
+    const component = createComponent('free_preview', 0);
+    const file = new File(['photo'], 'photo.jpg', { type: 'image/jpeg' });
+    (component as any).isProfilePhotoScoreVisible = true;
+    component.selectedFile = file;
+    (component as any)._selectedFileToken = 1;
+    (component as any)._profileWorkflowService = {
+      scorePhoto: () => throwError(() => new Error('score failed')),
+    };
+    (component as any)._cdr = { markForCheck: () => undefined };
+    spyOn(console, 'warn');
+
+    (component as any).scoreSelectedPhoto(file, 1);
+
+    expect(component.isScoringPhoto).toBeFalse();
+  });
+
+  it('clears generated scoring state when the scoring request errors', () => {
+    const component = createComponent('pro_package', 9);
+    (component as any)._profileWorkflowService = {
+      scoreProcessedImage: () => throwError(() => new Error('score failed')),
+    };
+    (component as any)._cdr = { markForCheck: () => undefined };
+    spyOn(console, 'warn');
+
+    (component as any).scoreGeneratedPhoto(1);
+
+    expect(component.isScoringGeneratedPhoto).toBeFalse();
   });
 });

@@ -24,6 +24,7 @@ public class ProcessedImage
     public string? GenerationStatus { get; set; }
     public string? FailureReason { get; set; }
     public string? RawImageStoragePath { get; set; }
+    public int? ReplacesProcessedImageId { get; set; }
 
     // Retention policy field
     public DateTime ScheduledDeletionDate { get; set; }

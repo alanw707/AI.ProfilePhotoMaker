@@ -103,6 +103,43 @@ public class OutcomePackageServiceTests
     }
 
     [Fact]
+    public async Task ConsumeCandidates_KeepsPackageResumableUntilEveryCandidateSlotIsFilled()
+    {
+        await using var context = CreateContext();
+        var package = new OutcomePackageDefinition
+        {
+            Code = "pro_package",
+            Name = "Pro Package",
+            Description = "Test package",
+            IncludedCandidateCount = 9,
+            IsActive = true
+        };
+        context.OutcomePackageDefinitions.Add(package);
+        await context.SaveChangesAsync();
+        context.UserPackageEntitlements.Add(new UserPackageEntitlement
+        {
+            UserId = "partial-user",
+            OutcomePackageDefinitionId = package.Id,
+            Status = PackageEntitlementStatus.Active,
+            RemainingPackageUses = 1,
+            RemainingCandidates = 8,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await context.SaveChangesAsync();
+        var service = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance);
+
+        Assert.True(await service.ConsumeCandidatesAsync("partial-user", "pro_package", 3));
+        var partial = await context.UserPackageEntitlements.SingleAsync();
+        Assert.Equal(5, partial.RemainingCandidates);
+        Assert.Equal(1, partial.RemainingPackageUses);
+
+        Assert.True(await service.ConsumeCandidatesAsync("partial-user", "pro_package", 5));
+        Assert.Equal(0, partial.RemainingCandidates);
+        Assert.Equal(0, partial.RemainingPackageUses);
+    }
+
+    [Fact]
     public async Task GrantEntitlement_PromotesRawPreviewAndConsumesOneCandidateSlot()
     {
         await using var context = CreateContext();
@@ -488,6 +525,147 @@ public class OutcomePackageServiceTests
         {
             File.Delete(databasePath);
         }
+    }
+
+    [Theory]
+    [InlineData(8, 0, 9)]
+    [InlineData(3, 5, 4)]
+    public async Task GetResumablePreview_RestoresPromotedAndPaidCandidatesAfterInterruption(
+        int generatedCandidateCount,
+        int remainingCandidateCount,
+        int expectedTotal)
+    {
+        await using var context = CreateContext();
+        var userId = "resume-paid-user";
+        var profile = new UserProfile { UserId = userId };
+        var package = new OutcomePackageDefinition
+        {
+            Code = "pro_package",
+            Name = "Pro Package",
+            Description = "Test package",
+            IncludedCandidateCount = 9,
+            IncludedRefinementCount = 3,
+            IncludedPremiumAugmentationCount = 3,
+            IncludesPlatformExportKit = true,
+            IsActive = true
+        };
+        var style = new Style
+        {
+            Name = "linkedin",
+            Description = "Professional",
+            PromptTemplate = "Professional portrait",
+            NegativePromptTemplate = string.Empty,
+            IsActive = true
+        };
+        context.UserProfiles.Add(profile);
+        context.OutcomePackageDefinitions.Add(package);
+        context.Styles.Add(style);
+        await context.SaveChangesAsync();
+
+        var preview = new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = "uploads/source.png",
+            ProcessedImageUrl = "generated/preview.png",
+            RawImageStoragePath = "generated-private/raw.png",
+            Style = style.Name,
+            GenerationMode = "instant_headshot",
+            GenerationStatus = "succeeded",
+            CreatedAt = DateTime.UtcNow.AddMinutes(-5)
+        };
+        context.ProcessedImages.Add(preview);
+        await context.SaveChangesAsync();
+
+        var entitlement = new UserPackageEntitlement
+        {
+            UserId = userId,
+            OutcomePackageDefinitionId = package.Id,
+            Status = PackageEntitlementStatus.Active,
+            RemainingPackageUses = remainingCandidateCount > 0 ? 1 : 0,
+            RemainingCandidates = remainingCandidateCount,
+            RemainingRefinements = 3,
+            RemainingPremiumAugmentations = 3,
+            PlatformExportKitAvailable = true,
+            ActivatedAt = DateTime.UtcNow.AddMinutes(-4),
+            CreatedAt = DateTime.UtcNow.AddMinutes(-4),
+            UpdatedAt = DateTime.UtcNow
+        };
+        var promoted = new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = preview.OriginalImageUrl,
+            ProcessedImageUrl = preview.RawImageStoragePath!,
+            Style = style.Name,
+            GenerationMode = "instant_headshot_promoted_preview",
+            GenerationStatus = "succeeded",
+            CorrelationId = "purchase:1:promoted-preview",
+            CreatedAt = DateTime.UtcNow.AddMinutes(-3)
+        };
+        context.UserPackageEntitlements.Add(entitlement);
+        context.ProcessedImages.Add(promoted);
+        context.ProcessedImages.AddRange(Enumerable.Range(1, generatedCandidateCount).Select(index => new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = preview.OriginalImageUrl,
+            ProcessedImageUrl = $"generated/paid-{index}.png",
+            RawImageStoragePath = $"generated-private/paid-{index}.png",
+            Style = style.Name,
+            GenerationMode = "instant_headshot",
+            GenerationStatus = "succeeded",
+            CorrelationId = $"paid-batch:candidate:{index}",
+            CreatedAt = DateTime.UtcNow.AddMinutes(-2).AddSeconds(index)
+        }));
+        await context.SaveChangesAsync();
+        promoted.CorrelationId = $"purchase:{entitlement.Id}:promoted-preview";
+        await context.SaveChangesAsync();
+
+        var storage = new Mock<IStorageService>();
+        storage.Setup(service => service.ExistsAsync(It.IsAny<string>())).ReturnsAsync(true);
+        var service = new OutcomePackageService(
+            context,
+            NullLogger<OutcomePackageService>.Instance,
+            storage.Object);
+
+        var resumed = await service.GetResumablePreviewAsync(userId, preview.Id);
+
+        Assert.NotNull(resumed);
+        Assert.Equal(expectedTotal, resumed!.Candidates.Count);
+        Assert.Equal(promoted.Id, resumed.Candidates[0].ProcessedImageId);
+        Assert.Equal(remainingCandidateCount, resumed.RemainingCandidateCount);
+
+        var replaced = await context.ProcessedImages.SingleAsync(image =>
+            image.CorrelationId == "paid-batch:candidate:1");
+        var refinement = new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = preview.OriginalImageUrl,
+            ProcessedImageUrl = "generated/refined.png",
+            Style = style.Name,
+            GenerationMode = "instant_headshot",
+            GenerationStatus = "succeeded",
+            CorrelationId = "refinement-1",
+            ReplacesProcessedImageId = replaced.Id,
+            CreatedAt = DateTime.UtcNow
+        };
+        context.ProcessedImages.Add(refinement);
+        await context.SaveChangesAsync();
+
+        var resumedAfterRefinement = await service.GetResumablePreviewAsync(userId, preview.Id);
+
+        Assert.NotNull(resumedAfterRefinement);
+        Assert.Equal(expectedTotal, resumedAfterRefinement!.Candidates.Count);
+        Assert.Contains(resumedAfterRefinement.Candidates, candidate =>
+            candidate.ProcessedImageId == refinement.Id);
+        Assert.DoesNotContain(resumedAfterRefinement.Candidates, candidate =>
+            candidate.ProcessedImageId == replaced.Id);
+
+        var resumedWithoutPreviewId = await service.GetResumablePreviewAsync(userId);
+
+        Assert.NotNull(resumedWithoutPreviewId);
+        Assert.Equal(preview.Id, resumedWithoutPreviewId!.ProcessedImageId);
+        Assert.Equal(expectedTotal, resumedWithoutPreviewId.Candidates.Count);
+        Assert.Contains(resumedWithoutPreviewId.Candidates, candidate =>
+            candidate.ProcessedImageId == refinement.Id);
     }
 
     [Fact]
