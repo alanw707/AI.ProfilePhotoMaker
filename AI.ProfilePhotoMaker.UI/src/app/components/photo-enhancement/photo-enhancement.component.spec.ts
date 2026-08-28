@@ -134,6 +134,44 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.getPackageProgressText()).toBe('9 of 9 generated');
   });
 
+  it('ends an expired session when candidate generation returns 401', () => {
+    const component = createComponent('pro_package', 1);
+    const logout = jasmine.createSpy('logout');
+    (component as any)._authService = { logout };
+    (component as any)._cdr = { detectChanges: () => undefined };
+    spyOn(console, 'error');
+
+    (component as any).handleEnhancementFailure({
+      status: 401,
+      message: 'Unauthorized',
+      error: { message: 'Unauthorized' },
+    });
+
+    expect(logout).toHaveBeenCalled();
+  });
+
+  it('shows verification recovery when generation rejects an unconfirmed email', () => {
+    const component = createComponent('pro_package', 1);
+    const logout = jasmine.createSpy('logout');
+    (component as any)._authService = { logout };
+    (component as any)._cdr = { detectChanges: () => undefined };
+    spyOn(console, 'error');
+
+    (component as any).handleEnhancementFailure({
+      status: 401,
+      error: {
+        error: {
+          code: 'EmailNotVerified',
+          message: 'Please verify your email address before generating a headshot.',
+        },
+      },
+    });
+
+    expect(component.isEmailConfirmed).toBeFalse();
+    expect(component.verificationMessage).toContain('verify your email address');
+    expect(logout).not.toHaveBeenCalled();
+  });
+
   it('clears source scoring state when the scoring request errors', () => {
     const component = createComponent('free_preview', 0);
     const file = new File(['photo'], 'photo.jpg', { type: 'image/jpeg' });

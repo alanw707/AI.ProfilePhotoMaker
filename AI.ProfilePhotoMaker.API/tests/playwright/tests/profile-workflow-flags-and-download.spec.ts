@@ -99,6 +99,25 @@ async function fulfillJson(route: Route, data: unknown) {
   });
 }
 
+async function getContrastRatio(locator: ReturnType<Page["locator"]>) {
+  const colors = await locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return [style.color, style.backgroundColor];
+  });
+  const luminance = (color: string) => {
+    const channels = color.match(/[\d.]+/g)!.slice(0, 3).map(Number);
+    const linear = channels.map((channel) => {
+      const value = channel / 255;
+      return value <= 0.04045
+        ? value / 12.92
+        : Math.pow((value + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+  };
+  const [foreground, background] = colors.map(luminance);
+  return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+}
+
 async function installCommonRoutes(
   page: Page,
   features: Record<string, boolean>,
@@ -979,6 +998,13 @@ test.describe("Profile workflow flags, UX, and downloads", () => {
       .getByRole("checkbox", { name: /remaining package photos/i })
       .click();
     await expect(fulfillmentAction).toBeEnabled();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.locator("html").evaluate((element) => element.setAttribute("data-theme", "light"));
+    const desktopFulfillmentAction = page.locator(".fulfillment-callout .btn-primary");
+    await desktopFulfillmentAction.hover();
+    await expect(desktopFulfillmentAction).toHaveCSS("background-color", "rgb(23, 63, 153)");
+    expect(await getContrastRatio(desktopFulfillmentAction)).toBeGreaterThanOrEqual(4.5);
+    await page.locator("html").evaluate((element) => element.setAttribute("data-theme", "dark"));
     await fulfillmentAction.focus();
     await expect(fulfillmentAction).toBeFocused();
     await page.setViewportSize({ width: 1280, height: 900 });

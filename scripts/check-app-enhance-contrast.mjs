@@ -2,6 +2,7 @@ const pairs = [
   ['Production ink / proof paper', '#202529', '#f7f4ed'],
   ['Muted copy / proof paper', '#4d555b', '#f7f4ed'],
   ['White / proof cobalt', '#ffffff', '#2457c5'],
+  ['White / fulfillment CTA hover', '#ffffff', '#173f99'],
   ['Deep cobalt / proof paper', '#173f99', '#f7f4ed'],
   ['Proof red / paper white', '#9f3028', '#fffdf8'],
   ['Completion green / paper white', '#246b4b', '#fffdf8'],
