@@ -150,6 +150,29 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
     }
 
     [Fact]
+    public async Task AbandonPreview_RemovesItFromTheResumableEndpoint()
+    {
+        var userId = $"headshot-abandon-{Guid.NewGuid():N}";
+        await SeedUserAsync(userId, credits: 10);
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
+        var generated = await client.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = $"testing/enhanced/{userId}/source.png",
+            style = "professional", background = "auto", packageCode = "free_preview", numOutputs = 1
+        });
+        generated.EnsureSuccessStatusCode();
+        var preview = await generated.Content.ReadFromJsonAsync<HeadshotApiResponse>();
+
+        var abandoned = await client.DeleteAsync($"/api/headshots/resumable-preview/{preview!.Data!.ProcessedImageId}");
+        Assert.Equal(HttpStatusCode.OK, abandoned.StatusCode);
+        var resumed = await client.GetAsync($"/api/headshots/resumable-preview?previewId={preview.Data.ProcessedImageId}");
+        resumed.EnsureSuccessStatusCode();
+        var result = await resumed.Content.ReadFromJsonAsync<ResumablePreviewApiResponse>();
+        Assert.Null(result!.Data);
+    }
+
+    [Fact]
     public async Task PrivateRawPreviewProxyPath_IsRejectedWithoutAuthentication()
     {
         var client = _factory.CreateClient();
