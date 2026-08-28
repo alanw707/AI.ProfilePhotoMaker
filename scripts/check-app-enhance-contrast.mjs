@@ -5,6 +5,12 @@ const pairs = [
   ['Deep cobalt / proof paper', '#173f99', '#f7f4ed'],
   ['Proof red / paper white', '#9f3028', '#fffdf8'],
   ['Completion green / paper white', '#246b4b', '#fffdf8'],
+  ['Dark ink / dark proof paper', '#f0f4f8', '#0d1117'],
+  ['Dark muted copy / dark proof paper', '#bdc7d3', '#0d1117'],
+  ['White / dark proof cobalt', '#ffffff', '#315fc4'],
+  ['Dark cobalt link / dark proof paper', '#a9c0ff', '#0d1117'],
+  ['Dark proof red / dark surface', '#ff9b94', '#161b22'],
+  ['Dark completion green / dark surface', '#63d6a2', '#161b22'],
 ];
 
 function luminance(hex) {

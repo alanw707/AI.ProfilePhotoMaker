@@ -23,6 +23,12 @@ describe('PhotoWorkspaceImageViewModule', () => {
     );
   });
 
+  it('uses the storage proxy for restored candidate API URLs', () => {
+    expect(
+      module.normalizeDisplayImageUrl('/api/headshots/images/111/original', 'users/1/a.png')
+    ).toBe('https://api.example.test/profile-images/users/1/a.png');
+  });
+
   it('returns fallback image state before marking an image failed', () => {
     const first = module.nextFailedImageState({
       url: 'https://cdn.example.test/bad.png',

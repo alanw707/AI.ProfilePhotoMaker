@@ -637,7 +637,9 @@
             [attr.aria-pressed]="isCandidateSelected(candidate)"
             [attr.aria-label]="getCandidateAccessibleLabel(candidate, i)"
             (click)="selectCandidate(candidate)">
-            <img [src]="candidate.imageUrl" [alt]="'Candidate ' + (i + 1)" />
+            <img
+              [src]="normalizeDisplayImageUrl(candidate.imageUrl, candidate.storagePath)"
+              [alt]="'Candidate ' + (i + 1)" />
             <span>{{ i + 1 }}</span>
             <strong *ngIf="i === 0 && candidate.recommendationScore">Best shot</strong>
           </button>

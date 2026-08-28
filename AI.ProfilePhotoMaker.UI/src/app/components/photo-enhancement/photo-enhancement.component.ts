@@ -2155,7 +2155,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     return this.imageViewModule.createImageView(url, type, processedImageId, storagePath);
   }
 
-  private normalizeDisplayImageUrl(url: string, storagePath?: string): string {
+  normalizeDisplayImageUrl(url: string, storagePath?: string): string {
     return this.imageViewModule.normalizeDisplayImageUrl(url, storagePath);
   }
 

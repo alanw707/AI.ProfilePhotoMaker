@@ -54,6 +54,9 @@ export class PhotoWorkspaceImageViewModule {
       if (parsed.pathname.startsWith('/profile-images/')) {
         return this.adapter.toApiImageUrl(`${parsed.pathname}${parsed.search}`);
       }
+      if (storageProxyUrl && parsed.pathname.startsWith('/api/headshots/images/')) {
+        return storageProxyUrl;
+      }
     } catch {
       // Use storage proxy fallback below.
     }
