@@ -763,6 +763,7 @@ test.describe("Profile workflow flags, UX, and downloads", () => {
   test("Pro upgrade return makes remaining candidate fulfillment the primary action", async ({
     page,
   }) => {
+    await page.addInitScript(() => localStorage.setItem("theme", "dark"));
     await installCommonRoutes(page, {
       openAIHeadshotMvp: true,
       profilePhotoWorkflowOverhaul: true,
@@ -812,8 +813,11 @@ test.describe("Profile workflow flags, UX, and downloads", () => {
     );
 
     const proCandidates = Array.from({ length: 9 }, (_, index) => ({
-      imageUrl: `${baseOrigin}/assets/marketing/before-after/${index % 2 === 0 ? "linkedin-after.jpg" : "executive-after.jpg"}`,
-      storagePath: "",
+      imageUrl:
+        index === 0
+          ? "/api/headshots/images/111/original"
+          : `${baseOrigin}/assets/marketing/before-after/${index % 2 === 0 ? "linkedin-after.jpg" : "executive-after.jpg"}`,
+      storagePath: `dev/generated/user-1/pro-${index + 1}.jpg`,
       processedImageId: 111 + index,
       provider: "openai",
       model: "gpt-image-2",
@@ -822,6 +826,7 @@ test.describe("Profile workflow flags, UX, and downloads", () => {
     const refinementCandidate = {
       ...proCandidates[0],
       imageUrl: `${baseOrigin}/assets/marketing/before-after/set-1-after.jpg`,
+      storagePath: "dev/generated/user-1/refinement-999.jpg",
       processedImageId: 999,
       correlationId: "pro-refinement-1",
     };
@@ -922,10 +927,39 @@ test.describe("Profile workflow flags, UX, and downloads", () => {
     await expect(page.getByText("1 of 9 generated").first()).toBeVisible({
       timeout: 20_000,
     });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.locator(".candidate-proof img").first()).toHaveAttribute(
+      "src",
+      /\/profile-images\/dev\/generated\/user-1\/pro-1\.jpg$/,
+    );
+    await expect(page.locator(".proof-studio")).toHaveCSS(
+      "color-scheme",
+      "dark",
+    );
+    await expect(page.locator(".proof-studio")).toHaveCSS(
+      "background-color",
+      "rgb(13, 17, 23)",
+    );
+    const candidateBadge = page.locator(".candidate-proof > span").first();
+    await expect(candidateBadge).toHaveText("1");
+    await expect(candidateBadge).toHaveCSS(
+      "background-color",
+      "rgb(13, 17, 23)",
+    );
+    await expect(candidateBadge).toHaveCSS("color", "rgb(241, 245, 249)");
     let fulfillmentAction = page
       .getByRole("button", { name: "Generate remaining 8 photos" })
       .last();
     await expect(fulfillmentAction).toBeVisible();
+    await expect(fulfillmentAction).toHaveText("Generate remaining 8 photos");
+    await expect(fulfillmentAction).toHaveCSS(
+      "background-color",
+      /rgb\((255, 255, 255|49, 95, 196)\)/,
+    );
+    await expect(fulfillmentAction).toHaveCSS(
+      "color",
+      /rgb\((23, 63, 153|241, 245, 249|255, 255, 255)\)/,
+    );
     await expect(fulfillmentAction).toBeDisabled();
     await expect(
       page.getByText(
@@ -1061,7 +1095,7 @@ test.describe("Profile workflow flags, UX, and downloads", () => {
     );
     await expect(page.locator(".candidate-proof img").first()).toHaveAttribute(
       "src",
-      /set-1-after\.jpg/,
+      /\/profile-images\/dev\/generated\/user-1\/refinement-999\.jpg$/,
     );
     await expect(downloadPackage).toBeVisible();
 
