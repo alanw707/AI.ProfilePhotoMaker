@@ -1,5 +1,5 @@
 import { PhotoEnhancementComponent } from './photo-enhancement.component';
-import { throwError } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { HeadshotCandidate } from '../../services/headshot-generation.service';
 
 function candidate(id: number): HeadshotCandidate {
@@ -121,6 +121,36 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.getPackageProgressText()).toBe('9 of 9 generated');
   });
 
+  it('replaces the watermarked preview when paid promotion returns its private candidate', () => {
+    const component = createComponent('starter_package', 1);
+    const watermarked = candidate(1);
+    component.generatedCandidates = [watermarked];
+    component.previewCandidate = watermarked;
+    const promoted = { ...candidate(2), storagePath: 'test/generated-private/user-1/raw.png' };
+
+    const selected = (component as any).mergeGeneratedCandidates([promoted, candidate(3)]);
+
+    expect(component.generatedCandidates.map(item => item.processedImageId)).toEqual([2, 3]);
+    expect(component.previewCandidate?.processedImageId).toBe(2);
+    expect(selected?.processedImageId).toBe(3);
+  });
+
+  it('merges one persisted candidate at a time without duplicates after an interrupted batch', () => {
+    const component = createComponent('pro_package', 1);
+    component.selectedCandidateId = 1;
+
+    for (let id = 2; id <= 9; id++) {
+      (component as any).mergeGeneratedCandidates([candidate(id)]);
+    }
+    // Retrying the last request must return its persisted candidate, not create a tenth slot.
+    (component as any).mergeGeneratedCandidates([candidate(9)]);
+
+    expect(component.generatedCandidates.map(item => item.processedImageId)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9,
+    ]);
+    expect(component.getRemainingCandidateSlots()).toBe(0);
+  });
+
   it('replaces only the selected slot after a refinement', () => {
     const component = createComponent('pro_package', 9);
     component.selectedCandidateId = 4;
@@ -132,6 +162,62 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.generatedCandidates.map(item => item.processedImageId)).toContain(999);
     expect(replacement.processedImageId).toBe(999);
     expect(component.getPackageProgressText()).toBe('9 of 9 generated');
+  });
+
+  it('keeps an expired paid preview in the start-over recovery state', () => {
+    const component = createComponent('pro_package', 0);
+    const preview = {
+      processedImageId: 42,
+      imageUrl: '/profile-images/generated/preview.png',
+      storagePath: 'generated/preview.png',
+      sourceStoragePath: 'uploads/source.png',
+      style: 'linkedin',
+      createdAt: '2026-08-28T00:00:00Z',
+      hasRawPreview: false,
+      canPromotePreview: false,
+      activePackageCode: 'pro_package',
+      remainingCandidateCount: 8,
+      message: 'Your package is active, but this preview asset expired. Start a new photo set.',
+    };
+    (component as any)._headshotGenerationService = {
+      getResumablePreview: () => of({ success: true, data: preview }),
+    };
+    (component as any)._cdr = { markForCheck: () => undefined };
+    spyOn(component, 'resumePreview');
+
+    (component as any).loadResumablePreview(undefined, true);
+
+    expect(component.resumablePreview).toEqual(preview);
+    expect(component.resumePreview).not.toHaveBeenCalled();
+  });
+
+  it('restores persisted candidates before resuming an interrupted batch after reload', async () => {
+    const component = createComponent('pro_package', 0);
+    const draft = {
+      clientRequestId: 'interrupted-last-request',
+      imageStoragePath: 'uploads/source.png',
+      styleName: 'linkedin',
+      packageCode: 'pro_package',
+      useCaseCode: 'linkedin_executive',
+      isRegeneration: false,
+      startedAt: '2026-08-28T00:00:00Z',
+    };
+    const preview = { hasRawPreview: true, activePackageCode: 'pro_package' };
+    component.interruptedGeneration = draft as any;
+    (component as any)._headshotGenerationService = {
+      getResumablePreview: () => of({ success: true, data: preview }),
+    };
+    (component as any)._cdr = { markForCheck: () => undefined };
+    spyOn(component, 'resumePreview').and.returnValue(Promise.resolve());
+    spyOn(component as any, 'selectPortraitStyleByName');
+    spyOn(component, 'canStartEnhancement').and.returnValue(true);
+    spyOn(component, 'startEnhancement').and.returnValue(Promise.resolve());
+
+    component.resumeInterruptedGeneration();
+    await Promise.resolve();
+
+    expect(component.resumePreview).toHaveBeenCalledWith(preview as any);
+    expect(component.startEnhancement).toHaveBeenCalled();
   });
 
   it('ends an expired session when candidate generation returns 401', () => {

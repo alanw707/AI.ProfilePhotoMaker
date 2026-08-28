@@ -100,6 +100,18 @@ export class HeadshotGenerationService {
     return this.http.get<ResumableHeadshotPreviewResponse>(this.config.getFullUrl(url));
   }
 
+  abandonPreview(previewId: number): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(
+      this.config.getFullUrl(`/headshots/resumable-preview/${previewId}`)
+    );
+  }
+
+  getOriginalCandidateImage(imageId: number): Observable<Blob> {
+    return this.http.get(this.config.getFullUrl(`/headshots/images/${imageId}/original`), {
+      responseType: 'blob',
+    });
+  }
+
   private createClientRequestId(): string {
     if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
       return crypto.randomUUID();

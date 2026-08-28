@@ -29,6 +29,21 @@ describe('PhotoWorkspaceImageViewModule', () => {
     ).toBe('https://api.example.test/profile-images/users/1/a.png');
   });
 
+  it('keeps the authorized endpoint for private promoted previews', () => {
+    expect(
+      module.normalizeDisplayImageUrl(
+        '/api/headshots/images/111/original',
+        'prod/generated-private/user-1/raw.png'
+      )
+    ).toBe('https://api.example.test/api/headshots/images/111/original');
+  });
+
+  it('keeps blob URLs as display URLs after authorized image fetch', () => {
+    expect(module.normalizeDisplayImageUrl('blob:https://app.example.test/image')).toBe(
+      'blob:https://app.example.test/image'
+    );
+  });
+
   it('returns fallback image state before marking an image failed', () => {
     const first = module.nextFailedImageState({
       url: 'https://cdn.example.test/bad.png',

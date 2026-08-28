@@ -623,7 +623,8 @@
             </div>
             <div class="image-fallback" *ngIf="enhancedImage.loadFailed">
               <strong>Proof preview unavailable</strong>
-              <span>Your generated photo is saved. Retry the preview or download it when available.</span>
+              <span>This preview is no longer available. Start a new photo set to generate replacements.</span>
+              <button type="button" class="secondary-button" (click)="enhanceAnother()">Start with a new photo</button>
             </div>
           </div>
         </div>
@@ -638,8 +639,10 @@
             [attr.aria-label]="getCandidateAccessibleLabel(candidate, i)"
             (click)="selectCandidate(candidate)">
             <img
+              *ngIf="!candidate.previewUnavailable"
               [src]="normalizeDisplayImageUrl(candidate.imageUrl, candidate.storagePath)"
               [alt]="'Candidate ' + (i + 1)" />
+            <span *ngIf="candidate.previewUnavailable" class="candidate-preview-unavailable">Preview unavailable</span>
             <span>{{ i + 1 }}</span>
             <strong *ngIf="i === 0 && candidate.recommendationScore">Best shot</strong>
           </button>

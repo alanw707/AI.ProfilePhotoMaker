@@ -568,6 +568,7 @@ public class HeadshotGenerationServiceTests
         public Task<UserPackageEntitlement?> GrantEntitlementForCreditPackageAsync(string userId, int creditPackageId, string? paymentTransactionId, int? previewProcessedImageId = null, CancellationToken cancellationToken = default) => Task.FromResult<UserPackageEntitlement?>(_entitlement);
         public Task<UserPackageEntitlement?> GetActiveEntitlementAsync(string userId, string packageCode, CancellationToken cancellationToken = default) => Task.FromResult(_entitlement.RemainingPackageUses > 0 || _entitlement.RemainingCandidates > 0 || _entitlement.RemainingRefinements > 0 ? _entitlement : null);
         public Task<ResumableHeadshotPreviewDto?> GetResumablePreviewAsync(string userId, int? previewId = null, CancellationToken cancellationToken = default) => Task.FromResult<ResumableHeadshotPreviewDto?>(null);
+        public Task<bool> AbandonPreviewAsync(string userId, int previewId, CancellationToken cancellationToken = default) => Task.FromResult(true);
         public Task<PromotedPreviewDownload?> GetPromotedPreviewDownloadAsync(string userId, int imageId, CancellationToken cancellationToken = default) => Task.FromResult<PromotedPreviewDownload?>(null);
         public bool FailConsumeCandidates { get; init; }
 

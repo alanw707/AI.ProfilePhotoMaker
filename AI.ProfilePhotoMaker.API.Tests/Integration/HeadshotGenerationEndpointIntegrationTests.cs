@@ -150,6 +150,99 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
     }
 
     [Fact]
+    public async Task PrivateRawPreviewProxyPath_IsRejectedWithoutAuthentication()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/profile-images/test/generated-private/user/raw.png");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GenerateHeadshot_PromotesPreviewAndServesRawBytesOnlyThroughAuthorizedEndpoint()
+    {
+        var userId = $"headshot-promotion-{Guid.NewGuid():N}";
+        await SeedUserAsync(userId, credits: 10);
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
+        var sourcePath = $"testing/enhanced/{userId}/source.png";
+
+        var previewResponse = await client.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = sourcePath,
+            style = "professional",
+            background = "auto",
+            packageCode = "free_preview",
+            numOutputs = 1
+        });
+        previewResponse.EnsureSuccessStatusCode();
+        var preview = await previewResponse.Content.ReadFromJsonAsync<HeadshotApiResponse>();
+        await GrantPackageEntitlementAsync(userId, "starter_package", candidates: 3, refinements: 1, premiumAugmentations: 0, exportKit: true);
+
+        var paidResponse = await client.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = sourcePath,
+            style = "professional",
+            background = "auto",
+            packageCode = "starter_package",
+            numOutputs = 1,
+            reusedPreviewProcessedImageId = preview!.Data!.ProcessedImageId,
+            clientRequestId = "promote-preview"
+        });
+        paidResponse.EnsureSuccessStatusCode();
+        var paid = await paidResponse.Content.ReadFromJsonAsync<HeadshotApiResponse>();
+        var promoted = paid!.Data!.Candidates.Single(candidate => candidate.StoragePath.Contains("generated-private"));
+
+        Assert.Contains($"/api/headshots/images/{promoted.ProcessedImageId}/original", promoted.ImageUrl);
+        var imageResponse = await client.GetAsync($"/api/headshots/images/{promoted.ProcessedImageId}/original");
+        Assert.Equal(HttpStatusCode.OK, imageResponse.StatusCode);
+        Assert.Equal("image/png", imageResponse.Content.Headers.ContentType?.MediaType);
+        Assert.NotEmpty(await imageResponse.Content.ReadAsByteArrayAsync());
+    }
+
+    [Fact]
+    public async Task GenerateHeadshot_OneCandidateBatchesResumeWithoutDuplicatesOrAllowanceLoss()
+    {
+        var userId = $"headshot-batches-{Guid.NewGuid():N}";
+        await SeedUserAsync(userId, credits: 10);
+        await GrantPackageEntitlementAsync(userId, "starter_package", candidates: 3, refinements: 1, premiumAugmentations: 0, exportKit: true);
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
+
+        async Task<HeadshotApiResponse> GenerateAsync(string clientRequestId)
+        {
+            var response = await client.PostAsJsonAsync("/api/headshots/generate", new
+            {
+                imageStoragePath = $"testing/enhanced/{userId}/source.png",
+                style = "professional",
+                background = "auto",
+                packageCode = "starter_package",
+                numOutputs = 1,
+                clientRequestId
+            });
+            var body = await response.Content.ReadAsStringAsync();
+            Assert.True(response.StatusCode == HttpStatusCode.OK, body);
+            return (await response.Content.ReadFromJsonAsync<HeadshotApiResponse>())!;
+        }
+
+        var first = await GenerateAsync("batch-1");
+        var second = await GenerateAsync("batch-2");
+        var third = await GenerateAsync("batch-3");
+        var retry = await GenerateAsync("batch-3");
+
+        Assert.Equal(first.Data!.ProcessedImageId, first.Data.Candidates.Single().ProcessedImageId);
+        Assert.Equal(third.Data!.ProcessedImageId, retry.Data!.ProcessedImageId);
+        Assert.Equal(3, new[] { first, second, third }.Select(r => r.Data!.ProcessedImageId).Distinct().Count());
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var entitlement = db.UserPackageEntitlements.Single(e => e.UserId == userId);
+        Assert.Equal(0, entitlement.RemainingCandidates);
+        Assert.Equal(3, db.ProcessedImages.Count(i => i.UserProfile.UserId == userId));
+    }
+
+    [Fact]
     public async Task GenerateHeadshot_UnauthenticatedRequest_ReturnsUnauthorized()
     {
         var client = _factory.CreateClient();
@@ -270,5 +363,7 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
     private sealed class HeadshotCandidateData
     {
         public int ProcessedImageId { get; set; }
+        public string ImageUrl { get; set; } = string.Empty;
+        public string StoragePath { get; set; } = string.Empty;
     }
 }

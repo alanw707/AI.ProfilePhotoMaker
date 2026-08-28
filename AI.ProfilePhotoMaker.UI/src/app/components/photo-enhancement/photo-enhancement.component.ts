@@ -51,6 +51,7 @@ interface CandidateViewModel extends HeadshotCandidate {
   recommendationScore?: number;
   recommendationReason?: string;
   promotedFromPreview?: boolean;
+  previewUnavailable?: boolean;
 }
 
 type PackUseCaseCode = 'linkedin_executive' | 'realtor' | 'founder_press_kit';
@@ -185,6 +186,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   isLoadingResumablePreview = false;
   generatedCandidates: CandidateViewModel[] = [];
   selectedCandidateId: number | null = null;
+  private readonly candidateObjectUrls = new Set<string>();
   interruptedGeneration: InterruptedGenerationDraft | null = null;
   readonly roleOptions = [
     {
@@ -831,7 +833,26 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       return;
     }
 
-    void this.startEnhancement();
+    this._headshotGenerationService.getResumablePreview().subscribe({
+      next: response => {
+        const preview = response.success ? response.data : null;
+        if (!preview?.hasRawPreview) {
+          this.resumablePreview = preview;
+          this._cdr.markForCheck();
+          return;
+        }
+
+        void this.resumePreview(preview).then(() => {
+          if (this.canStartEnhancement(draft.isRegeneration)) {
+            void this.startEnhancement();
+          }
+        });
+      },
+      error: () => {
+        // Keep the persisted draft visible so the user can retry when the workspace is reachable.
+        this._cdr.markForCheck();
+      },
+    });
   }
 
   discardInterruptedGeneration(): void {
@@ -1079,9 +1100,10 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
           this.clearInterruptedGeneration();
         }
         const shouldAutoResume =
-          autoResume ||
-          this.resumablePreview?.activePackageCode === 'starter_package' ||
-          this.resumablePreview?.activePackageCode === 'pro_package';
+          this.resumablePreview?.hasRawPreview &&
+          (autoResume ||
+            this.resumablePreview?.activePackageCode === 'starter_package' ||
+            this.resumablePreview?.activePackageCode === 'pro_package');
         if (shouldAutoResume && this.resumablePreview) {
           this.resumePreview(this.resumablePreview);
         }
@@ -1095,7 +1117,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     });
   }
 
-  resumePreview(preview: ResumableHeadshotPreview): void {
+  async resumePreview(preview: ResumableHeadshotPreview): Promise<void> {
     const promotedCandidate = preview.promotedCandidate;
     const candidate: CandidateViewModel = {
       imageUrl: promotedCandidate?.imageUrl ?? preview.imageUrl,
@@ -1106,9 +1128,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       correlationId: promotedCandidate?.correlationId ?? '',
       promotedFromPreview: !!promotedCandidate,
     };
-    const resumedCandidates = preview.candidates?.length
-      ? preview.candidates.map(item => ({ ...item }))
-      : [candidate];
+    const resumedCandidates = await this.loadAuthorizedCandidateImages(
+      preview.candidates?.length ? preview.candidates.map(item => ({ ...item })) : [candidate]
+    );
     this.previewCandidate = resumedCandidates[0];
     this.resumablePreview = null;
     this.previewStyleName = preview.style;
@@ -1471,6 +1493,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       this._stateSubscription.unsubscribe();
     }
     this._consentSubscription?.unsubscribe();
+    this.revokeCandidateObjectUrls();
   }
 
   triggerFileUpload() {
@@ -1728,52 +1751,69 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
             ? this.previewCandidate
             : null;
         const styleName = this.selectedPortraitStyle?.style.name ?? 'linkedin';
-        const clientRequestId =
-          this._activeGenerationClientRequestId ?? this.createGenerationClientRequestId();
-        this.persistInterruptedGeneration({
-          clientRequestId,
-          imageStoragePath: uploadResult.storagePath,
-          styleName,
-          packageCode: this.selectedPackageCode,
-          useCaseCode: this.selectedUseCaseCode,
-          isRegeneration: this._nextRequestIsRegeneration,
-          replacesProcessedImageId: candidateBeingRegeneratedId ?? undefined,
-          startedAt: this.interruptedGeneration?.startedAt ?? new Date().toISOString(),
-        });
-        const headshotResponse = await firstValueFrom(
-          this._headshotGenerationService.generateHeadshot({
-            imageStoragePath: uploadResult.storagePath,
-            style: styleName,
-            background: 'auto',
-            packageCode: this.selectedPackageCode,
-            numOutputs: this._nextRequestIsRegeneration
-              ? 1
-              : this.getCandidateRequestCountForSelectedPackage(),
-            isRegeneration: this._nextRequestIsRegeneration,
-            reusedPreviewProcessedImageId: promotedPreview?.processedImageId,
-            replacesProcessedImageId: candidateBeingRegeneratedId ?? undefined,
-            useCaseCode: this.selectedUseCaseCode,
+        const requestCount = this._nextRequestIsRegeneration
+          ? 1
+          : this.getCandidateRequestCountForSelectedPackage();
+        let resultCandidate: CandidateViewModel | null = null;
+
+        // Keep every provider request below ingress/mobile connection limits. Each completed
+        // candidate is persisted and merged before the next request, so a dropped connection
+        // can resume the remaining work without duplicating fulfilled candidates.
+        for (let requestIndex = 0; requestIndex < requestCount; requestIndex++) {
+          const clientRequestId =
+            requestIndex === 0
+              ? (this._activeGenerationClientRequestId ?? this.createGenerationClientRequestId())
+              : this.createGenerationClientRequestId();
+          this.persistInterruptedGeneration({
             clientRequestId,
-            turnstileToken: this.turnstileSiteKey ? this.turnstileToken : undefined,
-          })
-        );
+            imageStoragePath: uploadResult.storagePath,
+            styleName,
+            packageCode: this.selectedPackageCode,
+            useCaseCode: this.selectedUseCaseCode,
+            isRegeneration: this._nextRequestIsRegeneration,
+            replacesProcessedImageId: candidateBeingRegeneratedId ?? undefined,
+            startedAt: this.interruptedGeneration?.startedAt ?? new Date().toISOString(),
+          });
+          const headshotResponse = await firstValueFrom(
+            this._headshotGenerationService.generateHeadshot({
+              imageStoragePath: uploadResult.storagePath,
+              style: styleName,
+              background: 'auto',
+              packageCode: this.selectedPackageCode,
+              numOutputs: 1,
+              isRegeneration: this._nextRequestIsRegeneration,
+              reusedPreviewProcessedImageId: promotedPreview?.processedImageId,
+              replacesProcessedImageId: candidateBeingRegeneratedId ?? undefined,
+              useCaseCode: this.selectedUseCaseCode,
+              clientRequestId,
+              turnstileToken: this.turnstileSiteKey ? this.turnstileToken : undefined,
+            })
+          );
 
-        if (!headshotResponse?.success || !headshotResponse.data?.imageUrl) {
-          const errorMsg = headshotResponse?.error?.message || 'Headshot generation failed';
-          console.error('Headshot API failed:', errorMsg);
-          throw new Error(errorMsg);
+          if (!headshotResponse?.success || !headshotResponse.data?.imageUrl) {
+            const errorMsg = headshotResponse?.error?.message || 'Headshot generation failed';
+            console.error('Headshot API failed:', errorMsg);
+            throw new Error(errorMsg);
+          }
+
+          const responseCandidates = await this.loadAuthorizedCandidateImages(
+            this.toCandidateViewModels(headshotResponse.data)
+          );
+          resultCandidate = this._nextRequestIsRegeneration
+            ? this.replaceRegeneratedCandidate(responseCandidates, candidateBeingRegeneratedId)
+            : this.mergeGeneratedCandidates(responseCandidates);
+          if (!resultCandidate) {
+            throw new Error('Generated candidate was not returned');
+          }
+          this.selectedCandidateId = resultCandidate.processedImageId;
+          this.processingProgress = 30 + Math.round(((requestIndex + 1) / requestCount) * 45);
+          this.processingStatus =
+            requestIndex + 1 < requestCount
+              ? `Generated ${requestIndex + 1} of ${requestCount} candidates...`
+              : 'Preparing your headshot...';
+          this._cdr.detectChanges();
         }
 
-        this.processingProgress = 75;
-        this.processingStatus = 'Preparing your headshot...';
-        const responseCandidates = this.toCandidateViewModels(headshotResponse.data);
-        const resultCandidate = this._nextRequestIsRegeneration
-          ? this.replaceRegeneratedCandidate(responseCandidates, candidateBeingRegeneratedId)
-          : this.mergeGeneratedCandidates(responseCandidates);
-        if (!resultCandidate) {
-          throw new Error('Generated candidate was not returned');
-        }
-        this.selectedCandidateId = resultCandidate.processedImageId;
         this.clearInterruptedGeneration();
         if (this.selectedPackageCode === 'free_preview') {
           this.previewCandidate = this.generatedCandidates[0] ?? null;
@@ -1800,10 +1840,10 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
         finalResult = {
           status: 'succeeded',
-          output: [resultCandidate.imageUrl],
-          dataUrl: resultCandidate.imageUrl,
-          processedImageId: resultCandidate.processedImageId,
-          storagePath: resultCandidate.storagePath,
+          output: [resultCandidate!.imageUrl],
+          dataUrl: resultCandidate!.imageUrl,
+          processedImageId: resultCandidate!.processedImageId,
+          storagePath: resultCandidate!.storagePath,
         };
       } else {
         const enhanceRequest = {
@@ -2141,6 +2181,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       candidate.processedImageId,
       candidate.storagePath
     );
+    if (candidate.previewUnavailable) {
+      this.enhancedImage.loadFailed = true;
+    }
     if (candidate.score) {
       this.generatedScore = candidate.score;
     } else if (this.isProfilePhotoScoreVisible) {
@@ -2173,6 +2216,40 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   normalizeDisplayImageUrl(url: string, storagePath?: string): string {
     return this.imageViewModule.normalizeDisplayImageUrl(url, storagePath);
+  }
+
+  private async loadAuthorizedCandidateImages(
+    candidates: CandidateViewModel[]
+  ): Promise<CandidateViewModel[]> {
+    return Promise.all(
+      candidates.map(async candidate => {
+        if (!this.isPrivateCandidateImage(candidate)) {
+          return candidate;
+        }
+
+        try {
+          const blob = await firstValueFrom(
+            this._headshotGenerationService.getOriginalCandidateImage(candidate.processedImageId)
+          );
+          const objectUrl = URL.createObjectURL(blob);
+          this.candidateObjectUrls.add(objectUrl);
+          return { ...candidate, imageUrl: objectUrl };
+        } catch {
+          return { ...candidate, previewUnavailable: true };
+        }
+      })
+    );
+  }
+
+  private isPrivateCandidateImage(candidate: CandidateViewModel): boolean {
+    return candidate.storagePath.split('/').includes('generated-private');
+  }
+
+  private revokeCandidateObjectUrls(): void {
+    for (const url of this.candidateObjectUrls) {
+      URL.revokeObjectURL(url);
+    }
+    this.candidateObjectUrls.clear();
   }
 
   private getStorageProxyUrl(storagePath?: string): string | null {
@@ -2219,7 +2296,21 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   private mergeGeneratedCandidates(
     responseCandidates: CandidateViewModel[]
   ): CandidateViewModel | null {
-    const merged = [...this.generatedCandidates];
+    const promotedPreview = responseCandidates.find(candidate =>
+      candidate.storagePath.split('/').includes('generated-private')
+    );
+    // Promotion replaces the watermarked free-preview record; it is not an extra slot.
+    const merged =
+      promotedPreview &&
+      this.previewCandidate &&
+      this.previewCandidate.processedImageId !== promotedPreview.processedImageId
+        ? this.generatedCandidates.filter(
+            candidate => candidate.processedImageId !== this.previewCandidate!.processedImageId
+          )
+        : [...this.generatedCandidates];
+    if (promotedPreview) {
+      this.previewCandidate = promotedPreview;
+    }
     const existingIds = new Set(merged.map(candidate => candidate.processedImageId));
     for (const candidate of responseCandidates) {
       if (!existingIds.has(candidate.processedImageId)) {
@@ -2230,9 +2321,10 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
     this.generatedCandidates = merged.slice(0, this.getSelectedCandidateCount());
     return (
-      this.generatedCandidates.find(
-        candidate => candidate.processedImageId === this.selectedCandidateId
+      responseCandidates.find(
+        candidate => !candidate.storagePath.split('/').includes('generated-private')
       ) ??
+      promotedPreview ??
       this.generatedCandidates[0] ??
       null
     );

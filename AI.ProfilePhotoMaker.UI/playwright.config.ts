@@ -10,6 +10,12 @@ export default defineConfig({
     baseURL: 'http://localhost:4200',
     trace: 'off',
   },
+  webServer: {
+    command: 'npm run dev:local',
+    url: 'http://localhost:4200',
+    reuseExistingServer: true,
+    timeout: 120_000,
+  },
   // Keep default single project unless overridden
 });
 

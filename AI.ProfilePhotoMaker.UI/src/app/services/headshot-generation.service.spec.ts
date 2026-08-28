@@ -21,6 +21,17 @@ describe('HeadshotGenerationService', () => {
     httpMock.verify();
   });
 
+  it('fetches promoted preview bytes through the authorized endpoint', () => {
+    service.getOriginalCandidateImage(123).subscribe(image => {
+      expect(image.type).toBe('image/png');
+    });
+
+    const req = httpMock.expectOne('/api/headshots/images/123/original');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(new Blob(['image'], { type: 'image/png' }));
+  });
+
   it('posts to the provider-agnostic headshot generation endpoint', () => {
     const request = {
       imageStoragePath: 'dev/enhanced/user-1/source.png',

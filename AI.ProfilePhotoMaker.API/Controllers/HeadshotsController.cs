@@ -66,6 +66,19 @@ public class HeadshotsController : ControllerBase
         return Ok(new { success = true, data = preview, error = (object?)null });
     }
 
+    [HttpDelete("resumable-preview/{previewId:int}")]
+    public async Task<IActionResult> AbandonPreview(int previewId)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var abandoned = await _outcomePackageService.AbandonPreviewAsync(userId, previewId, HttpContext.RequestAborted);
+        return abandoned ? Ok(new { success = true }) : NotFound(new { success = false });
+    }
+
     [HttpGet("images/{imageId:int}/original")]
     public async Task<IActionResult> DownloadOriginal(int imageId)
     {

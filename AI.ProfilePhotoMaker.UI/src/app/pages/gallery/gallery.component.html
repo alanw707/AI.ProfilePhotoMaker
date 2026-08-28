@@ -29,9 +29,12 @@
             <strong>Continue this profile photo session</strong>
             <p>{{ image.title }} • {{ image.createdAt | date: 'medium' }}</p>
           </div>
-          <button class="btn btn-primary" type="button" (click)="continueInPhotoWorkspace(image)">
-            Continue in Photo Workspace
-          </button>
+          <div>
+            <button class="btn btn-primary" type="button" (click)="continueInPhotoWorkspace(image)">
+              Continue in Photo Workspace
+            </button>
+            <button class="btn btn-secondary" type="button" (click)="abandonPreview(image)">Abandon session</button>
+          </div>
         </div>
       </section>
 

@@ -13,6 +13,7 @@ public interface IOutcomePackageService
     Task<bool> ReservePreviewForPurchaseAsync(string userId, int previewProcessedImageId, CancellationToken cancellationToken = default);
     Task<UserPackageEntitlement?> GrantEntitlementForCreditPackageAsync(string userId, int creditPackageId, string? paymentTransactionId, int? previewProcessedImageId = null, CancellationToken cancellationToken = default);
     Task<ResumableHeadshotPreviewDto?> GetResumablePreviewAsync(string userId, int? previewId = null, CancellationToken cancellationToken = default);
+    Task<bool> AbandonPreviewAsync(string userId, int previewId, CancellationToken cancellationToken = default);
     Task<PromotedPreviewDownload?> GetPromotedPreviewDownloadAsync(string userId, int imageId, CancellationToken cancellationToken = default);
     Task<UserPackageEntitlement?> GetActiveEntitlementAsync(string userId, string packageCode, CancellationToken cancellationToken = default);
     Task<bool> ConsumeCandidatesAsync(string userId, string packageCode, int candidateCount, CancellationToken cancellationToken = default);

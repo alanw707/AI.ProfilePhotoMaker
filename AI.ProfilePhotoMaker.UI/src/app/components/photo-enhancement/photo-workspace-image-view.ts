@@ -44,7 +44,7 @@ export class PhotoWorkspaceImageViewModule {
       return this.getStorageProxyUrl(storagePath) ?? '';
     }
 
-    if (url.startsWith('data:image/')) {
+    if (url.startsWith('data:image/') || url.startsWith('blob:')) {
       return url;
     }
 
@@ -54,7 +54,11 @@ export class PhotoWorkspaceImageViewModule {
       if (parsed.pathname.startsWith('/profile-images/')) {
         return this.adapter.toApiImageUrl(`${parsed.pathname}${parsed.search}`);
       }
-      if (storageProxyUrl && parsed.pathname.startsWith('/api/headshots/images/')) {
+      if (
+        storageProxyUrl &&
+        parsed.pathname.startsWith('/api/headshots/images/') &&
+        !this.isPrivateStoragePath(storagePath)
+      ) {
         return storageProxyUrl;
       }
     } catch {
@@ -62,6 +66,10 @@ export class PhotoWorkspaceImageViewModule {
     }
 
     return url.startsWith('/') ? this.adapter.toApiImageUrl(url) : (storageProxyUrl ?? url);
+  }
+
+  private isPrivateStoragePath(storagePath?: string): boolean {
+    return storagePath?.split('/').includes('generated-private') ?? false;
   }
 
   getStorageProxyUrl(storagePath?: string): string | null {

@@ -338,6 +338,33 @@ public class OutcomePackageService : IOutcomePackageService
         };
     }
 
+    public async Task<bool> AbandonPreviewAsync(
+        string userId,
+        int previewId,
+        CancellationToken cancellationToken = default)
+    {
+        var preview = await FindPreviewAsync(userId, previewId, cancellationToken);
+        if (preview == null || preview.ProcessedImageUrl == preview.RawImageStoragePath)
+        {
+            return false;
+        }
+
+        var isPromoted = await _context.ProcessedImages.AnyAsync(i =>
+            i.UserProfileId == preview.UserProfileId &&
+            i.GenerationMode == "instant_headshot_promoted_preview" &&
+            i.GenerationStatus == "succeeded" &&
+            i.ProcessedImageUrl == preview.RawImageStoragePath,
+            cancellationToken);
+        if (isPromoted)
+        {
+            return false;
+        }
+
+        preview.GenerationStatus = "abandoned";
+        await _context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     public async Task<PromotedPreviewDownload?> GetPromotedPreviewDownloadAsync(
         string userId,
         int imageId,

@@ -13,6 +13,7 @@ import { ConfigService } from '../../services/config.service';
 import { LoggingService, LogLevel } from '../../services/logging.service';
 import { environment } from '../../../environments/environment';
 import { firstValueFrom } from 'rxjs';
+import { HeadshotGenerationService } from '../../services/headshot-generation.service';
 
 @Component({
   selector: 'app-gallery',
@@ -37,7 +38,8 @@ export class GalleryComponent implements OnInit {
     private _fileUploadService: FileUploadService,
     private _cdr: ChangeDetectorRef,
     private _config: ConfigService,
-    private _logger: LoggingService
+    private _logger: LoggingService,
+    private _headshotGenerationService: HeadshotGenerationService
   ) {}
 
   ngOnInit() {
@@ -149,10 +151,31 @@ export class GalleryComponent implements OnInit {
               status: 'completed' as const,
               type,
               downloadUrl: preferredUrl,
-              canResumePreview: img.generationMode === 'instant_headshot',
+              canResumePreview: false,
             };
           })
           .filter(img => img !== null) as any[];
+
+        const resumableIds = await Promise.all(
+          response.data.images
+            .filter(image => image.generationMode === 'instant_headshot')
+            .slice(0, 3)
+            .map(async image => {
+              try {
+                const preview = await firstValueFrom(
+                  this._headshotGenerationService.getResumablePreview(image.id)
+                );
+                return preview.success && preview.data?.hasRawPreview ? image.id : null;
+              } catch {
+                return null;
+              }
+            })
+        );
+        const resumableIdSet = new Set(resumableIds.filter((id): id is number => id !== null));
+        this.galleryImages = this.galleryImages.map(image => ({
+          ...image,
+          canResumePreview: resumableIdSet.has(image.id),
+        }));
 
         this._logger.conditionalLog(enableDebug, LogLevel.DEBUG, 'Gallery images processed', {
           uniqueImages: uniqueImages.length,
@@ -202,6 +225,20 @@ export class GalleryComponent implements OnInit {
 
   continueInPhotoWorkspace(image: GalleryImage): void {
     this._router.navigate(['/app/enhance'], { queryParams: { resumePreviewId: image.id } });
+  }
+
+  async abandonPreview(image: GalleryImage): Promise<void> {
+    if (!confirm('Abandon this unfinished preview session? Your saved photos stay available.')) {
+      return;
+    }
+
+    try {
+      await firstValueFrom(this._headshotGenerationService.abandonPreview(image.id));
+      this.galleryImages = this.galleryImages.filter(candidate => candidate.id !== image.id);
+      this._cdr.detectChanges();
+    } catch {
+      this._logger.warn('Unable to abandon preview session', { imageId: image.id });
+    }
   }
 
   onImageClick(image: GalleryImage) {
