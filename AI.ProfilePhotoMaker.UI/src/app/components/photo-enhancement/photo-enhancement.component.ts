@@ -707,6 +707,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   canStartEnhancement(isRegeneration = false): boolean {
     return (
+      !this.isLoadingAccountStatus &&
+      this.isEmailConfirmed &&
       !this.isProcessing &&
       this.hasEnhancementSourceReady() &&
       this.hasEnoughCredits(isRegeneration) &&
@@ -1933,8 +1935,22 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       name: error.name,
     });
 
-    this.errorMessage = this.getEnhancementErrorMessage(error);
     this.isProcessing = false;
+    if (error.status === 401) {
+      if (error.error?.error?.code === 'EmailNotVerified') {
+        this.isEmailConfirmed = false;
+        this.errorMessage = '';
+        this.verificationMessage =
+          error.error.error.message || 'Verify your email address before generating photos.';
+        this._cdr.detectChanges();
+        return;
+      }
+
+      this._authService.logout();
+      return;
+    }
+
+    this.errorMessage = this.getEnhancementErrorMessage(error);
     this._cdr.detectChanges();
   }
 
