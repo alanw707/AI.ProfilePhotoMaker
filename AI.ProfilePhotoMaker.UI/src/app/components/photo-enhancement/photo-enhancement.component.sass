@@ -1413,7 +1413,7 @@
   .page-header h2
     font-size: clamp(30px, 8.4vw, 36px)
     line-height: 1.02
-    letter-spacing: -.045em
+    letter-spacing: -.04em
 
   .page-header p
     font-size: 15px
@@ -1424,3 +1424,1163 @@
 
   .retention-item
     flex-direction: column
+
+// Studio Proof Desk — route-scoped replacement world.
+.proof-studio
+  --proof-paper: #f7f4ed
+  --proof-paper-deep: #ece7dc
+  --proof-ink: #202529
+  --proof-muted: #4d555b
+  --proof-rule: #b9b2a5
+  --proof-blue: #2457c5
+  --proof-blue-dark: #173f99
+  --proof-red: #9f3028
+  --proof-green: #246b4b
+  color-scheme: light
+  background: var(--proof-paper)
+  color: var(--proof-ink)
+  font-family: 'Archivo', sans-serif
+
+  ::selection
+    background: var(--proof-blue)
+    color: #fff
+
+  :focus-visible
+    outline: 3px solid var(--proof-blue)
+    outline-offset: 3px
+
+  input, select, button
+    accent-color: var(--proof-blue)
+    caret-color: var(--proof-blue)
+    font-family: inherit
+
+  button, select, input[type='range']
+    min-width: 44px
+    min-height: 44px
+
+  input[type='range']
+    margin-block: 0
+    cursor: pointer
+
+  .consent-checkbox, .fulfillment-consent, label.retention-item
+    min-height: 44px
+    align-items: center
+
+  .consent-checkbox a
+    display: inline-flex
+    min-width: 44px
+    min-height: 44px
+    align-items: center
+    margin-block: -12px
+    padding-block: 12px
+    vertical-align: middle
+
+  a
+    color: var(--proof-blue-dark)
+    text-underline-offset: .2em
+
+  .gallery-main
+    max-width: 1180px
+    padding: 28px 20px 80px
+
+  .gallery-content
+    gap: 22px
+
+  &.has-active-file
+    .proof-masthead
+      padding-block: 22px 18px
+
+      h1
+        max-width: 660px
+        font-size: clamp(36px, 4.8vw, 56px)
+
+      .studio-note
+        display: none
+
+  h1, h2, h3, h4
+    color: var(--proof-ink)
+    font-family: 'Archivo', sans-serif
+    letter-spacing: -.025em
+
+  p, small, span, dt, dd
+    color: inherit
+
+  .proof-masthead
+    display: grid
+    grid-template-columns: minmax(0, 1fr) 280px
+    align-items: end
+    gap: 44px
+    padding: 34px 0 26px
+    border-bottom: 2px solid var(--proof-ink)
+    background: transparent
+
+    h1
+      max-width: 760px
+      margin: 0 0 12px
+      font-size: clamp(38px, 6vw, 70px)
+      font-stretch: condensed
+      font-weight: 800
+      line-height: .95
+      letter-spacing: -.04em
+      text-wrap: balance
+
+    > div > p
+      max-width: 68ch
+      margin: 0
+      color: var(--proof-muted)
+      font-size: 16px
+      line-height: 1.55
+
+  .studio-note
+    margin: 0
+    padding: 14px 0
+    border-top: 1px solid var(--proof-rule)
+    border-bottom: 1px solid var(--proof-rule)
+    color: var(--proof-muted)
+    font-size: 13px
+    line-height: 1.45
+
+    strong
+      display: block
+      margin-bottom: 4px
+      color: var(--proof-ink)
+      font-size: 13px
+      text-transform: uppercase
+      letter-spacing: .06em
+
+  .workflow-rail
+    grid-template-columns: repeat(3, minmax(0, 1fr))
+    gap: 0
+    padding: 0
+    overflow: hidden
+    border: 1px solid var(--proof-rule)
+    border-radius: 12px
+    background: #fffdf8
+    list-style: none
+
+  .workflow-step
+    min-height: 72px
+    padding: 12px 16px
+    border: 0
+    border-right: 1px solid var(--proof-rule)
+    border-radius: 0
+    background: transparent
+    color: var(--proof-muted)
+
+    &:last-child
+      border-right: 0
+
+    span
+      width: 30px
+      height: 30px
+      border: 1px solid var(--proof-rule)
+      background: transparent
+      color: var(--proof-muted)
+      font-variant-numeric: tabular-nums
+
+    strong
+      color: var(--proof-ink)
+
+    &.active
+      background: #e8edfa
+      box-shadow: inset 0 -4px 0 var(--proof-blue)
+
+      span
+        border-color: var(--proof-blue)
+        background: var(--proof-blue)
+        color: #fff
+
+    &.complete span
+      border-color: var(--proof-green)
+      background: var(--proof-green)
+      color: #fff
+
+  .package-ticket
+    display: grid
+    gap: 14px
+    padding: 18px 20px
+    border: 1px solid var(--proof-rule)
+    border-radius: 12px
+    background: #fffdf8
+    box-shadow: 0 10px 28px rgba(55, 48, 38, .08)
+
+  .ticket-heading
+    display: flex
+    align-items: start
+    justify-content: space-between
+    gap: 16px
+
+    p
+      margin: 0 0 2px
+      color: var(--proof-muted)
+      font-size: 12px
+      font-weight: 700
+      text-transform: uppercase
+      letter-spacing: .07em
+
+    strong
+      color: var(--proof-ink)
+      font-size: 21px
+      font-variant-numeric: tabular-nums
+
+  .ticket-status
+    padding: 6px 9px
+    border: 1px solid currentColor
+    border-radius: 6px
+    color: var(--proof-red)
+    font-size: 11px
+    font-weight: 800
+    text-transform: uppercase
+    letter-spacing: .05em
+    transform: rotate(-1deg)
+
+  .candidate-progress
+    height: 8px
+    overflow: hidden
+    border-radius: 3px
+    background: var(--proof-paper-deep)
+
+    span
+      display: block
+      height: 100%
+      background: var(--proof-blue)
+      transition: width .4s cubic-bezier(.16, 1, .3, 1)
+
+  .allowance-list
+    display: grid
+    grid-template-columns: repeat(4, minmax(0, 1fr))
+    gap: 0
+    margin: 0
+    border-top: 1px dashed var(--proof-rule)
+
+    div
+      padding: 12px 14px 0
+      border-right: 1px solid var(--proof-rule)
+
+      &:first-child
+        padding-left: 0
+
+      &:last-child
+        border-right: 0
+
+    dt
+      color: var(--proof-muted)
+      font-size: 11px
+      font-weight: 700
+      text-transform: uppercase
+      letter-spacing: .06em
+
+    dd
+      margin: 3px 0 0
+      color: var(--proof-ink)
+      font-size: 13px
+      font-weight: 700
+      font-variant-numeric: tabular-nums
+
+  .upload-area
+    width: 100%
+    min-height: 300px
+    padding: 42px 24px
+    border: 1px dashed var(--proof-rule)
+    border-radius: 14px
+    background: #fffdf8
+    color: var(--proof-ink)
+    box-shadow: none
+
+    &:hover, &.drag-over
+      transform: none
+      border-color: var(--proof-blue)
+      background: #eef2fb
+
+    h2
+      margin: 12px 0 8px
+      font-size: clamp(25px, 4vw, 34px)
+
+    p
+      color: var(--proof-muted)
+
+  .upload-icon
+    width: 42px
+    height: 42px
+    margin: 0 auto
+    fill: none
+    stroke: var(--proof-blue)
+    stroke-width: 1.7
+
+  .visually-hidden
+    position: absolute !important
+    width: 1px !important
+    height: 1px !important
+    padding: 0 !important
+    overflow: hidden !important
+    clip: rect(0, 0, 0, 0) !important
+    white-space: nowrap !important
+    border: 0 !important
+
+  .file-preview, .enhancement-options, .results-section, .credits-card, .verification-card, .generation-recovery, .error-card
+    border: 1px solid var(--proof-rule)
+    border-radius: 14px
+    background: #fffdf8
+    box-shadow: 0 12px 34px rgba(55, 48, 38, .08)
+    backdrop-filter: none
+
+  .file-preview .preview-image-frame,
+  .file-preview .preview-image
+    border-radius: 9px
+
+  .photo-score-summary, .quality-gate-card, .biometric-consent
+    border-radius: 10px
+    background: var(--proof-paper)
+
+  .section-heading
+    max-width: 72ch
+
+    h2, h3
+      margin: 0 0 7px
+      font-size: clamp(24px, 3vw, 32px)
+
+    p
+      color: var(--proof-muted)
+
+  .portrait-style-panel
+    padding: 26px
+
+  .vertical-pack-card, .style-tab
+    min-height: 44px
+    border-color: var(--proof-rule)
+    border-radius: 8px
+    background: transparent
+    color: var(--proof-muted)
+
+    &.selected, &.active, &:hover
+      border-color: var(--proof-blue)
+      background: #e8edfa
+      color: var(--proof-ink)
+      transform: none
+
+  .workflow-grid
+    grid-template-columns: repeat(3, minmax(0, 1fr))
+    gap: 12px
+
+  .workflow-card
+    min-height: 250px
+    grid-template-rows: 136px 1fr
+    border-color: var(--proof-rule)
+    border-radius: 10px
+    background: var(--proof-paper)
+
+    &:hover
+      transform: none
+      border-color: var(--proof-blue)
+      box-shadow: 0 8px 24px rgba(55, 48, 38, .1)
+
+    &.selected
+      border-color: var(--proof-blue)
+      background: #eef2fb
+      box-shadow: 0 0 0 2px var(--proof-blue)
+
+      &::after
+        top: 8px
+        right: 8px
+        border-radius: 5px
+        background: var(--proof-blue)
+
+  .portrait-style-card .workflow-preview
+    aspect-ratio: 4 / 3
+    object-fit: cover
+    background: var(--proof-paper-deep)
+
+  .option-text
+    span
+      color: var(--proof-blue-dark)
+
+    p
+      color: var(--proof-muted)
+
+  .btn
+    min-height: 46px
+    border-radius: 9px
+    transition: background .18s ease, box-shadow .18s ease
+
+    &:hover:not(:disabled)
+      transform: none
+      box-shadow: 0 7px 18px rgba(55, 48, 38, .14)
+
+    &.btn-primary
+      border-color: var(--proof-blue) !important
+      background: var(--proof-blue) !important
+      color: #fff !important
+      box-shadow: 0 8px 20px rgba(36, 87, 197, .22) !important
+
+      &:hover:not(:disabled)
+        border-color: var(--proof-blue-dark) !important
+        background: var(--proof-blue-dark) !important
+
+    &.btn-secondary
+      border-color: var(--proof-rule)
+      background: #fffdf8
+      color: var(--proof-ink)
+
+    &.btn-outline
+      border-color: var(--proof-blue)
+      background: transparent
+      color: var(--proof-blue-dark)
+
+  .action-footer
+    bottom: 12px
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 230px) auto
+    border-color: var(--proof-rule)
+    border-radius: 12px
+    background: #fffdf8
+    box-shadow: 0 14px 34px rgba(55, 48, 38, .18)
+    backdrop-filter: none
+
+  .action-summary span, .action-package-select
+    color: var(--proof-muted)
+
+  .form-control
+    border-color: var(--proof-rule)
+    border-radius: 9px
+    background-color: #fffdf8
+    color: var(--proof-ink)
+    box-shadow: none
+
+  .generation-recovery
+    display: grid
+    grid-template-columns: minmax(0, 1fr) auto
+    align-items: center
+    gap: 24px
+    padding: 22px
+
+    h2
+      margin: 0 0 6px
+      font-size: 25px
+
+    p
+      max-width: 68ch
+      margin: 0
+      color: var(--proof-muted)
+
+  .recovery-consent, .generation-recovery app-turnstile
+    grid-column: 1 / -1
+
+  .recovery-consent
+    color: var(--proof-ink)
+
+  .generation-recovery-actions
+    display: flex
+    flex-wrap: wrap
+    gap: 10px
+
+  .processing-section
+    position: relative
+    inset: auto
+    z-index: auto
+    display: block
+    padding: 0
+
+  .processing-card
+    display: grid
+    grid-template-columns: auto minmax(0, 1fr)
+    align-items: center
+    gap: 18px 20px
+    width: 100%
+    max-width: none
+    padding: 24px
+    border: 1px solid var(--proof-rule)
+    border-radius: 14px
+    background: #fffdf8
+    color: var(--proof-ink)
+    text-align: left
+    box-shadow: 0 12px 34px rgba(55, 48, 38, .08)
+
+    h2
+      margin: 0 0 5px
+      font-size: 26px
+
+    p
+      margin: 0
+      color: var(--proof-muted)
+
+  .processing-spinner
+    width: 48px
+    height: 48px
+    margin: 0
+    border: 4px solid var(--proof-paper-deep)
+    border-top-color: var(--proof-blue)
+    border-right-color: var(--proof-blue)
+    box-shadow: none
+
+  .processing-progress, .processing-status
+    grid-column: 2
+
+  .processing-progress
+    height: 8px
+    background: var(--proof-paper-deep)
+    box-shadow: none
+
+  .progress-bar
+    background: var(--proof-blue)
+    box-shadow: none
+
+  .results-section
+    padding: clamp(22px, 4vw, 40px)
+    text-align: left
+
+  .proof-results-heading
+    display: flex
+    align-items: start
+    justify-content: space-between
+    gap: 28px
+    padding-bottom: 18px
+    border-bottom: 1px solid var(--proof-rule)
+
+    h2
+      margin: 0 0 7px
+      font-size: clamp(30px, 4vw, 46px)
+      line-height: 1
+
+    p
+      max-width: 68ch
+      margin: 0
+      color: var(--proof-muted)
+      line-height: 1.5
+
+  .retention-note
+    max-width: 250px !important
+    padding-top: 4px
+    font-size: 12px
+
+  .proof-desk
+    display: grid
+    grid-template-columns: 140px minmax(280px, 560px)
+    align-items: end
+    justify-content: center
+    gap: clamp(22px, 5vw, 58px)
+    margin: 30px 0 18px
+
+  .source-proof
+    display: grid
+    gap: 8px
+
+    > span, > p
+      color: var(--proof-muted)
+      font-size: 11px
+      font-weight: 700
+      line-height: 1.4
+      text-transform: uppercase
+      letter-spacing: .06em
+
+  .source-proof-frame
+    overflow: hidden
+    aspect-ratio: 4 / 5
+    border: 1px solid var(--proof-rule)
+    border-radius: 5px
+    background: var(--proof-paper-deep)
+
+    img
+      width: 100%
+      height: 100%
+      display: block
+      object-fit: cover
+      filter: saturate(.75)
+
+  .selected-proof
+    min-width: 0
+
+  .proof-label-row
+    display: flex
+    justify-content: space-between
+    gap: 16px
+    margin-bottom: 8px
+    color: var(--proof-muted)
+    font-size: 12px
+    font-weight: 700
+    text-transform: uppercase
+    letter-spacing: .06em
+
+    strong
+      color: var(--proof-blue-dark)
+      font-variant-numeric: tabular-nums
+
+  .selected-proof-frame
+    position: relative
+    overflow: hidden
+    width: 100%
+    aspect-ratio: 4 / 5
+    border-radius: 7px
+    background: var(--proof-paper-deep)
+    box-shadow: 0 18px 40px rgba(55, 48, 38, .18)
+
+    > img
+      width: 100%
+      height: 100%
+      display: block
+      object-fit: cover
+      transform-origin: center
+
+  .proof-mark
+    position: absolute
+    top: 15px
+    left: 15px
+    padding: 5px 8px
+    border: 2px solid var(--proof-blue)
+    border-radius: 4px
+    color: var(--proof-blue-dark)
+    background: rgba(247, 244, 237, .88)
+    font-size: 11px
+    font-weight: 800
+    text-transform: uppercase
+    letter-spacing: .06em
+    transform: rotate(-2deg)
+
+  .candidate-contact-sheet
+    display: grid
+    grid-auto-flow: column
+    grid-auto-columns: 92px
+    justify-content: center
+    gap: 10px
+    padding: 12px 4px 20px
+    overflow-x: auto
+    overscroll-behavior-inline: contain
+    scrollbar-color: var(--proof-blue) var(--proof-paper-deep)
+    scrollbar-width: thin
+
+  .candidate-proof
+    position: relative
+    width: 92px
+    min-height: 126px
+    padding: 5px
+    border: 1px solid var(--proof-rule)
+    border-radius: 6px
+    background: #fffdf8
+    color: var(--proof-ink)
+    cursor: pointer
+    scroll-snap-align: center
+
+    img
+      width: 100%
+      aspect-ratio: 4 / 5
+      display: block
+      object-fit: cover
+      border-radius: 3px
+
+    > span
+      position: absolute
+      right: 8px
+      bottom: 8px
+      min-width: 23px
+      height: 23px
+      display: grid
+      place-items: center
+      border-radius: 50%
+      background: var(--proof-ink)
+      color: #fff
+      font-size: 11px
+      font-weight: 800
+      font-variant-numeric: tabular-nums
+
+    > strong
+      position: absolute
+      top: 9px
+      left: 9px
+      padding: 4px 6px
+      border-radius: 4px
+      background: #fffdf8
+      color: var(--proof-blue-dark)
+      font-size: 9px
+      text-transform: uppercase
+
+    &.selected
+      border-color: var(--proof-blue)
+      box-shadow: 0 0 0 2px var(--proof-blue)
+
+  .fulfillment-callout
+    display: grid
+    grid-template-columns: minmax(0, 1fr) auto
+    align-items: center
+    gap: 24px
+    margin: 12px 0 28px
+    padding: 22px
+    border-radius: 12px
+    background: var(--proof-blue)
+    color: #fff
+
+    h2
+      margin: 0 0 5px
+      color: #fff
+      font-size: 25px
+
+    p
+      margin: 0
+      color: #eef3ff
+      line-height: 1.45
+
+    .btn-primary
+      min-width: 240px
+      border-color: #fff !important
+      background: #fff !important
+      color: var(--proof-blue-dark) !important
+      box-shadow: 0 8px 20px rgba(8, 22, 54, .2) !important
+
+  .mobile-fulfillment-action
+    display: none
+
+  .fulfillment-consent
+    display: flex
+    align-items: start
+    gap: 9px
+    margin-top: 14px
+    color: #fff
+    font-size: 13px
+    line-height: 1.4
+
+    input
+      width: 18px
+      height: 18px
+      flex: 0 0 auto
+      margin-top: 1px
+
+  .action-blocker
+    margin-top: 8px !important
+    color: #fff !important
+    font-size: 12px
+    font-weight: 700
+
+  .proof-workspace
+    display: grid
+    gap: 26px
+    margin-top: 26px
+
+  .recommendation-note
+    padding: 18px 0
+    border-top: 1px solid var(--proof-rule)
+    border-bottom: 1px solid var(--proof-rule)
+
+    h2
+      margin: 0 0 6px
+      font-size: 23px
+
+    p
+      max-width: 72ch
+      margin: 0
+      color: var(--proof-muted)
+      line-height: 1.5
+
+    strong
+      color: var(--proof-ink)
+
+  .upgrade-card-grid
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+
+  .upgrade-card
+    border-color: var(--proof-rule)
+    border-radius: 10px
+    background: var(--proof-paper)
+    box-shadow: none
+
+    h2
+      margin: 0
+      font-size: 25px
+
+    p, ul
+      color: var(--proof-muted)
+
+  .adjustment-workspace
+    grid-template-columns: minmax(280px, 390px) minmax(0, 1fr)
+
+  .adjustment-preview-card, .adjustment-controls-card
+    border-color: var(--proof-rule)
+    border-radius: 10px
+    background: var(--proof-paper)
+
+  .adjustment-preview-card h2
+    margin: 0
+    font-size: 22px
+
+  .adjustment-preview-frame
+    border-color: var(--proof-rule)
+    border-radius: 7px
+    background: var(--proof-paper-deep)
+
+  .retention-item
+    min-height: 48px
+    border-color: var(--proof-rule)
+    border-radius: 8px
+    background: #fffdf8
+    color: var(--proof-ink)
+
+  .retention-period
+    color: var(--proof-muted)
+    font-variant-numeric: tabular-nums
+
+  .refinement-action
+    display: flex
+    align-items: center
+    justify-content: space-between
+    gap: 18px
+    padding: 16px 0
+    border-top: 1px solid var(--proof-rule)
+    border-bottom: 1px solid var(--proof-rule)
+
+    strong, span
+      display: block
+
+    span
+      margin-top: 3px
+      color: var(--proof-muted)
+      font-size: 13px
+
+  .add-on-grid
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+
+  .add-on-card
+    min-height: 132px
+    border-color: var(--proof-rule)
+    border-radius: 9px
+    background: var(--proof-paper)
+
+    &:hover:not(:disabled)
+      transform: none
+      border-color: var(--proof-blue)
+      box-shadow: 0 8px 22px rgba(55, 48, 38, .1)
+
+    small
+      color: var(--proof-muted)
+
+    em
+      border-radius: 5px
+      background: #e8edfa
+      color: var(--proof-blue-dark)
+
+  .export-section
+    display: grid
+    gap: 16px
+    padding-top: 26px
+    border-top: 2px solid var(--proof-ink)
+
+  .export-exhausted
+    padding: 16px
+    border: 1px solid var(--proof-rule)
+    border-radius: 8px
+    background: var(--proof-paper-deep)
+
+    strong
+      color: var(--proof-ink)
+
+    p
+      margin: 4px 0 0
+      color: var(--proof-muted)
+
+  .export-list
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+
+    .retention-item
+      min-height: 56px
+      text-align: left
+
+  .free-export-note
+    margin: 0
+    padding: 14px 0
+    border-top: 1px solid var(--proof-rule)
+    color: var(--proof-muted)
+
+  .result-actions
+    position: sticky
+    bottom: 12px
+    z-index: 8
+    justify-content: flex-start
+    margin-top: 24px
+    padding: 12px
+    border: 1px solid var(--proof-rule)
+    border-radius: 12px
+    background: #fffdf8
+    box-shadow: 0 14px 34px rgba(55, 48, 38, .18)
+
+  .export-success
+    margin: 14px 0 0
+    padding: 12px 14px
+    border-radius: 8px
+    background: #e5f1ea
+    color: #174b34
+    font-weight: 700
+
+  .error-card
+    border-color: var(--proof-red)
+    text-align: left
+
+    h2
+      margin: 0 0 7px
+
+  @media (prefers-reduced-motion: reduce)
+    *, *::before, *::after
+      scroll-behavior: auto !important
+      animation-duration: .01ms !important
+      animation-iteration-count: 1 !important
+      transition-duration: .01ms !important
+
+@media (max-width: 900px)
+  .proof-studio
+    .proof-masthead
+      grid-template-columns: 1fr
+      gap: 20px
+
+    .workflow-grid
+      grid-template-columns: repeat(2, minmax(0, 1fr))
+
+    .allowance-list
+      grid-template-columns: repeat(2, minmax(0, 1fr))
+
+      div:nth-child(2)
+        border-right: 0
+
+      div:nth-child(n + 3)
+        margin-top: 10px
+        padding-top: 10px
+        border-top: 1px solid var(--proof-rule)
+
+    .proof-desk
+      grid-template-columns: 110px minmax(260px, 520px)
+
+    .adjustment-workspace
+      grid-template-columns: 1fr
+
+    .adjustment-preview-card
+      position: static
+
+@media (max-width: 640px)
+  .proof-studio
+    .gallery-main
+      padding: 14px 10px calc(96px + env(safe-area-inset-bottom))
+
+    .gallery-content
+      gap: 14px
+
+    .proof-masthead
+      padding: 18px 4px 14px
+
+      h1
+        font-size: clamp(32px, 9.5vw, 40px)
+        line-height: .98
+
+      > div > p
+        font-size: 14px
+
+    &.has-active-file
+      .proof-masthead
+        padding-block: 14px 12px
+
+        h1
+          font-size: 31px
+
+        > div > p
+          display: none
+
+    .studio-note
+      display: none
+
+    .workflow-rail
+      display: grid
+      grid-template-columns: repeat(3, minmax(0, 1fr))
+
+    .workflow-step
+      display: grid
+      grid-template-columns: 1fr
+      align-content: start
+      justify-items: start
+      min-height: 82px
+      padding: 9px
+
+      span
+        grid-row: auto
+        width: 25px
+        height: 25px
+        font-size: 11px
+
+      strong
+        font-size: 12px
+        line-height: 1.15
+
+      small
+        display: none
+
+    .package-ticket
+      padding: 14px
+
+    .ticket-heading strong
+      font-size: 18px
+
+    .allowance-list
+      grid-template-columns: 1fr 1fr
+
+      div
+        padding: 10px 8px 0
+
+      dt
+        font-size: 9px
+
+      dd
+        font-size: 11px
+
+    .upload-area
+      min-height: 240px
+      padding: 32px 18px
+
+    .file-preview-section
+      gap: 14px
+
+    .portrait-style-panel, .results-section
+      padding: 16px
+
+    .workflow-grid
+      display: grid
+      grid-auto-flow: column
+      grid-auto-columns: minmax(210px, 78vw)
+      grid-template-columns: none
+      overflow-x: auto
+      scroll-snap-type: x mandatory
+
+    .workflow-card
+      scroll-snap-align: center
+
+    .action-footer
+      position: sticky
+      bottom: calc(8px + env(safe-area-inset-bottom))
+      grid-template-columns: 1fr
+      gap: 10px
+      padding: 10px
+
+    .action-summary
+      display: flex
+      justify-content: space-between
+      gap: 10px
+
+    .enhance-btn
+      min-height: 54px
+
+    .generation-recovery
+      grid-template-columns: 1fr
+      gap: 16px
+      padding: 18px
+
+    .generation-recovery-actions
+      display: grid
+      grid-template-columns: 1fr 1fr
+
+      .btn
+        width: 100%
+
+    .processing-card
+      grid-template-columns: 1fr
+      padding: 18px
+
+    .processing-progress, .processing-status
+      grid-column: 1
+
+    .processing-spinner
+      width: 40px
+      height: 40px
+
+    .proof-results-heading
+      display: grid
+      gap: 10px
+
+    .retention-note
+      max-width: none !important
+
+    .proof-desk
+      grid-template-columns: 62px minmax(0, 1fr)
+      align-items: end
+      gap: 12px
+      margin-top: 20px
+
+    .candidate-contact-sheet
+      grid-auto-columns: 78px
+      justify-content: start
+      scroll-snap-type: x mandatory
+
+    .candidate-proof
+      width: 78px
+      min-height: 109px
+
+    .fulfillment-callout
+      grid-template-columns: 1fr
+      gap: 16px
+      padding: 18px
+
+      > .btn-primary
+        display: none
+
+    .mobile-fulfillment-action
+      position: fixed
+      right: 8px
+      bottom: calc(8px + env(safe-area-inset-bottom))
+      left: 8px
+      z-index: 40
+      display: grid
+      grid-template-columns: 1fr
+      align-items: center
+      gap: 0
+      padding: 8px
+      border: 1px solid var(--proof-rule)
+      border-radius: 12px
+      background: #fffdf8
+      box-shadow: 0 14px 34px rgba(55, 48, 38, .24)
+
+      > span
+        position: absolute
+        width: 1px
+        height: 1px
+        overflow: hidden
+        clip: rect(0, 0, 0, 0)
+        white-space: nowrap
+
+      .btn
+        width: 100%
+        min-height: 50px
+        padding-inline: 12px
+
+    .upgrade-card-grid, .add-on-grid, .export-list
+      grid-template-columns: 1fr
+
+    .adjustment-control .retention-period
+      grid-template-columns: minmax(0, 1fr) 48px
+
+    .refinement-action
+      align-items: stretch
+      flex-direction: column
+
+    .result-actions
+      bottom: calc(8px + env(safe-area-inset-bottom))
+      display: grid
+      grid-template-columns: 1fr 1fr
+      gap: 8px
+      padding: 8px
+
+      .btn
+        width: 100%
+        min-height: 48px
+
+      .btn-primary, .save-success
+        grid-column: 1 / -1
+
+@media (max-width: 380px)
+  .proof-studio
+    .gallery-main
+      padding-inline: 8px
+
+    .workflow-step
+      padding: 8px 6px
+
+    .ticket-status
+      max-width: 102px
+      text-align: center
+
+    .proof-desk
+      grid-template-columns: 52px minmax(0, 1fr)
+
+    .result-actions
+      grid-template-columns: 1fr
+
+      .btn-primary, .save-success
+        grid-column: auto

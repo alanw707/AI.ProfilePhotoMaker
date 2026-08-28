@@ -181,16 +181,59 @@ public class OutcomePackageService : IOutcomePackageService
         int? previewId = null,
         CancellationToken cancellationToken = default)
     {
+        var now = DateTime.UtcNow;
+        var paidEntitlements = await _context.UserPackageEntitlements
+            .Include(e => e.OutcomePackageDefinition)
+            .Where(e =>
+                e.UserId == userId &&
+                (e.Status == PackageEntitlementStatus.Active ||
+                 e.Status == PackageEntitlementStatus.Consumed) &&
+                (e.ExpiresAt == null || e.ExpiresAt > now) &&
+                (e.OutcomePackageDefinition.Code == "starter_package" ||
+                 e.OutcomePackageDefinition.Code == "pro_package"))
+            .OrderByDescending(e => e.Status == PackageEntitlementStatus.Active)
+            .ThenByDescending(e => e.CreatedAt)
+            .ToListAsync(cancellationToken);
+        var entitlement = paidEntitlements.FirstOrDefault();
+
+        // Free Preview records are the only headshots with both a watermarked display path
+        // and a private raw path. Paid candidates are never valid resume anchors.
         var previews = _context.ProcessedImages
             .Include(i => i.UserProfile)
             .Where(i =>
                 i.UserProfile.UserId == userId &&
                 i.GenerationStatus == "succeeded" &&
                 i.GenerationMode == "instant_headshot" &&
-                i.RawImageStoragePath != null);
-        var preview = previewId.HasValue
-            ? await previews.FirstOrDefaultAsync(i => i.Id == previewId.Value, cancellationToken)
-            : await previews.OrderByDescending(i => i.CreatedAt).FirstOrDefaultAsync(cancellationToken);
+                i.RawImageStoragePath != null &&
+                i.ProcessedImageUrl != i.RawImageStoragePath);
+        ProcessedImage? preview;
+        if (previewId.HasValue)
+        {
+            preview = await previews.FirstOrDefaultAsync(i => i.Id == previewId.Value, cancellationToken);
+        }
+        else
+        {
+            preview = null;
+            if (entitlement != null)
+            {
+                var entitlementPromotion = await _context.ProcessedImages.FirstOrDefaultAsync(i =>
+                    i.UserProfile.UserId == userId &&
+                    i.GenerationMode == "instant_headshot_promoted_preview" &&
+                    i.GenerationStatus == "succeeded" &&
+                    i.CorrelationId == $"purchase:{entitlement.Id}:promoted-preview",
+                    cancellationToken);
+                if (entitlementPromotion != null)
+                {
+                    preview = await previews
+                        .Where(i => i.RawImageStoragePath == entitlementPromotion.ProcessedImageUrl)
+                        .OrderByDescending(i => i.CreatedAt)
+                        .FirstOrDefaultAsync(cancellationToken);
+                }
+            }
+            preview ??= await previews
+                .OrderByDescending(i => i.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
 
         if (preview == null ||
             !await _context.Styles.AnyAsync(s => s.IsActive && s.Name == preview.Style, cancellationToken) ||
@@ -202,14 +245,6 @@ public class OutcomePackageService : IOutcomePackageService
         var rawStoragePath = preview.RawImageStoragePath!;
         var rawPreviewExists = await StorageImageExistsAsync(rawStoragePath);
         var sourceExists = await StorageImageExistsAsync(preview.OriginalImageUrl);
-        var entitlement = await QueryActiveEntitlements(userId)
-            .Where(e =>
-                (e.OutcomePackageDefinition.Code == "starter_package" || e.OutcomePackageDefinition.Code == "pro_package") &&
-                (e.RemainingPackageUses > 0 || e.RemainingCandidates > 0 || e.RemainingRefinements > 0 || e.RemainingPremiumAugmentations > 0 || e.PlatformExportKitAvailable))
-            .OrderByDescending(e => e.OutcomePackageDefinition.Code == "pro_package")
-            .ThenBy(e => e.ExpiresAt ?? DateTime.MaxValue)
-            .ThenBy(e => e.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
         var promotedImage = rawPreviewExists
             ? await _context.ProcessedImages.FirstOrDefaultAsync(i =>
                 i.UserProfileId == preview.UserProfileId &&
@@ -218,6 +253,62 @@ public class OutcomePackageService : IOutcomePackageService
                 i.ProcessedImageUrl == rawStoragePath,
                 cancellationToken)
             : null;
+        if (promotedImage?.CorrelationId?.Split(':') is ["purchase", var entitlementId, ..] &&
+            int.TryParse(entitlementId, out var linkedEntitlementId))
+        {
+            entitlement = paidEntitlements.FirstOrDefault(item => item.Id == linkedEntitlementId) ?? entitlement;
+        }
+        var restoredCandidates = new List<ProcessedImage>();
+        if (promotedImage != null)
+        {
+            restoredCandidates.Add(promotedImage);
+        }
+
+        if (entitlement != null)
+        {
+            var packageCandidateLimit = Math.Max(
+                entitlement.OutcomePackageDefinition.IncludedCandidateCount - restoredCandidates.Count,
+                0);
+            var entitlementStartedAt = entitlement.ActivatedAt ?? entitlement.CreatedAt;
+            var generatedCandidates = await _context.ProcessedImages
+                .Where(i =>
+                    i.UserProfileId == preview.UserProfileId &&
+                    i.Id != preview.Id &&
+                    i.GenerationMode == "instant_headshot" &&
+                    i.GenerationStatus == "succeeded" &&
+                    i.ReplacesProcessedImageId == null &&
+                    i.OriginalImageUrl == preview.OriginalImageUrl &&
+                    i.Style == preview.Style &&
+                    i.CreatedAt >= entitlementStartedAt)
+                .OrderBy(i => i.CreatedAt)
+                .ThenBy(i => i.Id)
+                .Take(packageCandidateLimit)
+                .ToListAsync(cancellationToken);
+            restoredCandidates.AddRange(generatedCandidates);
+
+            var refinements = await _context.ProcessedImages
+                .Where(i =>
+                    i.UserProfileId == preview.UserProfileId &&
+                    i.GenerationMode == "instant_headshot" &&
+                    i.GenerationStatus == "succeeded" &&
+                    i.ReplacesProcessedImageId != null &&
+                    i.OriginalImageUrl == preview.OriginalImageUrl &&
+                    i.Style == preview.Style &&
+                    i.CreatedAt >= entitlementStartedAt)
+                .OrderBy(i => i.CreatedAt)
+                .ThenBy(i => i.Id)
+                .ToListAsync(cancellationToken);
+            foreach (var refinement in refinements)
+            {
+                var replacedIndex = restoredCandidates.FindIndex(candidate =>
+                    candidate.Id == refinement.ReplacesProcessedImageId);
+                if (replacedIndex >= 0)
+                {
+                    restoredCandidates[replacedIndex] = refinement;
+                }
+            }
+        }
+        var candidates = restoredCandidates.Select(ToCandidateDto).ToList();
 
         return new ResumableHeadshotPreviewDto
         {
@@ -234,6 +325,7 @@ public class OutcomePackageService : IOutcomePackageService
                 ? 0
                 : Math.Max(entitlement.RemainingCandidates - (rawPreviewExists && promotedImage == null ? 1 : 0), 0),
             PromotedCandidate = promotedImage == null ? null : ToCandidateDto(promotedImage),
+            Candidates = candidates,
             Message = entitlement == null
                 ? (rawPreviewExists
                     ? "Resume this preview, then unlock Starter or Pro to generate paid candidates."
@@ -432,7 +524,10 @@ public class OutcomePackageService : IOutcomePackageService
         }
 
         entitlement.RemainingCandidates -= candidateCount;
-        entitlement.RemainingPackageUses = Math.Max(0, entitlement.RemainingPackageUses - 1);
+        if (entitlement.RemainingCandidates == 0)
+        {
+            entitlement.RemainingPackageUses = Math.Max(0, entitlement.RemainingPackageUses - 1);
+        }
         MarkConsumedIfEmpty(entitlement);
         await _context.SaveChangesAsync(cancellationToken);
         return true;

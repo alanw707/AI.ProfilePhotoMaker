@@ -1,0 +1,42 @@
+[
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html",
+    "line": 275,
+    "snippet": "<img [src]=\"imagePreview\" alt=\"Selected image\" class=\"preview-image\" />"
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html",
+    "line": 466,
+    "snippet": "<img [src]=\"option.image\" [alt]=\"option.title + ' preview'\" class=\"workflow-preview\" loading=\"lazy\" "
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html",
+    "line": 603,
+    "snippet": "<img [src]=\"imagePreview\" alt=\"Original source photo\" (error)=\"onBeforeImageError()\" />"
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html",
+    "line": 640,
+    "snippet": "<img [src]=\"candidate.imageUrl\" [alt]=\"'Candidate ' + (i + 1)\" />"
+  }
+]

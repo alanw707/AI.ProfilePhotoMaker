@@ -349,6 +349,71 @@ public class HeadshotGenerationServiceTests
     }
 
     [Fact]
+    public async Task GenerateHeadshotAsync_StoresRefinementReplacementLink()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, credits: 3);
+        var profile = await context.UserProfiles.SingleAsync(item => item.UserId == userId);
+        var sourcePath = $"dev/enhanced/{userId}/source.png";
+        var package = new OutcomePackageDefinition
+        {
+            Code = "pro_package",
+            Name = "Pro Package",
+            Description = "Test package",
+            IncludedCandidateCount = 9,
+            IncludedRefinementCount = 3,
+            IsActive = true
+        };
+        context.OutcomePackageDefinitions.Add(package);
+        await context.SaveChangesAsync();
+        var entitlement = new UserPackageEntitlement
+        {
+            UserId = userId,
+            OutcomePackageDefinitionId = package.Id,
+            OutcomePackageDefinition = package,
+            Status = PackageEntitlementStatus.Active,
+            RemainingPackageUses = 0,
+            RemainingCandidates = 0,
+            RemainingRefinements = 1,
+            PlatformExportKitAvailable = true
+        };
+        var originalCandidate = new ProcessedImage
+        {
+            UserProfileId = profile.Id,
+            OriginalImageUrl = sourcePath,
+            ProcessedImageUrl = $"dev/generated/{userId}/candidate.png",
+            Style = "linkedin",
+            IsGenerated = true,
+            GenerationMode = "instant_headshot",
+            GenerationStatus = "succeeded"
+        };
+        context.UserPackageEntitlements.Add(entitlement);
+        context.ProcessedImages.Add(originalCandidate);
+        await context.SaveChangesAsync();
+        var service = CreateService(
+            context,
+            new FakeStorageService(),
+            new FakeHeadshotProvider("data:image/png;base64," + Convert.ToBase64String([1, 2, 3])),
+            new FakeOutcomePackageService(entitlement));
+
+        var result = await service.GenerateHeadshotAsync(new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = sourcePath,
+            Style = "linkedin",
+            Background = "auto",
+            PackageCode = "pro_package",
+            NumOutputs = 1,
+            IsRegeneration = true,
+            ReplacesProcessedImageId = originalCandidate.Id,
+            ClientRequestId = "refinement-link"
+        }, userId);
+
+        var refinement = await context.ProcessedImages.SingleAsync(image =>
+            image.Id == result.ProcessedImageId);
+        Assert.Equal(originalCandidate.Id, refinement.ReplacesProcessedImageId);
+    }
+
+    [Fact]
     public async Task GenerateHeadshotAsync_RejectsStoragePathOutsideCurrentUserPrefixes()
     {
         using var context = CreateContext();
@@ -501,7 +566,7 @@ public class HeadshotGenerationServiceTests
         public Task<bool> CanPromotePreviewAsync(string userId, int previewProcessedImageId, CancellationToken cancellationToken = default) => Task.FromResult(true);
         public Task<bool> ReservePreviewForPurchaseAsync(string userId, int previewProcessedImageId, CancellationToken cancellationToken = default) => Task.FromResult(true);
         public Task<UserPackageEntitlement?> GrantEntitlementForCreditPackageAsync(string userId, int creditPackageId, string? paymentTransactionId, int? previewProcessedImageId = null, CancellationToken cancellationToken = default) => Task.FromResult<UserPackageEntitlement?>(_entitlement);
-        public Task<UserPackageEntitlement?> GetActiveEntitlementAsync(string userId, string packageCode, CancellationToken cancellationToken = default) => Task.FromResult(_entitlement.RemainingPackageUses > 0 || _entitlement.RemainingCandidates > 0 ? _entitlement : null);
+        public Task<UserPackageEntitlement?> GetActiveEntitlementAsync(string userId, string packageCode, CancellationToken cancellationToken = default) => Task.FromResult(_entitlement.RemainingPackageUses > 0 || _entitlement.RemainingCandidates > 0 || _entitlement.RemainingRefinements > 0 ? _entitlement : null);
         public Task<ResumableHeadshotPreviewDto?> GetResumablePreviewAsync(string userId, int? previewId = null, CancellationToken cancellationToken = default) => Task.FromResult<ResumableHeadshotPreviewDto?>(null);
         public Task<PromotedPreviewDownload?> GetPromotedPreviewDownloadAsync(string userId, int imageId, CancellationToken cancellationToken = default) => Task.FromResult<PromotedPreviewDownload?>(null);
         public bool FailConsumeCandidates { get; init; }
@@ -514,7 +579,12 @@ public class HeadshotGenerationServiceTests
             _entitlement.RemainingCandidates -= candidateCount;
             return Task.FromResult(true);
         }
-        public Task<bool> ConsumeRefinementAsync(string userId, string? packageCode = null, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<bool> ConsumeRefinementAsync(string userId, string? packageCode = null, CancellationToken cancellationToken = default)
+        {
+            if (_entitlement.RemainingRefinements <= 0) return Task.FromResult(false);
+            _entitlement.RemainingRefinements--;
+            return Task.FromResult(true);
+        }
         public Task<bool> ConsumePremiumAugmentationAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task<bool> ConsumeExportKitAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(false);
     }

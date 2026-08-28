@@ -20,6 +20,8 @@ public class HeadshotGenerationRequestDto
 
     public int? ReusedPreviewProcessedImageId { get; set; }
 
+    public int? ReplacesProcessedImageId { get; set; }
+
     [StringLength(64)]
     public string? UseCaseCode { get; set; }
 
@@ -74,5 +76,6 @@ public class ResumableHeadshotPreviewDto
     public string? ActivePackageCode { get; set; }
     public int RemainingCandidateCount { get; set; }
     public HeadshotCandidateDto? PromotedCandidate { get; set; }
+    public List<HeadshotCandidateDto> Candidates { get; set; } = new();
     public string? Message { get; set; }
 }

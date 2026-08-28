@@ -79,6 +79,25 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         var portraitStyle = await ResolvePortraitStyleAsync(request.Style, cancellationToken);
         request.Style = portraitStyle.Name;
         var packageCode = NormalizePackageCode(request.PackageCode);
+        ProcessedImage? replacedCandidate = null;
+        if (request.IsRegeneration)
+        {
+            replacedCandidate = request.ReplacesProcessedImageId is int replacedId
+                ? await _dbContext.ProcessedImages.FirstOrDefaultAsync(i =>
+                    i.Id == replacedId &&
+                    i.UserProfileId == profile.Id &&
+                    i.GenerationStatus == "succeeded" &&
+                    (i.GenerationMode == "instant_headshot" ||
+                     i.GenerationMode == "instant_headshot_promoted_preview"),
+                    cancellationToken)
+                : null;
+            if (replacedCandidate == null || replacedCandidate.OriginalImageUrl != sourcePath)
+            {
+                throw new HeadshotGenerationException(
+                    "InvalidImageSource",
+                    "Choose an owned candidate from this package before using a refinement.");
+            }
+        }
         var requestedOutputs = Math.Clamp(request.NumOutputs, 1, 9);
         requestedOutputs = packageCode switch
         {
@@ -171,6 +190,8 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         }
 
         CreditConsumptionResult? consumed = null;
+        var promotionCreated = false;
+        var packageAllowanceConsumed = false;
 
         try
         {
@@ -196,7 +217,6 @@ public class HeadshotGenerationService : IHeadshotGenerationService
 
             var candidates = new List<HeadshotCandidateDto>();
             var generationSourcePath = sourcePath;
-            var promotionCreated = false;
             if (packageCode != "free_preview" && request.ReusedPreviewProcessedImageId is int previewImageId)
             {
                 var promotion = await BuildPromotedPreviewCandidateAsync(
@@ -265,6 +285,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                     GenerationStatus = "succeeded",
                     CorrelationId = candidateCorrelationId,
                     RawImageStoragePath = storedOutput.RawPath,
+                    ReplacesProcessedImageId = replacedCandidate?.Id,
                     PromptVersion = string.IsNullOrWhiteSpace(recipe.Code) ? result.PromptVersion : $"{result.PromptVersion}:{recipe.Code}"
                 };
                 processedImage.SetScheduledDeletionDate();
@@ -290,6 +311,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                         ? "Unable to consume package refinement allowance."
                         : "Unable to consume profile photo package allowance.");
                 }
+                packageAllowanceConsumed = true;
             }
 
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
@@ -323,9 +345,45 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         }
         catch
         {
+            if (!packageAllowanceConsumed &&
+                packageCode != "free_preview" &&
+                !request.IsRegeneration &&
+                _outcomePackageService != null)
+            {
+                var partialCandidateCount = await CountPersistedCandidatesAsync(
+                    profile.Id,
+                    correlationId,
+                    cancellationToken);
+                var partialAllowanceCount = partialCandidateCount + (promotionCreated ? 1 : 0);
+                var partialAllowanceConsumed = partialAllowanceCount == 0 ||
+                    await _outcomePackageService.ConsumeCandidatesAsync(
+                        userId,
+                        packageCode,
+                        partialAllowanceCount,
+                        cancellationToken);
+                if (!partialAllowanceConsumed)
+                {
+                    await MarkPersistedCandidatesFailedAsync(profile.Id, correlationId, cancellationToken);
+                }
+            }
             await _basicTierService.RefundCreditsAsync(userId, consumed);
             throw;
         }
+    }
+
+    private Task<int> CountPersistedCandidatesAsync(
+        int userProfileId,
+        string correlationId,
+        CancellationToken cancellationToken)
+    {
+        var candidateCorrelationPrefix = $"{correlationId}:candidate:";
+        return _dbContext.ProcessedImages.CountAsync(i =>
+            i.UserProfileId == userProfileId &&
+            i.GenerationMode == "instant_headshot" &&
+            i.GenerationStatus == "succeeded" &&
+            (i.CorrelationId == correlationId ||
+             (i.CorrelationId != null && i.CorrelationId.StartsWith(candidateCorrelationPrefix))),
+            cancellationToken);
     }
 
     private async Task MarkPersistedCandidatesFailedAsync(int userProfileId, string correlationId, CancellationToken cancellationToken)
@@ -480,6 +538,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             NormalizeUseCaseCode(request.UseCaseCode),
             NormalizeRecipeCode(request.RecipeCode),
             request.IsRegeneration ? "regenerate" : "generate",
+            request.ReplacesProcessedImageId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "none",
             clientRequestId);
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
         return $"{ActionName}:{hash[..32]}";

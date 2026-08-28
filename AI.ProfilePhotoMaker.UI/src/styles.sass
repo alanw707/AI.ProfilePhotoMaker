@@ -819,3 +819,18 @@ input, textarea, select
   
   &:hover svg
     transform: rotate(180deg)
+
+// Preserve 44px application-shell targets while the proof workspace is active.
+body:has(.proof-studio)
+  .app-header a,
+  .app-header button,
+  .app-back-to-top,
+  .theme-toggle
+    min-width: 44px
+    min-height: 44px
+
+// Keep global floating utilities clear of /app/enhance's mobile fulfillment action.
+@media (max-width: 768px)
+  body:has(.mobile-fulfillment-action) .app-back-to-top,
+  body:has(.mobile-fulfillment-action) .theme-toggle
+    bottom: calc(76px + env(safe-area-inset-bottom)) !important

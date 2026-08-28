@@ -1,0 +1,131 @@
+{
+  "title": "Choose the visual world for /app/enhance",
+  "question": "This mobile-first workspace needs to make package fulfillment impossible to miss. Keep the lead direction, choose an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "The Departure Board",
+      "kicker": "THE ROLL",
+      "lineage": "rail and airport wayfinding systems",
+      "thesis": "Your package reads as a journey already in motion: every owed photo has a visible status, and one clear gate advances the trip.",
+      "palette": ["#F4F5F2", "#102A43", "#146C94", "#F08C46"],
+      "materials": ["powder-coated wayfinding panels", "split-flap status cells", "matte photo proofs"],
+      "viewport": "On mobile, a compact Pro 1/9 route board sits above the selected portrait; a thumb-level Generate remaining 8 photos gate anchors the screen while candidate stops unfold below.",
+      "risk": "Without generous portrait scale and calm body copy, the system could feel like logistics software rather than a personal photo studio.",
+      "raised": [
+        {"from": "HyperCard Stack", "raise": "Every stage becomes addressable and resumable, with a visible back trail instead of hidden state."},
+        {"from": "WPA Poster", "raise": "Each screen carries one imperative at full strength; supporting regions stop competing."},
+        {"from": "Star Atlas", "raise": "Importance is encoded by scale before color: the selected portrait and next action always dominate."},
+        {"from": "Miura Fold", "raise": "Dense package detail compacts into a phone summary and deploys only when requested."},
+        {"from": "Alphabet Storm", "raise": "Motion is reserved for deterministic status changes and remains reversible and readable."}
+      ]
+    },
+    {
+      "id": "model-pick",
+      "label": "The Studio Proof Desk",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "editorial contact sheets and portrait-studio proofing tables",
+      "thesis": "The interface behaves like a photographer presenting proofs: the chosen portrait leads, the contact sheet stays close, and package progress reads like a job ticket.",
+      "palette": ["#F7F4ED", "#202529", "#2457C5", "#C64B3C"],
+      "materials": ["matte photo paper", "grease-pencil proof marks", "contact-sheet frames"],
+      "viewport": "A large selected proof fills the first mobile fold, with a narrow candidate strip, a handwritten-style best-shot mark, and a clipped fulfillment ticket carrying the single next action.",
+      "risk": "It is the most familiar photography direction and can become intimidating pro-tool cosplay if crop marks and proof notation overpower plain guidance."
+    },
+    {
+      "id": "challenger-night-flight",
+      "label": "The Calm Instrument Panel",
+      "verdict": "competitive",
+      "lineage": "small-aircraft night instrument six-pack",
+      "thesis": "Each package allowance owns one trustworthy instrument while a single central trajectory shows what the user must do next.",
+      "palette": ["#080D12", "#F4F7F5", "#8DE29B", "#F3A847"],
+      "materials": ["matte instrument panel", "luminous dial markings", "damped status needles"],
+      "viewport": "The portrait occupies the main instrument glass; candidates, refinements, add-ons, and exports become four separately labeled readings beneath one bright next-action annunciator.",
+      "case": "It matches the lead direction on allowance clarity and state visibility, but professionals identify less naturally with a cockpit than with a photo workflow.",
+      "risk": "The dark technical language can feel specialist, masculine, or high-stakes, making a simple personal task feel harder than it is.",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-night-flight-six-pack-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/signals-instruments-night-flight-six-pack.webp"
+    },
+    {
+      "id": "challenger-hypercard",
+      "label": "The HyperCard Stack",
+      "verdict": "declined",
+      "lineage": "black-and-white HyperCard shoebox stacks",
+      "thesis": "Each package stage is one addressable card with a literal back trail and editable choices in place.",
+      "palette": ["#FFFFFF", "#000000", "#A8A8A8"],
+      "materials": ["one-bit pixels", "stipple dither", "painted buttons"],
+      "viewport": "A fixed-ratio mobile card shows one task at a time with Back and Continue controls embedded in its border.",
+      "case": "Strong navigation memory, but weak professional-photo identification and insufficient image richness.",
+      "kept": "Addressable, resumable stages with an exact back trail.",
+      "risk": "The retro monochrome treatment would make paid portraits feel like a novelty demo.",
+      "hero": "https://impeccable.style/worlds/cards/medium-native-hypercard-stack-shoebox-hero.webp"
+    },
+    {
+      "id": "challenger-wpa",
+      "label": "The Profile Poster",
+      "verdict": "declined",
+      "lineage": "WPA national-park travel posters",
+      "thesis": "Each stage becomes one flat-ink portrait plane and one ranger-voiced imperative.",
+      "palette": ["#2C7A7B", "#285943", "#B86B3D", "#F2E6C9"],
+      "materials": ["flat silkscreen ink", "cream stock", "caption bars"],
+      "viewport": "The selected portrait becomes a four-plane poster above a full-width Generate remaining photos command bar.",
+      "case": "Memorable hierarchy, but the poster language promotes the product more than it helps someone operate it.",
+      "kept": "One imperative per screen with uncompromised flat hierarchy.",
+      "risk": "Generated photos could look falsely color-treated when the interface is too visually entangled with them.",
+      "hero": "https://impeccable.style/worlds/cards/posters-covers-sleeves-wpa-park-poster-hero.webp"
+    },
+    {
+      "id": "challenger-star-atlas",
+      "label": "The Candidate Atlas",
+      "verdict": "declined",
+      "lineage": "celestial star-atlas charts",
+      "thesis": "Candidates form a ranked field where recommendation strength is visible as magnitude and every package has coordinates.",
+      "palette": ["#071B33", "#F3F0E8", "#D98245", "#8296AA"],
+      "materials": ["night chart paper", "coordinate grids", "magnitude dots"],
+      "viewport": "A bright best-shot anchor centers the candidate field while package coordinates and the next action orbit at quieter scales.",
+      "case": "Ranking can be beautifully legible, but spatial metaphor obscures the straightforward generate-review-export sequence.",
+      "kept": "Encode importance through scale before annotation or color.",
+      "risk": "A constellation of portraits becomes abstract precisely when users need direct comparison.",
+      "hero": "https://impeccable.style/worlds/cards/notation-diagram-systems-star-atlas-hero.webp"
+    },
+    {
+      "id": "challenger-miura",
+      "label": "The Deployable Sheet",
+      "verdict": "declined",
+      "lineage": "Miura-fold deployable structures",
+      "thesis": "The package opens from a compact summary into linked candidate, refinement, and export regions without losing their relationship.",
+      "palette": ["#FCFCFA", "#23272B", "#D2A84A", "#BFD9E8"],
+      "materials": ["matte folded sheet", "gold foil packet", "scored creases"],
+      "viewport": "A compact package packet opens stepwise into portrait proofs and allowance detail as the user advances.",
+      "case": "Excellent responsive behavior, but fold geometry adds interpretation cost to familiar controls.",
+      "kept": "Compact summaries deploy detail progressively while preserving the complete state graph.",
+      "risk": "Diagonal seams would fight portrait crops and reduce tap-target clarity.",
+      "hero": "https://impeccable.style/worlds/cards/paper-folds-pleats-deployable-miura-orbit-sheet-hero.webp"
+    },
+    {
+      "id": "challenger-alphabet",
+      "label": "The Instruction Weather",
+      "verdict": "declined",
+      "lineage": "procedural alphabet storms",
+      "thesis": "Plain-language actions physically transform into package state, turning instructions into visible consequences.",
+      "palette": ["#FAFAF7", "#101214", "#A7ABB0", "#D9DDE1"],
+      "materials": ["paper field", "monumental grotesk letters", "silver transition flash"],
+      "viewport": "Generate condenses into eight candidate labels, then settles into a stable proof strip beneath the selected portrait.",
+      "case": "Expressive state motion, but language-as-weather competes with faces and harms task predictability.",
+      "kept": "Status motion must be deterministic, reversible, and readable throughout transformation.",
+      "risk": "The signature interaction would dominate the product instead of serving package fulfillment.",
+      "hero": "https://impeccable.style/worlds/cards/dream-surreal-impossible-worlds-alphabet-storm-hero.webp"
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "code", "toggle": false},
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A polished SaaS wizard with a stepper, upload card, candidate grid, settings cards, and sticky primary button.",
+    "palette": ["#FFFFFF", "#172033", "#22B8B0", "#E8EEF5"],
+    "materials": ["clean card grid", "soft elevation", "rounded controls"],
+    "viewport": "A conventional top stepper leads into one white task card, with package status in a sidebar and the primary action at the bottom.",
+    "risk": "Immediately usable, but visually interchangeable with unrelated AI tools and likely to repeat the current hierarchy problem."
+  },
+  "steer": true
+}
