@@ -837,6 +837,11 @@
                 Regenerate selected proof
               </button>
             </div>
+            <p class="action-blocker" *ngIf="errorMessage" role="alert">{{ errorMessage }}</p>
+            <app-turnstile
+              *ngIf="turnstileSiteKey && !turnstileToken"
+              [siteKey]="turnstileSiteKey"
+              (tokenChange)="onTurnstileTokenChange($event)"></app-turnstile>
             <div class="add-on-grid">
               <button
                 class="add-on-card"

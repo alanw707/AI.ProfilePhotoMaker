@@ -2573,11 +2573,16 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
           }
         },
         error: error => {
+          const apiError = error?.error?.error;
           this.errorMessage =
             error?.error?.message ||
-            error?.error?.error?.message ||
+            apiError?.message ||
             error?.message ||
             'Premium augmentation failed.';
+          if (apiError?.code === 'BotVerificationFailed') {
+            this.turnstileToken = '';
+            this.turnstile?.reset();
+          }
           this.isApplyingPremiumAugmentation = false;
           this._cdr.markForCheck();
         },

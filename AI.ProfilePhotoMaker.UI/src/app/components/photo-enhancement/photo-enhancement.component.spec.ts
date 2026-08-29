@@ -35,6 +35,38 @@ function createComponent(
 }
 
 describe('PhotoEnhancementComponent package fulfillment', () => {
+  it('resets an expired bot-verification token after a premium augmentation rejection', () => {
+    const component = createComponent('pro_package', 9);
+    Object.assign(component, {
+      arePremiumAugmentationsVisible: true,
+      enhancedImage: {
+        url: 'candidate.jpg',
+        storagePath: 'generated/candidate.jpg',
+        processedImageId: 1,
+      },
+      premiumAugmentations: [],
+      turnstileSiteKey: 'site-key',
+      turnstileToken: 'expired-token',
+    });
+    (component as any)._cdr = { markForCheck: () => undefined };
+    (component as any)._replicateService = {
+      enhancePhoto: () =>
+        throwError(() => ({
+          error: {
+            error: {
+              code: 'BotVerificationFailed',
+              message: 'Bot verification failed. Please try again.',
+            },
+          },
+        })),
+    };
+
+    component.applyPremiumAugmentation('relighting');
+
+    expect(component.turnstileToken).toBe('');
+    expect(component.errorMessage).toContain('Bot verification failed');
+  });
+
   it('shows the remaining paid candidate slots as the primary generation action', () => {
     const component = createComponent('pro_package', 1);
 
