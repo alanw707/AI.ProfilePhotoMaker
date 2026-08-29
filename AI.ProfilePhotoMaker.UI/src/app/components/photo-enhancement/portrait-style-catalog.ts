@@ -58,14 +58,16 @@ export class PortraitStyleCatalogModule<T extends PortraitStyleCatalogCard> {
     return styles.find(style => style.group === 'recommended') ?? styles[0] ?? null;
   }
 
+  getRecommendedStyles(styles: T[], useCase: PortraitStyleUseCase): T[] {
+    return useCase.recommendedStyles
+      .map(styleName =>
+        styles.find(card => card.style.name === styleName || card.key === styleName)
+      )
+      .filter((style): style is T => !!style);
+  }
+
   selectRecommendedForUseCase(styles: T[], useCase: PortraitStyleUseCase): T | null {
-    return (
-      useCase.recommendedStyles
-        .map(styleName =>
-          styles.find(card => card.style.name === styleName || card.key === styleName)
-        )
-        .find((style): style is T => !!style) ?? null
-    );
+    return this.getRecommendedStyles(styles, useCase)[0] ?? null;
   }
 
   findByStyleName(styles: T[], styleName: string | null | undefined): T | null {

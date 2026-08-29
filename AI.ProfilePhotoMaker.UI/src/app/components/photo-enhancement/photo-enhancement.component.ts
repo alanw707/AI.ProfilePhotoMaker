@@ -144,7 +144,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       label: 'LinkedIn / Executive',
       shortLabel: 'LinkedIn',
       description: 'Best for LinkedIn, resumes, avatars, and executive profile pages.',
-      recommendedStyles: ['linkedin', 'executive', 'professional'],
+      recommendedStyles: ['linkedin', 'executive', 'tech-professional'],
       defaultExports: ['linkedin_profile', 'google_avatar', 'resume_headshot', 'original_high_res'],
     },
     {
@@ -152,7 +152,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       label: 'Realtor',
       shortLabel: 'Realtor',
       description: 'Trust-building portraits for Zillow, Realtor.com, flyers, and social posts.',
-      recommendedStyles: ['linkedin', 'executive', 'professional'],
+      recommendedStyles: ['startup', 'linkedin', 'executive'],
       defaultExports: ['realtor_square', 'realtor_flyer', 'linkedin_profile', 'original_high_res'],
     },
     {
@@ -160,7 +160,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       label: 'Founder / Press Kit',
       shortLabel: 'Founder',
       description: 'Founder portraits for press bios, podcasts, website bios, and social banners.',
-      recommendedStyles: ['linkedin', 'executive', 'creator'],
+      recommendedStyles: ['entrepreneur', 'executive', 'creative'],
       defaultExports: [
         'website_bio',
         'podcast_avatar',
@@ -1399,6 +1399,16 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   getVisiblePortraitStyles(): PortraitStyleCard[] {
+    if (this.selectedStyleGroup === 'recommended') {
+      const styles = this.portraitStyleCatalog.getRecommendedStyles(
+        this.portraitStyles,
+        this.getSelectedUseCase()
+      );
+      if (styles.length) {
+        return styles;
+      }
+    }
+
     return this.portraitStyleCatalog.getVisibleStyles(this.portraitStyles, this.selectedStyleGroup);
   }
 

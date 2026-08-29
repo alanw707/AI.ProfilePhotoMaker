@@ -54,4 +54,12 @@ describe('PortraitStyleCatalogModule', () => {
       catalog.selectRecommendedForUseCase(styles, { recommendedStyles: ['pixar-3d'] })?.style.name
     ).toBe('pixar_3d');
   });
+
+  it('returns only a use case’s recommendations in its declared order', () => {
+    expect(
+      catalog
+        .getRecommendedStyles(styles, { recommendedStyles: ['executive', 'linkedin'] })
+        .map(style => style.key)
+    ).toEqual(['executive', 'linkedin']);
+  });
 });
