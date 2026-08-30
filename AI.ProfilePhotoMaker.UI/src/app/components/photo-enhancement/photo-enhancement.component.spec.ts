@@ -68,6 +68,40 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.errorMessage).toContain('Bot verification failed');
   });
 
+  it('keeps Free Preview selected when a saved paid-generation draft has no entitlement', () => {
+    const component = createComponent('free_preview', 0);
+    const storageKey = 'photoWorkspaceInterruptedGeneration-test';
+    Object.assign(component, {
+      _interruptedGenerationKey: storageKey,
+      photoWorkspaceSession: {
+        createStoredPreviewSourceState: () => ({
+          imagePreview: 'stored-preview',
+          beforeImageLoadFailed: false,
+        }),
+      },
+    });
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        clientRequestId: 'interrupted-request',
+        imageStoragePath: 'uploads/source.jpg',
+        styleName: 'executive',
+        packageCode: 'pro_package',
+        useCaseCode: 'linkedin_executive',
+        isRegeneration: false,
+        startedAt: new Date().toISOString(),
+      })
+    );
+
+    try {
+      (component as any).restoreInterruptedGeneration();
+
+      expect(component.selectedPackageCode).toBe('free_preview');
+    } finally {
+      localStorage.removeItem(storageKey);
+    }
+  });
+
   it('only shows styles suited to the selected use case as recommended', () => {
     const component = createComponent('free_preview', 0);
     Object.assign(component, {

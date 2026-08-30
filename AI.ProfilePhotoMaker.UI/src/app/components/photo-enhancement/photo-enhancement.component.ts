@@ -882,8 +882,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
       this.interruptedGeneration = draft;
       this._activeGenerationClientRequestId = draft.clientRequestId;
-      this.selectedPackageCode = draft.packageCode;
-      this.selectedUseCaseCode = draft.useCaseCode;
       this.previewSourceStoragePath = draft.imageStoragePath;
       this.currentSourceStoragePath = draft.imageStoragePath;
       this.pendingPaidStyleName = draft.styleName;
