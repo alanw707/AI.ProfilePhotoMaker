@@ -26,6 +26,20 @@ public class ProfilePhotoScoreServiceTests
     }
 
     [Fact]
+    public async Task ScoreAsync_RatesReferenceProfessionalPortraitAtNinetyOrHigher()
+    {
+        var fixturePath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "../../../../AI.ProfilePhotoMaker.UI/src/assets/marketing/before-after/executive-after.jpg"));
+        await using var stream = File.OpenRead(fixturePath);
+
+        var score = await new ProfilePhotoScoreService().ScoreAsync(stream, "executive-after.jpg");
+
+        Assert.True(score.OverallScore >= 90, $"Expected 90 or higher, got {score.OverallScore}.");
+        Assert.Equal("pass", score.QualityGate.Status);
+    }
+
+    [Fact]
     public async Task ScoreAsync_ReturnsQualityGateForUpload()
     {
         await using var stream = new MemoryStream();

@@ -71,14 +71,17 @@ public class ProfilePhotoScoreService : IProfilePhotoScoreService
             BuildSubscore("role_readiness", $"Role readiness ({rubricSource})", roleFitScore, rubric?.RoleFitFeedback ?? (roleFitScore >= 80 ? "The image has a strong baseline for professional role-specific positioning." : "Improve professionalism, approachability, confidence, and attire/background fit before relying on role-specific styling."))
         };
 
-        var overall = (int)Math.Round(subscores.Average(s => s.Score));
+        // Technical signals gate unusable uploads; derived subscores remain explanatory and are not counted twice.
+        var technicalScore = new[] { resolutionScore, framingScore, lightingScore, sharpnessScore, backgroundScore, facePresenceScore }.Average();
+        var readinessScore = new[] { professionalismScore, approachabilityScore, confidenceScore, attireBackgroundFitScore, roleFitScore }.Average();
+        var overall = CalibrateProfessionalReadiness((technicalScore * 0.4) + (readinessScore * 0.6));
         var strengths = subscores.Where(s => s.Score >= 82).Select(s => s.Label).Take(3).ToList();
         var improvements = subscores.Where(s => s.Score < 82).OrderBy(s => s.Score).Select(s => s.Feedback).Take(3).ToList();
 
         return new ProfilePhotoScoreDto
         {
             OverallScore = overall,
-            RatingLabel = overall >= 85 ? "LinkedIn-ready" : overall >= 70 ? "Good starting point" : "Needs improvement",
+            RatingLabel = overall >= 90 ? "LinkedIn-ready" : overall >= 75 ? "Good starting point" : "Needs improvement",
             Subscores = subscores,
             Strengths = strengths.Count > 0 ? strengths : new List<string> { "Clear enough to start a profile-photo workflow" },
             Improvements = improvements.Count > 0 ? improvements : new List<string> { "Use photo adjustment or refinement to tune the final result." },
@@ -123,7 +126,7 @@ public class ProfilePhotoScoreService : IProfilePhotoScoreService
             blocked.Add("Image appears too blurry for reliable generation.");
             recommendations.Add("Upload a sharper source photo.");
         }
-        else if (sharpnessScore < 62)
+        else if (sharpnessScore < 55)
         {
             warnings.Add("Image sharpness is below ideal quality.");
             recommendations.Add("Use a less blurry photo for better facial detail.");
@@ -175,7 +178,7 @@ public class ProfilePhotoScoreService : IProfilePhotoScoreService
                         role = "user",
                         content = new object[]
                         {
-                            new { type = "text", text = "Score this professional profile photo. Return JSON only with integer 0-100 fields professionalism, approachability, confidence, attireBackgroundFit, roleFit and concise feedback fields professionalismFeedback, approachabilityFeedback, confidenceFeedback, attireBackgroundFitFeedback, roleFitFeedback, overallFeedback. Judge visible professionalism, approachability, confidence, attire appropriateness, background fit, and general role readiness. Do not identify the person." },
+                            new { type = "text", text = "Score this LinkedIn professional profile photo. Return JSON only with integer 0-100 fields professionalism, approachability, confidence, attireBackgroundFit, roleFit and concise feedback fields professionalismFeedback, approachabilityFeedback, confidenceFeedback, attireBackgroundFitFeedback, roleFitFeedback, overallFeedback. Judge visible professionalism, approachability, confidence, attire appropriateness, background fit, and LinkedIn role readiness. Use this calibration: 90-95 = polished, clear, platform-ready professional portrait; 80-89 = good with a minor shortcoming; 70-79 = a material issue; below 70 = unsuitable. Neat business-casual attire is appropriate for LinkedIn unless visibly unprofessional. Do not identify the person." },
                             new { type = "image_url", image_url = new { url = dataUrl } }
                         }
                     }
@@ -241,6 +244,21 @@ public class ProfilePhotoScoreService : IProfilePhotoScoreService
         public string? AttireBackgroundFitFeedback { get; init; }
         public string? RoleFitFeedback { get; init; }
         public string? OverallFeedback { get; init; }
+    }
+
+    private static int CalibrateProfessionalReadiness(double rawScore)
+    {
+        if (rawScore < 55)
+        {
+            return (int)Math.Round(rawScore);
+        }
+
+        if (rawScore < 70)
+        {
+            return (int)Math.Round(55 + ((rawScore - 55) * 4 / 3));
+        }
+
+        return Math.Min(100, (int)Math.Round(75 + ((rawScore - 70) * 25 / 18)));
     }
 
     private static ProfilePhotoSubscoreDto BuildSubscore(string code, string label, int score, string feedback)
