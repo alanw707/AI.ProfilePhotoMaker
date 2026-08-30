@@ -1,4 +1,5 @@
 import { PhotoEnhancementComponent } from './photo-enhancement.component';
+import { PortraitStyleCatalogModule } from './portrait-style-catalog';
 import { of, throwError } from 'rxjs';
 import { HeadshotCandidate } from '../../services/headshot-generation.service';
 
@@ -65,6 +66,43 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
 
     expect(component.turnstileToken).toBe('');
     expect(component.errorMessage).toContain('Bot verification failed');
+  });
+
+  it('only shows styles suited to the selected use case as recommended', () => {
+    const component = createComponent('free_preview', 0);
+    Object.assign(component, {
+      selectedStyleGroup: 'recommended',
+      selectedUseCaseCode: 'realtor',
+      packUseCases: [
+        {
+          code: 'realtor',
+          recommendedStyles: ['linkedin', 'executive', 'entrepreneur', 'startup'],
+        },
+      ],
+      portraitStyles: [
+        'linkedin',
+        'executive',
+        'entrepreneur',
+        'startup',
+        'medical',
+        'academic',
+        'creative',
+      ].map((key, displayOrder) => ({
+        key,
+        style: { name: key },
+        group: 'recommended',
+        displayOrder,
+        name: key,
+      })),
+      portraitStyleCatalog: new PortraitStyleCatalogModule(),
+    });
+
+    expect(component.getVisiblePortraitStyles().map(style => style.key)).toEqual([
+      'linkedin',
+      'executive',
+      'entrepreneur',
+      'startup',
+    ]);
   });
 
   it('shows the remaining paid candidate slots as the primary generation action', () => {

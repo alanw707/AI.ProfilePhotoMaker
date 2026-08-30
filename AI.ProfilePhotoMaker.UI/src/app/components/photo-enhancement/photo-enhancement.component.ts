@@ -144,7 +144,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       label: 'LinkedIn / Executive',
       shortLabel: 'LinkedIn',
       description: 'Best for LinkedIn, resumes, avatars, and executive profile pages.',
-      recommendedStyles: ['linkedin', 'executive', 'tech-professional'],
+      recommendedStyles: ['linkedin', 'executive', 'tech-professional', 'entrepreneur'],
       defaultExports: ['linkedin_profile', 'google_avatar', 'resume_headshot', 'original_high_res'],
     },
     {
@@ -152,7 +152,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       label: 'Realtor',
       shortLabel: 'Realtor',
       description: 'Trust-building portraits for Zillow, Realtor.com, flyers, and social posts.',
-      recommendedStyles: ['startup', 'linkedin', 'executive'],
+      recommendedStyles: ['linkedin', 'executive', 'entrepreneur', 'startup'],
       defaultExports: ['realtor_square', 'realtor_flyer', 'linkedin_profile', 'original_high_res'],
     },
     {
@@ -160,7 +160,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       label: 'Founder / Press Kit',
       shortLabel: 'Founder',
       description: 'Founder portraits for press bios, podcasts, website bios, and social banners.',
-      recommendedStyles: ['entrepreneur', 'executive', 'creative'],
+      recommendedStyles: ['entrepreneur', 'executive', 'startup', 'tech-professional', 'creative'],
       defaultExports: [
         'website_bio',
         'podcast_avatar',
@@ -1279,19 +1279,19 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         description: 'Clean, modern profile for engineering and product roles.',
       },
       medical: {
-        group: 'recommended',
+        group: 'more',
         badgeLabel: 'Healthcare',
         displayOrder: 60,
         description: 'Calm, trusted presentation for clinical profiles.',
       },
       academic: {
-        group: 'recommended',
+        group: 'more',
         badgeLabel: 'Academic',
         displayOrder: 70,
         description: 'Credible portrait for educators, authors, and researchers.',
       },
       creative: {
-        group: 'recommended',
+        group: 'more',
         badgeLabel: 'Creative',
         displayOrder: 80,
         description: 'Professional polish with a more expressive feel.',
@@ -1411,7 +1411,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       this.portraitStyles,
       this.getSelectedUseCase()
     );
-    return [...recommended, ...styles.filter(style => !recommended.includes(style))];
+    return recommended;
   }
 
   hasPortraitStyleGroup(group: PortraitStyleGroup): boolean {
