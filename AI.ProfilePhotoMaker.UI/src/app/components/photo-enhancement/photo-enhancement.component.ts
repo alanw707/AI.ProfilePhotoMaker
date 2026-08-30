@@ -1399,17 +1399,19 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   getVisiblePortraitStyles(): PortraitStyleCard[] {
-    if (this.selectedStyleGroup === 'recommended') {
-      const styles = this.portraitStyleCatalog.getRecommendedStyles(
-        this.portraitStyles,
-        this.getSelectedUseCase()
-      );
-      if (styles.length) {
-        return styles;
-      }
+    const styles = this.portraitStyleCatalog.getVisibleStyles(
+      this.portraitStyles,
+      this.selectedStyleGroup
+    );
+    if (this.selectedStyleGroup !== 'recommended') {
+      return styles;
     }
 
-    return this.portraitStyleCatalog.getVisibleStyles(this.portraitStyles, this.selectedStyleGroup);
+    const recommended = this.portraitStyleCatalog.getRecommendedStyles(
+      this.portraitStyles,
+      this.getSelectedUseCase()
+    );
+    return [...recommended, ...styles.filter(style => !recommended.includes(style))];
   }
 
   hasPortraitStyleGroup(group: PortraitStyleGroup): boolean {

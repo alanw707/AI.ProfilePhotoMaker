@@ -122,18 +122,18 @@ test.describe("Instant headshot mocked flow", () => {
         contentType: "application/json",
         body: JSON.stringify({
           success: true,
-          data: [
-            {
-              id: 1,
-              name: "LinkedIn",
+          data: ["LinkedIn", "Executive", "Entrepreneur", "Startup"].map(
+            (name, index) => ({
+              id: index + 1,
+              name,
               description: "Clean professional portrait",
               promptTemplate: "Professional portrait",
               negativePromptTemplate: "",
               isActive: true,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
-            },
-          ],
+            }),
+          ),
           error: null,
         }),
       });
@@ -342,12 +342,22 @@ test.describe("Instant headshot mocked flow", () => {
     });
 
     let headshotCalled = false;
+    let generatedCandidateCount = 0;
     await page.route("**/api/headshots/generate", async (route) => {
       headshotCalled = true;
+      generatedCandidateCount += 1;
       const request = route.request().postDataJSON();
       expect(request.imageStoragePath).toContain("/enhanced/");
       expect(request.packageCode).toBe("pro_package");
-      expect(request.numOutputs).toBe(9);
+      expect(request.numOutputs).toBe(1);
+      const candidate = {
+        imageUrl: "data:image/png;base64,iVBORw0KGgo=",
+        storagePath: `dev/generated/user-1/headshot-${generatedCandidateCount}.png`,
+        processedImageId: 41 + generatedCandidateCount,
+        provider: "openai",
+        model: "gpt-image-2",
+        correlationId: `corr-${generatedCandidateCount}`,
+      };
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -355,24 +365,12 @@ test.describe("Instant headshot mocked flow", () => {
           success: true,
           data: {
             success: true,
-            imageUrl: "data:image/png;base64,iVBORw0KGgo=",
-            storagePath: "dev/generated/user-1/headshot-1.png",
-            processedImageId: 42,
-            provider: "openai",
-            model: "gpt-image-2",
+            ...candidate,
             style: "general_professional",
             background: "auto",
             creditsCost: 1,
             remainingCredits: 4,
-            correlationId: "corr-1",
-            candidates: Array.from({ length: 9 }, (_, index) => ({
-              imageUrl: "data:image/png;base64,iVBORw0KGgo=",
-              storagePath: `dev/generated/user-1/headshot-${index + 1}.png`,
-              processedImageId: 42 + index,
-              provider: "openai",
-              model: "gpt-image-2",
-              correlationId: `corr-${index + 1}`,
-            })),
+            candidates: [candidate],
           },
           error: null,
         }),
@@ -468,7 +466,18 @@ test.describe("Instant headshot mocked flow", () => {
     await expect(page.getByText(/88\/100/).first()).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByText("Linkedin").first()).toBeVisible();
+    const recommendedStyles = page.locator(".portrait-style-card");
+    await expect(recommendedStyles).toHaveCount(4);
+    const fourthRecommendedStyle = page.getByRole("button", { name: /Startup/i });
+    await expect(fourthRecommendedStyle).toBeVisible();
+    const firstStyleImage = recommendedStyles.first().locator("img");
+    const firstStyleTitle = recommendedStyles.first().locator("h4");
+    const [imageBox, titleBox] = await Promise.all([
+      firstStyleImage.boundingBox(),
+      firstStyleTitle.boundingBox(),
+    ]);
+    expect(imageBox?.y! + imageBox?.height!).toBeLessThanOrEqual(titleBox?.y!);
+    await page.getByLabel("Unlocked package").selectOption("pro_package");
     await page
       .getByRole("checkbox", { name: /biometric data/i })
       .check({ force: true });
