@@ -167,6 +167,20 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.isCandidateFulfillmentComplete()).toBeFalse();
   });
 
+  it('shows the API recovery message instead of a generic HTTP error', () => {
+    const component = createComponent('pro_package', 0);
+
+    const message = (component as any).getEnhancementErrorMessage({
+      status: 400,
+      message: 'Http failure response',
+      error: {
+        error: { message: 'The selected source photo expired. Choose a saved candidate instead.' },
+      },
+    });
+
+    expect(message).toBe('The selected source photo expired. Choose a saved candidate instead.');
+  });
+
   it('restores paid candidates even when the preview source has expired', () => {
     const component = createComponent('pro_package', 0);
     const preview = {
