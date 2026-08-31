@@ -621,7 +621,10 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   getGeneratedCandidateCount(): number {
-    return Math.min(this.generatedCandidates.length, this.getSelectedCandidateCount());
+    const total = this.getSelectedCandidateCount();
+    const entitlement = this.getCurrentPackageEntitlement();
+    const consumed = entitlement ? total - Math.max(entitlement.remainingCandidates, 0) : 0;
+    return Math.min(Math.max(this.generatedCandidates.length, consumed), total);
   }
 
   getRemainingCandidateSlots(): number {

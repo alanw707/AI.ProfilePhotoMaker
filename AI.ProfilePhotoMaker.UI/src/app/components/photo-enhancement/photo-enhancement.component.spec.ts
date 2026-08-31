@@ -167,6 +167,28 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.isCandidateFulfillmentComplete()).toBeFalse();
   });
 
+  it('uses the remaining Pro allowance after its promoted preview is no longer available', () => {
+    const component = createComponent('pro_package', 0);
+    component.enhancementType = 'headshot';
+    component.packageEntitlements = [
+      {
+        id: 1,
+        packageCode: 'pro_package',
+        packageName: 'Pro Package',
+        status: 'active',
+        remainingPackageUses: 1,
+        remainingCandidates: 8,
+        remainingRefinements: 5,
+        remainingPremiumAugmentations: 2,
+        platformExportKitAvailable: true,
+      },
+    ];
+
+    expect(component.getPackageProgressText()).toBe('1 of 9 generated');
+    expect(component.getCandidateRequestCountForSelectedPackage()).toBe(8);
+    expect(component.hasEnoughCredits()).toBeTrue();
+  });
+
   it('reports an allowance mismatch without directing the user to refinements', () => {
     const component = createComponent('pro_package', 4);
     component.packageEntitlements = [
