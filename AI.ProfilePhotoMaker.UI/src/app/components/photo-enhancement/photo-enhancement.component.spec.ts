@@ -167,6 +167,27 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.isCandidateFulfillmentComplete()).toBeFalse();
   });
 
+  it('uses a paid refinement allowance instead of legacy credits for a Gallery photo', () => {
+    const component = createComponent('pro_package', 0);
+    Object.assign(component, {
+      isHeadshotMvpEnabled: true,
+      packageEntitlements: [
+        {
+          packageCode: 'pro_package',
+          status: 'active',
+          remainingPackageUses: 1,
+          remainingCandidates: 7,
+          remainingRefinements: 1,
+          remainingPremiumAugmentations: 0,
+          platformExportKitAvailable: true,
+        },
+      ],
+    });
+    component.enhancementType = 'headshot_linkedin';
+
+    expect(component.hasEnoughCredits()).toBeTrue();
+  });
+
   it('shows the API recovery message instead of a generic HTTP error', () => {
     const component = createComponent('pro_package', 0);
 
