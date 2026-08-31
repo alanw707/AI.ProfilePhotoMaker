@@ -555,12 +555,14 @@ public class OutcomePackageServiceTests
     }
 
     [Theory]
-    [InlineData(8, 0, 9)]
-    [InlineData(3, 5, 4)]
+    [InlineData(8, 0, 9, true)]
+    [InlineData(3, 5, 4, true)]
+    [InlineData(3, 5, 4, false)]
     public async Task GetResumablePreview_RestoresPromotedAndPaidCandidatesAfterInterruption(
         int generatedCandidateCount,
         int remainingCandidateCount,
-        int expectedTotal)
+        int expectedTotal,
+        bool previewDisplayExists)
     {
         await using var context = CreateContext();
         var userId = "resume-paid-user";
@@ -647,7 +649,10 @@ public class OutcomePackageServiceTests
         await context.SaveChangesAsync();
 
         var storage = new Mock<IStorageService>();
-        storage.Setup(service => service.ExistsAsync(It.IsAny<string>())).ReturnsAsync(true);
+        storage.Setup(service => service.ExistsAsync(It.IsAny<string>()))
+            .Returns((string path) => Task.FromResult(
+                previewDisplayExists ||
+                (path != preview.ProcessedImageUrl && path != preview.OriginalImageUrl)));
         var service = new OutcomePackageService(
             context,
             NullLogger<OutcomePackageService>.Instance,

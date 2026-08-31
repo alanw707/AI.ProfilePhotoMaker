@@ -139,14 +139,53 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
         var json = await response.Content.ReadFromJsonAsync<HeadshotApiResponse>();
         Assert.NotNull(json?.Data);
         Assert.Equal(3, json!.Data!.Candidates.Count);
-        Assert.Equal(3, json.Data.CreditsCost);
-        Assert.Equal(7, json.Data.RemainingCredits);
+        Assert.Equal(0, json.Data.CreditsCost);
+        Assert.Equal(10, json.Data.RemainingCredits);
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var entitlement = db.UserPackageEntitlements.Single(e => e.UserId == userId);
         Assert.Equal(0, entitlement.RemainingCandidates);
         Assert.Equal(3, db.ProcessedImages.Count(i => i.UserProfile.UserId == userId));
+    }
+
+    [Fact]
+    public async Task StudioSource_ReturnsOnlyAnOwnedImage()
+    {
+        var ownerUserId = $"studio-owner-{Guid.NewGuid():N}";
+        var otherUserId = $"studio-other-{Guid.NewGuid():N}";
+        await SeedUserAsync(ownerUserId, credits: 0);
+        await SeedUserAsync(otherUserId, credits: 0);
+
+        var ownerClient = _factory.CreateClient();
+        ownerClient.DefaultRequestHeaders.Add("X-Test-UserId", ownerUserId);
+        var generated = await ownerClient.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = $"testing/enhanced/{ownerUserId}/source.png",
+            style = "professional",
+            background = "auto",
+            packageCode = "free_preview",
+            numOutputs = 1
+        });
+        generated.EnsureSuccessStatusCode();
+        var generatedBody = await generated.Content.ReadFromJsonAsync<HeadshotApiResponse>();
+        var imageId = generatedBody!.Data!.ProcessedImageId;
+
+        var ownerResponse = await ownerClient.GetAsync($"/api/ProfilePhotoWorkflow/images/{imageId}/studio-source");
+        ownerResponse.EnsureSuccessStatusCode();
+        var ownerBody = await ownerResponse.Content.ReadFromJsonAsync<StudioImageSourceApiResponse>();
+        Assert.True(ownerBody!.Success);
+        Assert.Equal(imageId, ownerBody.Data!.ProcessedImageId);
+
+        var otherClient = _factory.CreateClient();
+        otherClient.DefaultRequestHeaders.Add("X-Test-UserId", otherUserId);
+        var otherResponse = await otherClient.GetAsync($"/api/ProfilePhotoWorkflow/images/{imageId}/studio-source");
+        Assert.Equal(HttpStatusCode.NotFound, otherResponse.StatusCode);
+
+        var anonymousClient = _factory.CreateClient();
+        anonymousClient.DefaultRequestHeaders.Add("X-Test-Unauthenticated", "true");
+        var anonymousResponse = await anonymousClient.GetAsync($"/api/ProfilePhotoWorkflow/images/{imageId}/studio-source");
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymousResponse.StatusCode);
     }
 
     [Fact]
@@ -369,6 +408,17 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
         public bool CanPromotePreview { get; set; }
         public string? ActivePackageCode { get; set; }
         public int RemainingCandidateCount { get; set; }
+    }
+
+    private sealed class StudioImageSourceApiResponse
+    {
+        public bool Success { get; set; }
+        public StudioImageSourceApiData? Data { get; set; }
+    }
+
+    private sealed class StudioImageSourceApiData
+    {
+        public int ProcessedImageId { get; set; }
     }
 
     private sealed class HeadshotApiData

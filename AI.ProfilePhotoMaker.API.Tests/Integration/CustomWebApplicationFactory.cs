@@ -172,6 +172,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 sp.GetRequiredService<ILogger<OpenAIImageGenerationService>>(),
                 sp.GetRequiredService<IStorageService>()));
         services.AddScoped<IOutcomePackageService, OutcomePackageService>();
+        services.AddScoped<IProfilePhotoScoreService, FakeProfilePhotoScoreService>();
+        services.AddScoped<IPlatformExportService, FakePlatformExportService>();
         services.AddScoped<IHeadshotGenerationProvider, OpenAIHeadshotGenerationProvider>();
         services.AddScoped<IHeadshotGenerationService>(sp => new HeadshotGenerationService(
             sp.GetRequiredService<ApplicationDbContext>(),
@@ -324,6 +326,28 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         public Task SendAbandonedUploadNudgeAsync(string userId, string? email, string? firstName = null, int uploadedCount = 0, int minimumRequiredUploads = 5) => Task.CompletedTask;
         public Task<EmailSendResult> SendMarketingEmailAsync(string userId, string email, string subject, string htmlBody, string unsubscribeUrl) => Task.FromResult(new EmailSendResult(true));
         public string RenderMarketingEmailPreview(string subject, string htmlBody) => htmlBody;
+    }
+
+    private sealed class FakeProfilePhotoScoreService : IProfilePhotoScoreService
+    {
+        public Task<ProfilePhotoScoreDto> ScoreAsync(
+            Stream imageStream,
+            string fileName,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ProfilePhotoScoreDto());
+    }
+
+    private sealed class FakePlatformExportService : IPlatformExportService
+    {
+        public IReadOnlyList<PlatformExportOptionDto> GetExportOptions() => Array.Empty<PlatformExportOptionDto>();
+
+        public Task<byte[]> CreateExportPackageAsync(
+            Stream sourceImage,
+            string baseFileName,
+            IReadOnlyCollection<string> exportCodes,
+            PlatformExportAdjustmentOptions? adjustments = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(Array.Empty<byte>());
     }
 
     private sealed class FakeStorageService : IStorageService

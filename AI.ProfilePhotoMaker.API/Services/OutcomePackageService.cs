@@ -236,8 +236,16 @@ public class OutcomePackageService : IOutcomePackageService
         }
 
         if (preview == null ||
-            !await _context.Styles.AnyAsync(s => s.IsActive && s.Name == preview.Style, cancellationToken) ||
-            !await StorageImageExistsAsync(preview.ProcessedImageUrl))
+            !await _context.Styles.AnyAsync(s => s.IsActive && s.Name == preview.Style, cancellationToken))
+        {
+            return null;
+        }
+
+        // A package may already own durable paid candidates even after the
+        // watermarked preview display copy has expired. The display copy is
+        // required only to resume an unpaid preview; do not hide paid work.
+        var previewDisplayExists = await StorageImageExistsAsync(preview.ProcessedImageUrl);
+        if (!previewDisplayExists && entitlement == null)
         {
             return null;
         }

@@ -167,6 +167,43 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.isCandidateFulfillmentComplete()).toBeFalse();
   });
 
+  it('loads the authorized Gallery source into Studio refinement', () => {
+    const component = createComponent('pro_package', 0);
+    const getStudioImageSource = jasmine.createSpy('getStudioImageSource').and.returnValue(
+      of({
+        success: true,
+        data: {
+          processedImageId: 42,
+          storagePath: 'generated/gallery-photo.png',
+          imageUrl: 'gallery-photo-url',
+          style: 'linkedin',
+        },
+      })
+    );
+    (component as any)._profileWorkflowService = { getStudioImageSource };
+    (component as any)._cdr = { markForCheck: () => undefined };
+    (component as any).imageViewModule = {
+      createImageView: (
+        url: string,
+        type?: string,
+        processedImageId?: number,
+        storagePath?: string
+      ) => ({
+        url,
+        type,
+        processedImageId,
+        storagePath,
+      }),
+    };
+
+    (component as any).loadGalleryImageForRefinement(42);
+
+    expect(getStudioImageSource).toHaveBeenCalledOnceWith(42);
+    expect(component.enhancementType).toBe('headshot_linkedin');
+    expect(component.selectedCandidateId).toBe(42);
+    expect(component.saveSuccessMessage).toContain('Photo loaded from your workspace');
+  });
+
   it('uses a paid refinement allowance instead of legacy credits for a Gallery photo', () => {
     const component = createComponent('pro_package', 0);
     Object.assign(component, {
