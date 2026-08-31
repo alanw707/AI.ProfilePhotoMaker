@@ -167,6 +167,27 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.isCandidateFulfillmentComplete()).toBeFalse();
   });
 
+  it('restores paid candidates even when the preview source has expired', () => {
+    const component = createComponent('pro_package', 0);
+    const preview = {
+      hasRawPreview: false,
+      activePackageCode: 'pro_package',
+      candidates: [candidate(1)],
+    } as any;
+    Object.assign(component, {
+      _headshotGenerationService: {
+        getResumablePreview: () => of({ success: true, data: preview }),
+      },
+      _cdr: { markForCheck: () => undefined },
+    });
+    spyOn(component as any, 'clearInterruptedGeneration');
+    const resume = spyOn(component, 'resumePreview');
+
+    (component as any).loadResumablePreview();
+
+    expect(resume).toHaveBeenCalledWith(preview);
+  });
+
   it('uses the remaining Pro allowance after its promoted preview is no longer available', () => {
     const component = createComponent('pro_package', 0);
     component.enhancementType = 'headshot';

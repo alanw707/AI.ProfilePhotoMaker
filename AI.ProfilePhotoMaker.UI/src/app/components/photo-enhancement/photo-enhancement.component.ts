@@ -1100,11 +1100,12 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         if (this.resumablePreview?.candidates?.length) {
           this.clearInterruptedGeneration();
         }
+        const hasPaidCandidates =
+          !!this.resumablePreview?.candidates?.length &&
+          (this.resumablePreview.activePackageCode === 'starter_package' ||
+            this.resumablePreview.activePackageCode === 'pro_package');
         const shouldAutoResume =
-          this.resumablePreview?.hasRawPreview &&
-          (autoResume ||
-            this.resumablePreview?.activePackageCode === 'starter_package' ||
-            this.resumablePreview?.activePackageCode === 'pro_package');
+          hasPaidCandidates || (this.resumablePreview?.hasRawPreview && autoResume);
         if (shouldAutoResume && this.resumablePreview) {
           this.resumePreview(this.resumablePreview);
         }
