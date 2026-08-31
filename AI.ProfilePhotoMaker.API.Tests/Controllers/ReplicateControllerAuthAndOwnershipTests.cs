@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading;
+using System.Text.Json;
 using AI.ProfilePhotoMaker.API.Controllers;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
@@ -208,6 +209,44 @@ public class ReplicateControllerAuthAndOwnershipTests
 
         mockBasic.VerifyAll();
         mockReplicate.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GenerateImages_WithoutFiveCredits_ReplaysTheSavedStyledGeneration400WithoutCallingProvider()
+    {
+        using var db = CreateInMemoryDb();
+        const string userId = "styled-generation-user";
+        db.Styles.Add(new Style
+        {
+            Name = "linkedin",
+            Description = "Professional",
+            PromptTemplate = "portrait",
+            NegativePromptTemplate = string.Empty,
+            IsActive = true
+        });
+        await db.SaveChangesAsync();
+        var basic = new Mock<IBasicTierService>(MockBehavior.Strict);
+        basic.Setup(service => service.GetAvailableCreditsAsync(userId)).ReturnsAsync(0);
+        var replicate = new Mock<IReplicateApiClient>(MockBehavior.Strict);
+        var controller = CreateGenerationController(userId, db, replicate, basic);
+
+        var result = await controller.GenerateImages(new GenerateImagesRequestDto
+        {
+            UserId = userId,
+            TrainedModelVersion = "owner/model:version",
+            Style = "linkedin",
+            NumOutputs = 1
+        }) as BadRequestObjectResult;
+
+        Assert.NotNull(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, result!.StatusCode);
+        using var body = JsonDocument.Parse(JsonSerializer.Serialize(result.Value));
+        Assert.Equal("InsufficientCredits", body.RootElement.GetProperty("error").GetProperty("code").GetString());
+        Assert.Equal(
+            "Styled image generation requires 5 credits. You have 0 credits. Please purchase more credits to generate styled images.",
+            body.RootElement.GetProperty("error").GetProperty("message").GetString());
+        basic.Verify(service => service.GetAvailableCreditsAsync(userId), Times.Once);
+        replicate.VerifyNoOtherCalls();
     }
 
     [Fact]

@@ -12,6 +12,7 @@ Functional changes: `534c917` (`Restore paid candidates after preview expiry`); 
 | Package progress / partial retry | `GenerateHeadshot_OneCandidateBatchesResumeWithoutDuplicatesOrAllowanceLoss`; `PurchasedPhotoWorkflow_ScoresPreviewContinuesPackageAndLoadsStudioSource`; `photo-enhancement.component.spec.ts` partial-fulfilment cases |
 | Expired display/source recovery and stale-request prevention | `OutcomePackageServiceTests.GetResumablePreview_RestoresPromotedAndPaidCandidatesAfterInterruption` availability matrix; `HeadshotGenerationServiceTests.GenerateHeadshotAsync_RejectsExpiredSourceBeforeCallingProviderOrConsumingPackageAllowance`; expired-source UI resume spec |
 | Failed-generation recovery | `HeadshotGenerationServiceTests.GenerateHeadshotAsync_RefundsCreditsWhenProviderFails`; enhancement error/retry cases |
+| Original styled-generation 400 root cause | `ReplicateControllerAuthAndOwnershipTests.GenerateImages_WithoutFiveCredits_ReplaysTheSavedStyledGeneration400WithoutCallingProvider`; `docs/deployment/evidence/generation-insufficient-credits.json` |
 | Saved candidate viewing/refinement | `StudioSource_ReturnsOnlyAnOwnedImage`; `PurchasedPhotoWorkflow_ScoresPreviewContinuesPackageAndLoadsStudioSource` (owned restored-candidate URL returns 200; another user gets 404); Gallery route and Studio-load specs |
 
 The expiry case is deliberately red-capable: before `534c917`, its `previewDisplayExists: false` row returned `null`; it now restores the owned paid candidates while the preview display copy and source are unavailable.
@@ -20,20 +21,20 @@ The legacy-credit regression is deliberately red-capable: `GenerateHeadshotAsync
 
 `GenerateHeadshotAsync_RejectsExpiredSourceBeforeCallingProviderOrConsumingPackageAllowance` is deliberately red-capable: before the source guard, an expired source reached the provider and consumed package allowance. It now returns `ImageSourceExpired` before either action. The resumable-preview theory independently exercises every display/source availability pair while the paid preview raw asset is available; saved paid candidates restore in every availability combination.
 
-## Original production 400: evidence boundary and safe telemetry proposal
+## Original production 400: root cause and regression signal
 
-The saved production 400 (`Styled image generation requires 5 credits`) belongs to a different styled-image flow. It is **not evidence** for the instant-headshot package failure; this document does not claim a root cause for the original headshot 400. The package legacy-credit test above proves only that specific historical regression.
+The saved artifact at `docs/deployment/evidence/generation-insufficient-credits.json` is a complete redacted response: HTTP `400`, `InsufficientCredits`, and `Styled image generation requires 5 credits. You have 0 credits.` Its exact message maps to `GenerationController.GenerateImages`, whose pre-provider credit guard multiplies one styled output by `CreditCostConfig.StyledGeneration` (5). The root cause was therefore an attempted **legacy styled-image generation with zero legacy credits**, not the package-backed instant-headshot workflow.
 
-A paid replay is not authorized. To identify the original 400 without consuming allowance, request either (a) its redacted response status/body plus the server correlation ID, or (b) approval for temporary safe telemetry. The telemetry event must contain only: failure code, HTTP status, package code, requested output count, whether an entitlement was present, remaining candidate allowance, source-availability boolean, and a server-generated correlation ID. It must exclude user ID, email, cookies, authorization headers, storage paths/URLs, image data, prompts, and payment identifiers. Remove the event after one captured failure. Until then, the original 400 root cause remains unverified.
+`ReplicateControllerAuthAndOwnershipTests.GenerateImages_WithoutFiveCredits_ReplaysTheSavedStyledGeneration400WithoutCallingProvider` is the deterministic replay: it reproduces the exact status/code/message from the saved artifact, verifies the 5-credit gate, and proves no provider request is sent. The current `/enhance` purchased-photo path uses the package-backed headshot endpoint, covered separately by `PurchasedPhotoWorkflow_ScoresPreviewContinuesPackageAndLoadsStudioSource` and `GenerateHeadshotAsync_CompletesPaidCandidatesWithoutLegacyCredits`; it does not treat a package allowance as legacy styled-generation credit. This distinction is the root-cause fix: purchased-photo continuation remains on the package entitlement path, while the legacy styled-image endpoint gives its accurate, actionable insufficient-credit response.
 
 ## Commands and results
 
 ```text
 dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj \
   --configuration Release \
-  --filter 'FullyQualifiedName~OutcomePackageServiceTests|FullyQualifiedName~HeadshotGenerationEndpointIntegrationTests|FullyQualifiedName~HeadshotGenerationServiceTests' \
+  --filter 'FullyQualifiedName~OutcomePackageServiceTests|FullyQualifiedName~HeadshotGenerationEndpointIntegrationTests|FullyQualifiedName~HeadshotGenerationServiceTests|FullyQualifiedName~ReplicateControllerAuthAndOwnershipTests' \
   --no-restore
-# Passed: 43
+# Passed: 53
 
 cd AI.ProfilePhotoMaker.UI && npm run test -- --watch=false \
   --include='src/app/components/photo-enhancement/photo-enhancement.component.spec.ts' \
