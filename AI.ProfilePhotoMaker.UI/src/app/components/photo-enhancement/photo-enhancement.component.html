@@ -110,14 +110,8 @@
             <p id="package-ticket-title">{{ getSelectedPackageLabel() }}</p>
             <strong aria-live="polite">{{ getPackageProgressText() }}</strong>
           </div>
-          <span class="ticket-status">
-            {{
-              isLoadingEntitlements
-                ? 'Checking package'
-                : isCandidateFulfillmentComplete()
-                  ? 'Candidate set complete'
-                  : 'In progress'
-            }}
+          <span class="ticket-status" [class.refinement-context]="isGalleryRefinementActive()">
+            {{ getPackageTicketStatus() }}
           </span>
         </div>
         <div
@@ -132,6 +126,9 @@
               getSelectedCandidateCount() ? (getGeneratedCandidateCount() / getSelectedCandidateCount()) * 100 : 0
             "></span>
         </div>
+        <p class="ticket-context" *ngIf="isGalleryRefinementActive()">
+          You can refine this saved photo now. Photo-generation slots remain available for later.
+        </p>
         <dl class="allowance-list" *ngIf="!isLoadingEntitlements">
           <div>
             <dt>Candidates</dt>

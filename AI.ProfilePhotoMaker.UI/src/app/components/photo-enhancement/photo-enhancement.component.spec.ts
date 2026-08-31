@@ -271,6 +271,7 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.saveSuccessMessage).toContain('Photo loaded from your workspace');
     expect(component.canShowFinishingTools()).toBeTrue();
     expect(component.isPaidPackageFulfillmentPending()).toBeFalse();
+    expect(component.getPackageTicketStatus()).toBe('Refining saved photo');
     spyOn(component, 'canStartEnhancement').and.returnValue(true);
     expect(component.canStartRegeneration()).toBeTrue();
   });

@@ -677,6 +677,18 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     );
   }
 
+  getPackageTicketStatus(): string {
+    if (this.isLoadingEntitlements) {
+      return 'Checking package';
+    }
+
+    if (this.isGalleryRefinementActive()) {
+      return 'Refining saved photo';
+    }
+
+    return this.isCandidateFulfillmentComplete() ? 'Candidate set complete' : 'In progress';
+  }
+
   getPackageProgressText(): string {
     return `${this.getGeneratedCandidateCount()} of ${this.getSelectedCandidateCount()} generated`;
   }
