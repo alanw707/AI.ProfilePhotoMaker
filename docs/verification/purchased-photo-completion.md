@@ -1,6 +1,6 @@
 # Purchased-photo completion verification
 
-Functional changes: `534c917` (`Restore paid candidates after preview expiry`); `22dc862` (`Serve owned paid candidate images`).
+Functional changes: `534c917` (`Restore paid candidates after preview expiry`); `22dc862` (`Serve owned paid candidate images`); `b84de8e` (`Block generation from expired photo sources`).
 
 ## Deterministic coverage map
 
@@ -51,7 +51,8 @@ GitHub Actions deployments for the functional commits succeeded:
 
 - Expiry/recovery: run `33386974558`, commit `534c917b6cc4e3aa4f86ad0305d310c0c6e7996c`, <https://github.com/alanw707/AI.ProfilePhotoMaker/actions/runs/33386974558>
 - Saved paid-candidate viewing: run `33390397106`, commit `22dc862f31476bf5f2a84ff99ae5f330de32390f`, <https://github.com/alanw707/AI.ProfilePhotoMaker/actions/runs/33390397106>
+- Expired-source request blocking: run `33392748832`, commit `b84de8ea7ef1777c7e1c0442a40602c85df7277c`, <https://github.com/alanw707/AI.ProfilePhotoMaker/actions/runs/33392748832>
 
-The latter deployment completed its test, security scan, and production deployment jobs successfully. Its restored-candidate URL behavior is proven by the deterministic integration test above: the owner receives `200`; a different authenticated user receives `404`.
+The latter two deployments completed their test, security scan, and production deployment jobs successfully. The saved-candidate integration test proves owner `200` and different-user `404`; the expired-source generation test proves no provider request or package-allowance consumption.
 
 Authenticated inspection was non-destructive. On desktop, selecting **Refine** for an owned Gallery image navigated to `/app/enhance?refineImageId=…`; one authorized `studio-source` request occurred, the Studio showed the existing package progress (`2 of 9 generated`), and no alert appeared. At a 390 px mobile viewport, the same route made one authorized source request and had no horizontal overflow. No generation control was invoked and no allowance was consumed.
