@@ -1,6 +1,6 @@
 # Purchased-photo completion verification
 
-Functional change: `534c917` (`Restore paid candidates after preview expiry`)
+Functional changes: `534c917` (`Restore paid candidates after preview expiry`); `22dc862` (`Serve owned paid candidate images`).
 
 ## Deterministic coverage map
 
@@ -39,10 +39,11 @@ npm run build:mvp-v1
 
 ## Production verification
 
-GitHub Actions deployment for the functional commit succeeded:
+GitHub Actions deployments for the functional commits succeeded:
 
-- Run: `33386974558`
-- Commit: `534c917b6cc4e3aa4f86ad0305d310c0c6e7996c`
-- URL: <https://github.com/alanw707/AI.ProfilePhotoMaker/actions/runs/33386974558>
+- Expiry/recovery: run `33386974558`, commit `534c917b6cc4e3aa4f86ad0305d310c0c6e7996c`, <https://github.com/alanw707/AI.ProfilePhotoMaker/actions/runs/33386974558>
+- Saved paid-candidate viewing: run `33390397106`, commit `22dc862f31476bf5f2a84ff99ae5f330de32390f`, <https://github.com/alanw707/AI.ProfilePhotoMaker/actions/runs/33390397106>
+
+The latter deployment completed its test, security scan, and production deployment jobs successfully. Its restored-candidate URL behavior is proven by the deterministic integration test above: the owner receives `200`; a different authenticated user receives `404`.
 
 Authenticated inspection was non-destructive. On desktop, selecting **Refine** for an owned Gallery image navigated to `/app/enhance?refineImageId=…`; one authorized `studio-source` request occurred, the Studio showed the existing package progress (`2 of 9 generated`), and no alert appeared. At a 390 px mobile viewport, the same route made one authorized source request and had no horizontal overflow. No generation control was invoked and no allowance was consumed.
