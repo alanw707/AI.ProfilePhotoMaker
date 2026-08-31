@@ -2081,7 +2081,16 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       return 'Insufficient permissions or credits. Please check your account.';
     }
 
-    return error.error?.message || error.message || 'Enhancement failed. Please try again.';
+    const apiMessage = error.error?.error?.message ?? error.error?.message;
+    if (apiMessage) {
+      return apiMessage;
+    }
+
+    if (error.status === 400) {
+      return 'We could not complete that request. Check the photo and package details, then try again.';
+    }
+
+    return error.message || 'Enhancement failed. Please try again.';
   }
 
   private async uploadImageForEnhancement(): Promise<{
