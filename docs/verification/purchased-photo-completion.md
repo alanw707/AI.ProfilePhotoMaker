@@ -23,9 +23,9 @@ The legacy-credit regression is deliberately red-capable: `GenerateHeadshotAsync
 ```text
 dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj \
   --configuration Release \
-  --filter 'FullyQualifiedName~OutcomePackageServiceTests|FullyQualifiedName~HeadshotGenerationEndpointIntegrationTests' \
+  --filter 'FullyQualifiedName~OutcomePackageServiceTests|FullyQualifiedName~HeadshotGenerationEndpointIntegrationTests|FullyQualifiedName~HeadshotGenerationServiceTests' \
   --no-restore
-# Passed: 27
+# Passed: 40
 
 cd AI.ProfilePhotoMaker.UI && npm run test -- --watch=false \
   --include='src/app/components/photo-enhancement/photo-enhancement.component.spec.ts' \
