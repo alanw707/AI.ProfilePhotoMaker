@@ -460,6 +460,46 @@ public class HeadshotGenerationServiceTests
     }
 
     [Fact]
+    public async Task GenerateHeadshotAsync_RejectsExpiredSourceBeforeCallingProviderOrConsumingPackageAllowance()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, credits: 0);
+        var sourcePath = $"dev/enhanced/{userId}/expired-source.png";
+        var entitlement = new UserPackageEntitlement
+        {
+            Status = PackageEntitlementStatus.Active,
+            RemainingPackageUses = 1,
+            RemainingCandidates = 3,
+            OutcomePackageDefinition = new OutcomePackageDefinition
+            {
+                Code = "starter_package",
+                IncludedCandidateCount = 3
+            }
+        };
+        var provider = new FakeHeadshotProvider("data:image/png;base64,AQID");
+        var service = CreateService(
+            context,
+            new FakeStorageService(sourcePath),
+            provider,
+            new FakeOutcomePackageService(entitlement));
+
+        var ex = await Assert.ThrowsAsync<HeadshotGenerationException>(() =>
+            service.GenerateHeadshotAsync(new HeadshotGenerationRequestDto
+            {
+                ImageStoragePath = sourcePath,
+                Style = "linkedin",
+                Background = "auto",
+                PackageCode = "starter_package",
+                NumOutputs = 1
+            }, userId));
+
+        Assert.Equal("ImageSourceExpired", ex.Code);
+        Assert.Equal(0, provider.CallCount);
+        Assert.Equal(3, entitlement.RemainingCandidates);
+        Assert.Empty(context.ProcessedImages);
+    }
+
+    [Fact]
     public async Task GenerateHeadshotAsync_RejectsStoragePathOutsideCurrentUserPrefixes()
     {
         using var context = CreateContext();
@@ -580,15 +620,18 @@ public class HeadshotGenerationServiceTests
         }
     }
 
-    private sealed class FakeStorageService : IStorageService
+    private sealed class FakeStorageService(params string[] missingPaths) : IStorageService
     {
+        private readonly HashSet<string> _missingPaths = missingPaths.ToHashSet(StringComparer.Ordinal);
+
         public Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId, string folderType = "generated") =>
             Task.FromResult($"dev/{folderType}/{userId}/{fileName}");
 
         public Task<string> SaveImageToPathAsync(Stream imageStream, string storagePath) => Task.FromResult(storagePath);
-        public Task<Stream?> GetImageAsync(string storagePath) => Task.FromResult<Stream?>(new MemoryStream([1, 2, 3]));
+        public Task<Stream?> GetImageAsync(string storagePath) => Task.FromResult<Stream?>(
+            _missingPaths.Contains(storagePath) ? null : new MemoryStream([1, 2, 3]));
         public Task<bool> DeleteImageAsync(string storagePath) => Task.FromResult(true);
-        public Task<bool> ExistsAsync(string storagePath) => Task.FromResult(true);
+        public Task<bool> ExistsAsync(string storagePath) => Task.FromResult(!_missingPaths.Contains(storagePath));
         public string GetImageUrl(string storagePath) => $"https://cdn.example.test/{storagePath}";
         public Task<List<string>> ListUserImagesAsync(string userId) => Task.FromResult(new List<string>());
         public Task<StorageFileInfo?> GetFileInfoAsync(string storagePath) => Task.FromResult<StorageFileInfo?>(null);

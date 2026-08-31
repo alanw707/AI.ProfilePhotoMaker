@@ -324,6 +324,7 @@ public class OutcomePackageService : IOutcomePackageService
             ImageUrl = preview.ProcessedImageUrl,
             StoragePath = preview.ProcessedImageUrl,
             SourceStoragePath = preview.OriginalImageUrl,
+            SourceAvailable = sourceExists,
             Style = preview.Style,
             CreatedAt = preview.CreatedAt,
             HasRawPreview = rawPreviewExists,

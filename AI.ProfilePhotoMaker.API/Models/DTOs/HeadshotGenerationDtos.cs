@@ -69,6 +69,7 @@ public class ResumableHeadshotPreviewDto
     public string ImageUrl { get; set; } = string.Empty;
     public string StoragePath { get; set; } = string.Empty;
     public string SourceStoragePath { get; set; } = string.Empty;
+    public bool SourceAvailable { get; set; }
     public string Style { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public bool HasRawPreview { get; set; }

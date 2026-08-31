@@ -167,6 +167,13 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             };
         }
 
+        if (!await StorageImageExistsAsync(sourcePath, cancellationToken))
+        {
+            throw new HeadshotGenerationException(
+                "ImageSourceExpired",
+                "This photo's original upload is no longer available. Your saved candidates are still available; upload a new photo set to generate more.");
+        }
+
         if (_outcomePackageService != null)
         {
             var entitlement = packageCode == "free_preview"
@@ -218,7 +225,6 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                 Sid(userId), S(_provider.ProviderName), S(_provider.ModelName), S(correlationId));
 
             var candidates = new List<HeadshotCandidateDto>();
-            var generationSourcePath = sourcePath;
             if (packageCode != "free_preview" && request.ReusedPreviewProcessedImageId is int previewImageId)
             {
                 var promotion = await BuildPromotedPreviewCandidateAsync(
@@ -230,14 +236,6 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                 if (promotion.Candidate != null)
                 {
                     candidates.Add(promotion.Candidate);
-                    if (!await StorageImageExistsAsync(sourcePath, cancellationToken) && !string.IsNullOrWhiteSpace(promotion.Candidate.StoragePath))
-                    {
-                        _logger.LogWarning(
-                            "Preview source image missing for paid continuation. Falling back to promoted preview raw image. SourcePath={SourcePath}, FallbackPath={FallbackPath}",
-                            S(sourcePath),
-                            S(promotion.Candidate.StoragePath));
-                        generationSourcePath = promotion.Candidate.StoragePath;
-                    }
                 }
             }
 
@@ -252,7 +250,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                 var result = await _provider.GenerateAsync(new HeadshotGenerationRequest
                 {
                     UserId = userId,
-                    ImageStoragePath = generationSourcePath,
+                    ImageStoragePath = sourcePath,
                     Style = portraitStyle.Name,
                     Background = request.Background,
                     PromptTemplate = ApplyRecipeToPrompt(BuildInstantHeadshotPrompt(portraitStyle.PromptTemplate, profile), recipe),

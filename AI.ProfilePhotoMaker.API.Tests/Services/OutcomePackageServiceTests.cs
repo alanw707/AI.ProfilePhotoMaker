@@ -555,14 +555,17 @@ public class OutcomePackageServiceTests
     }
 
     [Theory]
-    [InlineData(8, 0, 9, true)]
-    [InlineData(3, 5, 4, true)]
-    [InlineData(3, 5, 4, false)]
+    [InlineData(8, 0, 9, true, true)]
+    [InlineData(3, 5, 4, true, true)]
+    [InlineData(3, 5, 4, false, true)]
+    [InlineData(3, 5, 4, true, false)]
+    [InlineData(3, 5, 4, false, false)]
     public async Task GetResumablePreview_RestoresPromotedAndPaidCandidatesAfterInterruption(
         int generatedCandidateCount,
         int remainingCandidateCount,
         int expectedTotal,
-        bool previewDisplayExists)
+        bool previewDisplayExists,
+        bool sourceExists)
     {
         await using var context = CreateContext();
         var userId = "resume-paid-user";
@@ -650,9 +653,12 @@ public class OutcomePackageServiceTests
 
         var storage = new Mock<IStorageService>();
         storage.Setup(service => service.ExistsAsync(It.IsAny<string>()))
-            .Returns((string path) => Task.FromResult(
-                previewDisplayExists ||
-                (path != preview.ProcessedImageUrl && path != preview.OriginalImageUrl)));
+            .Returns((string path) => Task.FromResult(path switch
+            {
+                var value when value == preview.ProcessedImageUrl => previewDisplayExists,
+                var value when value == preview.OriginalImageUrl => sourceExists,
+                _ => true
+            }));
         var service = new OutcomePackageService(
             context,
             NullLogger<OutcomePackageService>.Instance,
@@ -664,6 +670,7 @@ public class OutcomePackageServiceTests
         Assert.Equal(expectedTotal, resumed!.Candidates.Count);
         Assert.Equal(promoted.Id, resumed.Candidates[0].ProcessedImageId);
         Assert.Equal(remainingCandidateCount, resumed.RemainingCandidateCount);
+        Assert.Equal(sourceExists, resumed.SourceAvailable);
 
         var replaced = await context.ProcessedImages.SingleAsync(image =>
             image.CorrelationId == "paid-batch:candidate:1");

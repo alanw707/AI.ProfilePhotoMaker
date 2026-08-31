@@ -1189,8 +1189,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this.resumablePreview = null;
     this.previewStyleName = preview.style;
     const sourceState = this.photoWorkspaceSession.createStoredPreviewSourceState(
-      preview.sourceStoragePath,
-      this.getStorageProxyUrl(preview.sourceStoragePath)
+      preview.sourceAvailable === false ? null : preview.sourceStoragePath,
+      preview.sourceAvailable === false ? null : this.getStorageProxyUrl(preview.sourceStoragePath)
     );
     this.previewSourceStoragePath = sourceState.previewSourceStoragePath;
     this.currentSourceStoragePath = sourceState.currentSourceStoragePath;
@@ -1209,7 +1209,10 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       preview.activePackageCode === 'pro_package'
     ) {
       this.selectedPackageCode = preview.activePackageCode;
-      this.saveSuccessMessage = `${this.getPackageLabel(preview.activePackageCode)} is unlocked. Your preview is ready; generate the remaining candidates when ready.`;
+      this.saveSuccessMessage =
+        preview.sourceAvailable === false
+          ? 'Your saved candidates are restored, but the original upload expired. Upload a new photo set to generate more.'
+          : `${this.getPackageLabel(preview.activePackageCode)} is unlocked. Your preview is ready; generate the remaining candidates when ready.`;
     } else {
       this.selectedPackageCode = 'free_preview';
       this.saveSuccessMessage =

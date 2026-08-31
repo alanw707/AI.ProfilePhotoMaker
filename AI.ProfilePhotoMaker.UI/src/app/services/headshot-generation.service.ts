@@ -57,6 +57,7 @@ export interface ResumableHeadshotPreview {
   imageUrl: string;
   storagePath: string;
   sourceStoragePath: string;
+  sourceAvailable?: boolean;
   style: string;
   createdAt: string;
   hasRawPreview: boolean;

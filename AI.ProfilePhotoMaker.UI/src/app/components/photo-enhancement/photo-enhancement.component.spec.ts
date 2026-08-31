@@ -410,6 +410,51 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.resumePreview).not.toHaveBeenCalled();
   });
 
+  it('restores saved candidates without retaining an expired source for another generation', async () => {
+    const component = createComponent('pro_package', 0);
+    Object.assign(component, {
+      photoWorkspaceSession: {
+        createStoredPreviewSourceState: (
+          sourceStoragePath: string | null,
+          imagePreview: string | null
+        ) => ({
+          imagePreview,
+          beforeImageLoadFailed: false,
+          currentSourceStoragePath: sourceStoragePath,
+          previewSourceStoragePath: sourceStoragePath,
+          previewStyleName: null,
+        }),
+      },
+      portraitStyleCatalog: { findByStyleName: () => null },
+      portraitStyles: [],
+      isProfilePhotoScoreVisible: false,
+      _interruptedGenerationKey: 'expired-source-resume',
+      _cdr: { markForCheck: () => undefined },
+    });
+    spyOn(component as any, 'loadAuthorizedCandidateImages').and.resolveTo([candidate(42)]);
+    spyOn(component, 'selectCandidate');
+
+    await component.resumePreview({
+      processedImageId: 42,
+      imageUrl: 'preview.jpg',
+      storagePath: 'generated/preview.jpg',
+      sourceStoragePath: 'uploads/expired-source.jpg',
+      sourceAvailable: false,
+      style: 'linkedin',
+      createdAt: '2026-08-28T00:00:00Z',
+      hasRawPreview: true,
+      canPromotePreview: false,
+      activePackageCode: 'pro_package',
+      remainingCandidateCount: 7,
+      candidates: [candidate(42)],
+    });
+
+    expect(component.previewSourceStoragePath).toBeNull();
+    expect(component.currentSourceStoragePath).toBeNull();
+    expect((component as any).hasEnhancementSourceReady()).toBeFalse();
+    expect(component.saveSuccessMessage).toContain('original upload expired');
+  });
+
   it('restores persisted candidates before resuming an interrupted batch after reload', async () => {
     const component = createComponent('pro_package', 0);
     const draft = {
