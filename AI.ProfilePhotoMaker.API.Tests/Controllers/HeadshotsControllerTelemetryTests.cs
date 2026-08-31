@@ -26,7 +26,7 @@ public class HeadshotsControllerTelemetryTests
         var generator = new Mock<IHeadshotGenerationService>();
         generator.Setup(service => service.GenerateHeadshotAsync(
                 It.IsAny<HeadshotGenerationRequestDto>(), userId, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new HeadshotGenerationException("PackageEntitlementRequired", "missing package"));
+            .ThrowsAsync(new HeadshotGenerationException("InsufficientCredits", "missing credits"));
         var users = UserManagerMockFactory.Create();
         users.Setup(manager => manager.FindByIdAsync(userId))
             .ReturnsAsync(new ApplicationUser { Id = userId, EmailConfirmed = true });
@@ -68,7 +68,7 @@ public class HeadshotsControllerTelemetryTests
         }) as ObjectResult;
 
         Assert.NotNull(result);
-        Assert.Equal(StatusCodes.Status402PaymentRequired, result!.StatusCode);
+        Assert.Equal(StatusCodes.Status400BadRequest, result!.StatusCode);
         Assert.True(controller.Response.Headers.TryGetValue("X-Headshot-Failure-Correlation", out var correlation));
         Assert.Matches("^[a-f0-9]{32}$", correlation.ToString());
         packages.Verify(service => service.GetActiveEntitlementAsync(userId, "starter_package", It.IsAny<CancellationToken>()), Times.Once);

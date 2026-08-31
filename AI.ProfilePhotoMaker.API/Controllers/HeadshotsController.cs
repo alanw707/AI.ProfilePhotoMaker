@@ -207,7 +207,8 @@ public class HeadshotsController : ControllerBase
         string failureCode,
         string userId)
     {
-        if (!_configuration.GetValue<bool>("Diagnostics:CaptureHeadshotFailure") ||
+        if (status != StatusCodes.Status400BadRequest ||
+            !_configuration.GetValue<bool>("Diagnostics:CaptureHeadshotFailure") ||
             Interlocked.Exchange(ref _temporaryFailureTelemetryCaptured, 1) != 0)
         {
             return;
