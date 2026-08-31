@@ -383,9 +383,9 @@ public class OutcomePackageService : IOutcomePackageService
             .FirstOrDefaultAsync(i =>
                 i.Id == imageId &&
                 i.UserProfile.UserId == userId &&
-                i.GenerationMode == "instant_headshot_promoted_preview" &&
-                i.GenerationStatus == "succeeded" &&
-                EF.Functions.Like(i.ProcessedImageUrl, "%generated-private/%"),
+                (i.GenerationMode == "instant_headshot_promoted_preview" ||
+                 i.GenerationMode == "instant_headshot") &&
+                i.GenerationStatus == "succeeded",
                 cancellationToken);
         if (image == null)
         {

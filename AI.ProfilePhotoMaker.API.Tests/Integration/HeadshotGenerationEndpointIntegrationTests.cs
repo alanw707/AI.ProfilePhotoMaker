@@ -230,6 +230,17 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
         var resumed = await resumeResponse.Content.ReadFromJsonAsync<ResumablePreviewApiResponse>();
         Assert.Equal("starter_package", resumed!.Data!.ActivePackageCode);
         Assert.Equal(1, resumed.Data.RemainingCandidateCount);
+        var paidCandidate = resumed.Data.Candidates.Single(candidate =>
+            candidate.ProcessedImageId == continuation.Data.ProcessedImageId);
+        var paidCandidateResponse = await client.GetAsync(paidCandidate.ImageUrl);
+        Assert.Equal(HttpStatusCode.OK, paidCandidateResponse.StatusCode);
+
+        var otherUserId = $"workflow-other-{Guid.NewGuid():N}";
+        await SeedUserAsync(otherUserId, credits: 0);
+        var otherClient = _factory.CreateClient();
+        otherClient.DefaultRequestHeaders.Add("X-Test-UserId", otherUserId);
+        var otherCandidateResponse = await otherClient.GetAsync(paidCandidate.ImageUrl);
+        Assert.Equal(HttpStatusCode.NotFound, otherCandidateResponse.StatusCode);
 
         var studioResponse = await client.GetAsync(
             $"/api/ProfilePhotoWorkflow/images/{continuation.Data.ProcessedImageId}/studio-source");
@@ -460,6 +471,7 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
         public bool CanPromotePreview { get; set; }
         public string? ActivePackageCode { get; set; }
         public int RemainingCandidateCount { get; set; }
+        public List<HeadshotCandidateData> Candidates { get; set; } = new();
     }
 
     private sealed class StudioImageSourceApiResponse
