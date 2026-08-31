@@ -71,22 +71,25 @@ public class ProfilePhotoScoreService : IProfilePhotoScoreService
             BuildSubscore("role_readiness", $"Role readiness ({rubricSource})", roleFitScore, rubric?.RoleFitFeedback ?? (roleFitScore >= 80 ? "The image has a strong baseline for professional role-specific positioning." : "Improve professionalism, approachability, confidence, and attire/background fit before relying on role-specific styling."))
         };
 
-        // Technical signals gate unusable uploads; derived subscores remain explanatory and are not counted twice.
+        // Quality signals gate unusable uploads. The vision rubric owns the professional score;
+        // pixel heuristics are only the offline fallback and never receive score inflation.
         var technicalScore = new[] { resolutionScore, framingScore, lightingScore, sharpnessScore, backgroundScore, facePresenceScore }.Average();
         var readinessScore = new[] { professionalismScore, approachabilityScore, confidenceScore, attireBackgroundFitScore, roleFitScore }.Average();
-        var overall = CalibrateProfessionalReadiness((technicalScore * 0.4) + (readinessScore * 0.6));
+        var overall = rubric == null
+            ? (int)Math.Round((technicalScore * 0.4) + (readinessScore * 0.6))
+            : (int)Math.Round(readinessScore);
         var strengths = subscores.Where(s => s.Score >= 82).Select(s => s.Label).Take(3).ToList();
         var improvements = subscores.Where(s => s.Score < 82).OrderBy(s => s.Score).Select(s => s.Feedback).Take(3).ToList();
 
         return new ProfilePhotoScoreDto
         {
             OverallScore = overall,
-            RatingLabel = overall >= 90 ? "LinkedIn-ready" : overall >= 75 ? "Good starting point" : "Needs improvement",
+            RatingLabel = overall > 85 ? "LinkedIn-ready" : overall >= 75 ? "Good starting point" : "Needs improvement",
             Subscores = subscores,
             Strengths = strengths.Count > 0 ? strengths : new List<string> { "Clear enough to start a profile-photo workflow" },
             Improvements = improvements.Count > 0 ? improvements : new List<string> { "Use photo adjustment or refinement to tune the final result." },
             Guidance = rubric?.OverallFeedback ?? BuildGuidance(overall, rubric != null),
-            QualityGate = BuildQualityGate(image.Width, image.Height, resolutionScore, framingScore, lightingScore, sharpnessScore, facePresenceScore, platformFitScore)
+            QualityGate = BuildQualityGate(image.Width, image.Height, resolutionScore, framingScore, lightingScore, sharpnessScore, facePresenceScore, platformFitScore, overall)
         };
     }
 
@@ -98,7 +101,8 @@ public class ProfilePhotoScoreService : IProfilePhotoScoreService
         int lightingScore,
         int sharpnessScore,
         int facePresenceScore,
-        int platformFitScore)
+        int platformFitScore,
+        int overallScore)
     {
         var blocked = new List<string>();
         var warnings = new List<string>();
@@ -147,6 +151,12 @@ public class ProfilePhotoScoreService : IProfilePhotoScoreService
         {
             warnings.Add("Framing may not work well for a single professional portrait.");
             recommendations.Add("Use a centered head-and-shoulders photo with one person.");
+        }
+
+        if (overallScore <= 85)
+        {
+            warnings.Add("Professional readiness needs to score above 85 before the photo passes quality review.");
+            recommendations.Add("Use a clearer, more professional head-and-shoulders photo.");
         }
 
         return new PhotoQualityGateDto
@@ -244,21 +254,6 @@ public class ProfilePhotoScoreService : IProfilePhotoScoreService
         public string? AttireBackgroundFitFeedback { get; init; }
         public string? RoleFitFeedback { get; init; }
         public string? OverallFeedback { get; init; }
-    }
-
-    private static int CalibrateProfessionalReadiness(double rawScore)
-    {
-        if (rawScore < 55)
-        {
-            return (int)Math.Round(rawScore);
-        }
-
-        if (rawScore < 70)
-        {
-            return (int)Math.Round(55 + ((rawScore - 55) * 4 / 3));
-        }
-
-        return Math.Min(100, (int)Math.Round(75 + ((rawScore - 70) * 25 / 18)));
     }
 
     private static ProfilePhotoSubscoreDto BuildSubscore(string code, string label, int score, string feedback)
