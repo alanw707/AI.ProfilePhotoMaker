@@ -249,12 +249,30 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
       }),
     };
 
+    component.packageEntitlements = [
+      {
+        id: 1,
+        packageCode: 'pro_package',
+        packageName: 'Pro Package',
+        status: 'active',
+        remainingPackageUses: 1,
+        remainingCandidates: 7,
+        remainingRefinements: 1,
+        remainingPremiumAugmentations: 0,
+        platformExportKitAvailable: true,
+      },
+    ];
+
     (component as any).loadGalleryImageForRefinement(42);
 
     expect(getStudioImageSource).toHaveBeenCalledOnceWith(42);
     expect(component.enhancementType).toBe('headshot_linkedin');
     expect(component.selectedCandidateId).toBe(42);
     expect(component.saveSuccessMessage).toContain('Photo loaded from your workspace');
+    expect(component.canShowFinishingTools()).toBeTrue();
+    expect(component.isPaidPackageFulfillmentPending()).toBeFalse();
+    spyOn(component, 'canStartEnhancement').and.returnValue(true);
+    expect(component.canStartRegeneration()).toBeTrue();
   });
 
   it('uses a paid refinement allowance instead of legacy credits for a Gallery photo', () => {

@@ -818,7 +818,7 @@
             </div>
           </div>
 
-          <ng-container *ngIf="arePremiumAugmentationsVisible && isCandidateFulfillmentComplete()">
+          <ng-container *ngIf="arePremiumAugmentationsVisible && canUseRefinementTools()">
             <div class="section-heading add-on-heading">
               <h2>Refine the selected proof</h2>
               <p>Refinements and Pro add-ons are optional finishing steps. They never count as package candidates.</p>

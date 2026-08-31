@@ -543,7 +543,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       !this.isProcessing &&
       !this.isApplyingPremiumAugmentation &&
       !!this.enhancedImage &&
-      this.isCandidateFulfillmentComplete() &&
+      this.canUseRefinementTools() &&
       this.isPremiumAddOnUnlockedForCurrentCandidate()
     );
   }
@@ -643,12 +643,29 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     return this.getRemainingCandidateSlots() === 0 && this.getGeneratedCandidateCount() > 0;
   }
 
+  isGalleryRefinementActive(): boolean {
+    return (
+      !!this.selectedCandidateId &&
+      !this.generatedCandidates.some(
+        candidate => candidate.processedImageId === this.selectedCandidateId
+      )
+    );
+  }
+
   isPaidPackageFulfillmentPending(): boolean {
-    return this.selectedPackageCode !== 'free_preview' && this.getRemainingCandidateSlots() > 0;
+    return (
+      this.selectedPackageCode !== 'free_preview' &&
+      this.getRemainingCandidateSlots() > 0 &&
+      !this.isGalleryRefinementActive()
+    );
+  }
+
+  canUseRefinementTools(): boolean {
+    return this.isCandidateFulfillmentComplete() || this.isGalleryRefinementActive();
   }
 
   canShowFinishingTools(): boolean {
-    return this.selectedPackageCode === 'free_preview' || this.isCandidateFulfillmentComplete();
+    return this.selectedPackageCode === 'free_preview' || this.canUseRefinementTools();
   }
 
   canDownloadPackage(): boolean {
@@ -709,7 +726,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     return (
       this.selectedPackageCode !== 'free_preview' &&
       !!this.enhancedImage &&
-      this.isCandidateFulfillmentComplete() &&
+      this.canUseRefinementTools() &&
       this.canStartEnhancement(true)
     );
   }
