@@ -13,6 +13,7 @@ Functional changes: `534c917` (`Restore paid candidates after preview expiry`); 
 | Expired display/source recovery and stale-request prevention | `OutcomePackageServiceTests.GetResumablePreview_RestoresPromotedAndPaidCandidatesAfterInterruption` availability matrix; `HeadshotGenerationServiceTests.GenerateHeadshotAsync_RejectsExpiredSourceBeforeCallingProviderOrConsumingPackageAllowance`; expired-source UI resume spec |
 | Failed-generation recovery | `HeadshotGenerationServiceTests.GenerateHeadshotAsync_RefundsCreditsWhenProviderFails`; enhancement error/retry cases |
 | Legacy styled-generation 400 comparator (not original-400 evidence) | `ReplicateControllerAuthAndOwnershipTests.GenerateImages_WithoutFiveCredits_ReplaysTheSavedStyledGeneration400WithoutCallingProvider`; `docs/deployment/evidence/generation-insufficient-credits.json` |
+| Temporary safe headshot-failure telemetry | `HeadshotsControllerTelemetryTests.Generate_CapturesOneSafeFailureCorrelationWhenTemporaryTelemetryIsEnabled` |
 | Saved candidate viewing/refinement | `StudioSource_ReturnsOnlyAnOwnedImage`; `PurchasedPhotoWorkflow_ScoresPreviewContinuesPackageAndLoadsStudioSource` (owned restored-candidate URL returns 200; another user gets 404); Gallery route and Studio-load specs |
 
 The expiry case is deliberately red-capable: before `534c917`, its `previewDisplayExists: false` row returned `null`; it now restores the owned paid candidates while the preview display copy and source are unavailable.
@@ -25,16 +26,18 @@ The legacy-credit regression is deliberately red-capable: `GenerateHeadshotAsync
 
 The saved January artifact at `docs/deployment/evidence/generation-insufficient-credits.json` is a different legacy styled-image flow: HTTP `400`, `InsufficientCredits`, and `Styled image generation requires 5 credits. You have 0 credits.` `ReplicateControllerAuthAndOwnershipTests.GenerateImages_WithoutFiveCredits_ReplaysTheSavedStyledGeneration400WithoutCallingProvider` deterministically reproduces that artifact and proves its 5-credit gate sends no provider request. Neither the artifact nor that replay has provenance tying it to the reported purchased-photo/headshot 400. They are a comparator, **not evidence of the original root cause**.
 
-A paid replay remains prohibited. To identify the original 400 without consuming allowance, capture either (a) its redacted response status/body plus a server correlation ID, or (b) one temporary safe-telemetry event. The event must contain only failure code, HTTP status, package code, requested output count, entitlement-present boolean, remaining candidate allowance, source-availability boolean, and server-generated correlation ID. It must exclude user ID, email, cookies, authorization headers, storage paths/URLs, image data, prompts, and payment identifiers. Remove the event after one captured failure. Until then, the original 400 root cause remains unverified and completion must remain blocked.
+A paid replay remains prohibited. Temporary safe telemetry is enabled for this deployment by `Diagnostics__CaptureHeadshotFailure=true`. It captures only the first rejected headshot request per container process, adds a server-generated correlation header, and logs failure code, HTTP status, normalized package code, requested output count, entitlement-present boolean, remaining candidate allowance, source-path-supplied boolean, and regeneration boolean. It excludes user ID, email, cookies, authorization headers, storage paths/URLs, image data, prompts, and payment identifiers. The one-event gate is regression-covered by `HeadshotsControllerTelemetryTests.Generate_CapturesOneSafeFailureCorrelationWhenTemporaryTelemetryIsEnabled`.
+
+A future captured event (or a redacted original response and correlation ID) is still required to identify the original 400. Until then, the original root cause remains unverified and completion must remain blocked.
 
 ## Commands and results
 
 ```text
 dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj \
   --configuration Release \
-  --filter 'FullyQualifiedName~OutcomePackageServiceTests|FullyQualifiedName~HeadshotGenerationEndpointIntegrationTests|FullyQualifiedName~HeadshotGenerationServiceTests|FullyQualifiedName~ReplicateControllerAuthAndOwnershipTests' \
+  --filter 'FullyQualifiedName~OutcomePackageServiceTests|FullyQualifiedName~HeadshotGenerationEndpointIntegrationTests|FullyQualifiedName~HeadshotGenerationServiceTests|FullyQualifiedName~ReplicateControllerAuthAndOwnershipTests|FullyQualifiedName~HeadshotsControllerTelemetryTests' \
   --no-restore
-# Passed: 53
+# Passed: 54
 
 cd AI.ProfilePhotoMaker.UI && npm run test -- --watch=false \
   --include='src/app/components/photo-enhancement/photo-enhancement.component.spec.ts' \

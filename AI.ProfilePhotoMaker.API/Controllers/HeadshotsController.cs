@@ -24,6 +24,8 @@ public class HeadshotsController : ControllerBase
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<HeadshotsController> _logger;
 
+    private static int _temporaryFailureTelemetryCaptured;
+
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
@@ -181,6 +183,7 @@ public class HeadshotsController : ControllerBase
                 _ => 503
             };
 
+            await CaptureTemporaryFailureTelemetryAsync(request, status, ex.Code, userId);
             return StatusCode(status, new
             {
                 success = false,
@@ -196,6 +199,52 @@ public class HeadshotsController : ControllerBase
                 error = new { code = "HeadshotGenerationFailed", message = "Failed to generate headshot. Please try again later." }
             });
         }
+    }
+
+    private async Task CaptureTemporaryFailureTelemetryAsync(
+        HeadshotGenerationRequestDto request,
+        int status,
+        string failureCode,
+        string userId)
+    {
+        if (!_configuration.GetValue<bool>("Diagnostics:CaptureHeadshotFailure") ||
+            Interlocked.Exchange(ref _temporaryFailureTelemetryCaptured, 1) != 0)
+        {
+            return;
+        }
+
+        var packageCode = request.PackageCode?.Trim().ToLowerInvariant() is "starter_package" or "pro_package" or "free_preview"
+            ? request.PackageCode.Trim().ToLowerInvariant()
+            : "other";
+        UserPackageEntitlement? entitlement = null;
+        try
+        {
+            if (packageCode is "starter_package" or "pro_package")
+            {
+                entitlement = await _outcomePackageService.GetActiveEntitlementAsync(
+                    userId,
+                    packageCode,
+                    HttpContext.RequestAborted);
+            }
+        }
+        catch (Exception telemetryException)
+        {
+            _logger.LogWarning(telemetryException, "Temporary headshot failure telemetry could not read entitlement state");
+        }
+
+        var correlationId = Guid.NewGuid().ToString("N");
+        HttpContext.Response.Headers.Append("X-Headshot-Failure-Correlation", correlationId);
+        _logger.LogWarning(
+            "SAFE_HEADSHOT_FAILURE Correlation={Correlation} Status={Status} Code={Code} Package={Package} Outputs={Outputs} EntitlementPresent={EntitlementPresent} RemainingCandidates={RemainingCandidates} SourcePathSupplied={SourcePathSupplied} IsRegeneration={IsRegeneration}",
+            correlationId,
+            status,
+            S(failureCode),
+            packageCode,
+            Math.Clamp(request.NumOutputs, 1, 9),
+            entitlement != null,
+            entitlement?.RemainingCandidates,
+            !string.IsNullOrWhiteSpace(request.ImageStoragePath),
+            request.IsRegeneration);
     }
 
     private bool IsOpenAIHeadshotMvpEnabled()

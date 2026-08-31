@@ -598,6 +598,10 @@
                   "value": "true"
                 },
                 {
+                  "name": "Diagnostics__CaptureHeadshotFailure",
+                  "value": "true"
+                },
+                {
                   "name": "Features__ProfilePhotoWorkflowOverhaul",
                   "value": "true"
                 },

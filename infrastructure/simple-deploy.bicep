@@ -500,6 +500,11 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'Features__OpenAIHeadshotMvp'
               value: 'true'
             }
+            // Temporary, one-event, non-sensitive evidence capture. Remove after capture.
+            {
+              name: 'Diagnostics__CaptureHeadshotFailure'
+              value: 'true'
+            }
             {
               name: 'Features__ProfilePhotoWorkflowOverhaul'
               value: 'true'
