@@ -189,6 +189,58 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
     }
 
     [Fact]
+    public async Task PurchasedPhotoWorkflow_ScoresPreviewContinuesPackageAndLoadsStudioSource()
+    {
+        var userId = $"workflow-user-{Guid.NewGuid():N}";
+        await SeedUserAsync(userId, credits: 1);
+        await GrantPackageEntitlementAsync(userId, "starter_package", candidates: 3, refinements: 1, premiumAugmentations: 0, exportKit: true);
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
+
+        using var scoreContent = new MultipartFormDataContent();
+        scoreContent.Add(new ByteArrayContent([1, 2, 3]), "image", "source.png");
+        var scoreResponse = await client.PostAsync("/api/ProfilePhotoWorkflow/score", scoreContent);
+        scoreResponse.EnsureSuccessStatusCode();
+
+        var previewResponse = await client.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = $"testing/enhanced/{userId}/source.png",
+            style = "professional",
+            background = "auto",
+            packageCode = "free_preview",
+            numOutputs = 1
+        });
+        previewResponse.EnsureSuccessStatusCode();
+
+        var continuationResponse = await client.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = $"testing/enhanced/{userId}/source.png",
+            style = "professional",
+            background = "auto",
+            packageCode = "starter_package",
+            numOutputs = 1
+        });
+        continuationResponse.EnsureSuccessStatusCode();
+        var continuation = await continuationResponse.Content.ReadFromJsonAsync<HeadshotApiResponse>();
+        Assert.NotNull(continuation?.Data);
+        Assert.Equal(0, continuation!.Data!.CreditsCost);
+
+        var resumeResponse = await client.GetAsync("/api/headshots/resumable-preview");
+        resumeResponse.EnsureSuccessStatusCode();
+        var resumed = await resumeResponse.Content.ReadFromJsonAsync<ResumablePreviewApiResponse>();
+        Assert.Equal("starter_package", resumed!.Data!.ActivePackageCode);
+        Assert.Equal(1, resumed.Data.RemainingCandidateCount);
+
+        var studioResponse = await client.GetAsync(
+            $"/api/ProfilePhotoWorkflow/images/{continuation.Data.ProcessedImageId}/studio-source");
+        studioResponse.EnsureSuccessStatusCode();
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(1, db.UserProfiles.Single(profile => profile.UserId == userId).Credits);
+    }
+
+    [Fact]
     public async Task AbandonPreview_RemovesItFromTheResumableEndpoint()
     {
         var userId = $"headshot-abandon-{Guid.NewGuid():N}";
