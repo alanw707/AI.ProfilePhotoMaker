@@ -564,7 +564,7 @@
             [attr.aria-valuenow]="processingProgress">
             <div class="progress-bar" [style.width.%]="processingProgress"></div>
           </div>
-          <p class="processing-status">{{ processingStatus }}</p>
+          <p class="processing-status" role="status" aria-live="polite">{{ processingStatus }}</p>
         </div>
       </section>
 
@@ -952,7 +952,7 @@
             <div class="spinner" *ngIf="isSaving"></div>
             {{ isSaving ? 'Saving...' : 'Save to Workspace' }}
           </button>
-          <div class="save-success" *ngIf="isSaved && saveSuccessMessage">
+          <div class="save-success" *ngIf="isSaved && saveSuccessMessage" role="status" aria-live="polite">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" />
               <path
