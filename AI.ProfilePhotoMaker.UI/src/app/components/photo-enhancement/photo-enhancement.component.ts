@@ -1916,10 +1916,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         };
       } else {
         const enhanceRequest = {
-          // Keep URL for older backend behavior, but prefer storagePath so the API can
-          // read the source image directly from storage in local/container runs.
-          imageUrl: uploadResult.url,
-          imageStoragePath: uploadResult.storagePath,
+          ...(uploadResult.storagePath
+            ? { imageStoragePath: uploadResult.storagePath }
+            : { imageUrl: uploadResult.url }),
           enhancementType: this.enhancementType,
           turnstileToken: this.turnstileSiteKey ? this.turnstileToken : undefined,
         };

@@ -36,6 +36,59 @@ function createComponent(
 }
 
 describe('PhotoEnhancementComponent package fulfillment', () => {
+  it('sends only the storage path when legacy enhancement upload returns a relative display URL', async () => {
+    const component = createComponent('free_preview', 0);
+    let request: any;
+    Object.assign(component, {
+      isHeadshotMvpEnabled: false,
+      enhancementType: 'professional',
+      selectedFile: new File(['photo'], 'source.jpg', { type: 'image/jpeg' }),
+      isEmailConfirmed: true,
+      biometricConsentAccepted: true,
+      isProfilePhotoScoreVisible: false,
+      turnstileSiteKey: '',
+    });
+    spyOn(component, 'hasEnoughCredits').and.returnValue(true);
+    spyOn(component as any, 'uploadImageForEnhancement').and.resolveTo({
+      url: '/profile-images/uploads/source.jpg',
+      fileName: 'source.jpg',
+      storagePath: 'uploads/source.jpg',
+    });
+    (component as any)._cdr = { detectChanges: () => undefined, markForCheck: () => undefined };
+    (component as any)._stateService = { refreshCredits: () => Promise.resolve() };
+    (component as any).createEnhancedImageViewModel = (
+      url: string,
+      type: string,
+      id: number,
+      storagePath: string
+    ) => ({
+      url,
+      type,
+      processedImageId: id,
+      storagePath,
+    });
+    (component as any)._replicateService = {
+      enhancePhoto: (value: any) => {
+        request = value;
+        return of({
+          success: true,
+          data: {
+            provider: 'OpenAI',
+            Status: 'succeeded',
+            Output: ['https://example.test/enhanced.jpg'],
+            processedImageId: 1,
+            storagePath: 'enhanced/result.jpg',
+          },
+        });
+      },
+    };
+
+    await component.startEnhancement();
+
+    expect(request.imageStoragePath).toBe('uploads/source.jpg');
+    expect(request.imageUrl).toBeUndefined();
+  });
+
   it('resets an expired bot-verification token after a premium augmentation rejection', () => {
     const component = createComponent('pro_package', 9);
     Object.assign(component, {

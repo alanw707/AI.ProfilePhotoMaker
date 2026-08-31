@@ -28,7 +28,13 @@ The saved January artifact at `docs/deployment/evidence/generation-insufficient-
 
 A paid replay remains prohibited. Temporary safe telemetry is enabled for this deployment by `Diagnostics__CaptureHeadshotFailure=true`. It captures only the first HTTP 400 headshot rejection per container process, adds a server-generated correlation header, and logs failure code, HTTP status, normalized package code, requested output count, entitlement-present boolean, remaining candidate allowance, source-path-supplied boolean, and regeneration boolean. It excludes user ID, email, cookies, authorization headers, storage paths/URLs, image data, prompts, and payment identifiers. The one-event gate is regression-covered by `HeadshotsControllerTelemetryTests.Generate_CapturesOneSafeFailureCorrelationWhenTemporaryTelemetryIsEnabled`.
 
-A future captured event (or a redacted original response and correlation ID) is still required to identify the original 400. Until then, the original root cause remains unverified and completion must remain blocked.
+### Captured enhancement 400
+
+A redacted production response captured on 2026-08-31 is an MVC validation rejection from `/api/enhancement/enhance`, not `/api/headshots/generate`: `400` with `ImageUrl: Image URL must be a valid URL`. Its cause was deterministic: the legacy enhancement client sent both a relative display URL and its valid storage path, while the DTO's `[Url]` attribute rejected the relative URL before the controller could use the storage path. No provider call or allowance consumption occurred.
+
+The regression is red-capable in `photo-enhancement.component.spec.ts`: before the fix it observes the invalid relative `imageUrl` alongside `imageStoragePath`; it now requires storage-path-only requests. `EnhancePhotoRequestDtoTests.Validate_AllowsStoragePathWhenLegacyDisplayUrlIsRelative` also keeps the API validation contract aligned for legacy clients. This evidence does not attribute the separate historic purchased-headshot 400 to legacy credits; its evidence boundary remains unchanged.
+
+A future captured headshot event (or a redacted historic headshot response and correlation ID) is still required only to identify that separate headshot 400.
 
 ## Commands and results
 

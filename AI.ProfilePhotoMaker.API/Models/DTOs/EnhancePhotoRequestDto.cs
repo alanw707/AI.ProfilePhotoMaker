@@ -4,7 +4,6 @@ namespace AI.ProfilePhotoMaker.API.Models.DTOs;
 
 public class EnhancePhotoRequestDto : IValidatableObject
 {
-    [Url(ErrorMessage = "Image URL must be a valid URL")]
     public string? ImageUrl { get; set; }
 
     public string? ImageStoragePath { get; set; }
@@ -22,11 +21,20 @@ public class EnhancePhotoRequestDto : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (string.IsNullOrWhiteSpace(ImageStoragePath) && string.IsNullOrWhiteSpace(ImageUrl))
+        if (!string.IsNullOrWhiteSpace(ImageStoragePath))
+        {
+            yield break;
+        }
+
+        if (string.IsNullOrWhiteSpace(ImageUrl))
         {
             yield return new ValidationResult(
                 "Either imageStoragePath or imageUrl is required for photo enhancement",
                 new[] { nameof(ImageStoragePath), nameof(ImageUrl) });
+        }
+        else if (!new UrlAttribute().IsValid(ImageUrl))
+        {
+            yield return new ValidationResult("Image URL must be a valid URL", new[] { nameof(ImageUrl) });
         }
     }
 }
