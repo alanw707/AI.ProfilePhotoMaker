@@ -99,6 +99,14 @@ describe('GalleryImageActionsComponent', () => {
       expect(component.share.emit).toHaveBeenCalledWith(mockImage);
     });
 
+    it('should emit refine event', () => {
+      spyOn(component.refine, 'emit');
+
+      component.onRefine();
+
+      expect(component.refine.emit).toHaveBeenCalledWith(mockImage);
+    });
+
     it('should emit delete event', () => {
       spyOn(component.delete, 'emit');
 

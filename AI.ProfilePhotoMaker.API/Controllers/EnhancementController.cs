@@ -249,8 +249,11 @@ public class EnhancementController : ControllerBase
                 _logger.LogInformation("Enhancement source image URL normalized to: {ImageUrl}", S(dto.ImageUrl));
             }
 
-            // Check credit availability (enhancement costs 1 credit)
-            var requiredCredits = CreditCostConfig.GetCreditCost("photo_enhancement");
+            // Package refinements and premium augmentations are paid for by their separate
+            // outcome-package allowances, not the legacy credit ledger.
+            var requiredCredits = _outcomePackageService != null && (isPremiumAugmentation || isProfessionalRefinement)
+                ? 0
+                : CreditCostConfig.GetCreditCost("photo_enhancement");
             var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
             if (availableCredits < requiredCredits)
             {

@@ -405,11 +405,19 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   // Check whether the selected operation has its own package allowance.
   hasEnoughCredits(isRegeneration = false): boolean {
-    if (this.isHeadshotMvpEnabled && this.enhancementType === 'headshot') {
-      return (
-        this.selectedPackageCode === 'free_preview' ||
-        this.hasSelectedPackageEntitlement(isRegeneration)
-      );
+    const usesPackageRefinement = [
+      'headshot_linkedin',
+      'headshot_creator',
+      'headshot_office',
+      'headshot_studio',
+    ].includes(this.enhancementType);
+    if (
+      this.isHeadshotMvpEnabled &&
+      (this.enhancementType === 'headshot' || usesPackageRefinement)
+    ) {
+      return this.selectedPackageCode === 'free_preview'
+        ? !usesPackageRefinement && !isRegeneration
+        : this.hasSelectedPackageEntitlement(isRegeneration || usesPackageRefinement);
     }
 
     const totalCredits = this.getTotalAvailableCredits();
@@ -955,7 +963,12 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this._route.queryParamMap.subscribe(params => {
       const upgraded = params.get('upgraded');
       const resumePreviewId = Number(params.get('resumePreviewId') ?? params.get('previewId'));
+      const refineImageId = Number(params.get('refineImageId'));
       this.applyUseCaseFromQuery(params.get('useCase'));
+      if (Number.isFinite(refineImageId) && refineImageId > 0) {
+        this.loadGalleryImageForRefinement(refineImageId);
+        return;
+      }
       if (upgraded === 'starter_package' || upgraded === 'pro_package') {
         this.restorePreviewDraft();
         this.selectedPackageCode = upgraded;
@@ -989,6 +1002,45 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         }
       },
       error: error => console.warn('Failed to load platform export options', error),
+    });
+  }
+
+  private loadGalleryImageForRefinement(processedImageId: number): void {
+    this._profileWorkflowService.getStudioImageSource(processedImageId).subscribe({
+      next: response => {
+        if (!response.success || !response.data) {
+          this.errorMessage =
+            response.error?.message ?? 'This photo is no longer available to refine.';
+          this._cdr.markForCheck();
+          return;
+        }
+
+        const source = response.data;
+        this.selectedFile = null;
+        this.previewSourceStoragePath = source.storagePath;
+        this.currentSourceStoragePath = source.storagePath;
+        this.imagePreview = source.imageUrl;
+        this.beforeImageLoadFailed = false;
+        this.rawPreviewAvailable = false;
+        this.previewCandidate = null;
+        this.generatedCandidates = [];
+        this.selectedCandidateId = source.processedImageId;
+        this.enhancedImage = this.createEnhancedImageViewModel(
+          source.imageUrl,
+          'enhanced',
+          source.processedImageId,
+          source.storagePath
+        );
+        this.enhancementType = 'headshot_linkedin';
+        this.selectedPackageCode = this.getBestActivePaidPackageCode() ?? this.selectedPackageCode;
+        this.saveSuccessMessage =
+          'Photo loaded from your workspace. Choose a refinement to continue.';
+        this._cdr.markForCheck();
+      },
+      error: () => {
+        this.errorMessage = 'This photo is no longer available to refine.';
+        this._cdr.markForCheck();
+      },
     });
   }
 

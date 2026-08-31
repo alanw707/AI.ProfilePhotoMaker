@@ -106,7 +106,9 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             "pro_package" => Math.Min(requestedOutputs, 9),
             _ => 1
         };
-        var requiredCredits = packageCode == "free_preview" && _outcomePackageService != null ? 0 : CreditCostConfig.GetCreditCost(ActionName) * requestedOutputs;
+        // Outcome-package candidates are paid for by their package allowance. The legacy
+        // credit ledger remains only for generation flows without package fulfillment.
+        var requiredCredits = _outcomePackageService != null ? 0 : CreditCostConfig.GetCreditCost(ActionName) * requestedOutputs;
         var correlationId = BuildDeterministicCorrelationId(userId, sourcePath, request);
         var candidateCorrelationPrefix = $"{correlationId}:candidate:";
         var existingGeneratedImages = await _dbContext.ProcessedImages
@@ -281,7 +283,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                     Provider = result.Provider,
                     ProviderModel = result.Model,
                     GenerationMode = "instant_headshot",
-                    CreditCost = CreditCostConfig.GetCreditCost(ActionName),
+                    CreditCost = requiredCredits,
                     GenerationStatus = "succeeded",
                     CorrelationId = candidateCorrelationId,
                     RawImageStoragePath = storedOutput.RawPath,

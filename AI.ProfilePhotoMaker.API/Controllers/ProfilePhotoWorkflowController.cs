@@ -81,6 +81,39 @@ public class ProfilePhotoWorkflowController : BaseController
         return SuccessResponse(score);
     }
 
+    [HttpGet("images/{processedImageId:int}/studio-source")]
+    public async Task<IActionResult> GetStudioSource(int processedImageId, CancellationToken cancellationToken)
+    {
+        var authCheck = ValidateAuthentication();
+        if (authCheck != null) return authCheck;
+
+        var userId = GetCurrentUserId()!;
+        var image = await _context.ProcessedImages
+            .Include(i => i.UserProfile)
+            .FirstOrDefaultAsync(i => i.Id == processedImageId && i.UserProfile.UserId == userId, cancellationToken);
+        if (image == null)
+        {
+            return ErrorResponse("ImageNotFound", "The selected image was not found.", 404);
+        }
+
+        var storagePath = !string.IsNullOrWhiteSpace(image.ProcessedImageUrl)
+            ? image.ProcessedImageUrl
+            : image.OriginalImageUrl;
+        await using var sourceStream = await _storageService.GetImageAsync(storagePath);
+        if (sourceStream == null)
+        {
+            return ErrorResponse("ImageMissing", "The selected image file is no longer available.", 404);
+        }
+
+        return SuccessResponse(new
+        {
+            processedImageId = image.Id,
+            storagePath,
+            imageUrl = _storageService.GetImageUrl(storagePath),
+            style = image.Style
+        });
+    }
+
     [HttpGet("score-image/{processedImageId:int}")]
     public async Task<IActionResult> ScoreProcessedImage(int processedImageId, CancellationToken cancellationToken)
     {

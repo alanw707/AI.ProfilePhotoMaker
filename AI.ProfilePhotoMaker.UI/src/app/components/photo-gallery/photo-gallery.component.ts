@@ -138,6 +138,7 @@ export interface GalleryImage {
                 (view)="openImage($event)"
                 (download)="downloadImage($event)"
                 (share)="shareImage($event)"
+                (refine)="refineImage($event)"
                 (delete)="deleteImage($event)"
               >
               </app-gallery-image-actions>
@@ -184,6 +185,7 @@ export interface GalleryImage {
               (view)="openImage($event)"
               (download)="downloadImage($event)"
               (share)="shareImage($event)"
+              (refine)="refineImage($event)"
               (delete)="deleteImage($event)"
             >
             </app-gallery-image-actions>
@@ -217,6 +219,7 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
   @Output() imageClick = new EventEmitter<GalleryImage>();
   @Output() imageDownload = new EventEmitter<GalleryImage>();
   @Output() imageShare = new EventEmitter<GalleryImage>();
+  @Output() imageRefine = new EventEmitter<GalleryImage>();
   @Output() imageDelete = new EventEmitter<GalleryImage>();
   @Output() bulkDownload = new EventEmitter<GalleryImage[]>();
 
@@ -308,6 +311,10 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
 
   shareImage(image: GalleryImage): void {
     this.imageShare.emit(image);
+  }
+
+  refineImage(image: GalleryImage): void {
+    this.imageRefine.emit(image);
   }
 
   deleteImage(image: GalleryImage): void {

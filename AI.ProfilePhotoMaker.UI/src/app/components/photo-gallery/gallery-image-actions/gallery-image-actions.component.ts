@@ -8,7 +8,7 @@ import { GalleryImage } from '../photo-gallery.component';
   imports: [CommonModule],
   templateUrl: './gallery-image-actions.component.html',
   styleUrls: ['./gallery-image-actions.component.sass'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GalleryImageActionsComponent {
   @Input() image!: GalleryImage;
@@ -18,6 +18,7 @@ export class GalleryImageActionsComponent {
   @Output() view = new EventEmitter<GalleryImage>();
   @Output() download = new EventEmitter<GalleryImage>();
   @Output() share = new EventEmitter<GalleryImage>();
+  @Output() refine = new EventEmitter<GalleryImage>();
   @Output() delete = new EventEmitter<GalleryImage>();
 
   onView(event?: Event): void {
@@ -39,6 +40,13 @@ export class GalleryImageActionsComponent {
       event.stopPropagation();
     }
     this.share.emit(this.image);
+  }
+
+  onRefine(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.refine.emit(this.image);
   }
 
   onDelete(event?: Event): void {

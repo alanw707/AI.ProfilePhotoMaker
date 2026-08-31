@@ -57,6 +57,52 @@ public class HeadshotGenerationServiceTests
     }
 
     [Fact]
+    public async Task GenerateHeadshotAsync_CompletesPaidCandidatesWithoutLegacyCredits()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, credits: 1);
+        var entitlement = new UserPackageEntitlement
+        {
+            UserId = userId,
+            RemainingPackageUses = 1,
+            RemainingCandidates = 2,
+            RemainingRefinements = 1,
+            RemainingPremiumAugmentations = 1,
+            Status = PackageEntitlementStatus.Active
+        };
+        var provider = new FakeHeadshotProvider("data:image/png;base64," + Convert.ToBase64String([1, 2, 3]));
+        var service = CreateService(
+            context,
+            new FakeStorageService(),
+            provider,
+            new FakeOutcomePackageService(entitlement));
+
+        var first = await service.GenerateHeadshotAsync(new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = $"dev/uploads/{userId}/source.png",
+            Style = "linkedin",
+            PackageCode = "pro_package",
+            NumOutputs = 1,
+            ClientRequestId = "paid-package-first-candidate"
+        }, userId);
+        var second = await service.GenerateHeadshotAsync(new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = $"dev/uploads/{userId}/source.png",
+            Style = "linkedin",
+            PackageCode = "pro_package",
+            NumOutputs = 1,
+            ClientRequestId = "paid-package-second-candidate"
+        }, userId);
+
+        Assert.True(first.Success);
+        Assert.True(second.Success);
+        Assert.Equal(0, first.CreditsCost);
+        Assert.Equal(0, second.CreditsCost);
+        Assert.Equal(2, provider.Requests.Count);
+        Assert.Equal(0, entitlement.RemainingCandidates);
+    }
+
+    [Fact]
     public async Task GenerateHeadshotAsync_ReturnsExistingResultForDuplicateClientRequestWithoutConsumingCreditsAgain()
     {
         using var context = CreateContext();
@@ -576,8 +622,11 @@ public class HeadshotGenerationServiceTests
         {
             if (FailConsumeCandidates) return Task.FromResult(false);
             if (_entitlement.RemainingPackageUses <= 0 || _entitlement.RemainingCandidates < candidateCount) return Task.FromResult(false);
-            _entitlement.RemainingPackageUses = Math.Max(0, _entitlement.RemainingPackageUses - 1);
             _entitlement.RemainingCandidates -= candidateCount;
+            if (_entitlement.RemainingCandidates == 0)
+            {
+                _entitlement.RemainingPackageUses = Math.Max(0, _entitlement.RemainingPackageUses - 1);
+            }
             return Task.FromResult(true);
         }
         public Task<bool> ConsumeRefinementAsync(string userId, string? packageCode = null, CancellationToken cancellationToken = default)

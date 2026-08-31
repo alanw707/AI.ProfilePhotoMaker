@@ -245,6 +245,10 @@ export class GalleryComponent implements OnInit {
     window.open(image.url, '_blank');
   }
 
+  onImageRefine(image: GalleryImage): void {
+    this._router.navigate(['/app/enhance'], { queryParams: { refineImageId: image.id } });
+  }
+
   async testImageAccess(image: GalleryImage) {
     const imageUrl = image.downloadUrl || image.url;
 

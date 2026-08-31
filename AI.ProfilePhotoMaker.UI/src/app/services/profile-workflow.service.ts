@@ -57,6 +57,13 @@ export interface ProfilePhotoScore {
   qualityGate?: PhotoQualityGate;
 }
 
+export interface StudioImageSource {
+  processedImageId: number;
+  storagePath: string;
+  imageUrl: string;
+  style?: string | null;
+}
+
 export interface PlatformExportOption {
   code: string;
   label: string;
@@ -103,6 +110,12 @@ export class ProfileWorkflowService {
     return this.http.post<ApiResponse<ProfilePhotoScore>>(
       this.config.getFullUrl('/profilephotoworkflow/score'),
       formData
+    );
+  }
+
+  getStudioImageSource(processedImageId: number): Observable<ApiResponse<StudioImageSource>> {
+    return this.http.get<ApiResponse<StudioImageSource>>(
+      this.config.getFullUrl(`/profilephotoworkflow/images/${processedImageId}/studio-source`)
     );
   }
 
