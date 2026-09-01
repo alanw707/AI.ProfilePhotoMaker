@@ -57,10 +57,18 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
         Assert.Single(json.Data.Candidates);
     }
 
-    [Fact]
-    public async Task EnhancePhoto_PremiumOutfit_UsesPremiumAllowanceWithoutLegacyCreditConsumption()
+    [Theory]
+    [InlineData("relighting")]
+    [InlineData("professional_polish")]
+    [InlineData("outfit_upgrade")]
+    [InlineData("background_upgrade")]
+    [InlineData("skin_tone_polish")]
+    [InlineData("sharpen_detail")]
+    [InlineData("skin_smoothing")]
+    [InlineData("wrinkle_softening")]
+    public async Task EnhancePhoto_PremiumAugmentation_UsesPremiumAllowanceWithoutLegacyCreditConsumption(string enhancementType)
     {
-        var userId = $"outfit-upgrade-{Guid.NewGuid():N}";
+        var userId = $"premium-{enhancementType}-{Guid.NewGuid():N}";
         await SeedUserAsync(userId, credits: 0);
         await GrantPackageEntitlementAsync(userId, "pro_package", candidates: 7, refinements: 5, premiumAugmentations: 2, exportKit: true);
         var client = _factory.CreateClient();
@@ -69,7 +77,7 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
         var response = await client.PostAsJsonAsync("/api/enhancement/enhance", new
         {
             imageStoragePath = $"testing/enhanced/{userId}/source.png",
-            enhancementType = "outfit_upgrade"
+            enhancementType
         });
 
         var body = await response.Content.ReadAsStringAsync();
