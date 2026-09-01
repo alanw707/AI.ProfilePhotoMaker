@@ -2294,6 +2294,99 @@
       background: var(--proof-blue-wash)
       color: var(--proof-blue-dark)
 
+  .add-on-card.is-selected
+    border-color: var(--proof-blue)
+    background: var(--proof-blue-wash-strong)
+    box-shadow: inset 0 -3px 0 var(--proof-blue)
+
+  .augmentation-picker
+    display: grid
+    gap: 16px
+    margin-top: 18px
+    padding: 20px 0
+    border-top: 2px solid var(--proof-ink)
+    border-bottom: 1px solid var(--proof-rule)
+
+  .augmentation-picker-heading h3
+    margin: 0
+    font-size: 21px
+    letter-spacing: -.02em
+
+  .augmentation-picker-heading p
+    max-width: 62ch
+    margin: 6px 0 0
+    color: var(--proof-muted)
+    font-size: 14px
+    line-height: 1.45
+
+  .augmentation-option-list
+    display: grid
+    grid-template-columns: repeat(3, minmax(0, 1fr))
+    gap: 10px
+
+  .augmentation-option
+    display: flex
+    align-items: flex-start
+    min-height: 88px
+    gap: 10px
+    padding: 14px
+    border: 1px solid var(--proof-rule)
+    border-radius: 8px
+    background: var(--proof-surface)
+    color: var(--proof-ink)
+    cursor: pointer
+    transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease
+
+    &:hover
+      border-color: var(--proof-blue)
+
+    &:focus-within
+      outline: 3px solid var(--proof-blue)
+      outline-offset: 3px
+
+    &.is-selected
+      border-color: var(--proof-blue)
+      background: var(--proof-blue-wash)
+      box-shadow: inset 0 -2px 0 var(--proof-blue)
+
+    input
+      flex: 0 0 auto
+      min-width: 20px
+      min-height: 20px
+      margin: 1px 0 0
+
+    span
+      display: grid
+      gap: 3px
+
+    strong
+      font-size: 14px
+
+    small
+      color: var(--proof-muted)
+      font-size: 12px
+      line-height: 1.35
+
+  .augmentation-picker-action
+    display: flex
+    align-items: center
+    justify-content: space-between
+    gap: 16px
+
+    p
+      max-width: 48ch
+      margin: 0
+      color: var(--proof-muted)
+      font-size: 13px
+      line-height: 1.4
+
+    strong
+      color: var(--proof-ink)
+
+    .btn
+      flex: 0 0 auto
+      min-width: 190px
+
   .export-section
     display: grid
     gap: 16px
@@ -2581,15 +2674,19 @@
         min-height: 50px
         padding-inline: 12px
 
-    .upgrade-card-grid, .add-on-grid, .export-list
+    .upgrade-card-grid, .add-on-grid, .export-list, .augmentation-option-list
       grid-template-columns: 1fr
 
     .adjustment-control .retention-period
       grid-template-columns: minmax(0, 1fr) 48px
 
-    .refinement-action
+    .refinement-action, .augmentation-picker-action
       align-items: stretch
       flex-direction: column
+
+    .augmentation-picker-action .btn
+      width: 100%
+      min-width: 0
 
     .result-actions
       bottom: calc(8px + env(safe-area-inset-bottom))

@@ -270,5 +270,6 @@ export interface EnhancePhotoRequest {
   imageUrl?: string;
   imageStoragePath?: string;
   enhancementType?: string;
+  customPrompt?: string;
   turnstileToken?: string;
 }

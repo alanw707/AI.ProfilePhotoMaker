@@ -838,18 +838,57 @@
               *ngIf="turnstileSiteKey && !turnstileToken"
               [siteKey]="turnstileSiteKey"
               (tokenChange)="onTurnstileTokenChange($event)"></app-turnstile>
-            <div class="add-on-grid">
+            <div class="add-on-grid" aria-label="Premium add-on types">
               <button
                 class="add-on-card"
                 type="button"
                 *ngFor="let augmentation of premiumAugmentations"
-                (click)="applyPremiumAugmentation(augmentation.type)"
+                (click)="selectPremiumAugmentation(augmentation.type)"
+                [class.is-selected]="selectedPremiumAugmentationType === augmentation.type"
+                [attr.aria-pressed]="selectedPremiumAugmentationType === augmentation.type"
                 [disabled]="!canApplyPremiumAugmentation()">
                 <strong>{{ augmentation.label }}</strong>
                 <small>{{ augmentation.description }}</small>
                 <em>{{ getPremiumAddOnBadgeText() }}</em>
               </button>
             </div>
+            <section
+              class="augmentation-picker"
+              *ngIf="getSelectedPremiumAugmentation() as augmentation"
+              aria-labelledby="augmentation-picker-title">
+              <div class="augmentation-picker-heading">
+                <h3 id="augmentation-picker-title">Choose the {{ augmentation.label.toLowerCase() }} direction</h3>
+                <p>Pick one restrained finish. You can compare the result with the current proof before exporting.</p>
+              </div>
+              <div
+                class="augmentation-option-list"
+                role="radiogroup"
+                [attr.aria-label]="augmentation.label + ' options'">
+                <label
+                  class="augmentation-option"
+                  *ngFor="let option of augmentation.options"
+                  [class.is-selected]="selectedPremiumAugmentationOptionId === option.id">
+                  <input
+                    type="radio"
+                    name="premium-augmentation-option"
+                    [value]="option.id"
+                    [(ngModel)]="selectedPremiumAugmentationOptionId" />
+                  <span>
+                    <strong>{{ option.label }}</strong>
+                    <small>{{ option.description }}</small>
+                  </span>
+                </label>
+              </div>
+              <div class="augmentation-picker-action">
+                <p>
+                  <strong>One premium add-on</strong>
+                  is used only after this new proof is created.
+                </p>
+                <button class="btn btn-primary" type="button" (click)="applySelectedPremiumAugmentation()">
+                  Apply {{ augmentation.label.toLowerCase() }}
+                </button>
+              </div>
+            </section>
           </ng-container>
 
           <section

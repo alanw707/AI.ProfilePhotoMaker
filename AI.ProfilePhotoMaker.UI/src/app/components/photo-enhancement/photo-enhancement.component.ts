@@ -65,6 +65,32 @@ interface PackUseCaseOption {
   defaultExports: string[];
 }
 
+interface PremiumAugmentationOption {
+  id: string;
+  label: string;
+  description: string;
+  prompt: string;
+}
+
+interface PremiumAugmentation {
+  label: string;
+  type: string;
+  description: string;
+  options: PremiumAugmentationOption[];
+}
+
+const premiumOption = (
+  id: string,
+  label: string,
+  description: string,
+  direction: string
+): PremiumAugmentationOption => ({
+  id,
+  label,
+  description,
+  prompt: `Preserve the person's identity, age, facial structure, skin tone, expression, hairstyle, body shape, pose, crop, and camera angle. Keep all non-requested parts of the photo unchanged. ${direction}`,
+});
+
 interface InterruptedGenerationDraft {
   clientRequestId: string;
   imageStoragePath: string;
@@ -290,48 +316,210 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     'Brightness',
     'Contrast',
   ];
-  readonly premiumAugmentations = [
+  readonly premiumAugmentations: PremiumAugmentation[] = [
     {
       label: 'Relighting',
       type: 'relighting',
-      description: 'Balance shadows and add cleaner studio-style light.',
+      description: 'Balance shadows and set a deliberate light mood.',
+      options: [
+        premiumOption(
+          'soft-studio',
+          'Soft studio',
+          'Even, flattering light with gentle shadows.',
+          'Use broad, soft studio light with balanced exposure and gentle natural shadows.'
+        ),
+        premiumOption(
+          'window-light',
+          'Window light',
+          'Calm daylight with natural dimension.',
+          'Use soft indirect window daylight with natural, dimensional facial light.'
+        ),
+        premiumOption(
+          'editorial',
+          'Editorial contrast',
+          'Crisper shaping without a dramatic look.',
+          'Use refined editorial portrait lighting with controlled contrast and no harsh shadows.'
+        ),
+      ],
     },
     {
       label: 'Professional polish',
       type: 'professional_polish',
-      description: 'Reduce minor distractions while keeping a natural look.',
+      description: 'Choose the level of finishing touch.',
+      options: [
+        premiumOption(
+          'camera-ready',
+          'Camera ready',
+          'A light, natural tidy-up.',
+          'Apply a restrained camera-ready polish: reduce shine and minor distractions while retaining natural texture.'
+        ),
+        premiumOption(
+          'executive',
+          'Executive finish',
+          'Balanced color and a composed finish.',
+          'Apply a composed executive portrait finish with balanced color, clarity, and subtle under-eye shadow reduction.'
+        ),
+        premiumOption(
+          'fresh',
+          'Fresh and natural',
+          'Keep the least-retouched appearance.',
+          'Make only minimal natural corrections to color, clarity, and small distractions; avoid any beauty-filter effect.'
+        ),
+      ],
     },
     {
       label: 'Outfit upgrade',
       type: 'outfit_upgrade',
-      description: 'Try a more polished business-casual wardrobe.',
+      description: 'Pick wardrobe that fits the way you work.',
+      options: [
+        premiumOption(
+          'tailored-blazer',
+          'Tailored blazer',
+          'A neutral jacket and polished shirt.',
+          'Replace visible clothing with a neutral tailored blazer and simple collared shirt; use no logos, uniforms, or status signals.'
+        ),
+        premiumOption(
+          'business-casual',
+          'Business casual',
+          'Approachable and polished for everyday work.',
+          'Replace visible clothing with a refined business-casual top in understated professional colors; use no logos or uniforms.'
+        ),
+        premiumOption(
+          'creative-professional',
+          'Creative professional',
+          'Modern, understated style for a creative role.',
+          'Replace visible clothing with a modern, understated creative-professional outfit; avoid logos, luxury signals, uniforms, or dramatic styling.'
+        ),
+      ],
     },
     {
       label: 'Background upgrade',
       type: 'background_upgrade',
-      description: 'Swap clutter for a cleaner professional setting.',
+      description: 'Choose a setting that supports your work.',
+      options: [
+        premiumOption(
+          'warm-studio',
+          'Warm studio',
+          'A quiet warm-gray portrait backdrop.',
+          'Replace only the background with a warm-gray studio backdrop and natural edge separation.'
+        ),
+        premiumOption(
+          'modern-office',
+          'Modern office',
+          'A softly blurred, credible workplace.',
+          'Replace only the background with a tasteful softly blurred modern office; keep it uncluttered and naturally lit.'
+        ),
+        premiumOption(
+          'bright-interior',
+          'Bright interior',
+          'An approachable, calm indoor setting.',
+          'Replace only the background with a bright, warm, uncluttered interior with subtle depth and no identifiable brand or location.'
+        ),
+      ],
     },
     {
       label: 'Skin tone polish',
       type: 'skin_tone_polish',
-      description: 'Even redness and uneven color without changing identity.',
+      description: 'Balance color while preserving natural texture.',
+      options: [
+        premiumOption(
+          'balanced',
+          'Balanced tone',
+          'Gently even redness and uneven color.',
+          'Balance minor redness, shadows, and uneven color while retaining pores, age, and realistic skin texture.'
+        ),
+        premiumOption(
+          'warmth',
+          'Natural warmth',
+          'A subtle healthy warmth, never a tan.',
+          'Add subtle natural warmth and balance uneven tone without changing ethnicity, skin color, or realistic texture.'
+        ),
+        premiumOption(
+          'even-light',
+          'Even light',
+          'Reduce color cast from mixed lighting.',
+          'Correct mixed-light color cast and uneven facial illumination while preserving natural skin tone and texture.'
+        ),
+      ],
     },
     {
       label: 'Sharpen detail',
       type: 'sharpen_detail',
-      description: 'Improve crispness around eyes, hair, and clothing edges.',
+      description: 'Choose where crispness should be most noticeable.',
+      options: [
+        premiumOption(
+          'portrait-focus',
+          'Portrait focus',
+          'Crisper eyes, hair, and facial contours.',
+          'Improve crisp focus around eyes, hair, and facial contours with no halos, gritty texture, or artificial HDR.'
+        ),
+        premiumOption(
+          'wardrobe-detail',
+          'Wardrobe detail',
+          'Refine clothing edges without changing the outfit.',
+          'Improve natural detail in clothing edges, hair, and eyes without changing wardrobe, background, or composition.'
+        ),
+        premiumOption(
+          'gentle-clarity',
+          'Gentle clarity',
+          'A restrained fix for mild camera softness.',
+          'Apply only gentle clarity for mild camera softness; avoid over-sharpening, halos, or texture changes.'
+        ),
+      ],
     },
     {
       label: 'Skin smoothing',
       type: 'skin_smoothing',
-      description: 'Soften camera noise while preserving realistic texture.',
+      description: 'Set how light the retouch should feel.',
+      options: [
+        premiumOption(
+          'barely-there',
+          'Barely there',
+          'Only calm camera noise and minor blotchiness.',
+          'Make a barely-there localized retouch that reduces camera noise and minor blotchiness while keeping pores and age visible.'
+        ),
+        premiumOption(
+          'balanced-retouch',
+          'Balanced retouch',
+          'A polished but realistic finish.',
+          'Apply a balanced, localized professional retouch while preserving pores, facial texture, age, and expression.'
+        ),
+        premiumOption(
+          'under-eye',
+          'Under-eye refresh',
+          'Soften fatigue shadows without changing expression.',
+          'Gently reduce only harsh under-eye shadows and camera noise; preserve expression, age, skin texture, and all other facial details.'
+        ),
+      ],
     },
     {
       label: 'Wrinkle softening',
       type: 'wrinkle_softening',
-      description: 'Subtly soften harsh crease shadows.',
+      description: 'Choose the character of the finishing touch.',
+      options: [
+        premiumOption(
+          'natural',
+          'Natural soften',
+          'Ease harsh shadows while keeping character.',
+          'Subtly soften only harsh wrinkle shadows while retaining age, expression lines, and natural facial character.'
+        ),
+        premiumOption(
+          'under-eye-lines',
+          'Under-eye lines',
+          'Target harsh crease shadows around the eyes.',
+          'Subtly soften only harsh under-eye crease shadows while preserving natural expression, age, and skin texture.'
+        ),
+        premiumOption(
+          'even-light',
+          'Even facial light',
+          'Use light to soften, not erase, lines.',
+          'Use softer, even facial lighting to reduce harsh wrinkle shadows without erasing expression lines or changing facial structure.'
+        ),
+      ],
     },
   ];
+  selectedPremiumAugmentationType: string | null = null;
+  selectedPremiumAugmentationOptionId: string | null = null;
   exportOptions: PlatformExportOption[] = [];
   selectedExportCodes = new Set<string>([
     'linkedin_profile',
@@ -2623,7 +2811,44 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this.adjustmentContrast = 100;
   }
 
-  applyPremiumAugmentation(type: string): void {
+  selectPremiumAugmentation(type: string): void {
+    const augmentation = this.premiumAugmentations.find(item => item.type === type);
+    if (!augmentation) {
+      return;
+    }
+
+    this.selectedPremiumAugmentationType = augmentation.type;
+    this.selectedPremiumAugmentationOptionId = augmentation.options[0]?.id ?? null;
+    this.errorMessage = '';
+  }
+
+  getSelectedPremiumAugmentation(): PremiumAugmentation | null {
+    return (
+      this.premiumAugmentations.find(item => item.type === this.selectedPremiumAugmentationType) ??
+      null
+    );
+  }
+
+  getSelectedPremiumAugmentationOption(): PremiumAugmentationOption | null {
+    const augmentation = this.getSelectedPremiumAugmentation();
+    return (
+      augmentation?.options.find(
+        option => option.id === this.selectedPremiumAugmentationOptionId
+      ) ?? null
+    );
+  }
+
+  applySelectedPremiumAugmentation(): void {
+    const augmentation = this.getSelectedPremiumAugmentation();
+    const option = this.getSelectedPremiumAugmentationOption();
+    if (!augmentation || !option) {
+      return;
+    }
+
+    this.applyPremiumAugmentation(augmentation.type, option.prompt);
+  }
+
+  applyPremiumAugmentation(type: string, customPrompt?: string): void {
     if (!this.arePremiumAugmentationsVisible) {
       this.errorMessage = 'Premium augmentation add-ons are not available in this rollout.';
       return;
@@ -2648,6 +2873,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       .enhancePhoto({
         ...sourcePayload,
         enhancementType: type,
+        customPrompt,
         turnstileToken: this.turnstileSiteKey ? this.turnstileToken : undefined,
       })
       .subscribe({
@@ -2668,6 +2894,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
           this.enhancedImage.augmentationLabel = this.premiumAugmentations.find(
             item => item.type === type
           )?.label;
+          this.selectedPremiumAugmentationType = null;
+          this.selectedPremiumAugmentationOptionId = null;
           const processedImageId = this.enhancedImage.processedImageId;
           if (this.isProfilePhotoScoreVisible && processedImageId) {
             this.scoreGeneratedPhoto(processedImageId);

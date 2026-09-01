@@ -121,6 +121,66 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.errorMessage).toContain('Bot verification failed');
   });
 
+  it('sends the selected premium direction instead of applying a generic upgrade', () => {
+    const component = createComponent('pro_package', 9);
+    let request: any;
+    Object.assign(component, {
+      arePremiumAugmentationsVisible: true,
+      enhancedImage: {
+        url: 'candidate.jpg',
+        storagePath: 'generated/candidate.jpg',
+        processedImageId: 1,
+      },
+      premiumAugmentations: [
+        {
+          label: 'Background upgrade',
+          type: 'background_upgrade',
+          description: 'Choose a setting.',
+          options: [
+            {
+              id: 'modern-office',
+              label: 'Modern office',
+              description: 'A credible workplace.',
+              prompt: 'Replace only the background with a softly blurred modern office.',
+            },
+          ],
+        },
+      ],
+      isProfilePhotoScoreVisible: false,
+      areOutcomePackagesVisible: false,
+    });
+    (component as any)._cdr = { markForCheck: () => undefined };
+    (component as any)._stateService = { refreshCredits: () => Promise.resolve() };
+    (component as any).createEnhancedImageViewModel = (
+      url: string,
+      type: string,
+      id: number,
+      storagePath: string
+    ) => ({
+      url,
+      type,
+      processedImageId: id,
+      storagePath,
+    });
+    (component as any)._replicateService = {
+      enhancePhoto: (value: any) => {
+        request = value;
+        return of({
+          success: true,
+          data: { dataUrl: 'result.jpg', processedImageId: 2, storagePath: 'enhanced/result.jpg' },
+        });
+      },
+    };
+
+    component.selectPremiumAugmentation('background_upgrade');
+    component.applySelectedPremiumAugmentation();
+
+    expect(request.customPrompt).toBe(
+      'Replace only the background with a softly blurred modern office.'
+    );
+    expect(request.enhancementType).toBe('background_upgrade');
+  });
+
   it('keeps Free Preview selected when a saved paid-generation draft has no entitlement', () => {
     const component = createComponent('free_preview', 0);
     const storageKey = 'photoWorkspaceInterruptedGeneration-test';
