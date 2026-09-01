@@ -58,6 +58,32 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
     }
 
     [Fact]
+    public async Task EnhancePhoto_PremiumOutfit_UsesPremiumAllowanceWithoutLegacyCreditConsumption()
+    {
+        var userId = $"outfit-upgrade-{Guid.NewGuid():N}";
+        await SeedUserAsync(userId, credits: 0);
+        await GrantPackageEntitlementAsync(userId, "pro_package", candidates: 7, refinements: 5, premiumAugmentations: 2, exportKit: true);
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
+
+        var response = await client.PostAsJsonAsync("/api/enhancement/enhance", new
+        {
+            imageStoragePath = $"testing/enhanced/{userId}/source.png",
+            enhancementType = "outfit_upgrade"
+        });
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, body);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var profile = db.UserProfiles.Single(profile => profile.UserId == userId);
+        var entitlement = db.UserPackageEntitlements.Single(item => item.UserId == userId);
+        Assert.Equal(0, profile.Credits);
+        Assert.Equal(1, entitlement.RemainingPremiumAugmentations);
+    }
+
+    [Fact]
     public async Task GetResumablePreview_ReturnsLatestOwnedRawPreviewWithPackageContinuation()
     {
         var userId = $"headshot-resume-{Guid.NewGuid():N}";

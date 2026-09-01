@@ -269,42 +269,44 @@ public class EnhancementController : ControllerBase
                 });
             }
 
-            // Consume credits BEFORE API call to prevent race conditions
-            // Use photo_enhancement action to track enhancement usage
-            var correlationId = $"photo_enhancement:{Guid.NewGuid()}";
-            creditConsumptionResult = await _basicTierService.ConsumeCreditsAsync(
-                userId,
-                requiredCredits,
-                "photo_enhancement",
-                correlationId,
-                HttpContext?.RequestAborted ?? CancellationToken.None);
-
-            if (creditConsumptionResult == null || !creditConsumptionResult.Success)
+            if (requiredCredits > 0)
             {
-                if (creditConsumptionResult?.Error == "insufficient_credits")
+                // Consume legacy credits before the provider call to prevent races.
+                var correlationId = $"photo_enhancement:{Guid.NewGuid()}";
+                creditConsumptionResult = await _basicTierService.ConsumeCreditsAsync(
+                    userId,
+                    requiredCredits,
+                    "photo_enhancement",
+                    correlationId,
+                    HttpContext?.RequestAborted ?? CancellationToken.None);
+
+                if (creditConsumptionResult == null || !creditConsumptionResult.Success)
                 {
-                    _logger.LogWarning("Insufficient credits detected during OpenAI enhancement for user {UserId}", Sid(userId));
-                    return BadRequest(new
+                    if (creditConsumptionResult?.Error == "insufficient_credits")
+                    {
+                        _logger.LogWarning("Insufficient credits detected during OpenAI enhancement for user {UserId}", Sid(userId));
+                        return BadRequest(new
+                        {
+                            success = false,
+                            error = new
+                            {
+                                code = "InsufficientCredits",
+                                message = $"Insufficient credits for OpenAI enhancement. {requiredCredits} credit required."
+                            }
+                        });
+                    }
+
+                    _logger.LogError("Failed to consume credits for user {UserId} for OpenAI enhancement", Sid(userId));
+                    return StatusCode(500, new
                     {
                         success = false,
                         error = new
                         {
-                            code = "InsufficientCredits",
-                            message = $"Insufficient credits for OpenAI enhancement. {requiredCredits} credit required."
+                            code = "CreditConsumptionFailed",
+                            message = "Failed to process credit deduction. Please try again."
                         }
                     });
                 }
-
-                _logger.LogError("Failed to consume credits for user {UserId} for OpenAI enhancement", Sid(userId));
-                return StatusCode(500, new
-                {
-                    success = false,
-                    error = new
-                    {
-                        code = "CreditConsumptionFailed",
-                        message = "Failed to process credit deduction. Please try again."
-                    }
-                });
             }
 
             // Call OpenAI service to get base64 image data
