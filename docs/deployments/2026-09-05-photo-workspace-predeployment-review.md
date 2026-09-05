@@ -71,7 +71,10 @@ Resolved all reported NuGet advisories:
 - Angular/Karma: **465 passed, 19 skipped**.
 - Focused Playwright after review fixes: **8 passed** across pricing/dashboard, workspace recovery/accessibility, and premium generation.
 - Production UI build: passed; 26 SEO pages generated.
-- ESLint: 0 errors, 35 documented complexity warnings.
+- Local Docker builds: API and frontend images passed (`Dockerfile.backend` and `Dockerfile.frontend`, `build:docker`); API compiled with 0 warnings/errors.
+- Local Docker runtime smoke: both containers became healthy; API liveness, frontend root, and frontend `/pricing/` route passed.
+- Docker limitation: API ran in `LocalDev` with migrations disabled and dummy local-only configuration; this does not replace SQL/Azurite, Stripe sandbox, or production-like storage staging tests.
+- ESLint: 0 errors, 35 documented complexity warnings in both host and Docker frontend builds.
 - Bicep compilation: passed.
 - `dotnet ef migrations has-pending-model-changes`: none.
 - Production migration query: 0 pending.
