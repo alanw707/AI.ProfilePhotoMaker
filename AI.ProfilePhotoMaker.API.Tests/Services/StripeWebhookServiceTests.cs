@@ -348,8 +348,8 @@ public class StripeWebhookServiceTests
             .AsNoTracking()
             .FirstAsync(t => t.Id == transaction.Id);
 
-        Assert.Equal(PaymentStatus.Completed, updatedTransaction.Status);
-        Assert.NotNull(updatedTransaction.ProcessedAt);
+        Assert.Equal(PaymentStatus.PendingReview, updatedTransaction.Status);
+        Assert.Contains("PackageNotFound", updatedTransaction.FailureReason);
 
         Assert.False(await context.CreditPurchases.AnyAsync());
 
@@ -428,7 +428,7 @@ public class StripeWebhookServiceTests
     }
 
     [Fact]
-    public async Task HandleEventAsync_PaymentIntentSucceeded_MismatchedUserMetadata_UsesTransactionUser()
+    public async Task HandleEventAsync_PaymentIntentSucceeded_MismatchedUserMetadata_BlocksFulfillment()
     {
         using var context = CreateContext();
         var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
@@ -454,8 +454,30 @@ public class StripeWebhookServiceTests
             .AsNoTracking()
             .FirstAsync(p => p.UserId == userId);
 
-        Assert.Equal(5 + package.TotalCredits, profile.Credits);
+        Assert.Equal(5, profile.Credits);
         Assert.False(await context.UserProfiles.AnyAsync(p => p.UserId == mismatchedUserId));
+        Assert.Equal(PaymentStatus.PendingReview,
+            (await context.PaymentTransactions.SingleAsync(t => t.Id == transaction.Id)).Status);
+    }
+
+    [Fact]
+    public async Task HandleEventAsync_PaymentVerificationOutage_ThrowsForStripeRetry()
+    {
+        using var context = CreateContext();
+        var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
+        using var http = new HttpClient(new UnavailableStripeHandler());
+        var stripe = new StripeClient("sk_test_unit", httpClient: new SystemNetHttpClient(http));
+        var service = CreateService(context, stripe);
+        var stripeEvent = CreateStripeEvent(
+            PaymentIntentSucceededEvent,
+            transaction.ExternalTransactionId,
+            userId,
+            package.Id,
+            transaction.Id);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.HandleEventAsync(stripeEvent));
+
+        Assert.Empty(await context.CreditPurchases.ToListAsync());
     }
 
     [Fact]
@@ -484,7 +506,7 @@ public class StripeWebhookServiceTests
         Assert.False(await context.CreditPurchases.AnyAsync());
     }
 
-    private static StripeWebhookService CreateService(ApplicationDbContext context)
+    private static StripeWebhookService CreateService(ApplicationDbContext context, StripeClient? stripeClient = null)
     {
         var basicTierService = new BasicTierService(context, NullLogger<BasicTierService>.Instance);
 
@@ -506,7 +528,8 @@ public class StripeWebhookServiceTests
             basicTierService,
             NullLogger<CreditPackageService>.Instance,
             Options.Create(stripeOptions),
-            Options.Create(simulationOptions));
+            Options.Create(simulationOptions),
+            stripeClient);
 
         var email = new DummyEmailNotificationService();
         return new StripeWebhookService(
@@ -515,6 +538,12 @@ public class StripeWebhookServiceTests
             NullLogger<StripeWebhookService>.Instance,
             email,
             new DummyCouponService());
+    }
+
+    private sealed class UnavailableStripeHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable));
     }
 
     private sealed class DummyEmailNotificationService : IEmailNotificationService

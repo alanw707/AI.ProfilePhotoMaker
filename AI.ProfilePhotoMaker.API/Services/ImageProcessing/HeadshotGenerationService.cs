@@ -168,6 +168,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         }
 
         CreditConsumptionResult? consumed = null;
+        var generationCommitted = false;
 
         try
         {
@@ -279,6 +280,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                 }
             }
 
+            generationCommitted = true;
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
             await _basicTierService.LogUsageAsync(
                 userId,
@@ -310,12 +312,24 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         }
         catch
         {
-            await _basicTierService.RefundCreditsAsync(userId, consumed);
+            if (!generationCommitted)
+            {
+                await MarkPersistedCandidatesFailedAsync(
+                    profile.Id,
+                    correlationId,
+                    CancellationToken.None,
+                    "generation-incomplete");
+                await _basicTierService.RefundCreditsAsync(userId, consumed);
+            }
             throw;
         }
     }
 
-    private async Task MarkPersistedCandidatesFailedAsync(int userProfileId, string correlationId, CancellationToken cancellationToken)
+    private async Task MarkPersistedCandidatesFailedAsync(
+        int userProfileId,
+        string correlationId,
+        CancellationToken cancellationToken,
+        string failureReason = "package-entitlement-consumption-failed")
     {
         var candidateCorrelationPrefix = $"{correlationId}:candidate:";
         var promotedPreviewCorrelationId = $"{correlationId}:promoted-preview";
@@ -331,7 +345,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         foreach (var candidate in persistedCandidates)
         {
             candidate.GenerationStatus = "failed";
-            candidate.FailureReason = "package-entitlement-consumption-failed";
+            candidate.FailureReason = failureReason;
         }
 
         if (persistedCandidates.Count > 0)

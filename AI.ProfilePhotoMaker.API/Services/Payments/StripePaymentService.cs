@@ -1,3 +1,4 @@
+using System.Globalization;
 using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
@@ -104,8 +105,8 @@ public class StripePaymentService : IStripePaymentService
             ["package_id"] = package.Id.ToString(),
             ["package_name"] = package.Name,
             ["package_total_credits"] = package.TotalCredits.ToString(),
-            ["original_price"] = originalPrice.ToString("0.00"),
-            ["discount_amount"] = discountAmount.ToString("0.00")
+            ["original_price"] = originalPrice.ToString("0.00", CultureInfo.InvariantCulture),
+            ["discount_amount"] = discountAmount.ToString("0.00", CultureInfo.InvariantCulture)
         };
         if (!string.IsNullOrWhiteSpace(appliedCouponCode))
         {

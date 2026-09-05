@@ -142,9 +142,18 @@ public class CreditPackageService : ICreditPackageService
                 return new CreditPurchaseResult(false, transaction.Status, null, "PaymentFailed", "This payment has been refunded.");
             }
 
-            if (!await VerifyAndRefreshStripeTransactionAsync(transaction, packageId))
+            var paymentVerified = await VerifyAndRefreshStripeTransactionAsync(transaction, packageId);
+            if (paymentVerified != true)
             {
-                return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "PaymentVerificationFailed", "Unable to verify payment for this package. Please retry or contact support.");
+                var unavailable = paymentVerified == null;
+                return new CreditPurchaseResult(
+                    false,
+                    PaymentStatus.Failed,
+                    null,
+                    unavailable ? "PaymentVerificationUnavailable" : "PaymentVerificationFailed",
+                    unavailable
+                        ? "Payment verification is temporarily unavailable. Please retry."
+                        : "Unable to verify payment for this package. Please retry or contact support.");
             }
 
             if (transaction.Status == PaymentStatus.Pending)
@@ -271,7 +280,7 @@ public class CreditPackageService : ICreditPackageService
         return purchase;
     }
 
-    private async Task<bool> VerifyAndRefreshStripeTransactionAsync(PaymentTransaction transaction, int packageId)
+    private async Task<bool?> VerifyAndRefreshStripeTransactionAsync(PaymentTransaction transaction, int packageId)
     {
         if (_stripeClient == null)
         {
@@ -321,7 +330,7 @@ public class CreditPackageService : ICreditPackageService
             _logger.LogWarning(ex,
                 "Unable to verify Stripe payment intent {PaymentIntentId}",
                 LoggingSanitizer.SanitizeId(transaction.ExternalTransactionId));
-            return false;
+            return null;
         }
     }
 

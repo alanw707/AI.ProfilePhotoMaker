@@ -243,10 +243,33 @@ public class CreditPackageServiceTests
             (await context.UserProfiles.SingleAsync(p => p.UserId == userId)).Credits);
     }
 
-    private sealed class IntentResponseHandler(string json) : HttpMessageHandler
+    [Fact]
+    public async Task FirstFulfillment_ReportsTemporaryStripeFailureAsUnavailable()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context);
+        var package = await SeedCreditPackageAsync(context);
+        context.PaymentTransactions.Add(new PaymentTransaction
+        {
+            Id = 82, UserId = userId, ExternalTransactionId = "pi_unavailable",
+            Amount = package.Price, Currency = "USD", Status = PaymentStatus.Completed, Type = PaymentType.OneTime
+        });
+        await context.SaveChangesAsync();
+        using var http = new HttpClient(new IntentResponseHandler("{}", HttpStatusCode.ServiceUnavailable));
+        var stripe = new StripeClient("sk_test_unit", httpClient: new SystemNetHttpClient(http));
+
+        var result = await CreateService(context, stripeClient: stripe)
+            .PurchaseCreditPackageAsync(userId, package.PackageId, "82");
+
+        Assert.False(result.Success);
+        Assert.Equal("PaymentVerificationUnavailable", result.ErrorCode);
+        Assert.Empty(await context.CreditPurchases.ToListAsync());
+    }
+
+    private sealed class IntentResponseHandler(string json, HttpStatusCode status = HttpStatusCode.OK) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-            => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            => Task.FromResult(new HttpResponseMessage(status)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             });

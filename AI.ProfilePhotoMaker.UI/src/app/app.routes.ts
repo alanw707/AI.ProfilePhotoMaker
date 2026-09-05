@@ -1,4 +1,5 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, Routes } from '@angular/router';
 import { LoginComponent } from './auth/login/login.component';
 import { RegisterComponent } from './auth/register/register.component';
 import { guestGuard } from './guards/guest.guard';
@@ -151,7 +152,8 @@ export const routes: Routes = [
   // Legacy protected routes (for backwards compatibility)
   {
     path: 'dashboard',
-    redirectTo: 'app/enhance',
+    redirectTo: ({ queryParams }) =>
+      inject(Router).createUrlTree(['/app/enhance'], { queryParams }),
     pathMatch: 'full',
   },
   {

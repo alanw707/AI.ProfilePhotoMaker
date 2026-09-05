@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
@@ -86,7 +87,9 @@ public class StripeWebhookService : IStripeWebhookService
         if (!string.IsNullOrWhiteSpace(transactionIdRaw) && int.TryParse(transactionIdRaw, out var transactionId))
         {
             transaction = await _dbContext.PaymentTransactions
-                .FirstOrDefaultAsync(t => t.Id == transactionId, cancellationToken);
+                .FirstOrDefaultAsync(
+                    t => t.Id == transactionId && t.ExternalTransactionId == paymentIntent.Id,
+                    cancellationToken);
         }
 
         transaction ??= await _dbContext.PaymentTransactions
@@ -99,20 +102,41 @@ public class StripeWebhookService : IStripeWebhookService
             return;
         }
 
+        if (transaction.Status == PaymentStatus.PendingReview)
+        {
+            _logger.LogWarning(
+                "Stripe payment intent {PaymentIntentId} remains blocked for manual review on transaction {TransactionId}",
+                LoggingSanitizer.SanitizeId(paymentIntent.Id),
+                transaction.Id);
+            return;
+        }
+
         if (!string.Equals(transaction.UserId, userId, StringComparison.Ordinal))
         {
-            _logger.LogWarning("Payment transaction {TransactionId} user mismatch. Transaction user {TransactionUserId}, metadata user {MetadataUserId}",
-                transaction.Id,
-                LoggingSanitizer.SanitizeId(transaction.UserId),
-                LoggingSanitizer.SanitizeId(userId));
-            userId = transaction.UserId;
+            _logger.LogError(
+                "Stripe payment intent {PaymentIntentId} user metadata does not match transaction {TransactionId}; fulfillment blocked",
+                LoggingSanitizer.SanitizeId(paymentIntent.Id),
+                transaction.Id);
+            transaction.Status = PaymentStatus.PendingReview;
+            transaction.FailureReason = "Stripe payment user metadata mismatch. Manual review required.";
+            transaction.UpdatedAt = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return;
         }
 
         if (transaction.Status is PaymentStatus.Completed or PaymentStatus.Succeeded)
         {
-            _logger.LogInformation("Stripe payment intent {PaymentIntentId} already processed for transaction {TransactionId}",
-                LoggingSanitizer.SanitizeId(paymentIntent.Id),
-                transaction.Id);
+            var alreadyFulfilled = await _dbContext.CreditPurchases.AsNoTracking().AnyAsync(
+                p => p.PaymentTransactionId == transaction.Id.ToString() &&
+                     (p.Status == PaymentStatus.Completed || p.Status == PaymentStatus.Succeeded),
+                cancellationToken);
+            if (alreadyFulfilled)
+            {
+                _logger.LogInformation("Stripe payment intent {PaymentIntentId} already processed for transaction {TransactionId}",
+                    LoggingSanitizer.SanitizeId(paymentIntent.Id),
+                    transaction.Id);
+                return;
+            }
         }
         else
         {
@@ -126,8 +150,8 @@ public class StripeWebhookService : IStripeWebhookService
 
         bool couponRedemptionFailed = false;
         if (!string.IsNullOrWhiteSpace(couponCode)
-            && decimal.TryParse(originalPriceRaw, out var originalPrice)
-            && decimal.TryParse(discountAmountRaw, out var discountAmount)
+            && decimal.TryParse(originalPriceRaw, NumberStyles.Number, CultureInfo.InvariantCulture, out var originalPrice)
+            && decimal.TryParse(discountAmountRaw, NumberStyles.Number, CultureInfo.InvariantCulture, out var discountAmount)
             && discountAmount > 0)
         {
             var redeemed = await _couponService.RedeemCouponAsync(couponCode, userId, originalPrice, discountAmount);
@@ -166,6 +190,16 @@ public class StripeWebhookService : IStripeWebhookService
                 purchaseResult.Status,
                 LoggingSanitizer.Sanitize(purchaseResult.ErrorCode),
                 LoggingSanitizer.Sanitize(purchaseResult.ErrorMessage));
+
+            if (purchaseResult.ErrorCode == "PaymentVerificationUnavailable")
+            {
+                throw new InvalidOperationException("Stripe payment verification is temporarily unavailable.");
+            }
+
+            transaction.Status = PaymentStatus.PendingReview;
+            transaction.FailureReason = $"Package fulfillment failed ({purchaseResult.ErrorCode ?? "unknown"}). Manual review required.";
+            transaction.UpdatedAt = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync(cancellationToken);
         }
         else
         {
@@ -196,6 +230,14 @@ public class StripeWebhookService : IStripeWebhookService
             return;
         }
 
+        if (transaction.Status is PaymentStatus.Completed or PaymentStatus.Succeeded)
+        {
+            _logger.LogWarning(
+                "Ignoring out-of-order failed event for completed transaction {TransactionId}",
+                transaction.Id);
+            return;
+        }
+
         transaction.Status = PaymentStatus.Failed;
         transaction.FailureReason = paymentIntent.LastPaymentError?.Message ?? "Payment failed";
         transaction.ProcessedAt ??= DateTime.UtcNow;
@@ -213,6 +255,14 @@ public class StripeWebhookService : IStripeWebhookService
         var transaction = await FindTransactionAsync(paymentIntent, cancellationToken);
         if (transaction == null)
         {
+            return;
+        }
+
+        if (transaction.Status is PaymentStatus.Completed or PaymentStatus.Succeeded)
+        {
+            _logger.LogWarning(
+                "Ignoring out-of-order canceled event for completed transaction {TransactionId}",
+                transaction.Id);
             return;
         }
 
@@ -236,7 +286,9 @@ public class StripeWebhookService : IStripeWebhookService
         if (!string.IsNullOrWhiteSpace(transactionIdRaw) && int.TryParse(transactionIdRaw, out var transactionId))
         {
             var transaction = await _dbContext.PaymentTransactions
-                .FirstOrDefaultAsync(t => t.Id == transactionId, cancellationToken);
+                .FirstOrDefaultAsync(
+                    t => t.Id == transactionId && t.ExternalTransactionId == paymentIntent.Id,
+                    cancellationToken);
             if (transaction != null)
             {
                 return transaction;

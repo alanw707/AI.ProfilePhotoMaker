@@ -360,6 +360,10 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
           value: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${sqlDatabase.name};User ID=sqladmin;Password=${sqlAdminPassword};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
         }
         {
+          name: 'storage-connection-string'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+        }
+        {
           name: 'acr-password'
           value: containerRegistry.listCredentials().passwords[0].value
         }
@@ -461,11 +465,11 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'ConnectionStrings__AzureStorage'
-              value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+              secretRef: 'storage-connection-string'
             }
             {
               name: 'AzureStorage__ConnectionString'
-              value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+              secretRef: 'storage-connection-string'
             }
             {
               name: 'AzureStorage__ContainerName'
@@ -478,7 +482,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             // Plain env vars for EnvironmentConfiguration production checks
             {
               name: 'AZURE_STORAGE_CONNECTION_STRING'
-              value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+              secretRef: 'storage-connection-string'
             }
             {
               name: 'AZURE_STORAGE_CONTAINER_NAME'

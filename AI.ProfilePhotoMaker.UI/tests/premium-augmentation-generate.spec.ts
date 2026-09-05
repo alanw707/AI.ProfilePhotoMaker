@@ -129,6 +129,8 @@ async function installWorkflowMocks(page: import('@playwright/test').Page): Prom
       body = { success: true, data: { emailConfirmed: true }, error: null };
     } else if (path.endsWith('/auth/validate-session')) {
       body = { success: true, isSuccess: true, isAuthenticated: true, data: {} };
+    } else if (path.endsWith('/auth/profile-completion-status')) {
+      body = { isCompleted: true };
     } else if (path.endsWith('/auth/user-roles')) {
       body = { success: true, data: [] };
     } else if (path.endsWith('/profile')) {
@@ -196,6 +198,16 @@ async function installWorkflowMocks(page: import('@playwright/test').Page): Prom
 }
 
 test('Pro package exposes an explicit premium generation action', async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as any).turnstile = {
+      render: (_container: HTMLElement, options: { callback: (token: string) => void }) => {
+        setTimeout(() => options.callback('e2e-turnstile-token'));
+        return 'e2e-widget';
+      },
+      remove: () => undefined,
+      reset: () => undefined,
+    };
+  });
   await installBuiltBundle(page);
   await installWorkflowMocks(page);
   await page.goto('http://127.0.0.1:4300/app/enhance?e2eAuthBypass=1');

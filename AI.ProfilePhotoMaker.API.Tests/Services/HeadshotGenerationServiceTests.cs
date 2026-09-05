@@ -341,6 +341,31 @@ public class HeadshotGenerationServiceTests
     }
 
     [Fact]
+    public async Task GenerateHeadshotAsync_MarksPartialBatchFailedAndRefundsCredits()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, credits: 3);
+        var provider = new FakeHeadshotProvider("data:image/png;base64,AQID", failOnCall: 2);
+        var service = CreateService(context, new FakeStorageService(), provider);
+
+        var ex = await Assert.ThrowsAsync<HeadshotGenerationException>(() =>
+            service.GenerateHeadshotAsync(new HeadshotGenerationRequestDto
+            {
+                ImageStoragePath = $"dev/enhanced/{userId}/source.png",
+                Style = "professional",
+                PackageCode = "starter_package",
+                NumOutputs = 2,
+                ClientRequestId = "partial-batch"
+            }, userId));
+
+        Assert.Equal("ProviderGenerationFailed", ex.Code);
+        Assert.Equal(3, (await context.UserProfiles.SingleAsync(p => p.UserId == userId)).Credits);
+        var persisted = await context.ProcessedImages.SingleAsync();
+        Assert.Equal("failed", persisted.GenerationStatus);
+        Assert.Equal("generation-incomplete", persisted.FailureReason);
+    }
+
+    [Fact]
     public async Task GenerateHeadshotAsync_RejectsStoragePathOutsideCurrentUserPrefixes()
     {
         using var context = CreateContext();
@@ -431,11 +456,13 @@ public class HeadshotGenerationServiceTests
     {
         private readonly string? _output;
         private readonly bool _success;
+        private readonly int? _failOnCall;
 
-        public FakeHeadshotProvider(string? output, bool success = true)
+        public FakeHeadshotProvider(string? output, bool success = true, int? failOnCall = null)
         {
             _output = output;
             _success = success;
+            _failOnCall = failOnCall;
         }
 
         public string ProviderName => "openai";
@@ -448,15 +475,16 @@ public class HeadshotGenerationServiceTests
         {
             CallCount++;
             Requests.Add(request);
+            var success = _success && CallCount != _failOnCall;
             return Task.FromResult(new HeadshotGenerationResult
             {
-                Success = _success,
+                Success = success,
                 DataUrlOrUrl = _output ?? string.Empty,
                 Provider = ProviderName,
                 Model = ModelName,
                 PromptVersion = "prompt-v1",
-                FailureCode = _success ? null : "ProviderGenerationFailed",
-                FailureMessage = _success ? null : "provider failed"
+                FailureCode = success ? null : "ProviderGenerationFailed",
+                FailureMessage = success ? null : "provider failed"
             });
         }
     }
