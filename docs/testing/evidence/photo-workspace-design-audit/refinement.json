@@ -1,0 +1,17 @@
+{
+  "provider": "local fixed-image fixture (not AI)",
+  "status": 200,
+  "success": true,
+  "error": null,
+  "isRegeneration": true,
+  "requestedOutputs": 1,
+  "returnedCandidates": 1,
+  "before": {
+    "candidates": 0,
+    "refinements": 5
+  },
+  "after": {
+    "candidates": 0,
+    "refinements": 4
+  }
+}

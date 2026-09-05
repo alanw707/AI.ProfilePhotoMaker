@@ -58,6 +58,43 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
     }
 
     [Fact]
+    public async Task FreePreviewPromotion_ConsumesAllThreeStarterSlots_WithoutDoubleConsumption()
+    {
+        var userId = $"headshot-promotion-{Guid.NewGuid():N}";
+        await SeedUserAsync(userId, credits: 10);
+        var sourcePath = $"testing/enhanced/{userId}/source.png";
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
+        var previewResponse = await client.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = sourcePath, style = "professional", numOutputs = 1
+        });
+        previewResponse.EnsureSuccessStatusCode();
+        var preview = (await previewResponse.Content.ReadFromJsonAsync<HeadshotApiResponse>())!.Data!;
+        await GrantPackageEntitlementAsync(userId, "starter_package", candidates: 3, refinements: 2, premiumAugmentations: 0, exportKit: true);
+        var continuation = new
+        {
+            imageStoragePath = sourcePath, style = "professional", packageCode = "starter_package", numOutputs = 2,
+            reusedPreviewProcessedImageId = preview.ProcessedImageId, reusedPreviewSourcePath = sourcePath,
+            reusedPreviewStyle = "professional", clientRequestId = "promotion-accounting-check"
+        };
+        var first = await client.PostAsJsonAsync("/api/headshots/generate", continuation);
+        first.EnsureSuccessStatusCode();
+        var result = (await first.Content.ReadFromJsonAsync<HeadshotApiResponse>())!.Data!;
+        Assert.Equal(3, result.Candidates.Count);
+        var retry = await client.PostAsJsonAsync("/api/headshots/generate", continuation);
+        retry.EnsureSuccessStatusCode();
+        Assert.Equal(result.Candidates.Select(c => c.ProcessedImageId),
+            (await retry.Content.ReadFromJsonAsync<HeadshotApiResponse>())!.Data!.Candidates.Select(c => c.ProcessedImageId));
+        using var scope = _factory.Services.CreateScope();
+        var entitlement = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().UserPackageEntitlements.Single(e => e.UserId == userId);
+        Assert.Equal(0, entitlement.RemainingCandidates);
+        Assert.Equal(0, entitlement.RemainingPackageUses);
+        Assert.Equal(2, entitlement.RemainingRefinements);
+        Assert.True(entitlement.PlatformExportKitAvailable);
+    }
+
+    [Fact]
     public async Task GetResumablePreview_ReturnsLatestOwnedRawPreviewWithPackageContinuation()
     {
         var userId = $"headshot-resume-{Guid.NewGuid():N}";
@@ -86,6 +123,56 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
         Assert.Equal("starter_package", json.Data.ActivePackageCode);
         Assert.Equal(2, json.Data.RemainingCandidateCount);
         Assert.Equal($"testing/enhanced/{userId}/source.png", json.Data.SourceStoragePath);
+    }
+
+    [Theory]
+    [InlineData("instant_headshot")]
+    [InlineData("instant_headshot_promoted_preview")]
+    [InlineData("premium_augmentation")]
+    [InlineData("photo_refinement")]
+    public async Task GetResumablePreview_ByIdRestoresPaidCandidateWithoutNewGeneration(string generationMode)
+    {
+        var userId = $"headshot-paid-resume-{Guid.NewGuid():N}";
+        await SeedUserAsync(userId, credits: 3);
+        await GrantPackageEntitlementAsync(userId, "starter_package", candidates: 3, refinements: 1, premiumAugmentations: 0, exportKit: true);
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
+        var generate = await client.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = $"testing/enhanced/{userId}/source.png", style = "professional",
+            packageCode = "starter_package", numOutputs = 3
+        });
+        generate.EnsureSuccessStatusCode();
+        var generated = await generate.Content.ReadFromJsonAsync<HeadshotApiResponse>();
+        var imageId = generated!.Data!.ProcessedImageId;
+        using (var setup = _factory.Services.CreateScope())
+        {
+            var context = setup.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            context.ProcessedImages.Single(i => i.Id == imageId).GenerationMode = generationMode;
+            await context.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync($"/api/headshots/resumable-preview?previewId={imageId}");
+        response.EnsureSuccessStatusCode();
+        var restored = (await response.Content.ReadFromJsonAsync<ResumablePreviewApiResponse>())!.Data;
+
+        Assert.NotNull(restored);
+        Assert.True(restored!.IsPaidCandidate);
+        Assert.False(restored.HasRawPreview);
+        Assert.False(restored.CanPromotePreview);
+        Assert.Equal(imageId, restored.ProcessedImageId);
+        Assert.Equal("starter_package", restored.ActivePackageCode);
+        Assert.Equal(0, restored.RemainingCandidateCount);
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var entitlement = db.UserPackageEntitlements.Single(e => e.UserId == userId);
+        Assert.Equal(1, entitlement.RemainingRefinements);
+        Assert.True(entitlement.PlatformExportKitAvailable);
+
+        var other = _factory.CreateClient();
+        other.DefaultRequestHeaders.Add("X-Test-UserId", "another-paid-resume-user");
+        var denied = await other.GetFromJsonAsync<ResumablePreviewApiResponse>($"/api/headshots/resumable-preview?previewId={imageId}");
+        Assert.Null(denied!.Data);
     }
 
     [Fact]
@@ -250,6 +337,7 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
         public string SourceStoragePath { get; set; } = string.Empty;
         public string Style { get; set; } = string.Empty;
         public bool HasRawPreview { get; set; }
+        public bool IsPaidCandidate { get; set; }
         public bool CanPromotePreview { get; set; }
         public string? ActivePackageCode { get; set; }
         public int RemainingCandidateCount { get; set; }

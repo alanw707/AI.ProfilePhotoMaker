@@ -146,9 +146,11 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             var entitlement = packageCode == "free_preview"
                 ? null
                 : await _outcomePackageService.GetActiveEntitlementAsync(userId, packageCode, cancellationToken);
+            var candidateSlots = requestedOutputs +
+                (packageCode != "free_preview" && !request.IsRegeneration && request.ReusedPreviewProcessedImageId.HasValue ? 1 : 0);
             var allowance = PackageEntitlementPolicy.CheckGenerationAllowance(
                 packageCode,
-                requestedOutputs,
+                candidateSlots,
                 request.IsRegeneration,
                 entitlement);
             if (!allowance.Allowed)
@@ -267,7 +269,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             {
                 var consumedPackageAllowance = request.IsRegeneration
                     ? await _outcomePackageService.ConsumeRefinementAsync(userId, packageCode, cancellationToken)
-                    : await _outcomePackageService.ConsumeCandidatesAsync(userId, packageCode, requestedOutputs, cancellationToken);
+                    : await _outcomePackageService.ConsumeCandidatesAsync(userId, packageCode, candidates.Count, cancellationToken);
                 if (!consumedPackageAllowance)
                 {
                     await MarkPersistedCandidatesFailedAsync(profile.Id, correlationId, cancellationToken);

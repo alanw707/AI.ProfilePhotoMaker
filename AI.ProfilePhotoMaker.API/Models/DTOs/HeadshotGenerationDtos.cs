@@ -74,6 +74,7 @@ public class ResumableHeadshotPreviewDto
     public string Style { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public bool HasRawPreview { get; set; }
+    public bool IsPaidCandidate { get; set; }
     public bool CanPromotePreview { get; set; }
     public string? ActivePackageCode { get; set; }
     public int RemainingCandidateCount { get; set; }

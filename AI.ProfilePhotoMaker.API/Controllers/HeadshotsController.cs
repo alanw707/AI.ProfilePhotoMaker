@@ -69,9 +69,14 @@ public class HeadshotsController : ControllerBase
             .Where(i =>
                 i.UserProfile.UserId == userId &&
                 i.GenerationStatus == "succeeded" &&
-                i.GenerationMode == "instant_headshot" &&
-                i.FailureReason != null &&
-                i.FailureReason.StartsWith("raw-preview:"));
+                (i.GenerationMode == "instant_headshot" || i.GenerationMode == "instant_headshot_promoted_preview" ||
+                 i.GenerationMode == "premium_augmentation" || i.GenerationMode == "photo_refinement"));
+
+        // Automatic suggestions remain Free Previews; explicit gallery links can reopen paid work.
+        if (!previewId.HasValue)
+        {
+            query = query.Where(i => i.FailureReason != null && i.FailureReason.StartsWith("raw-preview:"));
+        }
 
         var preview = previewId.HasValue
             ? await query.FirstOrDefaultAsync(i => i.Id == previewId.Value, HttpContext.RequestAborted)
@@ -82,25 +87,26 @@ public class HeadshotsController : ControllerBase
             return Ok(new { success = true, data = (object?)null, error = (object?)null });
         }
 
+        var isPaidCandidate = preview.FailureReason?.StartsWith("raw-preview:", StringComparison.Ordinal) != true;
         var styleActive = await _dbContext.Styles.AnyAsync(s => s.IsActive && s.Name == preview.Style, HttpContext.RequestAborted);
-        if (!styleActive || !await StorageImageExistsAsync(preview.ProcessedImageUrl))
+        if ((!isPaidCandidate && !styleActive) || !await StorageImageExistsAsync(preview.ProcessedImageUrl))
         {
             return Ok(new { success = true, data = (object?)null, error = (object?)null });
         }
 
-        var rawStoragePath = preview.FailureReason!["raw-preview:".Length..];
-        var rawPreviewExists = await StorageImageExistsAsync(rawStoragePath);
+        var rawPreviewExists = !isPaidCandidate && await StorageImageExistsAsync(preview.FailureReason!["raw-preview:".Length..]);
         var sourceExists = await StorageImageExistsAsync(preview.OriginalImageUrl);
 
-        var entitlement = rawPreviewExists
+        var entitlement = isPaidCandidate || rawPreviewExists
             ? await _dbContext.UserPackageEntitlements
             .Include(e => e.OutcomePackageDefinition)
             .Where(e => e.UserId == userId &&
                         e.Status == PackageEntitlementStatus.Active &&
                         (e.ExpiresAt == null || e.ExpiresAt > DateTime.UtcNow) &&
                         (e.OutcomePackageDefinition.Code == "starter_package" || e.OutcomePackageDefinition.Code == "pro_package") &&
-                        e.RemainingPackageUses > 0 &&
-                        e.RemainingCandidates > 0)
+                        (isPaidCandidate
+                            ? e.RemainingRefinements > 0 || e.RemainingPremiumAugmentations > 0 || e.PlatformExportKitAvailable
+                            : e.RemainingPackageUses > 0 && e.RemainingCandidates > 0))
             .OrderByDescending(e => e.OutcomePackageDefinition.Code == "pro_package")
             .ThenBy(e => e.ExpiresAt ?? DateTime.MaxValue)
             .ThenBy(e => e.CreatedAt)
@@ -108,7 +114,7 @@ public class HeadshotsController : ControllerBase
             : null;
 
         var totalCandidates = entitlement?.OutcomePackageDefinition.IncludedCandidateCount ?? 0;
-        var remainingCandidateCount = entitlement == null ? 0 : Math.Max(totalCandidates - 1, 0);
+        var remainingCandidateCount = isPaidCandidate || entitlement == null ? 0 : Math.Max(totalCandidates - 1, 0);
         var dto = new ResumableHeadshotPreviewDto
         {
             ProcessedImageId = preview.Id,
@@ -118,10 +124,13 @@ public class HeadshotsController : ControllerBase
             Style = preview.Style,
             CreatedAt = preview.CreatedAt,
             HasRawPreview = rawPreviewExists,
-            CanPromotePreview = entitlement != null && rawPreviewExists,
+            IsPaidCandidate = isPaidCandidate,
+            CanPromotePreview = !isPaidCandidate && entitlement != null && rawPreviewExists,
             ActivePackageCode = entitlement?.OutcomePackageDefinition.Code,
             RemainingCandidateCount = remainingCandidateCount,
-            Message = entitlement == null
+            Message = isPaidCandidate
+                ? "Paid photo restored. Use your remaining package tools or download your saved image."
+                : entitlement == null
                 ? (rawPreviewExists
                     ? "Resume this preview, then unlock Starter or Pro to generate paid candidates."
                     : "This preview can be viewed, but its generation source expired. Start over to create paid candidates.")

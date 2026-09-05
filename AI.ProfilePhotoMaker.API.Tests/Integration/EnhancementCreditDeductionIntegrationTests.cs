@@ -165,6 +165,69 @@ public class EnhancementCreditDeductionIntegrationTests : IClassFixture<CustomWe
         Assert.Equal(4, profile.Credits);
     }
 
+    [Fact]
+    public async Task ExpiredPremiumEntitlement_IsRejectedBeforeProviderOrCreditConsumption()
+    {
+        await SeedUserAsync(credits: 20);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.UserPackageEntitlements.RemoveRange(db.UserPackageEntitlements.Where(e => e.UserId == UserId));
+            var package = await db.OutcomePackageDefinitions.SingleAsync(p => p.Code == "pro_package");
+            db.UserPackageEntitlements.Add(new UserPackageEntitlement
+            {
+                UserId = UserId, OutcomePackageDefinitionId = package.Id,
+                Status = PackageEntitlementStatus.Active, RemainingPremiumAugmentations = 1,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(-1)
+            });
+            await db.SaveChangesAsync();
+        }
+        var response = await _factory.CreateAuthenticatedClient().PostAsJsonAsync("/api/enhancement/enhance", new
+        {
+            imageUrl = FakeOpenAiHttpMessageHandler.SuccessImageUrl, enhancementType = "relighting"
+        });
+        Assert.Equal(HttpStatusCode.PaymentRequired, response.StatusCode);
+        Assert.Equal(20, (await GetProfileAsync()).Credits);
+    }
+
+    [Theory]
+    [InlineData("relighting")]
+    [InlineData("professional_polish")]
+    [InlineData("outfit_upgrade")]
+    [InlineData("background_upgrade")]
+    [InlineData("skin_tone_polish")]
+    [InlineData("sharpen_detail")]
+    [InlineData("skin_smoothing")]
+    [InlineData("wrinkle_softening")]
+    public async Task IncludedPremiumTypes_ConsumeOneAllowance_AndRejectExhaustion(string type)
+    {
+        await SeedUserAsync(credits: 20);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.UserPackageEntitlements.RemoveRange(db.UserPackageEntitlements.Where(e => e.UserId == UserId));
+            var package = await db.OutcomePackageDefinitions.SingleAsync(p => p.Code == "pro_package");
+            db.UserPackageEntitlements.Add(new UserPackageEntitlement
+            {
+                UserId = UserId, OutcomePackageDefinitionId = package.Id,
+                Status = PackageEntitlementStatus.Active, RemainingPackageUses = 0,
+                RemainingCandidates = 0, RemainingRefinements = 0, RemainingPremiumAugmentations = 1,
+                PlatformExportKitAvailable = false
+            });
+            await db.SaveChangesAsync();
+        }
+        var client = _factory.CreateAuthenticatedClient();
+        var request = new { imageUrl = FakeOpenAiHttpMessageHandler.SuccessImageUrl, enhancementType = type };
+        var first = await client.PostAsJsonAsync("/api/enhancement/enhance", request);
+        Assert.True(first.StatusCode == HttpStatusCode.OK, await first.Content.ReadAsStringAsync());
+        var exhausted = await client.PostAsJsonAsync("/api/enhancement/enhance", request);
+        Assert.Equal(HttpStatusCode.PaymentRequired, exhausted.StatusCode);
+        Assert.Contains("Unlock a Pro Package", await exhausted.Content.ReadAsStringAsync());
+        using var verify = _factory.Services.CreateScope();
+        var remaining = await verify.ServiceProvider.GetRequiredService<ApplicationDbContext>().UserPackageEntitlements.SingleAsync(e => e.UserId == UserId);
+        Assert.Equal(0, remaining.RemainingPremiumAugmentations);
+    }
+
     private async Task SeedUserAsync(int credits)
     {
         using var scope = _factory.Services.CreateScope();

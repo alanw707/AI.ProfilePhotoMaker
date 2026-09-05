@@ -224,7 +224,9 @@ public class OutcomePackageService : IOutcomePackageService
             Id = entitlement.Id,
             PackageCode = entitlement.OutcomePackageDefinition.Code,
             PackageName = entitlement.OutcomePackageDefinition.Name,
-            Status = entitlement.Status.ToString().ToLowerInvariant(),
+            Status = entitlement.ExpiresAt.HasValue && entitlement.ExpiresAt <= DateTime.UtcNow
+                ? "expired"
+                : entitlement.Status.ToString().ToLowerInvariant(),
             RemainingPackageUses = entitlement.RemainingPackageUses,
             RemainingCandidates = entitlement.RemainingCandidates,
             RemainingRefinements = entitlement.RemainingRefinements,

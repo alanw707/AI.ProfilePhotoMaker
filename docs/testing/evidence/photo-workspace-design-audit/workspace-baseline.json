@@ -1,0 +1,141 @@
+[
+  {
+    "width": 1440,
+    "url": "/app/enhance",
+    "overflow": false,
+    "headings": [
+      "Create your professional profile photo",
+      "Start with a clear, front-facing photo",
+      "A clearer path to your best photo"
+    ],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "name": "Switch to dark theme",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Sign out",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Upload one photoDrag and drop or browse your deviceJPG, PNG, or WebP · Up to 7 MB",
+        "disabled": false
+      },
+      {
+        "tag": "INPUT",
+        "name": "",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Scroll to top",
+        "disabled": false
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "url": "/app/enhance",
+    "overflow": false,
+    "headings": [
+      "Create your professional profile photo",
+      "Start with a clear, front-facing photo",
+      "A clearer path to your best photo"
+    ],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "name": "Toggle navigation",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Upload one photoDrag and drop or browse your deviceJPG, PNG, or WebP · Up to 7 MB",
+        "disabled": false
+      },
+      {
+        "tag": "INPUT",
+        "name": "",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Scroll to top",
+        "disabled": false
+      }
+    ]
+  },
+  {
+    "packages": {
+      "success": true,
+      "data": [
+        {
+          "id": 1,
+          "code": "free_preview",
+          "name": "Free Preview",
+          "description": "Score your source photo and try a same-quality watermarked preview before buying a package.",
+          "price": 0,
+          "currency": "USD",
+          "internalCreditPackageId": null,
+          "includedCandidateCount": 1,
+          "includedRefinementCount": 0,
+          "includedPremiumAugmentationCount": 0,
+          "includesPlatformExportKit": false,
+          "includesScoreDelta": false,
+          "displayOrder": 1,
+          "highlights": [
+            "1 generated candidate"
+          ]
+        },
+        {
+          "id": 2,
+          "code": "starter_package",
+          "name": "Starter Package",
+          "description": "Three profile-photo candidates, best shot selector, basic adjustment, and selected platform exports.",
+          "price": 9.99,
+          "currency": "USD",
+          "internalCreditPackageId": 1,
+          "includedCandidateCount": 3,
+          "includedRefinementCount": 2,
+          "includedPremiumAugmentationCount": 0,
+          "includesPlatformExportKit": true,
+          "includesScoreDelta": false,
+          "displayOrder": 2,
+          "highlights": [
+            "3 generated candidates",
+            "2 guided refinements",
+            "Platform export kit"
+          ]
+        },
+        {
+          "id": 3,
+          "code": "pro_package",
+          "name": "Pro Package",
+          "description": "Nine candidates, best shot selector, score delta, exports, refinements, and premium augmentations.",
+          "price": 19.99,
+          "currency": "USD",
+          "internalCreditPackageId": 2,
+          "includedCandidateCount": 9,
+          "includedRefinementCount": 5,
+          "includedPremiumAugmentationCount": 3,
+          "includesPlatformExportKit": true,
+          "includesScoreDelta": true,
+          "displayOrder": 3,
+          "highlights": [
+            "9 generated candidates",
+            "5 guided refinements",
+            "3 premium augmentations",
+            "Platform export kit",
+            "Before/after score delta"
+          ]
+        }
+      ],
+      "message": null,
+      "error": null
+    },
+    "errors": []
+  }
+]

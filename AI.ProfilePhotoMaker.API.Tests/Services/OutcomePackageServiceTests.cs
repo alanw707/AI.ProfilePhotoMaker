@@ -64,6 +64,35 @@ public class OutcomePackageServiceTests
     }
 
     [Fact]
+    public async Task ExpiredEntitlement_IsReportedExpired_AndCannotBeConsumed()
+    {
+        await using var context = CreateContext();
+        var package = new OutcomePackageDefinition
+        {
+            Code = "pro_package", Name = "Pro", Description = "Test", IsActive = true
+        };
+        context.OutcomePackageDefinitions.Add(package);
+        context.UserPackageEntitlements.Add(new UserPackageEntitlement
+        {
+            UserId = "expired-user", OutcomePackageDefinition = package,
+            Status = PackageEntitlementStatus.Active, RemainingPackageUses = 1,
+            RemainingCandidates = 9, RemainingRefinements = 5,
+            RemainingPremiumAugmentations = 3, PlatformExportKitAvailable = true,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(-1)
+        });
+        await context.SaveChangesAsync();
+        var service = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance);
+
+        var entitlement = Assert.Single(await service.GetUserEntitlementsAsync("expired-user"));
+        Assert.Equal("expired", entitlement.Status);
+        Assert.Null(await service.GetActiveEntitlementAsync("expired-user", "pro_package"));
+        Assert.False(await service.ConsumeCandidatesAsync("expired-user", "pro_package", 1));
+        Assert.False(await service.ConsumeRefinementAsync("expired-user"));
+        Assert.False(await service.ConsumePremiumAugmentationAsync("expired-user"));
+        Assert.False(await service.ConsumeExportKitAsync("expired-user"));
+    }
+
+    [Fact]
     public async Task ConsumeCandidates_FreePreview_AllowsOnlyOneCandidateWithoutEntitlement()
     {
         await using var context = CreateContext();

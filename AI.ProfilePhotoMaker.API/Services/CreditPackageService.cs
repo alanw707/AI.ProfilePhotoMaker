@@ -82,6 +82,11 @@ public class CreditPackageService : ICreditPackageService
 
         if (existingPurchase != null)
         {
+            if (!string.Equals(existingPurchase.UserId, userId, StringComparison.Ordinal) || existingPurchase.PackageId != packageId)
+            {
+                return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "TransactionMismatch", "Payment transaction does not match the current user and package.");
+            }
+
             var success = existingPurchase.Status is PaymentStatus.Completed or PaymentStatus.Succeeded;
             return new CreditPurchaseResult(success, existingPurchase.Status, existingPurchase);
         }
@@ -117,8 +122,6 @@ public class CreditPackageService : ICreditPackageService
 
         if (transaction != null)
         {
-            await RefreshStripeTransactionStatusAsync(transaction);
-
             if (!string.Equals(transaction.UserId, userId, StringComparison.Ordinal))
             {
                 _logger.LogWarning(
@@ -126,6 +129,22 @@ public class CreditPackageService : ICreditPackageService
                     LoggingSanitizer.SanitizeId(paymentTransactionId ?? transaction.Id.ToString()),
                     LoggingSanitizer.SanitizeId(userId));
                 return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "TransactionMismatch", "Payment transaction does not belong to the current user.");
+            }
+
+            // Manual review must not be bypassed by refreshing a succeeded Stripe intent.
+            if (transaction.Status == PaymentStatus.PendingReview)
+            {
+                return new CreditPurchaseResult(false, transaction.Status, null, "PaymentPendingReview", "Payment requires review before the package can be fulfilled.");
+            }
+
+            if (transaction.Status == PaymentStatus.Refunded)
+            {
+                return new CreditPurchaseResult(false, transaction.Status, null, "PaymentFailed", "This payment has been refunded.");
+            }
+
+            if (!await VerifyAndRefreshStripeTransactionAsync(transaction, packageId))
+            {
+                return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "PaymentVerificationFailed", "Unable to verify payment for this package. Please retry or contact support.");
             }
 
             if (transaction.Status == PaymentStatus.Pending)
@@ -252,58 +271,57 @@ public class CreditPackageService : ICreditPackageService
         return purchase;
     }
 
-    private async Task RefreshStripeTransactionStatusAsync(PaymentTransaction transaction)
+    private async Task<bool> VerifyAndRefreshStripeTransactionAsync(PaymentTransaction transaction, int packageId)
     {
-        if (_stripeClient == null || string.IsNullOrWhiteSpace(transaction.ExternalTransactionId))
+        if (_stripeClient == null)
         {
-            return;
+            return true;
         }
-
-        if (transaction.Status is PaymentStatus.Completed or PaymentStatus.Succeeded)
+        if (string.IsNullOrWhiteSpace(transaction.ExternalTransactionId))
         {
-            return;
+            return false;
         }
-
-        var paymentIntentService = new PaymentIntentService(_stripeClient);
 
         try
         {
-            var intent = await paymentIntentService.GetAsync(transaction.ExternalTransactionId);
-
-            switch (intent.Status)
+            // Verify the first fulfillment even when a webhook already marked the local row completed.
+            // The client-supplied package ID is not proof of which package the customer paid for.
+            var intent = await new PaymentIntentService(_stripeClient).GetAsync(transaction.ExternalTransactionId);
+            var expectedAmount = (long)Math.Round(transaction.Amount * 100, MidpointRounding.AwayFromZero);
+            if (intent.Id != transaction.ExternalTransactionId ||
+                intent.Metadata == null ||
+                !intent.Metadata.TryGetValue("package_id", out var paidPackageId) || paidPackageId != packageId.ToString() ||
+                !intent.Metadata.TryGetValue("user_id", out var paidUserId) || paidUserId != transaction.UserId ||
+                intent.Amount != expectedAmount ||
+                !string.Equals(intent.Currency, transaction.Currency, StringComparison.OrdinalIgnoreCase) ||
+                (intent.Status == "succeeded" && intent.AmountReceived != expectedAmount))
             {
-                case "succeeded":
-                    transaction.Status = PaymentStatus.Completed;
-                    transaction.FailureReason = null;
-                    transaction.ProcessedAt ??= DateTime.UtcNow;
-                    transaction.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                    break;
-                case "processing":
-                case "requires_capture":
-                    transaction.Status = PaymentStatus.Pending;
-                    transaction.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                    break;
-                case "requires_payment_method":
-                case "requires_confirmation":
-                    // Payment is waiting for a new confirmation; leave status as-is so UI can retry.
-                    break;
-                default:
-                    break;
+                _logger.LogWarning("Stripe payment does not match transaction {TransactionId} and package {PackageId}", transaction.Id, packageId);
+                return false;
             }
-        }
-        catch (StripeException stripeException)
-        {
-            _logger.LogWarning(stripeException,
-                "Unable to refresh Stripe payment intent {PaymentIntentId}",
-                LoggingSanitizer.SanitizeId(transaction.ExternalTransactionId));
+
+            transaction.Status = intent.Status switch
+            {
+                "succeeded" => PaymentStatus.Completed,
+                "canceled" => PaymentStatus.Cancelled,
+                "requires_payment_method" when intent.LastPaymentError != null => PaymentStatus.Failed,
+                _ => PaymentStatus.Pending
+            };
+            transaction.FailureReason = intent.LastPaymentError?.Message;
+            transaction.UpdatedAt = DateTime.UtcNow;
+            if (transaction.Status != PaymentStatus.Pending)
+            {
+                transaction.ProcessedAt ??= DateTime.UtcNow;
+            }
+            await _context.SaveChangesAsync();
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex,
-                "Unexpected error while refreshing Stripe payment intent {PaymentIntentId}",
+                "Unable to verify Stripe payment intent {PaymentIntentId}",
                 LoggingSanitizer.SanitizeId(transaction.ExternalTransactionId));
+            return false;
         }
     }
 

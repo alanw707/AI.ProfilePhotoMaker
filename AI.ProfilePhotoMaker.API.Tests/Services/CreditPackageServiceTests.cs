@@ -6,6 +6,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
+using Stripe;
+using System.Net;
+using System.Text;
+using System.Text.Json;
 
 namespace AI.ProfilePhotoMaker.API.Tests.Services;
 
@@ -162,10 +166,97 @@ public class CreditPackageServiceTests
         Assert.Equal(5 + creditPackage.TotalCredits, profile.Credits);
     }
 
+    [Fact]
+    public async Task PurchaseCreditPackageAsync_DoesNotExposeAnotherUsersExistingPurchase()
+    {
+        using var context = CreateContext();
+        var owner = await SeedUserProfileAsync(context);
+        var package = await SeedCreditPackageAsync(context);
+        var service = CreateService(context, new StripeOptions(), new PaymentSimulationOptions { Enabled = true, SkipStripeIntegration = true });
+        var purchase = await service.PurchaseCreditPackageAsync(owner, package.PackageId, "sim-owner");
+        Assert.True(purchase.Success);
+
+        var result = await service.PurchaseCreditPackageAsync("another-user", package.PackageId, "sim-owner");
+
+        Assert.False(result.Success);
+        Assert.Null(result.Purchase);
+        Assert.Equal("TransactionMismatch", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task PurchaseCreditPackageAsync_DoesNotFulfillPendingReviewTransaction()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context);
+        var package = await SeedCreditPackageAsync(context);
+        context.PaymentTransactions.Add(new PaymentTransaction
+        {
+            Id = 71, UserId = userId, ExternalTransactionId = "pi_review",
+            Amount = package.Price, Status = PaymentStatus.PendingReview, Type = PaymentType.OneTime
+        });
+        await context.SaveChangesAsync();
+
+        var result = await CreateService(context).PurchaseCreditPackageAsync(userId, package.PackageId, "71");
+
+        Assert.False(result.Success);
+        Assert.Equal(PaymentStatus.PendingReview, result.Status);
+        Assert.Empty(await context.CreditPurchases.ToListAsync());
+        Assert.Equal(5, (await context.UserProfiles.SingleAsync(p => p.UserId == userId)).Credits);
+    }
+
+    [Theory]
+    [InlineData("matching", true)]
+    [InlineData("package", false)]
+    [InlineData("user", false)]
+    [InlineData("amount", false)]
+    [InlineData("currency", false)]
+    public async Task FirstFulfillment_MustMatchVerifiedStripeIntent(string mismatch, bool expectedSuccess)
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context);
+        var package = await SeedCreditPackageAsync(context);
+        context.PaymentTransactions.Add(new PaymentTransaction
+        {
+            Id = 81, UserId = userId, ExternalTransactionId = "pi_bound",
+            Amount = package.Price, Currency = "USD", Status = PaymentStatus.Completed, Type = PaymentType.OneTime
+        });
+        await context.SaveChangesAsync();
+        var amount = (long)(package.Price * 100);
+        var json = JsonSerializer.Serialize(new
+        {
+            id = "pi_bound", @object = "payment_intent", status = "succeeded",
+            amount = mismatch == "amount" ? amount - 1 : amount,
+            amount_received = amount,
+            currency = mismatch == "currency" ? "eur" : "usd",
+            metadata = new { user_id = mismatch == "user" ? "another-user" : userId,
+                package_id = mismatch == "package" ? "999999" : package.PackageId.ToString() }
+        });
+        using var http = new HttpClient(new IntentResponseHandler(json));
+        var stripe = new StripeClient("sk_test_unit", httpClient: new SystemNetHttpClient(http));
+        var service = CreateService(context, stripeClient: stripe);
+
+        var result = await service.PurchaseCreditPackageAsync(userId, package.PackageId, "81");
+
+        Assert.Equal(expectedSuccess, result.Success);
+        Assert.Equal(expectedSuccess ? 1 : 0, await context.CreditPurchases.CountAsync());
+        Assert.Equal(expectedSuccess ? 5 + package.TotalCredits : 5,
+            (await context.UserProfiles.SingleAsync(p => p.UserId == userId)).Credits);
+    }
+
+    private sealed class IntentResponseHandler(string json) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+    }
+
     private static CreditPackageService CreateService(
         ApplicationDbContext context,
         StripeOptions? stripeOptions = null,
-        PaymentSimulationOptions? simulationOptions = null)
+        PaymentSimulationOptions? simulationOptions = null,
+        StripeClient? stripeClient = null)
     {
         stripeOptions ??= new StripeOptions
         {
@@ -186,7 +277,8 @@ public class CreditPackageServiceTests
             basicTierService,
             NullLogger<CreditPackageService>.Instance,
             Options.Create(stripeOptions),
-            Options.Create(simulationOptions));
+            Options.Create(simulationOptions),
+            stripeClient);
     }
 
     private static ApplicationDbContext CreateContext()

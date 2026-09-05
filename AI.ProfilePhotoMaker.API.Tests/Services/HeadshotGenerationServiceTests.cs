@@ -173,8 +173,10 @@ public class HeadshotGenerationServiceTests
         Assert.Single(context.UsageLogs.Where(l => l.Action == "instant_headshot_generation"));
     }
 
-    [Fact]
-    public async Task GenerateHeadshotAsync_ReturnsPromotedPreviewAndGeneratedCandidatesForDuplicatePaidContinuation()
+    [Theory]
+    [InlineData(2, true)]
+    [InlineData(3, false)]
+    public async Task GenerateHeadshotAsync_ReturnsPromotedPreviewAndGeneratedCandidatesForDuplicatePaidContinuation(int newCandidateCount, bool fitsPackage)
     {
         using var context = CreateContext();
         var userId = await SeedUserProfileAsync(context, credits: 6);
@@ -206,7 +208,7 @@ public class HeadshotGenerationServiceTests
         {
             UserId = userId,
             RemainingPackageUses = 1,
-            RemainingCandidates = 2,
+            RemainingCandidates = 3,
             RemainingRefinements = 1,
             RemainingPremiumAugmentations = 1,
             Status = PackageEntitlementStatus.Active
@@ -218,12 +220,20 @@ public class HeadshotGenerationServiceTests
             Style = "linkedin",
             Background = "auto",
             PackageCode = "starter_package",
-            NumOutputs = 2,
+            NumOutputs = newCandidateCount,
             ClientRequestId = "paid-continuation-retry",
             ReusedPreviewProcessedImageId = preview.Id,
             ReusedPreviewSourcePath = sourcePath,
             ReusedPreviewStyle = "linkedin"
         };
+
+        if (!fitsPackage)
+        {
+            await Assert.ThrowsAsync<HeadshotGenerationException>(() => service.GenerateHeadshotAsync(request, userId));
+            Assert.Equal(0, provider.CallCount);
+            Assert.Equal(3, entitlement.RemainingCandidates);
+            return;
+        }
 
         var first = await service.GenerateHeadshotAsync(request, userId);
         var second = await service.GenerateHeadshotAsync(request, userId);

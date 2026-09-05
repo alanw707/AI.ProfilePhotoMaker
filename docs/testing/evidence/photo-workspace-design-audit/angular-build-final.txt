@@ -1,0 +1,105 @@
+
+> ai.profile-photo-maker.ui@0.0.0 build
+> npm run lint && ng build && npm run generate:seo-static
+
+
+> ai.profile-photo-maker.ui@0.0.0 lint
+> ng lint
+
+
+Linting "AI.ProfilePhotoMaker.UI"...
+
+/home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html
+  494:48  warning  The cyclomatic complexity 51 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  499:14  warning  The cyclomatic complexity 52 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  505:45  warning  The cyclomatic complexity 53 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  514:45  warning  The cyclomatic complexity 54 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  547:43  warning  The cyclomatic complexity 55 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  566:63  warning  The cyclomatic complexity 56 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  579:14  warning  The cyclomatic complexity 57 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  590:39  warning  The cyclomatic complexity 58 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  613:19  warning  The cyclomatic complexity 59 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  614:19  warning  The cyclomatic complexity 60 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  616:24  warning  The cyclomatic complexity 61 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  620:19  warning  The cyclomatic complexity 62 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  628:14  warning  The cyclomatic complexity 63 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  639:64  warning  The cyclomatic complexity 64 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  646:22  warning  The cyclomatic complexity 65 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  647:22  warning  The cyclomatic complexity 66 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  656:48  warning  The cyclomatic complexity 67 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  666:39  warning  The cyclomatic complexity 68 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  694:38  warning  The cyclomatic complexity 69 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  739:59  warning  The cyclomatic complexity 70 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  748:42  warning  The cyclomatic complexity 71 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  760:48  warning  The cyclomatic complexity 72 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  778:16  warning  The cyclomatic complexity 73 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  785:16  warning  The cyclomatic complexity 74 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  793:19  warning  The cyclomatic complexity 75 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  796:19  warning  The cyclomatic complexity 76 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  800:39  warning  The cyclomatic complexity 77 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  801:60  warning  The cyclomatic complexity 78 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  819:14  warning  The cyclomatic complexity 79 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  827:14  warning  The cyclomatic complexity 80 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  837:14  warning  The cyclomatic complexity 81 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  840:44  warning  The cyclomatic complexity 82 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+
+/home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.ts
+  1516:3   warning  Async method 'startEnhancement' has too many lines (212). Maximum allowed is 200  max-lines-per-function
+  1516:25  warning  Async method 'startEnhancement' has a complexity of 78. Maximum allowed is 60     complexity
+  1675:1   warning  File has too many lines (2309). Maximum allowed is 1500                           max-lines
+
+✖ 35 problems (0 errors, 35 warnings)
+
+Lint warnings found in the listed files.
+
+❯ Building...
+✔ Building...
+Initial chunk files   | Names                       |  Raw size | Estimated transfer size
+chunk-VDWKLWY2.js     | -                           | 297.86 kB |                80.75 kB
+main-KH6ZMJRO.js      | main                        | 184.03 kB |                29.23 kB
+styles-HUQYIPMX.css   | styles                      | 154.05 kB |                21.93 kB
+chunk-FKBZ7SQJ.js     | -                           |  49.45 kB |                 9.72 kB
+polyfills-T4U2DJQU.js | polyfills                   |  34.93 kB |                11.42 kB
+chunk-CFWXCFQ7.js     | -                           |  14.29 kB |                 3.24 kB
+chunk-7E5Y2JEG.js     | -                           |  10.31 kB |                 2.91 kB
+chunk-47LR4GE2.js     | -                           |   9.96 kB |                 2.82 kB
+chunk-PNLPFL32.js     | -                           |   5.74 kB |                 1.65 kB
+chunk-DSGS7NTR.js     | -                           |   5.61 kB |                 1.93 kB
+chunk-44DRCYKQ.js     | -                           |   4.13 kB |                 1.26 kB
+chunk-DNHJTGDL.js     | -                           |   2.69 kB |               948 bytes
+chunk-RLD3JL4C.js     | -                           |   2.18 kB |               597 bytes
+chunk-SG7SEASH.js     | -                           |   1.45 kB |               587 bytes
+chunk-GAFXACHQ.js     | -                           |   1.37 kB |               502 bytes
+chunk-G2AAXEWV.js     | -                           |   1.13 kB |               434 bytes
+chunk-KWISZDFU.js     | -                           | 993 bytes |               993 bytes
+chunk-QYCQDZ5L.js     | -                           | 778 bytes |               778 bytes
+
+                      | Initial total               | 780.95 kB |               171.69 kB
+
+Lazy chunk files      | Names                       |  Raw size | Estimated transfer size
+chunk-KLWBE5GB.js     | landing-component           | 233.41 kB |                32.17 kB
+chunk-3ZNUIBTE.js     | gallery-component           | 193.31 kB |                41.26 kB
+chunk-Y42M7ZDA.js     | photo-enhancement-component | 165.40 kB |                28.13 kB
+chunk-6BA2EWTO.js     | premium-component           | 138.45 kB |                19.11 kB
+chunk-NDC2FYTQ.js     | seo-page-component          |  73.89 kB |                12.31 kB
+chunk-WAUXIJ4R.js     | settings-component          |  63.18 kB |                11.89 kB
+chunk-EVJ4IY5H.js     | -                           |  42.57 kB |                 7.75 kB
+chunk-W5AOYUMM.js     | verify-email-component      |  35.38 kB |                 6.26 kB
+chunk-SDKF35ER.js     | admin-campaigns-component   |  30.33 kB |                 6.89 kB
+chunk-KQDJVLCT.js     | support-component           |  29.14 kB |                 5.24 kB
+chunk-FRYXWM3C.js     | admin-user-detail-component |  25.93 kB |                 5.75 kB
+chunk-77EX6F2D.js     | confirm-email-component     |  25.75 kB |                 4.45 kB
+chunk-5LJSNSLR.js     | -                           |  23.17 kB |                 4.02 kB
+chunk-O4373Q4S.js     | -                           |  20.96 kB |                 4.90 kB
+chunk-3QGVR2XW.js     | admin-users-component       |  18.03 kB |                 4.25 kB
+...and 28 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [9.348 seconds]
+
+Output location: /home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/dist/ai.profile-photo-maker.ui
+
+
+> ai.profile-photo-maker.ui@0.0.0 generate:seo-static
+> node scripts/generate-seo-static-pages.cjs
+
+Generated 26 SEO static pages in /home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/dist/ai.profile-photo-maker.ui/browser.

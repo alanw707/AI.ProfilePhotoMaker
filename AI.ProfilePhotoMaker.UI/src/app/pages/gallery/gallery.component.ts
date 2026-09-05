@@ -149,7 +149,11 @@ export class GalleryComponent implements OnInit {
               status: 'completed' as const,
               type,
               downloadUrl: preferredUrl,
-              canResumePreview: img.generationMode === 'instant_headshot',
+              canResumePreview:
+                img.generationMode === 'instant_headshot' ||
+                img.generationMode === 'instant_headshot_promoted_preview' ||
+                img.generationMode === 'premium_augmentation' ||
+                img.generationMode === 'photo_refinement',
             };
           })
           .filter(img => img !== null) as any[];

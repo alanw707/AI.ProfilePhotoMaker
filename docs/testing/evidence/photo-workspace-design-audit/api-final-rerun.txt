@@ -1,0 +1,15 @@
+/home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj : warning NU1903: Package 'SQLitePCLRaw.lib.e_sqlite3' 2.1.11 has a known high severity vulnerability, https://github.com/advisories/GHSA-2m69-gcr7-jv3q
+/home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj : warning NU1903: Package 'SSH.NET' 2023.0.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-q939-rpr3-3284
+/home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj : warning NU1903: Package 'System.Security.Cryptography.Xml' 10.0.7 has a known high severity vulnerability, https://github.com/advisories/GHSA-23rf-6693-g89p
+/home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj : warning NU1903: Package 'System.Security.Cryptography.Xml' 10.0.7 has a known high severity vulnerability, https://github.com/advisories/GHSA-8q5v-6pqq-x66h
+/home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj : warning NU1903: Package 'System.Security.Cryptography.Xml' 10.0.7 has a known high severity vulnerability, https://github.com/advisories/GHSA-cvvh-rhrc-wg4q
+/home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj : warning NU1903: Package 'System.Security.Cryptography.Xml' 10.0.7 has a known high severity vulnerability, https://github.com/advisories/GHSA-g8r8-53c2-pm3f
+/home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj : warning NU1903: Package 'System.Security.Cryptography.Xml' 10.0.7 has a known high severity vulnerability, https://github.com/advisories/GHSA-mmjf-rqrv-855v
+/home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj : warning NU1903: Package 'SSH.NET' 2023.0.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-q939-rpr3-3284
+  AI.ProfilePhotoMaker.API -> /home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> /home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for /home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+Results File: /home/alanw/AI.ProfilePhotoMaker/docs/testing/evidence/photo-workspace-design-audit/final-rerun.trx
+
+Passed!  - Failed:     0, Passed:   383, Skipped:     0, Total:   383, Duration: 58 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)

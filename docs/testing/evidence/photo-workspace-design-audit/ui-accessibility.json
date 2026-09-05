@@ -1,0 +1,95 @@
+[
+  {
+    "width": 1440,
+    "theme": "light",
+    "overflow": false,
+    "brokenVisibleImages": 0,
+    "contrastCandidates": [
+      {
+        "text": "AI Profile Photo Maker",
+        "ratio": 3.68,
+        "fontSize": 14.08,
+        "tag": "SPAN"
+      }
+    ],
+    "contrastCandidateCount": 1,
+    "inspectorHeight": 232.71875,
+    "keyboardSample": [
+      {
+        "tag": "A",
+        "label": "AI Profile Photo Maker"
+      },
+      {
+        "tag": "A",
+        "label": "Packages"
+      },
+      {
+        "tag": "A",
+        "label": "Photo workspace"
+      },
+      {
+        "tag": "A",
+        "label": "My photos"
+      },
+      {
+        "tag": "A",
+        "label": "Settings"
+      },
+      {
+        "tag": "A",
+        "label": "Support"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Switch to dark theme"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Sign out"
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "theme": "dark",
+    "overflow": false,
+    "brokenVisibleImages": 0,
+    "contrastCandidates": [],
+    "contrastCandidateCount": 0,
+    "inspectorHeight": 251.4375,
+    "keyboardSample": [
+      {
+        "tag": "BUTTON",
+        "label": "Toggle navigation"
+      },
+      {
+        "tag": "A",
+        "label": "Settings"
+      },
+      {
+        "tag": "INPUT",
+        "label": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Reset adjustments"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "RelightingBalance shadows and add cleaner studio-s"
+      }
+    ]
+  }
+]

@@ -1,0 +1,53 @@
+{
+  "provider": "local fixed-image fixture (not AI)",
+  "candidateId": 2,
+  "restoredWithoutGeneration": true,
+  "before": [
+    {
+      "id": 1,
+      "packageCode": "pro_package",
+      "packageName": "Pro Package",
+      "status": "active",
+      "remainingPackageUses": 0,
+      "remainingCandidates": 0,
+      "remainingRefinements": 5,
+      "remainingPremiumAugmentations": 3,
+      "platformExportKitAvailable": true,
+      "activatedAt": "2026-09-05T17:32:04.3405395",
+      "expiresAt": null
+    }
+  ],
+  "errors": [],
+  "premium": {
+    "status": 200,
+    "success": true,
+    "error": null,
+    "processedImageId": 11
+  },
+  "export": {
+    "fileName": "profile-photo-package-1788630928835.zip",
+    "entries": [
+      "profile-photo-11-linkedin-profile.jpg",
+      "profile-photo-11-google-avatar.jpg",
+      "profile-photo-11-resume-headshot.jpg",
+      "profile-photo-11-original-high-res.jpg",
+      "README.txt"
+    ],
+    "bytes": 332563
+  },
+  "after": [
+    {
+      "id": 1,
+      "packageCode": "pro_package",
+      "packageName": "Pro Package",
+      "status": "active",
+      "remainingPackageUses": 0,
+      "remainingCandidates": 0,
+      "remainingRefinements": 5,
+      "remainingPremiumAugmentations": 2,
+      "platformExportKitAvailable": false,
+      "activatedAt": "2026-09-05T17:32:04.3405395",
+      "expiresAt": null
+    }
+  ]
+}
