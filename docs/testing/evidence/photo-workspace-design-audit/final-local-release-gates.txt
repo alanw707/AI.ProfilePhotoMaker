@@ -1,0 +1,36 @@
+Final local release verification after retry-state remediation
+
+API: 403 passed, 0 failed, 0 skipped (1m15s).
+API Docker image: rebuilt successfully after final generation compensation fix.
+Docker smoke: fresh account registration, local-only email confirmation/login,
+source upload/scoring, deterministic preview and Azurite retrieval passed.
+
+Stripe: real test-mode PaymentIntent/event; locally HMAC-signed deliveries.
+16 concurrent deliveries: 1 successful response, 15 retryable responses.
+Credit delta: 150. Entitlement delta: 1. Sequential replay: HTTP 200.
+No real money, production purchase, or paid AI calls.
+
+Final isolated stack restart: SQL credits/images/entitlements/migration count and
+Azurite file counts unchanged; persisted image retrieval passed. Earlier fresh
+schema application verified 36 migrations; no schema changes since that check.
+
+Frontend (unchanged during subsequent backend-only fixes):
+Karma: 465 passed, 19 skipped.
+Focused Playwright: 8 passed using development server on port 4201 and existing
+mocked browser fixtures; this is distinct from real Docker auth/payment smoke.
+Production build: passed, 26 SEO pages.
+Lint: 0 errors, 35 existing complexity warnings.
+Production npm audit: 0 vulnerabilities.
+NuGet API/tests: no vulnerable packages reported.
+Local Bicep compilation: passed; no deployment.
+EF pending-model check: none after local design-time connection configuration.
+Git whitespace check: passed after final source changes; staged check is required before commit.
+
+Private original logs: /tmp/aipm-compose-verify/
+api-generation-ack-final.txt, docker-generation-ack-final.txt,
+free-preview-ack-final.txt, stripe-ack-final.txt, restart-ack-verify.txt,
+karma-post-retry.txt, playwright-post-retry.txt, ui-build-post-retry.txt,
+ui-lint-post-retry.txt, npm-audit-post-retry.txt, nuget-api-post-retry.txt,
+nuget-tests-post-retry.txt, bicep-post-retry.txt, model-post-retry.txt.
+
+Independent completion audit remains outstanding. Production remains NO-GO.

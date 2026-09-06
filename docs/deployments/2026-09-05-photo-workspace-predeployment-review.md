@@ -2,7 +2,7 @@
 
 ## Decision
 
-**NO-GO for production deployment.** Source, local full-stack verification, idempotency, and automated release gates are healthy. Production still requires separate authorization, coordinated Stripe API-version cutover, Azure Storage key rotation, and either an isolated staging target or an explicitly approved direct-canary exception.
+**NO-GO for production deployment.** Local remediation is in progress; final release-gate reruns and independent completion audit acceptance remain outstanding. The latest API suite passes 403 tests, including purchase/coupon rollback, generation lost-commit-acknowledgement, and legacy-token replay regressions. Production additionally requires separate authorization, coordinated Stripe API-version cutover, Azure Storage key rotation, and either an isolated staging target or an explicitly approved direct-canary exception.
 
 ## Reviewed scope
 
@@ -27,8 +27,8 @@ No linked issue or acceptance test was available. Spec review used `CONTEXT.md`,
 6. **Production storage credentials were rendered as plain Container App environment values.** Bicep now stores the connection string as a Container App secret and references it from all three compatibility environment variables.
 7. **EF deployment tooling targeted EF 8 while the application targets EF 10.** Local tool manifest updated to `dotnet-ef` 10.0.11.
 8. **Retry and premium Playwright checks depended on live/local services.** Their package, profile-completion, and Turnstile behavior is now explicitly mocked.
-9. **Generation idempotency was process-local and race-prone.** `HeadshotGenerationOperations` now provides a unique database claim, failure/recovery lease, and atomic accounting/completion transition. Separate-context concurrency coverage proves one provider call, one charge, and one successful operation.
-10. **Stripe webhook replay/concurrency was not database-coordinated.** `StripeWebhookOperations` now claims `event-type:PaymentIntent` operations across replicas, retries failed operations, and rejects concurrent processing. Discount coupon redemption is tied idempotently to the payment transaction; purchase, credits, and entitlement are committed in one database transaction.
+9. **Generation idempotency was process-local and race-prone.** `HeadshotGenerationOperations` now provides a unique database claim and per-attempt fencing token. Processing claims are never automatically reclaimed, even after their diagnostic lease timestamp, so a crashed worker cannot cause a second charge or provider call. Candidate rows carry the attempt token; completion, failure, and candidate cleanup require token ownership. Separate-context concurrency, expired-operation, and ownership-loss tests prove one provider call/charge and prevent cross-marking. Stale operations require the runbook's stop-and-reconcile procedure.
+10. **Stripe webhook replay/concurrency was not database-coordinated.** `StripeWebhookOperations` now claims `event-type:PaymentIntent` operations across replicas, retries explicitly failed operations, and never automatically reclaims processing receipts. Per-attempt fencing tokens are locked inside coupon and purchase transactions. Discount coupon redemption is tied idempotently to the payment transaction; transient redemption exceptions fail the receipt for Stripe retry rather than creating `PendingReview`; purchase, credits, and entitlement are committed in one database transaction.
 11. **Fresh/recovering SQL startup could be misclassified.** Migration startup now lets EF create a genuinely missing database and distinguishes an existing-but-recovering SQL database through `master`, waiting before migration rather than issuing a conflicting `CREATE DATABASE`.
 12. **Production npm dependencies contained high-severity advisories.** Angular was upgraded from 19.2 to 20.3, Angular ESLint and TypeScript were aligned, and the legacy face-api transitive `node-fetch` was pinned to patched 2.7.0.
 
@@ -52,8 +52,8 @@ No linked issue or acceptance test was available. Spec review used `CONTEXT.md`,
 
 - Azure authentication: valid.
 - Production Container App revision: healthy/running.
-- Production SQL at the read-only review point: 33 migrations applied and 0 pending against the pre-idempotency model. This release now contains 35 migrations; the two new additive migrations have not been applied to production.
-- EF model: no changes since migration `20260905233853_AddStripeWebhookOperationIdempotency`.
+- Production SQL at the read-only review point: 33 migrations applied and 0 pending against the pre-idempotency model. This release now contains 36 migrations; the three new additive migrations have not been applied to production.
+- EF model: no changes since migration `20260906012642_AddOperationFencing`.
 - Database auto-migration: disabled in production.
 - Stripe live endpoint: enabled; Basil API version; required PaymentIntent events configured.
 - Staging: not found.
@@ -78,16 +78,22 @@ Frontend production dependencies were also remediated:
 
 ## Verification
 
-- API: **390 passed, 0 failed**.
+- Latest API: **403 passed, 0 failed** after purchase/coupon retry-state fixes, legacy-token replay compatibility, and generation commit-acknowledgement compensation protection. Deterministic SQLite commit-boundary tests cover failures before commit and lost acknowledgements after commit; these are not SQL Server outage tests. Evidence: `docs/testing/evidence/photo-workspace-design-audit/purchase-retry-red-green.txt`.
+- Latest backend image rebuilt successfully after the generation commit-acknowledgement fix. Fresh-account registration/confirmation/login, upload/score, deterministic preview, Azurite retrieval, and local Stripe sandbox concurrency passed again. Additional regression evidence: `legacy-token-red-green.txt` and `generation-commit-ack-red-green.txt` in the testing evidence directory.
+- Post-retry reruns: production UI build passed (26 SEO pages); lint passed with 0 errors/35 existing warnings; production npm audit found 0 vulnerabilities; API and test NuGet scans found no vulnerable packages; EF reports no pending model changes. The first EF attempt lacked design-time connection configuration; rerunning with a local SQL Server connection descriptor passed without connecting to production.
+- Post-retry Karma rerun: **465 passed, 19 skipped**. Focused Playwright rerun: **8 passed**, using an isolated development server on port 4201 with the existing test fixtures (not production auth bypass). Local Bicep compilation passed without deployment.
+- Remaining gate results below are prior runs unless explicitly stated. Final source/evidence review and independent acceptance are still pending.
+- Preserved red/green concurrency evidence: `docs/testing/evidence/photo-workspace-design-audit/generation-idempotency-red-green.txt` and `stripe-webhook-idempotency-red-green.txt`; sanitized sandbox concurrency result: `stripe-sandbox-concurrency.txt`.
+- Focused final idempotency checks: generation concurrency/expiry/fencing **3 passed**; discounted webhook concurrency/transient replay/expiry/fencing **4 passed**.
 - Angular/Karma on Angular 20: **465 passed, 19 skipped**.
 - Focused Playwright on Angular 20: **8 passed** across pricing/dashboard, workspace recovery/accessibility, and premium generation. Two earlier attempts were environment/setup failures (no server, then an intentionally production-configured Docker frontend without the test-only auth bypass); the final intended development-host run passed after installing the Playwright 1.63 browser.
 - Production UI build: passed; 26 SEO pages generated.
 - ESLint: 0 errors, 35 documented complexity warnings in host and Docker frontend builds.
 - Local Docker builds: API and Angular 20 frontend images passed (`Dockerfile.backend` and `Dockerfile.frontend`); API compiled with 0 warnings/errors.
 - Fresh full Docker Compose runtime: SQL Server, Azurite, deterministic provider fixture, API, and frontend started; SQL/API/frontend health passed; API liveness, frontend root, and `/pricing/` passed.
-- Fresh SQL migration: **35 migrations**, both idempotency tables, and all required unique indexes verified. Forward idempotent SQL contains no `DROP`, `TRUNCATE`, or `DELETE`.
+- Fresh SQL migration: **36 migrations**, both idempotency tables, operation-token columns, candidate fencing token, and all required unique indexes verified. Forward idempotent SQL contains no destructive `DROP`, `TRUNCATE`, or `DELETE` statements; foreign-key DDL includes `ON DELETE CASCADE`.
 - Full workflow stack restart: account, entitlement, and image rows persisted, and the stored Azurite image remained retrievable.
-- Final fresh-schema Compose restart: API/frontend returned healthy and SQL retained all 35 migrations.
+- Final fresh-schema Compose restart: API/frontend returned healthy and SQL retained all 36 migrations.
 - Bicep compilation: passed.
 - `dotnet ef migrations has-pending-model-changes`: none.
 - NuGet vulnerability scan: 0 vulnerable packages in API and tests.
@@ -97,7 +103,7 @@ Frontend production dependencies were also remediated:
 
 ## Local integration evidence labels
 
-- **Real Stripe test mode:** a Stripe CLI listener supplied a temporary signing secret outside the repository; a real test-mode PaymentIntent produced a signed webhook, 150 credits, and a Pro entitlement. Replay preserved single fulfillment. No real purchase occurred.
+- **Real Stripe test mode:** a Stripe CLI listener supplied a temporary signing secret outside the repository; a real test-mode PaymentIntent produced a signed webhook, 150 credits, and a Pro entitlement. A second real test-mode discounted PaymentIntent/event payload was delivered 16 times concurrently with a locally configured valid webhook HMAC: exactly one webhook operation, coupon redemption, purchase, entitlement, and 150-credit award resulted; operation attempt count remained one and sequential replay returned 200 without duplication. No real purchase occurred.
 - **Deterministic AI fixture:** free preview, nine paid candidates, and premium relighting used a local OpenAI-compatible fixture. No paid AI call occurred; visual quality and identity preservation were not evaluated.
 - **Real local persistence:** SQL Server and Azurite used isolated named volumes. Upload, generated-image retrieval, export ZIP, accounting, and restart persistence were exercised against those services rather than mocks.
 - **Private evidence:** detailed scripts, credentials, event payloads, and account data remain under `/tmp/aipm-compose-verify/` and are intentionally excluded from commits.
@@ -108,7 +114,7 @@ Frontend production dependencies were also remediated:
 2. Approve coordinated Azure Storage alternate-key failover and compromised-key regeneration.
 3. Approve the coordinated Stripe Basil → Clover endpoint/revision cutover and reconciliation window.
 4. Approve the reviewed branch for commit/push/PR/merge and authorize a named operator and rollback owner.
-5. Apply and verify the two additive idempotency migrations before routing traffic to the new revision.
+5. Apply and verify the three additive idempotency/fencing migrations before routing traffic to the new revision.
 6. Repeat checkout/webhook, storage, export, accounting, and workspace smoke on staging or the approved zero-traffic/canary production revision before changing the production decision.
 
 See `docs/deployments/2026-09-06-photo-workspace-production-rollout-plan.md`. No production mutation, push, merge, or deployment was performed during this review.

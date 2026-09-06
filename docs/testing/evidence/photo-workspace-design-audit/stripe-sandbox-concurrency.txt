@@ -1,0 +1,25 @@
+Stripe sandbox webhook concurrency evidence
+===========================================
+
+Date: 2026-09-06
+Environment: isolated local Docker SQL Server/API; real Stripe test mode
+Secrets/payload/account data: excluded
+
+Method
+------
+1. API created a discounted Pro PaymentIntent against existing Stripe test-mode credentials.
+2. Stripe CLI confirmed it with the Visa test payment method.
+3. Stripe API returned the resulting real `payment_intent.succeeded` event payload.
+4. The local API's temporary webhook secret HMAC-signed that exact payload.
+5. Sixteen deliveries were issued concurrently to the Docker API webhook endpoint.
+6. One sequential replay followed.
+7. Local SQL reconciliation queried operation, coupon redemption, purchase, and entitlement rows.
+
+Result
+------
+PASS Stripe sandbox concurrency: 16 signed deliveries (1 accepted, 15 retryable conflict responses), 150 credits, 1 entitlement, replay 200
+SQL reconciliation: webhook operations=1, coupon redemptions=1, purchases=1, entitlements=1, operation attempt count=1
+
+Label
+-----
+Real Stripe test-mode PaymentIntent and event payload; local valid HMAC webhook signing for deterministic concurrent delivery. This is distinct from the separately completed Stripe CLI listener test, in which Stripe CLI forwarded and signed the webhook. No real purchase or paid AI call occurred.

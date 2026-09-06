@@ -57,8 +57,10 @@ public class HeadshotGenerationServiceTests
         Assert.Equal(image.CorrelationId, result.CorrelationId);
     }
 
-    [Fact]
-    public async Task GenerateHeadshotAsync_ReturnsExistingResultForDuplicateClientRequestWithoutConsumingCreditsAgain()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GenerateHeadshotAsync_ReturnsExistingResultForDuplicateClientRequestWithoutConsumingCreditsAgain(bool migratedLegacyOperation)
     {
         using var context = CreateContext();
         var userId = await SeedUserProfileAsync(context, credits: 3);
@@ -75,6 +77,13 @@ public class HeadshotGenerationServiceTests
         };
 
         var first = await service.GenerateHeadshotAsync(request, userId);
+        if (migratedLegacyOperation)
+        {
+            // AddOperationFencing defaults old operation tokens to empty; old images remain null.
+            (await context.HeadshotGenerationOperations.SingleAsync()).OperationToken = "";
+            (await context.ProcessedImages.SingleAsync()).GenerationOperationToken = null;
+            await context.SaveChangesAsync();
+        }
         var second = await service.GenerateHeadshotAsync(request, userId);
 
         Assert.Equal(first.ProcessedImageId, second.ProcessedImageId);
@@ -85,6 +94,36 @@ public class HeadshotGenerationServiceTests
         Assert.Equal(2, profile.Credits);
         Assert.Single(context.ProcessedImages);
         Assert.Single(context.UsageLogs.Where(l => l.Action == "instant_headshot_generation"));
+    }
+
+    [Fact]
+    public async Task GenerateHeadshotAsync_LostCommitAcknowledgementPreservesSucceededCandidatesAndCharge()
+    {
+        var fault = new CreditPackageServiceTests.CommitFault(true);
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite("Data Source=:memory:").AddInterceptors(fault).Options;
+        using var context = new ApplicationDbContext(options);
+        await context.Database.OpenConnectionAsync();
+        await context.Database.EnsureCreatedAsync();
+        var userId = await SeedUserProfileAsync(context, credits: 3);
+        var provider = new FakeHeadshotProvider("data:image/png;base64," + Convert.ToBase64String([1, 2, 3]));
+        var service = CreateService(context, new FakeStorageService(), provider);
+        var request = new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = $"dev/enhanced/{userId}/source.png",
+            Style = "professional", Background = "auto", ClientRequestId = "lost-commit-ack"
+        };
+        fault.Armed = true;
+
+        await Assert.ThrowsAsync<TimeoutException>(() => service.GenerateHeadshotAsync(request, userId));
+
+        Assert.True(fault.Fired);
+        Assert.Equal(HeadshotGenerationOperationStatus.Succeeded,
+            (await context.HeadshotGenerationOperations.AsNoTracking().SingleAsync()).Status);
+        Assert.Equal("succeeded", (await context.ProcessedImages.AsNoTracking().SingleAsync()).GenerationStatus);
+        Assert.Equal(2, (await context.UserProfiles.AsNoTracking().SingleAsync()).Credits);
+        Assert.True((await service.GenerateHeadshotAsync(request, userId)).Success);
+        Assert.Single(provider.Requests);
     }
 
     [Fact]
@@ -432,6 +471,114 @@ public class HeadshotGenerationServiceTests
         Assert.Single(await retryContext.UsageLogs
             .Where(l => l.Action == "instant_headshot_generation")
             .ToListAsync());
+    }
+
+    [Fact]
+    public async Task GenerateHeadshotAsync_DoesNotReclaimExpiredProcessingOperation()
+    {
+        var databaseName = $"generation-expiry-{Guid.NewGuid():N}";
+        var connectionString = $"Data Source={databaseName};Mode=Memory;Cache=Shared;Default Timeout=30";
+        await using var keeper = new SqliteConnection(connectionString);
+        await keeper.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connectionString)
+            .Options;
+        string userId;
+        await using (var setup = new ApplicationDbContext(options))
+        {
+            await setup.Database.EnsureCreatedAsync();
+            userId = await SeedUserProfileAsync(setup, credits: 3);
+        }
+
+        var provider = new BlockingHeadshotProvider();
+        var request = new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = $"dev/enhanced/{userId}/source.png",
+            Style = "professional",
+            ClientRequestId = "expired-operation"
+        };
+
+        await using var firstContext = new ApplicationDbContext(options);
+        var first = CreateService(firstContext, new FakeStorageService(), provider)
+            .GenerateHeadshotAsync(request, userId);
+        await provider.Started.WaitAsync(TimeSpan.FromSeconds(10));
+
+        await using (var expiryContext = new ApplicationDbContext(options))
+        {
+            await expiryContext.HeadshotGenerationOperations.ExecuteUpdateAsync(setters => setters
+                .SetProperty(operation => operation.LeaseExpiresAt, DateTime.UtcNow.AddMinutes(-1)));
+        }
+
+        await using (var duplicateContext = new ApplicationDbContext(options))
+        {
+            var duplicate = await Assert.ThrowsAsync<HeadshotGenerationException>(() =>
+                CreateService(duplicateContext, new FakeStorageService(), provider)
+                    .GenerateHeadshotAsync(request, userId));
+            Assert.Equal("GenerationInProgress", duplicate.Code);
+        }
+
+        provider.Release();
+        var completed = await first;
+
+        await using var verificationContext = new ApplicationDbContext(options);
+        var operation = await verificationContext.HeadshotGenerationOperations.SingleAsync();
+        var candidate = await verificationContext.ProcessedImages.SingleAsync();
+        Assert.Equal(HeadshotGenerationOperationStatus.Succeeded, operation.Status);
+        Assert.NotEmpty(operation.OperationToken);
+        Assert.Equal(operation.OperationToken, candidate.GenerationOperationToken);
+        Assert.Equal(1, provider.CallCount);
+        Assert.Equal(2, (await verificationContext.UserProfiles.SingleAsync(p => p.UserId == userId)).Credits);
+        Assert.Equal(candidate.Id, completed.ProcessedImageId);
+    }
+
+    [Fact]
+    public async Task GenerateHeadshotAsync_FencesWorkerThatLosesOperationOwnership()
+    {
+        var databaseName = $"generation-fence-{Guid.NewGuid():N}";
+        var connectionString = $"Data Source={databaseName};Mode=Memory;Cache=Shared;Default Timeout=30";
+        await using var keeper = new SqliteConnection(connectionString);
+        await keeper.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connectionString)
+            .Options;
+        string userId;
+        await using (var setup = new ApplicationDbContext(options))
+        {
+            await setup.Database.EnsureCreatedAsync();
+            userId = await SeedUserProfileAsync(setup, credits: 3);
+        }
+
+        var provider = new BlockingHeadshotProvider();
+        var request = new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = $"dev/enhanced/{userId}/source.png",
+            Style = "professional",
+            ClientRequestId = "ownership-fence"
+        };
+
+        await using var firstContext = new ApplicationDbContext(options);
+        var first = CreateService(firstContext, new FakeStorageService(), provider)
+            .GenerateHeadshotAsync(request, userId);
+        await provider.Started.WaitAsync(TimeSpan.FromSeconds(10));
+
+        const string replacementToken = "reconciled-owner-token";
+        await using (var fencingContext = new ApplicationDbContext(options))
+        {
+            await fencingContext.HeadshotGenerationOperations.ExecuteUpdateAsync(setters => setters
+                .SetProperty(operation => operation.OperationToken, replacementToken));
+        }
+
+        provider.Release();
+        var lost = await Assert.ThrowsAsync<HeadshotGenerationException>(() => first);
+        Assert.Equal("GenerationOwnershipLost", lost.Code);
+
+        await using var verificationContext = new ApplicationDbContext(options);
+        var operation = await verificationContext.HeadshotGenerationOperations.SingleAsync();
+        Assert.Equal(HeadshotGenerationOperationStatus.Processing, operation.Status);
+        Assert.Equal(replacementToken, operation.OperationToken);
+        Assert.Empty(verificationContext.ProcessedImages);
+        Assert.Equal(1, provider.CallCount);
+        Assert.Equal(3, (await verificationContext.UserProfiles.SingleAsync(p => p.UserId == userId)).Credits);
     }
 
     [Fact]

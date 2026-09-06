@@ -58,7 +58,12 @@ public class CreditPackageService : ICreditPackageService
         return packages;
     }
 
-    public async Task<CreditPurchaseResult> PurchaseCreditPackageAsync(string userId, int packageId, string? paymentTransactionId = null)
+    public async Task<CreditPurchaseResult> PurchaseCreditPackageAsync(
+        string userId,
+        int packageId,
+        string? paymentTransactionId = null,
+        string? webhookOperationKey = null,
+        string? webhookOperationToken = null)
     {
         var package = await _context.CreditPackages
             .FirstOrDefaultAsync(p => p.Id == packageId && p.IsActive);
@@ -171,7 +176,9 @@ public class CreditPackageService : ICreditPackageService
                 transaction.Id.ToString(),
                 transaction.Amount,
                 "stripe_credit_purchase",
-                transaction.ExternalTransactionId);
+                transaction.ExternalTransactionId,
+                webhookOperationKey,
+                webhookOperationToken);
 
             var success = purchase.Status is PaymentStatus.Completed or PaymentStatus.Succeeded;
             return new CreditPurchaseResult(success, purchase.Status, purchase);
@@ -209,16 +216,65 @@ public class CreditPackageService : ICreditPackageService
             .FirstOrDefaultAsync(t => t.ExternalTransactionId == paymentTransactionId);
     }
 
-    private async Task<CreditPurchase> CreatePurchaseAndApplyCreditsAsync(string userId, CreditPackage package, string? paymentTransactionId, decimal amountPaid, string creditSource, string? externalTransactionId = null)
+    private async Task<CreditPurchase> CreatePurchaseAndApplyCreditsAsync(
+        string userId,
+        CreditPackage package,
+        string? paymentTransactionId,
+        decimal amountPaid,
+        string creditSource,
+        string? externalTransactionId = null,
+        string? webhookOperationKey = null,
+        string? webhookOperationToken = null)
     {
         var strategy = _context.Database.CreateExecutionStrategy();
+        var firstAttempt = true;
         try
         {
             return await strategy.ExecuteAsync(async () =>
             {
+                if (!firstAttempt)
+                {
+                    _context.ChangeTracker.Clear();
+                }
+                firstAttempt = false;
                 await using var transaction = _context.Database.IsRelational()
                     ? await _context.Database.BeginTransactionAsync()
                     : null;
+
+                if (!string.IsNullOrWhiteSpace(webhookOperationKey) && !string.IsNullOrWhiteSpace(webhookOperationToken))
+                {
+                    var ownsOperation = _context.Database.IsRelational()
+                        ? await _context.StripeWebhookOperations
+                            .Where(operation => operation.OperationKey == webhookOperationKey &&
+                                                operation.OperationToken == webhookOperationToken &&
+                                                operation.Status == StripeWebhookOperationStatus.Processing)
+                            .ExecuteUpdateAsync(setters => setters
+                                .SetProperty(operation => operation.UpdatedAt, operation => operation.UpdatedAt)) == 1
+                        : await _context.StripeWebhookOperations.AnyAsync(operation =>
+                            operation.OperationKey == webhookOperationKey &&
+                            operation.OperationToken == webhookOperationToken &&
+                            operation.Status == StripeWebhookOperationStatus.Processing);
+                    if (!ownsOperation)
+                    {
+                        throw new InvalidOperationException("Stripe webhook operation ownership was lost before purchase fulfillment.");
+                    }
+                }
+
+                // A commit may have succeeded even if its acknowledgement was lost.
+                if (!string.IsNullOrWhiteSpace(paymentTransactionId))
+                {
+                    var committed = await _context.CreditPurchases.AsNoTracking()
+                        .FirstOrDefaultAsync(p => p.PaymentTransactionId == paymentTransactionId);
+                    if (committed != null)
+                    {
+                        if (committed.UserId != userId || committed.PackageId != package.Id)
+                        {
+                            throw new InvalidOperationException("Payment transaction does not match the purchase.");
+                        }
+                        committed.Package = package;
+                        return committed;
+                    }
+                }
 
                 var purchase = new CreditPurchase
                 {
@@ -237,17 +293,14 @@ public class CreditPackageService : ICreditPackageService
                 await _context.SaveChangesAsync();
 
                 var creditsAdded = await _basicTierService.AddPurchasedCreditsAsync(userId, package.TotalCredits, creditSource);
-                purchase.Status = creditsAdded ? PaymentStatus.Completed : PaymentStatus.Failed;
-                purchase.CompletedAt = creditsAdded ? DateTime.UtcNow : null;
-
                 if (!creditsAdded)
                 {
-                    _logger.LogError(
-                        "Failed to add credits to user {UserId} for purchase {PurchaseId}",
-                        LoggingSanitizer.SanitizeId(userId),
-                        purchase.Id);
+                    throw new InvalidOperationException("Credit allocation failed; purchase must be retried.");
                 }
-                else if (_outcomePackageService != null)
+                purchase.Status = PaymentStatus.Completed;
+                purchase.CompletedAt = DateTime.UtcNow;
+
+                if (_outcomePackageService != null)
                 {
                     await _outcomePackageService.GrantEntitlementForCreditPackageAsync(userId, package.Id, paymentTransactionId);
                 }
@@ -269,10 +322,15 @@ public class CreditPackageService : ICreditPackageService
                 .Include(p => p.Package)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.PaymentTransactionId == paymentTransactionId);
-            if (existingPurchase != null)
+            if (existingPurchase != null && existingPurchase.UserId == userId && existingPurchase.PackageId == package.Id)
             {
                 return existingPurchase;
             }
+            throw;
+        }
+        catch
+        {
+            _context.ChangeTracker.Clear();
             throw;
         }
     }

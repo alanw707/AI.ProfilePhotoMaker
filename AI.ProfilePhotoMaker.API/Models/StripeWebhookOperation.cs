@@ -22,6 +22,11 @@ public class StripeWebhookOperation
     public string? PaymentIntentId { get; set; }
 
     public StripeWebhookOperationStatus Status { get; set; } = StripeWebhookOperationStatus.Processing;
+
+    [Required]
+    [MaxLength(64)]
+    public string OperationToken { get; set; } = string.Empty;
+
     public int AttemptCount { get; set; } = 1;
     public DateTime LeaseExpiresAt { get; set; }
 

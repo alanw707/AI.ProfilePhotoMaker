@@ -375,7 +375,14 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             return Task.FromResult((false, "Coupon not available in test factory", 0m));
         }
 
-        public Task<bool> RedeemCouponAsync(string code, string userId, decimal originalPrice, decimal discountApplied, int? paymentTransactionId = null)
+        public Task<bool> RedeemCouponAsync(
+            string code,
+            string userId,
+            decimal originalPrice,
+            decimal discountApplied,
+            int? paymentTransactionId = null,
+            string? webhookOperationKey = null,
+            string? webhookOperationToken = null)
         {
             return Task.FromResult(true);
         }

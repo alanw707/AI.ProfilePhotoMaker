@@ -1,0 +1,30 @@
+Legacy generation-token migration compatibility — local verification
+
+RED: dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --no-restore --filter FullyQualifiedName~GenerateHeadshotAsync_ReturnsExistingResultForDuplicateClientRequestWithoutConsumingCreditsAgain
+Failed: 1, Passed: 1, Total: 2.
+Migrated legacy operation failed with HeadshotGenerationException:
+An identical headshot generation request is already in progress or requires reconciliation.
+
+Cause: operation migration defaults old tokens to empty strings; old candidate
+rows retain null tokens. Equality excluded successful legacy candidates.
+Fix: coalesce null candidate tokens to empty only for result replay comparison.
+Nonempty current-attempt tokens remain required for new fenced operations.
+
+GREEN: dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --no-restore --filter FullyQualifiedName~HeadshotGenerationServiceTests
+Passed: 16, Failed: 0, Skipped: 0.
+
+FULL API: dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --no-restore --logger 'console;verbosity=minimal'
+Passed: 402, Failed: 0, Skipped: 0, Duration: 1 m 4 s.
+
+Final local API Docker image rebuilt successfully. Fresh local-account upload,
+score, deterministic preview, and Azurite retrieval passed. Stripe sandbox
+concurrency script passed against rebuilt API; no real-money purchase.
+Initial preview attempts failed because of reused-account state and a browser
+script pending-promise error. Fresh account plus Promise.all click/response
+handling passed; no application code was changed for those setup failures.
+
+Private original logs (not committed): /tmp/aipm-compose-verify/
+legacy-token-red.txt, legacy-token-green.txt, api-legacy-token-final.txt,
+docker-api-legacy-token-final.txt, free-preview-legacy-token-final.txt,
+stripe-legacy-token-final.txt.
+Independent audit remains outstanding.

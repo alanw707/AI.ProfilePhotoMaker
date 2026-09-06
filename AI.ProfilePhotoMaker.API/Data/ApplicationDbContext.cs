@@ -144,6 +144,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<ProcessedImage>()
             .Property(i => i.CorrelationId)
             .HasMaxLength(128);
+
+        builder.Entity<ProcessedImage>()
+            .Property(i => i.GenerationOperationToken)
+            .HasMaxLength(64);
     }
 
     private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)

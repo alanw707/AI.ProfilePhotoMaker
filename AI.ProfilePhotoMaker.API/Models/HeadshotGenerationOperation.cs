@@ -15,6 +15,11 @@ public class HeadshotGenerationOperation
     public string CorrelationId { get; set; } = string.Empty;
 
     public HeadshotGenerationOperationStatus Status { get; set; } = HeadshotGenerationOperationStatus.Processing;
+
+    [Required]
+    [MaxLength(64)]
+    public string OperationToken { get; set; } = string.Empty;
+
     public DateTime LeaseExpiresAt { get; set; }
 
     [MaxLength(64)]

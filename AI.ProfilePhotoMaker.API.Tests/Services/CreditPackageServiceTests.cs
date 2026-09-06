@@ -275,6 +275,115 @@ public class CreditPackageServiceTests
             });
     }
 
+    [Fact]
+    public async Task PurchaseCreditPackageAsync_CreditAllocationFailureRollsBackAndAllowsReplay()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite("Data Source=:memory:").Options;
+        using var context = new ApplicationDbContext(options);
+        await context.Database.OpenConnectionAsync();
+        await context.Database.EnsureCreatedAsync();
+        var userId = await SeedUserProfileAsync(context);
+        var package = await SeedCreditPackageAsync(context);
+        var profile = await context.UserProfiles.SingleAsync(p => p.UserId == userId);
+        context.UserProfiles.Remove(profile);
+        await context.SaveChangesAsync();
+        var service = CreateService(context, new StripeOptions(),
+            new PaymentSimulationOptions { Enabled = true, SkipStripeIntegration = true });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.PurchaseCreditPackageAsync(userId, package.PackageId, "sim-retry-allocation"));
+        await context.SaveChangesAsync();
+        Assert.Empty(await context.CreditPurchases.ToListAsync());
+
+        context.Users.Attach(profile.User);
+        context.UserProfiles.Add(profile);
+        await context.SaveChangesAsync();
+        Assert.True((await service.PurchaseCreditPackageAsync(
+            userId, package.PackageId, "sim-retry-allocation")).Success);
+        Assert.True((await service.PurchaseCreditPackageAsync(
+            userId, package.PackageId, "sim-retry-allocation")).Success);
+        Assert.Single(await context.CreditPurchases.ToListAsync());
+        Assert.Equal(5 + package.TotalCredits,
+            (await context.UserProfiles.AsNoTracking().SingleAsync(p => p.UserId == userId)).Credits);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PurchaseCreditPackageAsync_ExecutionStrategyRetryAwardsExactlyOnce(bool afterCommit)
+    {
+        var fault = new CommitFault(afterCommit);
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite("Data Source=:memory:")
+            .ReplaceService<Microsoft.EntityFrameworkCore.Storage.IExecutionStrategyFactory, RetryFactory>()
+            .AddInterceptors(fault).Options;
+        using var context = new ApplicationDbContext(options);
+        await context.Database.OpenConnectionAsync();
+        await context.Database.EnsureCreatedAsync();
+        var userId = await SeedUserProfileAsync(context);
+        var package = await SeedCreditPackageAsync(context);
+        var service = CreateService(context, new StripeOptions(),
+            new PaymentSimulationOptions { Enabled = true, SkipStripeIntegration = true });
+        fault.Armed = true;
+
+        var result = await service.PurchaseCreditPackageAsync(userId, package.PackageId, "sim-commit-retry");
+
+        Assert.True(fault.Fired);
+        Assert.True(result.Success);
+        Assert.Single(await context.CreditPurchases.AsNoTracking().ToListAsync());
+        Assert.Equal(5 + package.TotalCredits,
+            (await context.UserProfiles.AsNoTracking().SingleAsync(p => p.UserId == userId)).Credits);
+        Assert.True((await service.PurchaseCreditPackageAsync(
+            userId, package.PackageId, "sim-commit-retry")).Success);
+    }
+
+    public sealed class RetryFactory(Microsoft.EntityFrameworkCore.Storage.ExecutionStrategyDependencies dependencies)
+        : Microsoft.EntityFrameworkCore.Storage.IExecutionStrategyFactory
+    {
+        public Microsoft.EntityFrameworkCore.Storage.IExecutionStrategy Create() => new RetryStrategy(dependencies);
+    }
+
+    private sealed class RetryStrategy(Microsoft.EntityFrameworkCore.Storage.ExecutionStrategyDependencies dependencies)
+        : Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy(dependencies, 1, TimeSpan.Zero)
+    {
+        protected override bool ShouldRetryOn(Exception exception) => exception is TimeoutException;
+    }
+
+    public sealed class CommitFault(bool afterCommit) : Microsoft.EntityFrameworkCore.Diagnostics.DbTransactionInterceptor
+    {
+        public bool Armed { get; set; }
+        public bool Fired { get; private set; }
+
+        private void FailOnce(bool committed)
+        {
+            if (Armed && !Fired && committed == afterCommit)
+            {
+                Fired = true;
+                throw new TimeoutException("Injected local commit outage");
+            }
+        }
+
+        public override ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult> TransactionCommittingAsync(
+            System.Data.Common.DbTransaction transaction,
+            Microsoft.EntityFrameworkCore.Diagnostics.TransactionEventData eventData,
+            Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult result,
+            CancellationToken cancellationToken = default)
+        {
+            FailOnce(false);
+            return ValueTask.FromResult(result);
+        }
+
+        public override Task TransactionCommittedAsync(
+            System.Data.Common.DbTransaction transaction,
+            Microsoft.EntityFrameworkCore.Diagnostics.TransactionEndEventData eventData,
+            CancellationToken cancellationToken = default)
+        {
+            FailOnce(true);
+            return Task.CompletedTask;
+        }
+    }
+
     private static CreditPackageService CreateService(
         ApplicationDbContext context,
         StripeOptions? stripeOptions = null,

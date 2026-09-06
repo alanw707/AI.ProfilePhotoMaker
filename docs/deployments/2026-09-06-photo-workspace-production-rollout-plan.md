@@ -24,12 +24,13 @@ Execution requires named operators and explicit approval at each gate below. The
 ## Release compatibility snapshot
 
 - Production database at the read-only review point: 33 applied migrations.
-- Release database model: 35 migrations, ending at `20260905233853_AddStripeWebhookOperationIdempotency`.
+- Release database model: 36 migrations, ending at `20260906012642_AddOperationFencing`.
 - Production Stripe webhook endpoint: enabled, `2025-08-27.basil`.
 - Release Stripe.NET: 49.1.0, expecting `2025-10-29.clover`.
 - Production Storage key: considered compromised after read-only tooling displayed it; rotation is mandatory.
 - Release adds database-backed generation and Stripe webhook idempotency.
-- Local release gates and full SQL/Azurite Compose verification passed; paid AI image quality remains untested.
+- Latest local API suite: 403 passed. Full SQL/Azurite Compose smoke and restart persistence passed after final fixes. Independent completion audit is still required; paid AI image quality remains untested.
+- Retry regression evidence includes coupon/purchase rollback, pre/post-commit failures, legacy-token replay, and generation lost-commit acknowledgement. See `docs/testing/evidence/photo-workspace-design-audit/final-local-release-gates.txt` and adjacent red/green artifacts.
 
 ## Owners and maintenance window
 
@@ -52,7 +53,7 @@ Do not combine these approvals implicitly.
 
 - **A — release artifact:** reviewed commit/image digest, CI green, no private evidence or credentials included.
 - **B — environment strategy:** staging rehearsal complete, or direct-production exception approved.
-- **C — database:** backup/restoration point confirmed; two additive migrations approved.
+- **C — database:** backup/restoration point confirmed; three additive migrations approved.
 - **D — Storage mutation:** alternate-key regeneration, secret switch, and compromised-key regeneration approved.
 - **E — Stripe mutation:** checkout pause and Basil → Clover endpoint change approved.
 - **F — deployment:** production revision/traffic change approved.
@@ -69,7 +70,7 @@ Any failed gate holds the release at NO-GO.
    - generated storage, test accounts, event payloads, and credentials
 2. Record commit SHA, image tag, and immutable backend/frontend image digests.
 3. Re-run CI from the frozen commit. Required results:
-   - API tests: 390 passing or more, zero failures.
+   - API tests: 403 passing or more, zero failures.
    - Karma: 465 passing, 19 known skips, zero failures.
    - Focused Playwright: 8 passing.
    - ESLint: zero errors; 35 known complexity warnings only.
@@ -92,6 +93,7 @@ The forward migration is database-first and compatible with the old application.
 - adds nullable `CouponRedemptions.PaymentTransactionId`;
 - adds the payment-transaction foreign key and filtered unique index;
 - adds unique operation/event indexes;
+- adds operation fencing tokens and a nullable candidate-operation token;
 - does not drop, truncate, or delete existing data.
 
 ### Pre-migration
@@ -118,7 +120,7 @@ WHERE Status = 0;
 export ConnectionStrings__DefaultConnection='<design-time-only connection string>'
 dotnet ef migrations script \
   20260518040142_AddOutcomePackages \
-  20260905233853_AddStripeWebhookOperationIdempotency \
+  20260906012642_AddOperationFencing \
   --idempotent \
   --project AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj \
   --startup-project AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj \
@@ -137,11 +139,16 @@ SELECT MigrationId
 FROM dbo.__EFMigrationsHistory
 WHERE MigrationId IN (
   '20260905231745_AddHeadshotGenerationOperationIdempotency',
-  '20260905233853_AddStripeWebhookOperationIdempotency'
+  '20260905233853_AddStripeWebhookOperationIdempotency',
+  '20260906012642_AddOperationFencing'
 );
 
 SELECT OBJECT_ID('dbo.HeadshotGenerationOperations') AS GenerationOperations,
        OBJECT_ID('dbo.StripeWebhookOperations') AS WebhookOperations;
+
+SELECT COL_LENGTH('dbo.HeadshotGenerationOperations', 'OperationToken') AS GenerationFence,
+       COL_LENGTH('dbo.StripeWebhookOperations', 'OperationToken') AS WebhookFence,
+       COL_LENGTH('dbo.ProcessedImages', 'GenerationOperationToken') AS CandidateFence;
 
 SELECT name, is_unique
 FROM sys.indexes
@@ -153,7 +160,7 @@ WHERE name IN (
 );
 ```
 
-Expected: two migration rows, two non-null object IDs, and four unique indexes.
+Expected: three migration rows, two non-null object IDs, and four unique indexes. Also verify `OperationToken` exists on both operation tables and `GenerationOperationToken` exists on `ProcessedImages`.
 
 **Gate C:** database operator confirms backup, migration rows, tables, indexes, and no unexpected data change.
 
@@ -236,7 +243,9 @@ Run these purchase scenarios against local/staging Stripe test mode before cutov
 5. Concurrent replay: one completed webhook operation and one fulfillment.
 6. Discounted purchase: one coupon redemption tied to the payment transaction.
 7. Decline and 3DS paths.
-8. Temporary Stripe verification failure: webhook returns retryable failure, then completes once after replay.
+8. Temporary Stripe verification or coupon-persistence failure: webhook returns retryable failure, then completes once after replay.
+
+Latest local evidence used a real Stripe test-mode discounted PaymentIntent/event payload with 16 concurrent, valid locally HMAC-signed deliveries. It produced one operation (attempt count one), one coupon redemption, one purchase, one entitlement, and one 150-credit award; sequential replay returned 200 without duplication. The initial Stripe CLI listener check remains separately labeled as Stripe-forwarded signing evidence.
 
 **Gate E:** Stripe operator approves endpoint mutation and confirms delivery/replay state.
 
@@ -276,12 +285,27 @@ Monitor:
 - API/frontend revision health, restarts, CPU/memory, latency, and HTTP 5xx/409 rates;
 - migration/startup failures;
 - `GenerationInProgress` volume and provider-call/credit-refund anomalies;
-- failed or expired `HeadshotGenerationOperations`;
-- failed/expired `StripeWebhookOperations` and attempt counts;
+- failed or reconciliation-due `HeadshotGenerationOperations`;
+- failed/reconciliation-due `StripeWebhookOperations` and attempt counts;
 - Stripe signature/API-version errors and delivery retries;
 - `PendingReview` transactions;
 - Storage authorization, blob-not-found, proxy, and export errors;
 - auth/Turnstile/OAuth callback failures.
+
+### Stale-operation safety rule
+
+`LeaseExpiresAt` is an observability/reconciliation deadline, **not** permission for another replica to reclaim a processing row. The application deliberately rejects duplicates while status remains `Processing`, even after that timestamp. This fail-stop behavior prevents a crashed request from repeating provider work, charging twice, or overlapping payment fulfillment.
+
+Before any status/token mutation:
+
+1. Pause the affected workflow (and checkout for webhook receipts).
+2. Drain or terminate every revision/replica that could own the recorded token; verify no worker remains in flight.
+3. Preserve the operation row, token, related logs, Stripe event/PaymentIntent, payment transaction, coupon redemption, purchase, entitlement, credit ledger, and token-matched candidate rows.
+4. For generation, reconcile charge/refund and token-matched candidates. Mark `Succeeded` only when the complete candidate/accounting result is durable. Otherwise refund exactly the token-specific charge if needed, mark only token-matched candidates failed, then mark the operation `Failed` before allowing a deliberate retry. If provider outcome is unknown, do not retry until an operator accepts the potential external duplicate.
+5. For Stripe, mark `Succeeded` when coupon/purchase/credit/entitlement fulfillment is already complete. If incomplete, repair any inconsistent local records transactionally, then mark the receipt `Failed` and replay the preserved Stripe event. Existing coupon and purchase keys make a partial prior commit idempotent.
+6. Record approver, before/after row snapshots, reason, and reconciliation result. Never overwrite an operation token or set `Failed` while its prior worker may still run.
+
+No automated job may reclaim these rows.
 
 ### Read-only reconciliation queries
 
