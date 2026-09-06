@@ -364,6 +364,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     private void ConfigureAdminRelationships(ModelBuilder builder)
     {
+        // Different payments share coupon capacity; receipt fencing alone cannot
+        // prevent a stale redemption from spending the final use twice.
+        var coupon = builder.Entity<Coupon>();
+        coupon.Property(c => c.CurrentUsages).IsConcurrencyToken();
+        coupon.Property(c => c.MaxUsages).IsConcurrencyToken();
+        coupon.Property(c => c.IsActive).IsConcurrencyToken();
+        coupon.Property(c => c.ExpiresAt).IsConcurrencyToken();
+
         builder.Entity<AdminAuditLog>()
             .HasIndex(l => new { l.AdminUserId, l.CreatedAt })
             .HasDatabaseName("IX_AdminAuditLogs_AdminUserId_CreatedAt");

@@ -1,0 +1,47 @@
+Shared coupon capacity — separate SQLite contexts, distinct users/payments
+Both contexts read the last available use before redemption. Red permits
+both redemptions; green rejects stale write, rolls back and clears tracking.
+Exact count remains one, later save cannot leak changes, winner replay succeeds,
+and losing payment replay respects exhausted capacity. Real CouponService; no paid calls.
+
+--- coupon-limit-red.txt ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:03.10]     AI.ProfilePhotoMaker.API.Tests.Services.CouponServiceTests.RedeemCoupon_DifferentPaymentsCompeteForLastUseWithoutOversubscription [FAIL]
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.CouponServiceTests.RedeemCoupon_DifferentPaymentsCompeteForLastUseWithoutOversubscription [2 s]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.CouponServiceTests.RedeemCoupon_DifferentPaymentsCompeteForLastUseWithoutOversubscription() in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/CouponServiceTests.cs:line 267
+   at AI.ProfilePhotoMaker.API.Tests.Services.CouponServiceTests.RedeemCoupon_DifferentPaymentsCompeteForLastUseWithoutOversubscription() in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/CouponServiceTests.cs:line 279
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 2 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- coupon-limit-green.txt ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    34, Skipped:     0, Total:    34, Duration: 4 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- api-coupon-limit-final.txt ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   415, Skipped:     0, Total:   415, Duration: 1 m 18 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- paid-workflow-coupon-final.txt ---
+PASS local Docker paid generation, entitlement accounting, premium augmentation, and export ZIP
+
+--- restart-coupon-verify.txt ---
+PASS local Docker SQL, migration, entitlement, and Azurite persistence across restart
+
+--- model-coupon-final.txt ---
+No changes have been made to the model since the last migration.

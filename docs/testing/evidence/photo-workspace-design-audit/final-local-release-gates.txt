@@ -1,7 +1,7 @@
 Final local release verification after retry-state remediation
 
-API: 414 passed, 0 failed, 0 skipped (1m15s).
-API Docker image: rebuilt successfully after package-allowance concurrency fix.
+API: 415 passed, 0 failed, 0 skipped (1m18s).
+API Docker image: rebuilt successfully after coupon-capacity concurrency fix.
 Final-image full Docker smoke: fresh account registration, local-only email
 confirmation/login, upload/scoring, deterministic preview, Azurite retrieval,
 Stripe sandbox concurrency, nine paid candidates, premium relighting and ZIP export.
@@ -17,8 +17,8 @@ No real money, production purchase, or paid AI calls.
 Final isolated stack restart: SQL credits/images/entitlements/migration count and
 Azurite file counts unchanged; persisted image retrieval passed. Earlier fresh
 schema application verified 36 migrations; final SQL also applied the empty,
-metadata-only ProtectCreditBalanceConcurrency and ProtectPackageAllowanceConcurrency
-migrations. Restart retained all 38. Neither changes database columns or data.
+metadata-only credit-balance, package-allowance and coupon-capacity concurrency
+migrations. Restart retained all 39. None changes database columns or data.
 
 Frontend (unchanged during subsequent backend-only fixes):
 Karma: 465 passed, 19 skipped.
@@ -33,10 +33,10 @@ EF pending-model check: none after local design-time connection configuration.
 Git whitespace check: passed after final source changes; staged check is required before commit.
 
 Private original logs: /tmp/aipm-compose-verify/
-api-allowance-final.txt, docker-allowance-final.txt,
-preview-allowance-final.txt, stripe-allowance-final.txt,
-paid-workflow-allowance-final.txt, restart-allowance-verify.txt,
-model-allowance-final.txt,
+api-coupon-limit-final.txt, docker-coupon-limit-final.txt,
+preview-coupon-final.txt, stripe-coupon-final.txt,
+paid-workflow-coupon-final.txt, restart-coupon-verify.txt,
+model-coupon-final.txt,
 karma-post-retry.txt, playwright-post-retry.txt, ui-build-post-retry.txt,
 ui-lint-post-retry.txt, npm-audit-post-retry.txt, nuget-api-post-retry.txt,
 nuget-tests-post-retry.txt, bicep-post-retry.txt, model-post-retry.txt.

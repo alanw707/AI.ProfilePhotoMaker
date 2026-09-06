@@ -240,6 +240,45 @@ public class CouponServiceTests
         }
     }
 
+    [Fact]
+    public async Task RedeemCoupon_DifferentPaymentsCompeteForLastUseWithoutOversubscription()
+    {
+        await using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        using var first = new ApplicationDbContext(options);
+        await first.Database.EnsureCreatedAsync();
+        foreach (var id in new[] { 101, 102 })
+        {
+            var userId = $"coupon-user-{id}";
+            first.Users.Add(new ApplicationUser { Id = userId, UserName = userId });
+            first.PaymentTransactions.Add(new PaymentTransaction
+            {
+                Id = id, UserId = userId, Amount = 8m,
+                ExternalTransactionId = $"pi_coupon_{id}", Status = PaymentStatus.Completed,
+                Type = PaymentType.OneTime
+            });
+        }
+        var coupon = await SeedCouponAsync(first, c => c.MaxUsages = 1);
+        using var second = new ApplicationDbContext(options);
+        // Both payment contexts read the final available use before either redemption.
+        await second.Coupons.SingleAsync(c => c.Id == coupon.Id);
+        Assert.True(await CreateService(first).RedeemCouponAsync("SAVE20", "coupon-user-101", 10m, 2m, 101));
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() =>
+            CreateService(second).RedeemCouponAsync("SAVE20", "coupon-user-102", 10m, 2m, 102));
+        Assert.Empty(second.ChangeTracker.Entries());
+        await second.SaveChangesAsync();
+
+        using var replay = new ApplicationDbContext(options);
+        Assert.Equal(1, (await replay.Coupons.SingleAsync()).CurrentUsages);
+        var redemption = Assert.Single(await replay.CouponRedemptions.ToListAsync());
+        Assert.Equal(101, redemption.PaymentTransactionId);
+        Assert.True(await CreateService(replay).RedeemCouponAsync("SAVE20", "coupon-user-101", 10m, 2m, 101));
+        Assert.False(await CreateService(replay).RedeemCouponAsync("SAVE20", "coupon-user-102", 10m, 2m, 102));
+        Assert.Single(await replay.CouponRedemptions.ToListAsync());
+        Assert.Equal(1, (await replay.Coupons.AsNoTracking().SingleAsync()).CurrentUsages);
+    }
+
     private static ApplicationDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
