@@ -1,7 +1,7 @@
 Final local release verification after retry-state remediation
 
-API: 406 passed, 0 failed, 0 skipped (1m15s).
-API Docker image: rebuilt successfully after ambiguous-provider fail-stop fix.
+API: 407 passed, 0 failed, 0 skipped (1m18s).
+API Docker image: rebuilt successfully after ambiguous-debit fail-stop fix.
 Final-image full Docker smoke: fresh account registration, local-only email
 confirmation/login, upload/scoring, deterministic preview, Azurite retrieval,
 Stripe sandbox concurrency, nine paid candidates, premium relighting and ZIP export.
@@ -31,9 +31,9 @@ EF pending-model check: none after local design-time connection configuration.
 Git whitespace check: passed after final source changes; staged check is required before commit.
 
 Private original logs: /tmp/aipm-compose-verify/
-api-provider-unknown-final.txt, docker-provider-unknown-final.txt,
-preview-provider-final.txt, stripe-provider-final.txt,
-paid-workflow-provider-unknown-final.txt, restart-provider-verify.txt,
+api-debit-unknown-final.txt, docker-debit-unknown-final.txt,
+preview-debit-final.txt, stripe-debit-final.txt,
+paid-workflow-debit-final.txt, restart-debit-verify.txt,
 karma-post-retry.txt, playwright-post-retry.txt, ui-build-post-retry.txt,
 ui-lint-post-retry.txt, npm-audit-post-retry.txt, nuget-api-post-retry.txt,
 nuget-tests-post-retry.txt, bicep-post-retry.txt, model-post-retry.txt.

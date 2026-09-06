@@ -1,4 +1,4 @@
-Final-image paid workflow verification after ambiguous-provider fix
+Final-image paid workflow verification after ambiguous-debit fix
 
 Local Docker SQL Server/Azurite/API/frontend; deterministic fixed-image provider,
 not paid AI. Fresh local account registered/confirmed/logged in; upload/scoring,
@@ -28,7 +28,7 @@ and entitlement deltas. This does not assess AI quality or independently inspect
 every ZIP member. Paid-workflow state and blob retrieval survived stack restart.
 
 Private execution logs: /tmp/aipm-compose-verify/
-paid-workflow-provider-unknown-final.txt, preview-provider-final.txt,
-stripe-provider-final.txt, restart-provider-verify.txt,
-docker-provider-unknown-final.txt, api-provider-unknown-final.txt.
+paid-workflow-debit-final.txt, preview-debit-final.txt,
+stripe-debit-final.txt, restart-debit-verify.txt,
+docker-debit-unknown-final.txt, api-debit-unknown-final.txt.
 No production changes, real-money purchase, or paid-provider calls.

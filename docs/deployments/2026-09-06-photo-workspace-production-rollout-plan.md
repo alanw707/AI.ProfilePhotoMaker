@@ -29,7 +29,7 @@ Execution requires named operators and explicit approval at each gate below. The
 - Release Stripe.NET: 49.1.0, expecting `2025-10-29.clover`.
 - Production Storage key: considered compromised after read-only tooling displayed it; rotation is mandatory.
 - Release adds database-backed generation and Stripe webhook idempotency.
-- Latest local API suite: 406 passed. Full SQL/Azurite Compose smoke and restart persistence passed after final fixes. Independent completion audit is still required; paid AI image quality remains untested.
+- Latest local API suite: 407 passed. Full SQL/Azurite Compose smoke and restart persistence passed after final fixes. Independent completion audit is still required; paid AI image quality remains untested.
 - Retry regression evidence includes coupon/purchase rollback, pre/post-commit failures, legacy-token replay, and generation lost-commit acknowledgement. See `docs/testing/evidence/photo-workspace-design-audit/final-local-release-gates.txt` and adjacent red/green artifacts.
 
 ## Owners and maintenance window
@@ -70,7 +70,7 @@ Any failed gate holds the release at NO-GO.
    - generated storage, test accounts, event payloads, and credentials
 2. Record commit SHA, image tag, and immutable backend/frontend image digests.
 3. Re-run CI from the frozen commit. Required results:
-   - API tests: 406 passing or more, zero failures.
+   - API tests: 407 passing or more, zero failures.
    - Karma: 465 passing, 19 known skips, zero failures.
    - Focused Playwright: 8 passing.
    - ESLint: zero errors; 35 known complexity warnings only.
@@ -306,6 +306,8 @@ Before any status/token mutation:
 6. Record approver, before/after row snapshots, reason, and reconciliation result. Never overwrite an operation token or set `Failed` while its prior worker may still run.
 
 OpenAI timeouts, network loss, malformed responses, and other failures without proof of rejection are ambiguous outcomes, not retry permission. The application retains the processing claim and charge for reconciliation, including when provider output could not be persisted. Explicit authentication rejection remains a definitive failure. Investigate retained charges promptly; never refund or resubmit automatically merely because the customer received an error.
+
+A debit may also persist before its consumption receipt or usage-log entry reaches generation. Any exception during debit, or missing receipt, retains `Processing`; absence of a charge usage log is not proof that no debit occurred. After draining workers, reconcile database/audit history and all intervening account transactions before deciding whether a debit occurred. Restore a verified debit exactly once with an operator-recorded transaction; do not rely on the automatic refund helper when its charge log is missing. If the amount/outcome cannot be established, keep the operation blocked and escalate rather than guessing or replaying.
 
 No automated job may reclaim these rows.
 

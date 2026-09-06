@@ -432,6 +432,62 @@ public class HeadshotGenerationServiceTests
     }
 
     [Fact]
+    public async Task GenerateHeadshotAsync_LostDebitAcknowledgementBlocksReplayAcrossContexts()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var fault = new LostDebitAcknowledgement();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection).AddInterceptors(fault).Options;
+        using var context = new ApplicationDbContext(options);
+        await context.Database.EnsureCreatedAsync();
+        var userId = await SeedUserProfileAsync(context, credits: 3);
+        var provider = new FakeHeadshotProvider("data:image/png;base64,AQID");
+        var request = new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = $"dev/enhanced/{userId}/source.png",
+            Style = "professional", ClientRequestId = "lost-debit-ack"
+        };
+        fault.Armed = true;
+
+        await Assert.ThrowsAsync<TimeoutException>(() =>
+            CreateService(context, new FakeStorageService(), provider).GenerateHeadshotAsync(request, userId));
+
+        using var replayContext = new ApplicationDbContext(options);
+        Assert.True(fault.Fired);
+        Assert.Equal(2, (await replayContext.UserProfiles.SingleAsync()).Credits);
+        var operation = await replayContext.HeadshotGenerationOperations.SingleAsync();
+        Assert.Equal(HeadshotGenerationOperationStatus.Processing, operation.Status);
+        operation.LeaseExpiresAt = DateTime.UtcNow.AddHours(-1);
+        await replayContext.SaveChangesAsync();
+        var replay = await Assert.ThrowsAsync<HeadshotGenerationException>(() =>
+            CreateService(replayContext, new FakeStorageService(), provider).GenerateHeadshotAsync(request, userId));
+        Assert.Equal("GenerationInProgress", replay.Code);
+        Assert.Equal(2, (await replayContext.UserProfiles.AsNoTracking().SingleAsync()).Credits);
+        Assert.Equal(0, provider.CallCount);
+        Assert.Empty(await replayContext.UsageLogs.ToListAsync());
+    }
+
+    private sealed class LostDebitAcknowledgement : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
+    {
+        public bool Armed { get; set; }
+        public bool Fired { get; private set; }
+
+        public override ValueTask<int> SavedChangesAsync(
+            Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesCompletedEventData eventData,
+            int result, CancellationToken cancellationToken = default)
+        {
+            if (Armed && !Fired && eventData.Context!.ChangeTracker.Entries<UserProfile>()
+                .Any(entry => entry.Entity.Credits == 2))
+            {
+                Fired = true;
+                throw new TimeoutException("Injected lost debit acknowledgement after persistence");
+            }
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    [Fact]
     public async Task GenerateHeadshotAsync_RefundsCreditsWhenProviderFails()
     {
         using var context = CreateContext();

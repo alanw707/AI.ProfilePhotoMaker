@@ -181,17 +181,20 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         CreditConsumptionResult? consumed = null;
         var generationCommitted = false;
         var providerOutcomeUnknown = false;
+        var debitOutcomeUnknown = false;
 
         try
         {
             if (requiredCredits > 0)
             {
+                debitOutcomeUnknown = true;
                 consumed = await _basicTierService.ConsumeCreditsAsync(
                     userId,
                     requiredCredits,
                     ActionName,
                     $"{correlationId}:attempt:{operationToken}",
                     cancellationToken);
+                debitOutcomeUnknown = consumed == null;
 
                 if (consumed == null || !consumed.Success)
                 {
@@ -357,11 +360,12 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         }
         catch (Exception ex)
         {
-            if (providerOutcomeUnknown)
+            if (providerOutcomeUnknown || debitOutcomeUnknown)
             {
-                // Keep the claim and charge for reconciliation. Neither an uncertain
-                // provider response nor failure to persist its output permits resubmission.
-                _logger.LogWarning("Generation outcome requires reconciliation for correlation {CorrelationId}", S(correlationId));
+                // A missing consumption receipt does not prove the debit rolled back.
+                // Keep the claim for reconciliation on uncertain debit/provider outcomes;
+                // neither automatic refund nor resubmission is safe.
+                _logger.LogWarning("Generation outcome requires reconciliation for correlation {CorrelationId}; debitUnknown={DebitUnknown}", S(correlationId), debitOutcomeUnknown);
                 throw;
             }
             if (!generationCommitted)
