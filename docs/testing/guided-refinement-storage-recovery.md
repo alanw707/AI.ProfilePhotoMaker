@@ -41,4 +41,25 @@ The global white blocker text was intended for a dark fulfillment panel. A light
 - Production UI build passed.
 - Full API run: 489 passed, one unchanged performance-suite threshold failed (85% achieved; assertion requires greater than 85%). No threshold was relaxed.
 
-No paid AI call, production mutation, or deployment performed for this fix. An already saved request from the older UI must be explicitly resumed or discarded after updating; unknown requests are never silently erased.
+No paid AI call or production mutation occurred during diagnosis. An already saved request from the older UI must be explicitly resumed or discarded after updating; unknown requests are never silently erased.
+
+## Requested verification and predeployment review
+
+User subsequently authorized verification, review and deployment of `4932756` against production baseline `eda11f3`.
+
+### Standards
+
+No blocking findings. The additional storage formats remain restricted to a selected database-owned proof and the authenticated user's folder; exact-path, unpaid-preview and traversal checks remain intact. No dependencies or migrations were added. The light-workspace color override leaves dark fulfillment-panel text unchanged.
+
+### Spec
+
+No missing requirements found for this fix. Real writer-generated paths now work; definitive validation failures release the saved request, ambiguous outcomes remain protected, and recovery guidance is readable at both tested widths. The test fixture's path-contract mismatch has been corrected rather than bypassing validation.
+
+### Fresh release gates
+
+- Full API suite: **490 passed**, including the previously flaky performance checks.
+- Angular suite, production build, and focused 11-test browser suite passed again.
+- Rebuilt Docker API tested against real local SQL and Azurite: an unprefixed saved photo was refined successfully, exactly one refinement was consumed, candidate/premium/credit balances were unchanged, the saved image was retrieved, and replay returned the same receipt without another provider call.
+- The Docker provider was explicitly checked to be the local deterministic fixture, not a paid AI endpoint. The first harness run reached a successful API response but failed to read a host-mounted counter; the complete rerun read the counter inside its container and passed.
+
+Deployment is authorized through the existing main-push workflow. Its result and live health are reported separately after completion.
