@@ -29,7 +29,7 @@ Execution requires named operators and explicit approval at each gate below. The
 - Release Stripe.NET: 49.1.0, expecting `2025-10-29.clover`.
 - Production Storage key: considered compromised after read-only tooling displayed it; rotation is mandatory.
 - Release adds database-backed generation and Stripe webhook idempotency.
-- Latest local API suite: 403 passed. Full SQL/Azurite Compose smoke and restart persistence passed after final fixes. Independent completion audit is still required; paid AI image quality remains untested.
+- Latest local API suite: 406 passed. Full SQL/Azurite Compose smoke and restart persistence passed after final fixes. Independent completion audit is still required; paid AI image quality remains untested.
 - Retry regression evidence includes coupon/purchase rollback, pre/post-commit failures, legacy-token replay, and generation lost-commit acknowledgement. See `docs/testing/evidence/photo-workspace-design-audit/final-local-release-gates.txt` and adjacent red/green artifacts.
 
 ## Owners and maintenance window
@@ -70,7 +70,7 @@ Any failed gate holds the release at NO-GO.
    - generated storage, test accounts, event payloads, and credentials
 2. Record commit SHA, image tag, and immutable backend/frontend image digests.
 3. Re-run CI from the frozen commit. Required results:
-   - API tests: 403 passing or more, zero failures.
+   - API tests: 406 passing or more, zero failures.
    - Karma: 465 passing, 19 known skips, zero failures.
    - Focused Playwright: 8 passing.
    - ESLint: zero errors; 35 known complexity warnings only.
@@ -304,6 +304,8 @@ Before any status/token mutation:
 4. For generation, reconcile charge/refund and token-matched candidates. Mark `Succeeded` only when the complete candidate/accounting result is durable. Otherwise refund exactly the token-specific charge if needed, mark only token-matched candidates failed, then mark the operation `Failed` before allowing a deliberate retry. If provider outcome is unknown, do not retry until an operator accepts the potential external duplicate.
 5. For Stripe, mark `Succeeded` when coupon/purchase/credit/entitlement fulfillment is already complete. If incomplete, repair any inconsistent local records transactionally, then mark the receipt `Failed` and replay the preserved Stripe event. Existing coupon and purchase keys make a partial prior commit idempotent.
 6. Record approver, before/after row snapshots, reason, and reconciliation result. Never overwrite an operation token or set `Failed` while its prior worker may still run.
+
+OpenAI timeouts, network loss, malformed responses, and other failures without proof of rejection are ambiguous outcomes, not retry permission. The application retains the processing claim and charge for reconciliation, including when provider output could not be persisted. Explicit authentication rejection remains a definitive failure. Investigate retained charges promptly; never refund or resubmit automatically merely because the customer received an error.
 
 No automated job may reclaim these rows.
 

@@ -1,9 +1,13 @@
 Final local release verification after retry-state remediation
 
-API: 403 passed, 0 failed, 0 skipped (1m15s).
-API Docker image: rebuilt successfully after final generation compensation fix.
-Docker smoke: fresh account registration, local-only email confirmation/login,
-source upload/scoring, deterministic preview and Azurite retrieval passed.
+API: 406 passed, 0 failed, 0 skipped (1m15s).
+API Docker image: rebuilt successfully after ambiguous-provider fail-stop fix.
+Final-image full Docker smoke: fresh account registration, local-only email
+confirmation/login, upload/scoring, deterministic preview, Azurite retrieval,
+Stripe sandbox concurrency, nine paid candidates, premium relighting and ZIP export.
+Exact accounting: nine candidate slots, one premium allowance, one export kit,
+and ten credits consumed. ZIP response exceeded 500 bytes; no page errors.
+All these flows ran sequentially against the same final image, not prior code.
 
 Stripe: real test-mode PaymentIntent/event; locally HMAC-signed deliveries.
 16 concurrent deliveries: 1 successful response, 15 retryable responses.
@@ -27,8 +31,9 @@ EF pending-model check: none after local design-time connection configuration.
 Git whitespace check: passed after final source changes; staged check is required before commit.
 
 Private original logs: /tmp/aipm-compose-verify/
-api-generation-ack-final.txt, docker-generation-ack-final.txt,
-free-preview-ack-final.txt, stripe-ack-final.txt, restart-ack-verify.txt,
+api-provider-unknown-final.txt, docker-provider-unknown-final.txt,
+preview-provider-final.txt, stripe-provider-final.txt,
+paid-workflow-provider-unknown-final.txt, restart-provider-verify.txt,
 karma-post-retry.txt, playwright-post-retry.txt, ui-build-post-retry.txt,
 ui-lint-post-retry.txt, npm-audit-post-retry.txt, nuget-api-post-retry.txt,
 nuget-tests-post-retry.txt, bicep-post-retry.txt, model-post-retry.txt.

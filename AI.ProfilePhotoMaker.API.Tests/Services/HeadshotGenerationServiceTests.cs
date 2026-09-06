@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Moq;
 
 namespace AI.ProfilePhotoMaker.API.Tests.Services;
 
@@ -355,6 +356,81 @@ public class HeadshotGenerationServiceTests
         Assert.Single(context.ProcessedImages);
     }
 
+    [Theory]
+    [InlineData("timeout")]
+    [InlineData("network")]
+    [InlineData("malformed-response")]
+    public async Task GenerateHeadshotAsync_AmbiguousOpenAIOutcomeBlocksReplayAcrossContexts(string failure)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        using var context = new ApplicationDbContext(options);
+        await context.Database.EnsureCreatedAsync();
+        var userId = await SeedUserProfileAsync(context, credits: 3);
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["OpenAI:ApiKey"] = "local-fixture-only"
+        }).Build();
+        byte[] png;
+        using (var image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(2, 2))
+        using (var buffer = new MemoryStream())
+        {
+            image.Save(buffer, new SixLabors.ImageSharp.Formats.Png.PngEncoder());
+            png = buffer.ToArray();
+        }
+        var storage = new Moq.Mock<IStorageService>();
+        storage.Setup(s => s.GetImageAsync(Moq.It.IsAny<string>()))
+            .ReturnsAsync(() => (Stream)new MemoryStream(png));
+        var handler = new AmbiguousOpenAIHandler(failure);
+        using var http = new HttpClient(handler);
+        var factory = new Moq.Mock<IHttpClientFactory>();
+        factory.Setup(f => f.CreateClient(Moq.It.IsAny<string>())).Returns(http);
+        var imageService = new OpenAIImageGenerationService(http, factory.Object, config,
+            NullLogger<OpenAIImageGenerationService>.Instance, storage.Object);
+        var provider = new OpenAIHeadshotGenerationProvider(imageService, config,
+            NullLogger<OpenAIHeadshotGenerationProvider>.Instance);
+        var request = new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = $"dev/enhanced/{userId}/source.png", Style = "professional",
+            ClientRequestId = "ambiguous-provider"
+        };
+
+        await Assert.ThrowsAsync<HeadshotGenerationException>(() =>
+            CreateService(context, storage.Object, provider).GenerateHeadshotAsync(request, userId));
+        Assert.Equal(1, handler.Calls);
+        var operation = await context.HeadshotGenerationOperations.SingleAsync();
+        Assert.Equal(HeadshotGenerationOperationStatus.Processing, operation.Status);
+        operation.LeaseExpiresAt = DateTime.UtcNow.AddHours(-1);
+        await context.SaveChangesAsync();
+
+        using var replayContext = new ApplicationDbContext(options);
+        var replay = await Assert.ThrowsAsync<HeadshotGenerationException>(() =>
+            CreateService(replayContext, storage.Object, provider).GenerateHeadshotAsync(request, userId));
+        Assert.Equal("GenerationInProgress", replay.Code);
+        Assert.Equal(1, handler.Calls);
+        Assert.Equal(2, (await replayContext.UserProfiles.SingleAsync()).Credits);
+        Assert.Empty(await replayContext.UsageLogs.Where(l => l.Action.EndsWith("_refund")).ToListAsync());
+    }
+
+    private sealed class AmbiguousOpenAIHandler(string failure) : HttpMessageHandler
+    {
+        public int Calls { get; private set; }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Calls++;
+            return failure switch
+            {
+                "timeout" => Task.FromException<HttpResponseMessage>(new TaskCanceledException("Injected lost response")),
+                "network" => Task.FromException<HttpResponseMessage>(new HttpRequestException("Injected lost response")),
+                _ => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent("not-json")
+                })
+            };
+        }
+    }
+
     [Fact]
     public async Task GenerateHeadshotAsync_RefundsCreditsWhenProviderFails()
     {
@@ -578,7 +654,8 @@ public class HeadshotGenerationServiceTests
         Assert.Equal(replacementToken, operation.OperationToken);
         Assert.Empty(verificationContext.ProcessedImages);
         Assert.Equal(1, provider.CallCount);
-        Assert.Equal(3, (await verificationContext.UserProfiles.SingleAsync(p => p.UserId == userId)).Credits);
+        // The stale worker cannot refund provider work whose result was not persisted.
+        Assert.Equal(2, (await verificationContext.UserProfiles.SingleAsync(p => p.UserId == userId)).Credits);
     }
 
     [Fact]

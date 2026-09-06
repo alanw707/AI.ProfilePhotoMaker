@@ -180,6 +180,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
 
         CreditConsumptionResult? consumed = null;
         var generationCommitted = false;
+        var providerOutcomeUnknown = false;
 
         try
         {
@@ -231,6 +232,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                     ? HeadshotRecipeRegistry.None(request.UseCaseCode)
                     : HeadshotRecipeRegistry.Resolve(request.UseCaseCode, request.RecipeCode, outputIndex);
                 await EnsureGenerationOperationOwnershipAsync(userId, correlationId, operationToken, cancellationToken);
+                providerOutcomeUnknown = true;
                 var result = await _provider.GenerateAsync(new HeadshotGenerationRequest
                 {
                     UserId = userId,
@@ -246,6 +248,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
 
                 if (!result.Success)
                 {
+                    providerOutcomeUnknown = result.FailureCode == "ProviderOutcomeUnknown";
                     throw new HeadshotGenerationException(
                         result.FailureCode ?? "ProviderGenerationFailed",
                         result.FailureMessage ?? "Headshot provider failed to generate an image.");
@@ -279,6 +282,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                 _dbContext.ProcessedImages.Add(processedImage);
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 candidates.Add(ToCandidateDto(processedImage));
+                providerOutcomeUnknown = false;
             }
 
             var commitStrategy = _dbContext.Database.CreateExecutionStrategy();
@@ -353,6 +357,13 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         }
         catch (Exception ex)
         {
+            if (providerOutcomeUnknown)
+            {
+                // Keep the claim and charge for reconciliation. Neither an uncertain
+                // provider response nor failure to persist its output permits resubmission.
+                _logger.LogWarning("Generation outcome requires reconciliation for correlation {CorrelationId}", S(correlationId));
+                throw;
+            }
             if (!generationCommitted)
             {
                 // A lost commit acknowledgement is not proof of rollback. Discard tracked
