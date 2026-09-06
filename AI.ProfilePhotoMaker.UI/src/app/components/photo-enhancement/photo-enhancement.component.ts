@@ -2405,6 +2405,13 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     });
 
     this.isProcessing = false;
+    // These 400 responses occur before a provider call or operation claim. They are
+    // editable rejections, not ambiguous in-flight work that needs receipt recovery.
+    const rejectionCode = error.error?.error?.code;
+    if (error.status === 400 && ['InvalidImageSource', 'InvalidRefinement', 'InvalidRequest', 'StyleUnavailable', 'BotVerificationFailed'].includes(rejectionCode)) {
+      this.clearInterruptedGeneration();
+      this._nextRequestIsRegeneration = false;
+    }
     if (error.status === 401) {
       if (error.error?.error?.code === 'EmailNotVerified') {
         this.isEmailConfirmed = false;

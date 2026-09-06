@@ -795,23 +795,29 @@ public class HeadshotGenerationServiceTests
     }
 
     [Theory]
-    [InlineData("instant_headshot", "subtle_smile", "closed-mouth smile")]
-    [InlineData("instant_headshot_promoted_preview", "relaxed_expression", "Relax facial tension")]
-    [InlineData("premium_augmentation", "upright_posture", "shoulder posture")]
-    [InlineData("photo_refinement", "subtle_smile", "closed-mouth smile")]
+    [InlineData("instant_headshot", "subtle_smile", "closed-mouth smile", false)]
+    [InlineData("instant_headshot_promoted_preview", "relaxed_expression", "Relax facial tension", false)]
+    [InlineData("premium_augmentation", "upright_posture", "shoulder posture", false)]
+    [InlineData("photo_refinement", "subtle_smile", "closed-mouth smile", false)]
+    [InlineData("instant_headshot", "subtle_smile", "closed-mouth smile", true)]
     public async Task GuidedRefinement_EditsSelectedProofWithFixedInstructionsAndReplaysOnce(
-        string mode, string code, string instruction)
+        string mode, string code, string instruction, bool environmentPrefixed)
     {
         using var context = CreateContext();
         var userId = await SeedUserProfileAsync(context, credits: 0);
         var originalSource = $"dev/enhanced/{userId}/expired-upload.png";
+        // Exercise the real storage writer's path contract shared with Azure, not a prefixed fake.
+        var writer = new LocalStorageService(new FakeWebHostEnvironment(), new ConfigurationBuilder().Build(),
+            NullLogger<LocalStorageService>.Instance, Mock.Of<IAsyncFileService>());
+        using var sourceBytes = new MemoryStream([1, 2, 3]);
+        var storedPath = await writer.SaveImageAsync(sourceBytes, "selected.png", userId,
+            mode == "instant_headshot_promoted_preview" ? "generated-private" :
+            mode == "premium_augmentation" || mode == "photo_refinement" ? "enhanced" : "generated");
         var selected = new ProcessedImage
         {
             UserProfileId = (await context.UserProfiles.SingleAsync()).Id,
             OriginalImageUrl = originalSource,
-            ProcessedImageUrl = mode == "instant_headshot_promoted_preview"
-                ? $"dev/generated-private/{userId}/selected.png"
-                : $"dev/generated/{userId}/selected.png",
+            ProcessedImageUrl = environmentPrefixed ? $"dev/{storedPath}" : storedPath,
             Style = "retired-portrait-style", IsGenerated = true,
             GenerationMode = mode, GenerationStatus = "succeeded"
         };
@@ -868,6 +874,8 @@ public class HeadshotGenerationServiceTests
     [InlineData("mismatched-path")]
     [InlineData("foreign-path")]
     [InlineData("traversal")]
+    [InlineData("unprefixed-foreign-path")]
+    [InlineData("unprefixed-traversal")]
     public async Task GuidedRefinement_RejectsUnownedOrUnpaidSource(string invalidSource)
     {
         using var context = CreateContext();
@@ -879,6 +887,8 @@ public class HeadshotGenerationServiceTests
             ProcessedImageUrl = invalidSource switch
             {
                 "foreign-path" => "dev/generated/another-user/selected.png",
+                "unprefixed-foreign-path" => "generated/another-user/selected.png",
+                "unprefixed-traversal" => $"generated/{ownerId}/../other/selected.png",
                 "traversal" => $"dev/generated/{ownerId}/../other/selected.png",
                 _ => $"dev/generated/{ownerId}/selected.png"
             }, Style = "linkedin",

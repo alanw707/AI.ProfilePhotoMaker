@@ -36,6 +36,29 @@ function createComponent(
 }
 
 describe('PhotoEnhancementComponent package fulfillment', () => {
+  for (const [status, code, rejectedBeforeGeneration] of [
+    [400, 'InvalidImageSource', true],
+    [400, 'InvalidRefinement', true],
+    [409, 'GenerationInProgress', false],
+    [502, 'ProviderOutcomeUnknown', false],
+    [0, 'NetworkError', false],
+  ] as const) {
+    it(`releases only definitively rejected saved requests (${code})`, () => {
+      const component = createComponent('pro_package', 9);
+      const draft = { clientRequestId: 'saved-request', refinementCode: 'upright_posture' };
+      Object.assign(component, { interruptedGeneration: draft, isProcessing: true });
+      (component as any)._interruptedGenerationKey = 'rejected-refinement-test';
+      (component as any)._activeGenerationClientRequestId = 'saved-request';
+      (component as any)._cdr = { detectChanges: () => undefined };
+      localStorage.setItem('rejected-refinement-test', JSON.stringify(draft));
+      (component as any).handleEnhancementFailure({ status, message: 'Request failed', error: { error: { code, message: 'Choose a valid photo.' } } });
+      expect(component.isProcessing).toBeFalse();
+      expect(component.interruptedGeneration).toEqual(rejectedBeforeGeneration ? null : draft as any);
+      expect(localStorage.getItem('rejected-refinement-test') === null).toBe(rejectedBeforeGeneration);
+      localStorage.removeItem('rejected-refinement-test');
+    });
+  }
+
   it('can retrieve a saved refinement receipt after the last allowance was consumed', () => {
     const component = createComponent('pro_package', 9);
     Object.assign(component, {

@@ -278,6 +278,21 @@ for (const width of [390, 1440]) {
     await expect(page.getByText('No premium edits remain. Your refinement allowance is unchanged.')).toBeVisible();
     await expect(page.getByText('4 refinements remaining', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Choose a change', exact: true })).toBeDisabled();
+    const blockerContrast = await page.locator('#refinement-blocker').evaluate(element => {
+      const luminance = (color: string) => {
+        const rgb = color.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(value => {
+          const channel = value / 255;
+          return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+        });
+        return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+      };
+      let surface: Element = element;
+      while (surface.parentElement && getComputedStyle(surface).backgroundColor === 'rgba(0, 0, 0, 0)') surface = surface.parentElement;
+      const foreground = luminance(getComputedStyle(element).color);
+      const background = luminance(getComputedStyle(surface).backgroundColor);
+      return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+    });
+    expect(blockerContrast).toBeGreaterThanOrEqual(4.5);
     await page.getByRole('radio', { name: /^Subtle smile/ }).check();
     const apply = page.getByRole('button', { name: 'Apply subtle smile', exact: true });
     await expect(apply).toBeEnabled();
@@ -295,5 +310,18 @@ for (const width of [390, 1440]) {
     await expect(page.getByText('3 refinements remaining', { exact: true })).toBeVisible();
     await expect(page.locator('.premium-edits summary')).toHaveText('Premium edits · 0 remaining');
     expect(premiumRequests).toHaveLength(0);
+
+    await page.route('**/api/headshots/generate', route => route.fulfill({
+      status: 400, contentType: 'application/json',
+      body: JSON.stringify({ success: false, error: { code: 'InvalidImageSource', message: 'Please select a valid image.' } }),
+    }));
+    await page.getByRole('radio', { name: /^Straighter posture/ }).check();
+    await page.getByRole('button', { name: 'Apply straighter posture', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'We could not finish that action' })).toBeVisible();
+    await page.getByRole('button', { name: 'Return to your work' }).click();
+    await expect(page.getByRole('radio', { name: /^Straighter posture/ })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Apply straighter posture', exact: true })).toBeEnabled();
+    expect(await page.evaluate(() => localStorage.getItem('photoWorkspaceInterruptedGeneration'))).toBeNull();
+    await expect(page.getByText('3 refinements remaining', { exact: true })).toBeVisible();
   });
 }

@@ -861,6 +861,13 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             ? new[] { StorageType.Enhanced, StorageType.Generated, StorageType.GeneratedPrivate }
             : new[] { StorageType.Upload, StorageType.Enhanced };
         var allowedPrefixes = allowedTypes.Select(type => _pathResolver.GetDirectoryPrefix(type, userId));
+        if (selectedProof)
+        {
+            // SaveImageAsync uses unprefixed paths; older outputs can also be environment-prefixed.
+            // The selected row has already been checked for ownership and exact path equality.
+            allowedPrefixes = allowedPrefixes.Concat(new[] { "enhanced", "generated", "generated-private" }
+                .Select(folder => $"{folder}/{userId}/"));
+        }
 
         if (!allowedPrefixes.Any(prefix => trimmed.StartsWith(prefix, StringComparison.Ordinal) && trimmed.Length > prefix.Length))
         {
