@@ -46,12 +46,37 @@ maintenance controls before mutations. Credentials must never enter this record.
 - Production UI build passed; 26 SEO pages.
 - Focused Playwright: nine passed, including current preview/premium flows.
 - EF model consistency: no pending model changes.
-- Full integrated Docker smoke, final security gates and rollout preflight: pending.
+- Integrated Docker rebuild and complete fresh-account workflow passed: upload, score,
+  preview, real Stripe sandbox delivery concurrency, purchase promotion, full nine-photo
+  set, premium relighting, ZIP export and exact allowance accounting.
+- Current Studio generates remaining candidates through individual idempotent requests.
+  The purchased preview counts once: eight new slots plus one promoted preview.
+  Package-covered generation and premium finishing consume zero legacy credits.
+- Full Docker restart preserved SQL rows, allowances, migration state and Azurite images.
+- Lint passed; production npm audit and NuGet dependency scan completed cleanly.
+- Sanitized actual gate summaries: `docs/testing/evidence/photo-workspace-design-audit/production-integration-local-gates.txt`.
+- Production rollout preflight: blocked as below.
 
 Detailed local runner logs remain under `/tmp/aipm-production-*`; no credentials,
 screenshots or private application data are committed.
 
 ## Production status
 
-Not deployed. No production mutation during integration/preflight so far.
+Not deployed. Integrated source frozen at `c03bf4d`; no production mutation during
+integration/preflight so far. Production main remains `f49a6fc` with its last deployment
+workflow successful. No push or production workflow dispatch has occurred.
+
+Read-only refreshed configuration confirms the live Stripe endpoint remains enabled
+on `2025-08-27.basil`; live API and webhook credentials are available. Storage still
+uses key1. Secrets were resolved in memory, never printed or committed.
+
+**Blocker:** SQL firewall rejects the operator host. Consequently production schema,
+operation drain and data recovery readiness cannot yet be verified from this host.
+Do not treat a configured SQL secret or successful Azure resource lookup as a successful
+SQL verification. A temporary operator-IP-only access rule, removed after verification,
+or an existing approved in-network execution path is needed before proceeding.
+No firewall rule was added and no production data was changed.
+
+Maintenance/rollback readiness and Stripe/Storage cutover remain unexecuted. Do not
+push main or dispatch the production workflow before these prerequisites pass.
 Do not confuse previous local audit approval with validation of this newly merged build.
