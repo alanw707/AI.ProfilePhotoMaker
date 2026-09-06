@@ -541,31 +541,10 @@
         </div>
       </section>
 
-      <!-- Processing Section -->
-      <section class="processing-section" *ngIf="isProcessing" aria-live="assertive" aria-labelledby="processing-title">
-        <div class="processing-card">
-          <div class="processing-spinner" aria-hidden="true"></div>
-          <div>
-            <h2 id="processing-title">
-              {{ isHeadshotMvpEnabled ? 'Building your candidate set' : 'Transforming your photo' }}
-            </h2>
-            <p>
-              You can return to this workspace if the connection drops. Resume generation will reuse this request and
-              any finished server work.
-            </p>
-          </div>
-          <div
-            class="processing-progress"
-            role="progressbar"
-            aria-label="Generation progress"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            [attr.aria-valuenow]="processingProgress">
-            <div class="progress-bar" [style.width.%]="processingProgress"></div>
-          </div>
-          <p class="processing-status" role="status" aria-live="polite">{{ processingStatus }}</p>
-        </div>
-      </section>
+      <app-photo-processing-dialog
+        *ngIf="isProcessing || isApplyingPremiumAugmentation"
+        [title]="isApplyingPremiumAugmentation ? 'Applying your premium edit' : getSelectedRefinement() ? 'Applying ' + getSelectedRefinement()!.label.toLowerCase() : isHeadshotMvpEnabled ? 'Creating your photos' : 'Transforming your photo'"
+        [status]="processingStatus" />
 
       <!-- Results Section -->
       <section class="results-section" *ngIf="enhancedImage">
@@ -693,7 +672,7 @@
 
         <div class="add-on-comparison" *ngIf="enhancedImage.previousDisplayUrl">
           <div class="section-heading">
-            <h2>{{ enhancedImage.augmentationLabel || 'Premium add-on' }} applied</h2>
+            <h2>{{ enhancedImage.augmentationLabel || 'Premium add-on' }} result</h2>
             <p>Compare your selected photo with the edited result before exporting.</p>
           </div>
           <div class="add-on-compare-grid">
@@ -1021,7 +1000,8 @@
             </svg>
             {{ saveSuccessMessage }}
           </div>
-          <button class="btn btn-outline" (click)="enhanceAnother()">Enhance Another Photo</button>
+          <button class="btn btn-outline" (click)="enhanceAnother()"
+            [disabled]="isProcessing || isApplyingPremiumAugmentation || !!interruptedGeneration">Enhance Another Photo</button>
         </div>
         <p class="export-success" *ngIf="exportSuccessMessage" role="status">
           {{ exportSuccessMessage }}

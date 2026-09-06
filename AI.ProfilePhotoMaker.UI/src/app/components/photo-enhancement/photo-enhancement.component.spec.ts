@@ -36,6 +36,23 @@ function createComponent(
 }
 
 describe('PhotoEnhancementComponent package fulfillment', () => {
+  for (const state of ['processing', 'premium', 'saved']) {
+    it(`does not reset a photo with ${state} work`, () => {
+      const component = createComponent('pro_package', 9);
+      const image = { url: 'saved-photo', displayUrl: 'saved-photo' };
+      const draft = state === 'saved' ? { clientRequestId: 'pending-request' } : null;
+      Object.assign(component, {
+        enhancedImage: image, interruptedGeneration: draft,
+        isProcessing: state === 'processing', isApplyingPremiumAugmentation: state === 'premium',
+      });
+      spyOn(component, 'resetAdjustments').and.stub();
+      component.enhanceAnother();
+      expect(component.enhancedImage).toBe(image);
+      expect(component.interruptedGeneration).toBe(draft as any);
+      expect(component.resetAdjustments).not.toHaveBeenCalled();
+    });
+  }
+
   for (const [status, code, rejectedBeforeGeneration] of [
     [400, 'InvalidImageSource', true],
     [400, 'InvalidRefinement', true],

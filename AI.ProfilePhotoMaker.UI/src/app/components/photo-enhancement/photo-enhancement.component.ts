@@ -44,6 +44,8 @@ import { FreePreviewPromotionModule } from './free-preview-promotion';
 import { PhotoWorkspaceSessionModule } from './photo-workspace-session';
 import { PortraitStyleCatalogModule, PortraitStyleGroup } from './portrait-style-catalog';
 
+import { PhotoProcessingDialogComponent } from './photo-processing-dialog.component';
+
 type EnhancedImage = PhotoWorkspaceImageView;
 
 interface CandidateViewModel extends HeadshotCandidate {
@@ -94,7 +96,7 @@ const premiumOption = (
 const REFINEMENT_OPTIONS = [
   { code: 'subtle_smile', label: 'Subtle smile', description: 'A slight, closed-mouth smile. No exaggerated grin.' },
   { code: 'relaxed_expression', label: 'Relaxed expression', description: 'A calmer, neutral expression. Keep the existing gaze.' },
-  { code: 'upright_posture', label: 'Straighter posture', description: 'Gently straighten the shoulders. Keep the expression and head angle.' },
+  { code: 'upright_posture', label: 'Straighter posture', description: 'Gently straighten slouched or uneven shoulders. Already upright poses may change very little. Keep the expression and head angle.' },
 ];
 
 interface InterruptedGenerationDraft {
@@ -124,7 +126,7 @@ interface PortraitStyleCard {
 @Component({
   selector: 'app-photo-enhancement',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, HeaderNavigationComponent, TurnstileComponent],
+  imports: [CommonModule, FormsModule, RouterModule, HeaderNavigationComponent, TurnstileComponent, PhotoProcessingDialogComponent],
   templateUrl: './photo-enhancement.component.html',
   styleUrls: ['./photo-enhancement.component.sass'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -978,6 +980,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   getRefinementBlockerText(): string {
+    if (this.isProcessing || this.isApplyingPremiumAugmentation) {
+      return 'An edit is still running. Use Show progress to view its status.';
+    }
     if (this.interruptedGeneration) {return 'Resolve the saved request above before starting another edit.';}
     if (!this.hasSelectedPackageEntitlement(true)) {return 'No refinements remain for this package.';}
     if (!this.getSelectedRefinement()) {return 'Choose one change above to continue.';}
@@ -985,7 +990,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     if (!this.isEmailConfirmed) {return 'Verify your email before refining.';}
     if (!this.biometricConsentAccepted) {return 'Accept the photo-processing consent below to continue.';}
     if (this.requiresTurnstile() && !this.turnstileToken) {return 'Complete the bot check below to continue.';}
-    return this.isProcessing || this.isApplyingPremiumAugmentation ? 'Wait for the current edit to finish.' : '';
+    return '';
   }
 
   canStartRegeneration(): boolean {
@@ -1180,6 +1185,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   discardInterruptedGeneration(): void {
+    if (this.isProcessing || this.isApplyingPremiumAugmentation) {
+      return;
+    }
     this.clearInterruptedGeneration();
     this.enhanceAnother();
     this._cdr.markForCheck();
@@ -3278,6 +3286,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   enhanceAnother() {
+    if (this.isProcessing || this.isApplyingPremiumAugmentation || this.interruptedGeneration) {
+      return;
+    }
     this.clearInterruptedGeneration();
     this.selectedFile = null;
     this.imagePreview = null;

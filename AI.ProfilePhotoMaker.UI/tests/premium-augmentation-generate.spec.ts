@@ -42,7 +42,7 @@ const score = {
   qualityGate: { status: 'pass', reasons: [], recommendations: [] },
 };
 
-async function installWorkflowMocks(page: import('@playwright/test').Page) {
+async function installWorkflowMocks(page: import('@playwright/test').Page, refinementImage = resultImage, initialImage = resultImage) {
   const packages = [
     {
       id: 1,
@@ -98,7 +98,7 @@ async function installWorkflowMocks(page: import('@playwright/test').Page) {
     updatedAt: '2026-01-01T00:00:00Z',
   };
   const candidate = {
-    imageUrl: resultImage,
+    imageUrl: initialImage,
     storagePath: 'dev/generated/test-user/candidate.png',
     processedImageId: 101,
     provider: 'openai',
@@ -173,7 +173,7 @@ async function installWorkflowMocks(page: import('@playwright/test').Page) {
         data: {
           ...candidate,
           imageUrl: resultImage,
-          candidates: refinement ? [{ ...candidate, processedImageId: 501 }] : Array.from({ length: 9 }, (_, index) => ({ ...candidate, processedImageId: 101 + index })),
+          candidates: refinement ? [{ ...candidate, imageUrl: refinementImage, storagePath: 'generated/test-user/refined.png', processedImageId: 501 }] : Array.from({ length: 9 }, (_, index) => ({ ...candidate, processedImageId: 101 + index })),
           style: 'linkedin',
           background: 'auto',
           creditsCost: 0,
@@ -306,7 +306,7 @@ for (const width of [390, 1440]) {
       refinementCode: 'subtle_smile', isRegeneration: true, numOutputs: 1,
       imageStoragePath: 'dev/generated/test-user/candidate.png', replacesProcessedImageId: 101,
     });
-    await expect(page.getByText('Subtle smile applied', { exact: true })).toBeVisible();
+    await expect(page.getByText('Subtle smile result', { exact: true })).toBeVisible();
     await expect(page.getByText('3 refinements remaining', { exact: true })).toBeVisible();
     await expect(page.locator('.premium-edits summary')).toHaveText('Premium edits · 0 remaining');
     expect(premiumRequests).toHaveLength(0);
@@ -323,5 +323,123 @@ for (const width of [390, 1440]) {
     await expect(page.getByRole('button', { name: 'Apply straighter posture', exact: true })).toBeEnabled();
     expect(await page.evaluate(() => localStorage.getItem('photoWorkspaceInterruptedGeneration'))).toBeNull();
     await expect(page.getByText('3 refinements remaining', { exact: true })).toBeVisible();
+  });
+}
+
+async function openUploadedWorkspace(page: import('@playwright/test').Page) {
+  await page.goto('/app/enhance?e2eAuthBypass=1');
+  const cookies = page.getByRole('button', { name: 'Reject Non-Essential' });
+  if (await cookies.isVisible()) await cookies.click();
+  await page.locator('input[type="file"]').setInputFiles(sourceImage);
+  await expect(page.getByRole('heading', { name: 'Choose your portrait direction' })).toBeVisible();
+  await page.getByRole('checkbox', { name: /I consent/ }).first().check();
+}
+
+for (const width of [390, 1440]) {
+  for (const operation of ['generation', 'refinement', 'rejection', 'unknown']) {
+    test(`processing modal remains visible from a scrolled action (${operation}, ${width})`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await installWorkflowMocks(page);
+      await openUploadedWorkspace(page);
+      if (operation !== 'generation') {
+        await page.getByRole('button', { name: 'Generate 9 photos', exact: true }).click();
+        await page.getByRole('radio', { name: /^Straighter posture/ }).check();
+      }
+      let release!: () => void;
+      const pending = new Promise<void>(resolve => { release = resolve; });
+      let submissions = 0;
+      await page.route('**/api/headshots/generate', async route => {
+        submissions++;
+        await pending;
+        if (operation === 'rejection' || operation === 'unknown') {
+          await route.fulfill({ status: operation === 'rejection' ? 400 : 502,
+            contentType: 'application/json', body: JSON.stringify({ success: false,
+              error: { code: operation === 'rejection' ? 'InvalidImageSource' : 'ProviderOutcomeUnknown', message: 'The edit could not be completed.' } }) });
+        } else {
+          await route.fallback();
+        }
+      });
+      try {
+        const action = page.getByRole('button', {
+          name: operation !== 'generation' ? 'Apply straighter posture' : 'Generate 9 photos', exact: true,
+        });
+        await action.scrollIntoViewIfNeeded();
+        await action.click();
+        const dialog = page.getByRole('dialog');
+        await expect(dialog).toBeVisible();
+        await expect(dialog.getByRole('heading')).toContainText(operation !== 'generation' ? /straighter posture/i : /candidate|photos/i);
+        const bounds = await dialog.boundingBox();
+        expect(bounds).not.toBeNull();
+        expect(bounds!.y).toBeGreaterThanOrEqual(0);
+        expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(844);
+        expect(await dialog.evaluate(el => el.contains(document.activeElement))).toBe(true);
+        await page.keyboard.press('Tab');
+        expect(await dialog.evaluate(el => el.contains(document.activeElement))).toBe(true);
+        expect(submissions).toBe(1);
+        if (process.env.CAPTURE_MODAL_REVIEW && operation === 'refinement') {
+          await page.screenshot({ path: `/tmp/aipm-modal-review-${width}.png` });
+        }
+        await expect(dialog.locator('[role="progressbar"][aria-valuenow]')).toHaveCount(0);
+        const saved = await page.evaluate(() => localStorage.getItem('photoWorkspaceInterruptedGeneration'));
+        expect(saved).not.toBeNull();
+        await page.keyboard.press('Escape');
+        await expect(dialog).not.toBeVisible();
+        const reopen = page.getByRole('button', { name: /Show progress$/ });
+        await expect(reopen).toBeInViewport();
+        if (operation !== 'generation') {
+          await expect(page.locator('#refinement-blocker')).toHaveText('An edit is still running. Use Show progress to view its status.');
+          await expect(page.getByRole('button', { name: 'Enhance Another Photo', exact: true })).toBeDisabled();
+        }
+        expect(await page.evaluate(() => localStorage.getItem('photoWorkspaceInterruptedGeneration'))).toBe(saved);
+        await reopen.click();
+        await expect(dialog).toBeVisible();
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await expect(dialog.locator('.spinner')).toHaveCSS('animation-name', 'none');
+        await dialog.getByRole('button', { name: 'Hide progress — keep working' }).click();
+        await reopen.click();
+        expect(submissions).toBe(1);
+      } finally {
+        release();
+      }
+      await expect(page.getByRole('dialog')).not.toBeVisible();
+      if (operation === 'rejection' || operation === 'unknown') {
+        await expect(page.getByRole('heading', { name: 'We could not finish that action' })).toBeFocused();
+        expect(await page.evaluate(() => localStorage.getItem('photoWorkspaceInterruptedGeneration') !== null)).toBe(operation === 'unknown');
+      } else {
+        await expect(page.locator('.proof-results-heading h2')).toBeFocused();
+      }
+    });
+  }
+
+  test(`posture comparison keeps distinct result and contained frames (${width})`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    // Committed marketing fixtures verify presentation, not actual posture-edit quality.
+    const fixture = (name: string) => 'data:image/jpeg;base64,' + fs.readFileSync(path.resolve(__dirname, `../src/assets/marketing/before-after/${name}.jpg`)).toString('base64');
+    const initialImage = fixture('academic1-before');
+    const differentImage = fixture('academic1-after');
+    await installWorkflowMocks(page, differentImage, initialImage);
+    await openUploadedWorkspace(page);
+    await page.getByRole('button', { name: 'Generate 9 photos', exact: true }).click();
+    await page.getByRole('radio', { name: /^Straighter posture/ }).check();
+    await page.getByRole('button', { name: 'Apply straighter posture', exact: true }).click();
+    const panel = page.locator('.add-on-comparison');
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole('heading')).toHaveText('Straighter posture result');
+    const before = page.getByRole('img', { name: 'Selected photo before edit', exact: true });
+    const after = page.getByRole('img', { name: 'Selected photo after edit', exact: true });
+    await expect(before).toHaveAttribute('src', initialImage);
+    await expect(after).toHaveAttribute('src', differentImage);
+    const contained = await panel.evaluate(element => {
+      const panelRect = element.getBoundingClientRect();
+      return [...element.querySelectorAll('img')].every(image => {
+        const rect = image.getBoundingClientRect();
+        return rect.bottom <= panelRect.bottom && rect.right <= panelRect.right && rect.left >= panelRect.left;
+      });
+    });
+    expect(contained).toBe(true);
+    if (process.env.CAPTURE_MODAL_REVIEW) {
+      await panel.screenshot({ path: `/tmp/aipm-comparison-review-${width}.png` });
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }

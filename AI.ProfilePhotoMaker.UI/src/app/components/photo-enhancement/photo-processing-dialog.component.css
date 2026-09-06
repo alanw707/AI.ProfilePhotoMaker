@@ -1,0 +1,17 @@
+:host { font: inherit; }
+dialog { box-sizing: border-box; width: min(36rem, calc(100vw - 32px)); max-height: calc(100dvh - 32px);
+  margin: auto; padding: clamp(20px, 4vw, 32px); overflow: auto; border: 1px solid var(--proof-rule, #bdb3a7);
+  border-radius: 16px; background: var(--proof-paper, #fffdf8); color: var(--proof-ink, #20272b); font: inherit; }
+dialog::backdrop { background: rgb(15 23 30 / 55%); }
+h2 { margin: 20px 0 12px; font-size: 1.5rem; line-height: 1.25; }
+p { margin: 0 0 20px; font-size: 1rem; line-height: 1.5; }
+button { min-height: 44px; padding: 12px 18px; border: 1px solid currentColor; border-radius: 8px;
+  background: var(--proof-paper, #fffdf8); color: var(--proof-ink, #20272b); font: inherit; cursor: pointer; }
+button:hover { background: #e8edf4; }
+button:focus-visible { outline: 3px solid #2457d6; outline-offset: 3px; }
+.spinner { display: block; width: 30px; height: 30px; border: 3px solid #d5dbea;
+  border-top-color: #2457d6; border-radius: 50%; animation: spin 1s linear infinite; }
+.reopen { position: fixed; inset-inline: 16px; bottom: 16px; margin-inline: auto;
+  width: fit-content; max-width: calc(100vw - 32px); z-index: 1000; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
