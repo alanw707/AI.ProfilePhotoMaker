@@ -341,6 +341,7 @@ jobs:
         run: |
           echo "🔍 Checking for pending EF Core migrations against production database..."
           dotnet tool restore
+          dotnet restore AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj
 
           PENDING=$(dotnet ef migrations list \
             --project AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj \
