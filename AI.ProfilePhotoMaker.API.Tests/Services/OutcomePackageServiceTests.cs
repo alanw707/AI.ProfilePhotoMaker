@@ -45,6 +45,8 @@ public class OutcomePackageServiceTests
 
         var service = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance);
 
+        Assert.False(await service.ConsumeCandidatesAsync(userId, "pro_package", 0));
+        Assert.False(await service.ConsumeCandidatesAsync(userId, "pro_package", -1));
         Assert.False(await service.ConsumeCandidatesAsync(userId, "pro_package", 10));
         Assert.True(await service.ConsumeCandidatesAsync(userId, "pro_package", 9));
         Assert.False(await service.ConsumeCandidatesAsync(userId, "pro_package", 1));
@@ -100,6 +102,90 @@ public class OutcomePackageServiceTests
 
         Assert.True(await service.ConsumeCandidatesAsync("free-user", "free_preview", 1));
         Assert.False(await service.ConsumeCandidatesAsync("free-user", "free_preview", 2));
+    }
+
+    [Theory]
+    [InlineData("candidates")]
+    [InlineData("refinement")]
+    [InlineData("premium")]
+    [InlineData("export")]
+    public async Task CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(string kind)
+    {
+        await using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        using (var setup = new ApplicationDbContext(options))
+        {
+            await setup.Database.EnsureCreatedAsync();
+            setup.Users.Add(new ApplicationUser { Id = "race-user", UserName = "race-user" });
+            var package = await setup.OutcomePackageDefinitions.SingleAsync(p => p.Code == "pro_package");
+            setup.UserPackageEntitlements.Add(new UserPackageEntitlement
+            {
+                UserId = "race-user", OutcomePackageDefinitionId = package.Id,
+                Status = PackageEntitlementStatus.Active, RemainingPackageUses = 1,
+                RemainingCandidates = 1, RemainingRefinements = 1,
+                RemainingPremiumAugmentations = 1, PlatformExportKitAvailable = true
+            });
+            await setup.SaveChangesAsync();
+        }
+        var firstGate = new ConsumptionSaveGate();
+        var secondGate = new ConsumptionSaveGate();
+        using var first = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection).AddInterceptors(firstGate).Options);
+        using var second = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection).AddInterceptors(secondGate).Options);
+        Task<bool> Consume(ApplicationDbContext context)
+        {
+            var service = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance);
+            return kind switch
+            {
+                "candidates" => service.ConsumeCandidatesAsync("race-user", "pro_package", 1),
+                "refinement" => service.ConsumeRefinementAsync("race-user"),
+                "premium" => service.ConsumePremiumAugmentationAsync("race-user"),
+                _ => service.ConsumeExportKitAsync("race-user")
+            };
+        }
+        try
+        {
+            var winner = Consume(first);
+            await firstGate.Reached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            var loser = Consume(second);
+            await secondGate.Reached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            firstGate.Release.TrySetResult();
+            Assert.True(await winner);
+            secondGate.Release.TrySetResult();
+            Assert.False(await loser);
+            // A caller's later save must not flush the rejected consumption.
+            await second.SaveChangesAsync();
+            using var verification = new ApplicationDbContext(options);
+            Assert.False(await Consume(verification));
+            var row = await verification.UserPackageEntitlements.SingleAsync();
+            Assert.Equal(kind == "candidates" ? 0 : 1, row.RemainingCandidates);
+            Assert.Equal(kind == "candidates" ? 0 : 1, row.RemainingPackageUses);
+            Assert.Equal(kind == "refinement" ? 0 : 1, row.RemainingRefinements);
+            Assert.Equal(kind == "premium" ? 0 : 1, row.RemainingPremiumAugmentations);
+            Assert.Equal(kind != "export", row.PlatformExportKitAvailable);
+        }
+        finally
+        {
+            firstGate.Release.TrySetResult();
+            secondGate.Release.TrySetResult();
+        }
+    }
+
+    private sealed class ConsumptionSaveGate : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
+    {
+        public TaskCompletionSource Reached { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override async ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(
+            Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData,
+            Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            Reached.TrySetResult();
+            await Release.Task.WaitAsync(cancellationToken);
+            return result;
+        }
     }
 
     private static ApplicationDbContext CreateContext()

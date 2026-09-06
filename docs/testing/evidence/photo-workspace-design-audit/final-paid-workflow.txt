@@ -1,4 +1,4 @@
-Final-image paid workflow verification after account-balance concurrency fix
+Final-image paid workflow verification after package-allowance concurrency fix
 
 Local Docker SQL Server/Azurite/API/frontend; deterministic fixed-image provider,
 not paid AI. Fresh local account registered/confirmed/logged in; upload/scoring,
@@ -28,7 +28,7 @@ and entitlement deltas. This does not assess AI quality or independently inspect
 every ZIP member. Paid-workflow state and blob retrieval survived stack restart.
 
 Private execution logs: /tmp/aipm-compose-verify/
-paid-workflow-balance-final.txt, preview-balance-final.txt,
-stripe-balance-final.txt, restart-balance-verify.txt,
-docker-account-concurrency-final.txt, api-account-concurrency-final.txt.
+paid-workflow-allowance-final.txt, preview-allowance-final.txt,
+stripe-allowance-final.txt, restart-allowance-verify.txt,
+docker-allowance-final.txt, api-allowance-final.txt.
 No production changes, real-money purchase, or paid-provider calls.

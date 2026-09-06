@@ -308,6 +308,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     private void ConfigureOutcomePackageRelationships(ModelBuilder builder)
     {
+        // Conditional writes protect all allowance fields, including terminal status.
+        var entitlement = builder.Entity<UserPackageEntitlement>();
+        entitlement.Property(e => e.RemainingPackageUses).IsConcurrencyToken();
+        entitlement.Property(e => e.RemainingCandidates).IsConcurrencyToken();
+        entitlement.Property(e => e.RemainingRefinements).IsConcurrencyToken();
+        entitlement.Property(e => e.RemainingPremiumAugmentations).IsConcurrencyToken();
+        entitlement.Property(e => e.PlatformExportKitAvailable).IsConcurrencyToken();
+        entitlement.Property(e => e.Status).IsConcurrencyToken();
+        entitlement.Property(e => e.ExpiresAt).IsConcurrencyToken();
+
         builder.Entity<OutcomePackageDefinition>()
             .HasIndex(p => p.Code)
             .IsUnique()
