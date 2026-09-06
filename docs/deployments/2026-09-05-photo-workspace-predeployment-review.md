@@ -2,7 +2,7 @@
 
 ## Decision
 
-**NO-GO for production deployment.** Local remediation is in progress; final release-gate reruns and independent completion audit acceptance remain outstanding. The latest API suite passes 407 tests, including purchase/coupon rollback, generation lost-commit-acknowledgement, legacy-token replay, ambiguous-provider and ambiguous-debit fail-stop regressions. Production additionally requires separate authorization, coordinated Stripe API-version cutover, Azure Storage key rotation, and either an isolated staging target or an explicitly approved direct-canary exception.
+**NO-GO for production deployment.** Local remediation is in progress; final release-gate reruns and independent completion audit acceptance remain outstanding. The latest API suite passes 410 tests, including purchase/coupon rollback, generation lost-commit-acknowledgement, legacy-token replay, ambiguous-provider and ambiguous-debit fail-stop regressions. Production additionally requires separate authorization, coordinated Stripe API-version cutover, Azure Storage key rotation, and either an isolated staging target or an explicitly approved direct-canary exception.
 
 ## Reviewed scope
 
@@ -52,8 +52,8 @@ No linked issue or acceptance test was available. Spec review used `CONTEXT.md`,
 
 - Azure authentication: valid.
 - Production Container App revision: healthy/running.
-- Production SQL at the read-only review point: 33 migrations applied and 0 pending against the pre-idempotency model. This release now contains 36 migrations; the three new additive migrations have not been applied to production.
-- EF model: no changes since migration `20260906012642_AddOperationFencing`.
+- Production SQL at the read-only review point: 33 migrations applied and 0 pending against the pre-idempotency model. This release now contains 37 migrations; three additive schema migrations and one metadata-only concurrency migration have not been applied to production.
+- EF model: no changes since migration `20260906034641_ProtectCreditBalanceConcurrency`; its Up/Down are empty because only EF concurrency metadata changed.
 - Database auto-migration: disabled in production.
 - Stripe live endpoint: enabled; Basil API version; required PaymentIntent events configured.
 - Staging: not found.
@@ -78,8 +78,9 @@ Frontend production dependencies were also remediated:
 
 ## Verification
 
-- Latest API: **407 passed, 0 failed** after purchase/coupon retry-state fixes, legacy-token replay compatibility, generation commit-acknowledgement compensation protection, and ambiguous-provider fail-stop handling. Deterministic SQLite commit-boundary tests cover failures before commit and lost acknowledgements after commit; these are not SQL Server outage tests. Evidence: `docs/testing/evidence/photo-workspace-design-audit/purchase-retry-red-green.txt`.
-- Latest backend image rebuilt successfully after ambiguous-debit fail-stop handling. Full sequential fresh-account registration/confirmation/login, upload/score, deterministic preview, Azurite retrieval, Stripe sandbox concurrency, nine paid candidates, premium relighting, and ZIP export passed against that image. Exact accounting consumed nine candidate slots, one premium allowance, one export kit, and ten credits. Paid-workflow SQL/Azurite persistence also passed across stack restart.
+- Latest API: **410 passed, 0 failed** after purchase/coupon retry-state fixes, legacy-token replay compatibility, generation commit-acknowledgement compensation protection, and ambiguous-provider fail-stop handling. Deterministic SQLite commit-boundary tests cover failures before commit and lost acknowledgements after commit; these are not SQL Server outage tests. Evidence: `docs/testing/evidence/photo-workspace-design-audit/purchase-retry-red-green.txt`.
+- Latest backend image rebuilt successfully after account-balance concurrency protection. SQL applied the metadata-only migration and retained all 37 migrations through restart. Full sequential fresh-account registration/confirmation/login, upload/score, deterministic preview, Azurite retrieval, Stripe sandbox concurrency, nine paid candidates, premium relighting, and ZIP export passed against that image. Exact accounting consumed nine candidate slots, one premium allowance, one export kit, and ten credits. Paid-workflow SQL/Azurite persistence also passed across stack restart.
+- Account-level race fixed by making Credits an EF concurrency token. Separate-context regressions cover distinct payment awards and purchase-versus-generation debit in both orders; stale writes roll back and fresh-context retries preserve exact balances. Evidence: `account-balance-concurrency-red-green.txt`. No new database column is required.
 - Debit acknowledgement-loss regression persists the charge through real BasicTierService, throws before receipt/log creation, and verifies separate-context replay cannot charge again even after lease expiry. Unknown debit outcomes retain `Processing` for operator reconciliation. Evidence: `debit-outcome-unknown-red-green.txt`.
 - Timeout, network loss, and malformed-response regressions run through the real OpenAI adapter with a local HTTP handler and separate SQLite contexts. Processing claim and charge remain held, including after lease expiry; replay makes no second provider request. Raw sanitized red/green logs: `provider-outcome-unknown-red-green.txt`. Additional regression evidence: `legacy-token-red-green.txt` and `generation-commit-ack-red-green.txt` in the testing evidence directory.
 - Post-retry reruns: production UI build passed (26 SEO pages); lint passed with 0 errors/35 existing warnings; production npm audit found 0 vulnerabilities; API and test NuGet scans found no vulnerable packages; EF reports no pending model changes. The first EF attempt lacked design-time connection configuration; rerunning with a local SQL Server connection descriptor passed without connecting to production.
@@ -116,7 +117,7 @@ Frontend production dependencies were also remediated:
 2. Approve coordinated Azure Storage alternate-key failover and compromised-key regeneration.
 3. Approve the coordinated Stripe Basil → Clover endpoint/revision cutover and reconciliation window.
 4. Approve the reviewed branch for commit/push/PR/merge and authorize a named operator and rollback owner.
-5. Apply and verify the three additive idempotency/fencing migrations before routing traffic to the new revision.
+5. Apply and verify the three additive idempotency/fencing migrations and the metadata-only concurrency migration before routing traffic to the new revision. Drain old writers: older application code lacks the concurrency mapping.
 6. Repeat checkout/webhook, storage, export, accounting, and workspace smoke on staging or the approved zero-traffic/canary production revision before changing the production decision.
 
 See `docs/deployments/2026-09-06-photo-workspace-production-rollout-plan.md`. No production mutation, push, merge, or deployment was performed during this review.

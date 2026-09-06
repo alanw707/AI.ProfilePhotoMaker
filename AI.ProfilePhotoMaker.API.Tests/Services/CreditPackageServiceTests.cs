@@ -384,6 +384,88 @@ public class CreditPackageServiceTests
         }
     }
 
+    [Fact]
+    public async Task DistinctPayments_StaleAccountBalanceCannotLoseAwardAndReplayCompletes()
+    {
+        await using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        using var first = new ApplicationDbContext(options);
+        await first.Database.EnsureCreatedAsync();
+        var userId = await SeedUserProfileAsync(first);
+        var package = await SeedCreditPackageAsync(first);
+        foreach (var id in new[] { 101, 102 })
+        {
+            first.PaymentTransactions.Add(new PaymentTransaction
+            {
+                Id = id, UserId = userId, Amount = package.Price,
+                ExternalTransactionId = $"pi_distinct_{id}", Status = PaymentStatus.Completed,
+                Type = PaymentType.OneTime
+            });
+        }
+        await first.SaveChangesAsync();
+        using var second = new ApplicationDbContext(options);
+        // Both replicas have read B before either payment writes its award.
+        await second.UserProfiles.SingleAsync(p => p.UserId == userId);
+        Assert.True((await CreateService(first).PurchaseCreditPackageAsync(userId, package.PackageId, "101")).Success);
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() =>
+            CreateService(second).PurchaseCreditPackageAsync(userId, package.PackageId, "102"));
+
+        using var replay = new ApplicationDbContext(options);
+        Assert.Single(await replay.CreditPurchases.ToListAsync());
+        Assert.True((await CreateService(replay).PurchaseCreditPackageAsync(userId, package.PackageId, "102")).Success);
+        Assert.True((await CreateService(replay).PurchaseCreditPackageAsync(userId, package.PackageId, "101")).Success);
+        Assert.Equal(2, await replay.CreditPurchases.CountAsync());
+        Assert.Equal(5 + 2 * package.TotalCredits,
+            (await replay.UserProfiles.AsNoTracking().SingleAsync()).Credits);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task PurchaseAndGenerationDebit_StaleBalanceCannotOverwriteOtherChange(bool purchaseFirst)
+    {
+        await using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        using var purchaseContext = new ApplicationDbContext(options);
+        await purchaseContext.Database.EnsureCreatedAsync();
+        var userId = await SeedUserProfileAsync(purchaseContext);
+        var package = await SeedCreditPackageAsync(purchaseContext);
+        using var generationContext = new ApplicationDbContext(options);
+        await generationContext.UserProfiles.SingleAsync(p => p.UserId == userId);
+        var purchasing = CreateService(purchaseContext, new StripeOptions(),
+            new PaymentSimulationOptions { Enabled = true, SkipStripeIntegration = true });
+        var debiting = new BasicTierService(generationContext, NullLogger<BasicTierService>.Instance);
+        if (purchaseFirst)
+        {
+            Assert.True((await purchasing.PurchaseCreditPackageAsync(userId, package.PackageId, "sim-contention")).Success);
+            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() =>
+                debiting.ConsumeCreditsAsync(userId, 1, "instant_headshot_generation", "contention"));
+        }
+        else
+        {
+            Assert.True((await debiting.ConsumeCreditsAsync(userId, 1, "instant_headshot_generation", "contention")).Success);
+            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() =>
+                purchasing.PurchaseCreditPackageAsync(userId, package.PackageId, "sim-contention"));
+        }
+        using var replay = new ApplicationDbContext(options);
+        if (purchaseFirst)
+        {
+            Assert.True((await new BasicTierService(replay, NullLogger<BasicTierService>.Instance)
+                .ConsumeCreditsAsync(userId, 1, "instant_headshot_generation", "contention")).Success);
+        }
+        else
+        {
+            Assert.True((await CreateService(replay, new StripeOptions(),
+                new PaymentSimulationOptions { Enabled = true, SkipStripeIntegration = true })
+                .PurchaseCreditPackageAsync(userId, package.PackageId, "sim-contention")).Success);
+        }
+        Assert.Equal(5 + package.TotalCredits - 1,
+            (await replay.UserProfiles.AsNoTracking().SingleAsync()).Credits);
+        Assert.Single(await replay.CreditPurchases.ToListAsync());
+    }
+
     private static CreditPackageService CreateService(
         ApplicationDbContext context,
         StripeOptions? stripeOptions = null,

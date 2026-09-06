@@ -91,6 +91,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     private void ConfigureUserProfileRelationships(ModelBuilder builder)
     {
+        // Every tracked balance write must match the balance originally read. This
+        // protects purchases, generation, refunds and resets across API replicas.
+        builder.Entity<UserProfile>().Property(p => p.Credits).IsConcurrencyToken();
+
         builder.Entity<UserProfile>()
             .HasOne(p => p.User)
             .WithOne()
