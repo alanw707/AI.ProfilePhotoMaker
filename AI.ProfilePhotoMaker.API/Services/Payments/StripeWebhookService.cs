@@ -12,6 +12,7 @@ namespace AI.ProfilePhotoMaker.API.Services.Payments;
 
 public class StripeWebhookService : IStripeWebhookService
 {
+    private static readonly TimeSpan WebhookLeaseDuration = TimeSpan.FromMinutes(10);
     private readonly ApplicationDbContext _dbContext;
     private readonly ICreditPackageService _creditPackageService;
     private readonly ILogger<StripeWebhookService> _logger;
@@ -34,29 +35,55 @@ public class StripeWebhookService : IStripeWebhookService
 
     public async Task HandleEventAsync(Event stripeEvent, CancellationToken cancellationToken = default)
     {
-        switch (stripeEvent.Type)
+        var paymentIntentId = (stripeEvent.Data.Object as PaymentIntent)?.Id;
+        var operationKey = string.IsNullOrWhiteSpace(paymentIntentId)
+            ? stripeEvent.Id
+            : $"{stripeEvent.Type}:{paymentIntentId}";
+        if (!await AcquireWebhookOperationAsync(stripeEvent, operationKey, paymentIntentId, cancellationToken))
         {
-            case "payment_intent.succeeded":
-                if (stripeEvent.Data.Object is PaymentIntent succeededIntent)
-                {
-                    await HandlePaymentIntentSucceededAsync(stripeEvent.Id, succeededIntent, cancellationToken);
-                }
-                break;
-            case "payment_intent.payment_failed":
-                if (stripeEvent.Data.Object is PaymentIntent failedIntent)
-                {
-                    await HandlePaymentIntentFailedAsync(stripeEvent.Id, failedIntent, cancellationToken);
-                }
-                break;
-            case "payment_intent.canceled":
-                if (stripeEvent.Data.Object is PaymentIntent canceledIntent)
-                {
-                    await HandlePaymentIntentCanceledAsync(stripeEvent.Id, canceledIntent, cancellationToken);
-                }
-                break;
-            default:
-                _logger.LogDebug("Ignoring Stripe event type {EventType}", stripeEvent.Type);
-                break;
+            return;
+        }
+
+        try
+        {
+            switch (stripeEvent.Type)
+            {
+                case "payment_intent.succeeded":
+                    if (stripeEvent.Data.Object is PaymentIntent succeededIntent)
+                    {
+                        await HandlePaymentIntentSucceededAsync(stripeEvent.Id, succeededIntent, cancellationToken);
+                    }
+                    break;
+                case "payment_intent.payment_failed":
+                    if (stripeEvent.Data.Object is PaymentIntent failedIntent)
+                    {
+                        await HandlePaymentIntentFailedAsync(stripeEvent.Id, failedIntent, cancellationToken);
+                    }
+                    break;
+                case "payment_intent.canceled":
+                    if (stripeEvent.Data.Object is PaymentIntent canceledIntent)
+                    {
+                        await HandlePaymentIntentCanceledAsync(stripeEvent.Id, canceledIntent, cancellationToken);
+                    }
+                    break;
+                default:
+                    _logger.LogDebug("Ignoring Stripe event type {EventType}", stripeEvent.Type);
+                    break;
+            }
+
+            await CompleteWebhookOperationAsync(operationKey, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                await FailWebhookOperationAsync(operationKey, ex.GetType().Name, CancellationToken.None);
+            }
+            catch (Exception receiptException)
+            {
+                _logger.LogError(receiptException, "Unable to persist failed Stripe webhook operation {OperationKey}", LoggingSanitizer.SanitizeId(operationKey));
+            }
+            throw;
         }
     }
 
@@ -154,7 +181,7 @@ public class StripeWebhookService : IStripeWebhookService
             && decimal.TryParse(discountAmountRaw, NumberStyles.Number, CultureInfo.InvariantCulture, out var discountAmount)
             && discountAmount > 0)
         {
-            var redeemed = await _couponService.RedeemCouponAsync(couponCode, userId, originalPrice, discountAmount);
+            var redeemed = await _couponService.RedeemCouponAsync(couponCode, userId, originalPrice, discountAmount, transaction.Id);
             if (!redeemed)
             {
                 couponRedemptionFailed = true;
@@ -276,6 +303,170 @@ public class StripeWebhookService : IStripeWebhookService
         _logger.LogInformation("Stripe payment intent {PaymentIntentId} cancelled. Transaction {TransactionId} marked as cancelled",
             LoggingSanitizer.SanitizeId(paymentIntent.Id),
             transaction.Id);
+    }
+
+    private async Task<bool> AcquireWebhookOperationAsync(
+        Event stripeEvent,
+        string operationKey,
+        string? paymentIntentId,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        if (!_dbContext.Database.IsRelational())
+        {
+            var existing = await _dbContext.StripeWebhookOperations
+                .FirstOrDefaultAsync(o => o.OperationKey == operationKey, cancellationToken);
+            if (existing != null)
+            {
+                if (existing.Status == StripeWebhookOperationStatus.Succeeded)
+                {
+                    return false;
+                }
+                if (existing.Status == StripeWebhookOperationStatus.Processing && existing.LeaseExpiresAt > now)
+                {
+                    throw new InvalidOperationException("This Stripe webhook operation is already being processed.");
+                }
+
+                existing.StripeEventId = stripeEvent.Id;
+                existing.Status = StripeWebhookOperationStatus.Processing;
+                existing.AttemptCount += 1;
+                existing.LeaseExpiresAt = now.Add(WebhookLeaseDuration);
+                existing.FailureCode = null;
+                existing.UpdatedAt = now;
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                return true;
+            }
+
+            _dbContext.StripeWebhookOperations.Add(CreateWebhookOperation(stripeEvent, operationKey, paymentIntentId, now));
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        var reclaimed = await _dbContext.StripeWebhookOperations
+            .Where(o => o.OperationKey == operationKey &&
+                        (o.Status == StripeWebhookOperationStatus.Failed ||
+                         (o.Status == StripeWebhookOperationStatus.Processing && o.LeaseExpiresAt <= now)))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(o => o.StripeEventId, stripeEvent.Id)
+                .SetProperty(o => o.Status, StripeWebhookOperationStatus.Processing)
+                .SetProperty(o => o.AttemptCount, o => o.AttemptCount + 1)
+                .SetProperty(o => o.LeaseExpiresAt, now.Add(WebhookLeaseDuration))
+                .SetProperty(o => o.FailureCode, (string?)null)
+                .SetProperty(o => o.UpdatedAt, now), cancellationToken);
+        if (reclaimed == 1)
+        {
+            return true;
+        }
+
+        var existingStatus = await _dbContext.StripeWebhookOperations
+            .AsNoTracking()
+            .Where(o => o.OperationKey == operationKey)
+            .Select(o => (StripeWebhookOperationStatus?)o.Status)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (existingStatus == StripeWebhookOperationStatus.Succeeded)
+        {
+            return false;
+        }
+        if (existingStatus == StripeWebhookOperationStatus.Processing)
+        {
+            throw new InvalidOperationException("This Stripe webhook operation is already being processed.");
+        }
+
+        var operation = CreateWebhookOperation(stripeEvent, operationKey, paymentIntentId, now);
+        _dbContext.StripeWebhookOperations.Add(operation);
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateException)
+        {
+            _dbContext.Entry(operation).State = EntityState.Detached;
+            var winner = await _dbContext.StripeWebhookOperations
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.OperationKey == operationKey, cancellationToken);
+            if (winner == null)
+            {
+                throw;
+            }
+            if (winner.Status == StripeWebhookOperationStatus.Succeeded)
+            {
+                return false;
+            }
+            throw new InvalidOperationException("This Stripe webhook operation is already being processed.");
+        }
+    }
+
+    private static StripeWebhookOperation CreateWebhookOperation(
+        Event stripeEvent,
+        string operationKey,
+        string? paymentIntentId,
+        DateTime now) => new()
+    {
+        OperationKey = operationKey,
+        StripeEventId = stripeEvent.Id,
+        EventType = stripeEvent.Type,
+        PaymentIntentId = paymentIntentId,
+        Status = StripeWebhookOperationStatus.Processing,
+        AttemptCount = 1,
+        LeaseExpiresAt = now.Add(WebhookLeaseDuration),
+        CreatedAt = now,
+        UpdatedAt = now
+    };
+
+    private async Task CompleteWebhookOperationAsync(string operationKey, CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        if (!_dbContext.Database.IsRelational())
+        {
+            var operation = await _dbContext.StripeWebhookOperations
+                .FirstAsync(o => o.OperationKey == operationKey, cancellationToken);
+            operation.Status = StripeWebhookOperationStatus.Succeeded;
+            operation.CompletedAt = now;
+            operation.LeaseExpiresAt = now;
+            operation.UpdatedAt = now;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        var updated = await _dbContext.StripeWebhookOperations
+            .Where(o => o.OperationKey == operationKey && o.Status == StripeWebhookOperationStatus.Processing)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(o => o.Status, StripeWebhookOperationStatus.Succeeded)
+                .SetProperty(o => o.CompletedAt, now)
+                .SetProperty(o => o.LeaseExpiresAt, now)
+                .SetProperty(o => o.UpdatedAt, now), cancellationToken);
+        if (updated != 1)
+        {
+            throw new InvalidOperationException("Unable to complete the Stripe webhook operation.");
+        }
+    }
+
+    private async Task FailWebhookOperationAsync(string operationKey, string failureCode, CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        if (!_dbContext.Database.IsRelational())
+        {
+            var operation = await _dbContext.StripeWebhookOperations
+                .FirstOrDefaultAsync(o => o.OperationKey == operationKey, cancellationToken);
+            if (operation != null)
+            {
+                operation.Status = StripeWebhookOperationStatus.Failed;
+                operation.FailureCode = failureCode;
+                operation.LeaseExpiresAt = now;
+                operation.UpdatedAt = now;
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+            return;
+        }
+
+        await _dbContext.StripeWebhookOperations
+            .Where(o => o.OperationKey == operationKey && o.Status == StripeWebhookOperationStatus.Processing)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(o => o.Status, StripeWebhookOperationStatus.Failed)
+                .SetProperty(o => o.FailureCode, failureCode)
+                .SetProperty(o => o.LeaseExpiresAt, now)
+                .SetProperty(o => o.UpdatedAt, now), cancellationToken);
     }
 
     private async Task<PaymentTransaction?> FindTransactionAsync(PaymentIntent paymentIntent, CancellationToken cancellationToken)

@@ -4,6 +4,7 @@ using AI.ProfilePhotoMaker.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AI.ProfilePhotoMaker.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260905231745_AddHeadshotGenerationOperationIdempotency")]
+    partial class AddHeadshotGenerationOperationIdempotency
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -246,9 +249,6 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
-                    b.Property<int?>("PaymentTransactionId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("RedeemedAt")
                         .HasColumnType("datetime2");
 
@@ -257,10 +257,6 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("PaymentTransactionId")
-                        .IsUnique()
-                        .HasFilter("[PaymentTransactionId] IS NOT NULL");
 
                     b.HasIndex("CouponId", "UserId")
                         .IsUnique()
@@ -1100,68 +1096,6 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.ToTable("RetentionDeletionWarningLogs");
                 });
 
-            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.StripeWebhookOperation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AttemptCount")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("EventType")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<string>("FailureCode")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<DateTime>("LeaseExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("OperationKey")
-                        .IsRequired()
-                        .HasMaxLength(320)
-                        .HasColumnType("nvarchar(320)");
-
-                    b.Property<string>("PaymentIntentId")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<string>("StripeEventId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OperationKey")
-                        .IsUnique();
-
-                    b.HasIndex("StripeEventId")
-                        .IsUnique();
-
-                    b.HasIndex("Status", "LeaseExpiresAt");
-
-                    b.ToTable("StripeWebhookOperations");
-                });
-
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Style", b =>
                 {
                     b.Property<int>("Id")
@@ -1906,11 +1840,6 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasForeignKey("CouponId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("AI.ProfilePhotoMaker.API.Models.PaymentTransaction", null)
-                        .WithMany()
-                        .HasForeignKey("PaymentTransactionId")
-                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("Coupon");
                 });

@@ -6,6 +6,7 @@ using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using Azure.Storage.Sas;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
@@ -366,6 +367,74 @@ public class HeadshotGenerationServiceTests
     }
 
     [Fact]
+    public async Task GenerateHeadshotAsync_ConcurrentDuplicateAcrossContextsRunsProviderAndAccountingOnce()
+    {
+        var databaseName = $"generation-{Guid.NewGuid():N}";
+        var connectionString = $"Data Source={databaseName};Mode=Memory;Cache=Shared;Default Timeout=30";
+        await using var keeper = new SqliteConnection(connectionString);
+        await keeper.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connectionString)
+            .Options;
+        string userId;
+        await using (var setup = new ApplicationDbContext(options))
+        {
+            await setup.Database.EnsureCreatedAsync();
+            userId = await SeedUserProfileAsync(setup, credits: 3);
+        }
+
+        var provider = new BlockingHeadshotProvider();
+        var request = new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = $"dev/enhanced/{userId}/source.png",
+            Style = "professional",
+            ClientRequestId = "cross-replica-request"
+        };
+
+        await using var firstContext = new ApplicationDbContext(options);
+        var first = CreateService(firstContext, new FakeStorageService(), provider)
+            .GenerateHeadshotAsync(request, userId);
+        await provider.Started.WaitAsync(TimeSpan.FromSeconds(10));
+
+        await using (var secondContext = new ApplicationDbContext(options))
+        {
+            var duplicateTask = CreateService(secondContext, new FakeStorageService(), provider)
+                .GenerateHeadshotAsync(new HeadshotGenerationRequestDto
+                {
+                    ImageStoragePath = request.ImageStoragePath,
+                    Style = "professional",
+                    ClientRequestId = request.ClientRequestId
+                }, userId);
+            await Task.WhenAny(duplicateTask, Task.Delay(TimeSpan.FromSeconds(2)));
+            provider.Release();
+            var duplicate = await Assert.ThrowsAsync<HeadshotGenerationException>(() => duplicateTask);
+            Assert.Equal("GenerationInProgress", duplicate.Code);
+        }
+
+        var firstResult = await first;
+
+        await using var retryContext = new ApplicationDbContext(options);
+        var retryResult = await CreateService(retryContext, new FakeStorageService(), provider)
+            .GenerateHeadshotAsync(new HeadshotGenerationRequestDto
+            {
+                ImageStoragePath = request.ImageStoragePath,
+                Style = "professional",
+                ClientRequestId = request.ClientRequestId
+            }, userId);
+
+        Assert.Equal(firstResult.ProcessedImageId, retryResult.ProcessedImageId);
+        Assert.Equal(0, retryResult.CreditsCost);
+        Assert.Equal(1, provider.CallCount);
+        Assert.Equal(2, (await retryContext.UserProfiles.SingleAsync(p => p.UserId == userId)).Credits);
+        Assert.Single(await retryContext.HeadshotGenerationOperations
+            .Where(o => o.Status == HeadshotGenerationOperationStatus.Succeeded)
+            .ToListAsync());
+        Assert.Single(await retryContext.UsageLogs
+            .Where(l => l.Action == "instant_headshot_generation")
+            .ToListAsync());
+    }
+
+    [Fact]
     public async Task GenerateHeadshotAsync_RejectsStoragePathOutsideCurrentUserPrefixes()
     {
         using var context = CreateContext();
@@ -429,16 +498,19 @@ public class HeadshotGenerationServiceTests
         };
 
         context.Users.Add(user);
-        context.Styles.Add(new Style
+        if (!await context.Styles.AnyAsync(s => s.Name == "linkedin"))
         {
-            Name = "linkedin",
-            Description = "LinkedIn professional style",
-            PromptTemplate = "professional portrait of a {gender} {ethnicity}, {subject}, clean neutral background, confident approachable expression",
-            NegativePromptTemplate = "distorted face, unrealistic features",
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        });
+            context.Styles.Add(new Style
+            {
+                Name = "linkedin",
+                Description = "LinkedIn professional style",
+                PromptTemplate = "professional portrait of a {gender} {ethnicity}, {subject}, clean neutral background, confident approachable expression",
+                NegativePromptTemplate = "distorted face, unrealistic features",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
         context.UserProfiles.Add(new UserProfile
         {
             UserId = userId,
@@ -486,6 +558,37 @@ public class HeadshotGenerationServiceTests
                 FailureCode = success ? null : "ProviderGenerationFailed",
                 FailureMessage = success ? null : "provider failed"
             });
+        }
+    }
+
+    private sealed class BlockingHeadshotProvider : IHeadshotGenerationProvider
+    {
+        private readonly TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _callCount;
+
+        public string ProviderName => "fixture";
+        public string ModelName => "deterministic";
+        public int CallCount => _callCount;
+        public Task Started => _started.Task;
+
+        public void Release() => _release.TrySetResult();
+
+        public async Task<HeadshotGenerationResult> GenerateAsync(
+            HeadshotGenerationRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _callCount);
+            _started.TrySetResult();
+            await _release.Task.WaitAsync(cancellationToken);
+            return new HeadshotGenerationResult
+            {
+                Success = true,
+                DataUrlOrUrl = "data:image/png;base64,AQID",
+                Provider = ProviderName,
+                Model = ModelName,
+                PromptVersion = "fixture-v1"
+            };
         }
     }
 

@@ -50,19 +50,16 @@ namespace AI.ProfilePhotoMaker.API.Services
         }
 
         /// <summary>
-        /// Gets a user profile by user ID with caching
+        /// Gets a user profile by user ID from the current request's DbContext.
+        /// Mutable EF entities must not be shared through the process-wide cache.
         /// </summary>
         public async Task<UserProfile?> GetUserProfileAsync(string userId)
         {
             if (string.IsNullOrEmpty(userId))
                 return null;
 
-            var cacheKey = $"user_profile_{userId}";
-            return await GetOrSetCachedAsync(cacheKey, async () =>
-            {
-                return await _context.UserProfiles
-                    .FirstOrDefaultAsync(p => p.UserId == userId);
-            });
+            return await _context.UserProfiles
+                .FirstOrDefaultAsync(p => p.UserId == userId);
         }
 
         /// <summary>

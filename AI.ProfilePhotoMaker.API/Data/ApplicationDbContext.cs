@@ -26,6 +26,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<UsageLog> UsageLogs { get; set; }
     public virtual DbSet<Prediction> Predictions { get; set; }
     public virtual DbSet<PendingGenerationRequest> PendingGenerationRequests { get; set; }
+    public virtual DbSet<HeadshotGenerationOperation> HeadshotGenerationOperations { get; set; }
     public virtual DbSet<RetentionDeletionWarningLog> RetentionDeletionWarningLogs { get; set; }
     public virtual DbSet<AbandonedUploadNudgeLog> AbandonedUploadNudgeLogs { get; set; }
 
@@ -33,6 +34,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
     public virtual DbSet<Subscription> Subscriptions { get; set; }
     public virtual DbSet<PaymentTransaction> PaymentTransactions { get; set; }
+    public virtual DbSet<StripeWebhookOperation> StripeWebhookOperations { get; set; }
     public virtual DbSet<FeedbackSubmission> FeedbackSubmissions { get; set; }
 
     // Premium Package management removed - replaced by unified CreditPackage system
@@ -62,8 +64,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         ConfigureUserStyleSelectionRelationships(builder);
         ConfigureSubscriptionRelationships(builder);
         ConfigurePaymentTransactionRelationships(builder);
+        ConfigureStripeWebhookOperations(builder);
         ConfigureFeedbackSubmissionRelationships(builder);
         ConfigurePendingGenerationRelationships(builder);
+        ConfigureHeadshotGenerationOperations(builder);
         ConfigureCreditPackageRelationships(builder);
         ConfigureOutcomePackageRelationships(builder);
         ConfigureAdminRelationships(builder);
@@ -140,6 +144,22 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<ProcessedImage>()
             .Property(i => i.CorrelationId)
             .HasMaxLength(128);
+    }
+
+    private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)
+    {
+        builder.Entity<HeadshotGenerationOperation>()
+            .HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(o => o.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<HeadshotGenerationOperation>()
+            .HasIndex(o => o.CorrelationId)
+            .IsUnique();
+
+        builder.Entity<HeadshotGenerationOperation>()
+            .HasIndex(o => new { o.Status, o.LeaseExpiresAt });
     }
 
     private void ConfigureUsageLogRelationships(ModelBuilder builder)
@@ -310,6 +330,20 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .OnDelete(DeleteBehavior.NoAction);
     }
 
+    private void ConfigureStripeWebhookOperations(ModelBuilder builder)
+    {
+        builder.Entity<StripeWebhookOperation>()
+            .HasIndex(o => o.OperationKey)
+            .IsUnique();
+
+        builder.Entity<StripeWebhookOperation>()
+            .HasIndex(o => o.StripeEventId)
+            .IsUnique();
+
+        builder.Entity<StripeWebhookOperation>()
+            .HasIndex(o => new { o.Status, o.LeaseExpiresAt });
+    }
+
     private void ConfigureAdminRelationships(ModelBuilder builder)
     {
         builder.Entity<AdminAuditLog>()
@@ -331,6 +365,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(r => new { r.CouponId, r.UserId })
             .IsUnique()
             .HasDatabaseName("IX_CouponRedemptions_CouponId_UserId_Unique");
+
+        builder.Entity<CouponRedemption>()
+            .HasIndex(r => r.PaymentTransactionId)
+            .IsUnique();
+
+        builder.Entity<CouponRedemption>()
+            .HasOne<PaymentTransaction>()
+            .WithMany()
+            .HasForeignKey(r => r.PaymentTransactionId)
+            .OnDelete(DeleteBehavior.NoAction);
     }
 
     private void ConfigurePerformanceIndexes(ModelBuilder builder)

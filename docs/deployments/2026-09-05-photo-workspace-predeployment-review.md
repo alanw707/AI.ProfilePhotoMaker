@@ -2,7 +2,7 @@
 
 ## Decision
 
-**NO-GO for production deployment.** Source and automated checks are healthy, but Stripe API-version coordination, credential rotation, and a real staging target remain unresolved.
+**NO-GO for production deployment.** Source, local full-stack verification, idempotency, and automated release gates are healthy. Production still requires separate authorization, coordinated Stripe API-version cutover, Azure Storage key rotation, and either an isolated staging target or an explicitly approved direct-canary exception.
 
 ## Reviewed scope
 
@@ -27,6 +27,10 @@ No linked issue or acceptance test was available. Spec review used `CONTEXT.md`,
 6. **Production storage credentials were rendered as plain Container App environment values.** Bicep now stores the connection string as a Container App secret and references it from all three compatibility environment variables.
 7. **EF deployment tooling targeted EF 8 while the application targets EF 10.** Local tool manifest updated to `dotnet-ef` 10.0.11.
 8. **Retry and premium Playwright checks depended on live/local services.** Their package, profile-completion, and Turnstile behavior is now explicitly mocked.
+9. **Generation idempotency was process-local and race-prone.** `HeadshotGenerationOperations` now provides a unique database claim, failure/recovery lease, and atomic accounting/completion transition. Separate-context concurrency coverage proves one provider call, one charge, and one successful operation.
+10. **Stripe webhook replay/concurrency was not database-coordinated.** `StripeWebhookOperations` now claims `event-type:PaymentIntent` operations across replicas, retries failed operations, and rejects concurrent processing. Discount coupon redemption is tied idempotently to the payment transaction; purchase, credits, and entitlement are committed in one database transaction.
+11. **Fresh/recovering SQL startup could be misclassified.** Migration startup now lets EF create a genuinely missing database and distinguishes an existing-but-recovering SQL database through `master`, waiting before migration rather than issuing a conflicting `CREATE DATABASE`.
+12. **Production npm dependencies contained high-severity advisories.** Angular was upgraded from 19.2 to 20.3, Angular ESLint and TypeScript were aligned, and the legacy face-api transitive `node-fetch` was pinned to patched 2.7.0.
 
 ### Spec findings fixed
 
@@ -39,18 +43,17 @@ No linked issue or acceptance test was available. Spec review used `CONTEXT.md`,
 1. **P1 — production Stripe endpoint incompatible with this release.** The enabled live endpoint uses `2025-08-27.basil`; Stripe.NET 49.1.0 expects `2025-10-29.clover`. Do not change the endpoint independently while the current Basil application is serving traffic. Coordinate endpoint and application rollout with a rollback plan.
 2. **P1 — exposed Azure Storage account key requires rotation.** A read-only CLI inspection displayed the current key. Future Bicep deployments hide it behind a secret reference, but the current key remains compromised until production is switched to the alternate key and the exposed key is regenerated.
 3. **P1 — no staging environment exists.** Azure contains only the production API/web apps, production SQL server/database, and production storage in `aiprofilemaker-v1`. Production-like migration/configuration and end-to-end smoke tests therefore cannot be completed safely without creating an isolated staging target.
-4. **P1 — generation idempotency is not atomic across replicas.** Two simultaneous requests with the same client request ID can both pass the initial lookup. In a multi-replica race, duplicate provider work and cross-marking candidates remain possible. Add a database-backed request/idempotency record or lock before relying on automatic POST retries.
-5. **P1 — discounted webhook fulfillment is not atomic across concurrent deliveries.** Sequential replay is safe after fulfillment, but concurrent delivery can race coupon redemption and package creation. Add database-backed Stripe event/idempotency handling before enabling high-volume discounted purchases.
-6. **P2 — standalone premium add-on purchases are absent.** `CONTEXT.md` says premium augmentations may be purchased additionally; this release deliberately exposes only package-included allowances and says no standalone add-on is available.
-7. **P2 — workspace component remains above repository complexity limits.** Lint reports 35 warnings: template complexity reaches 82, `startEnhancement` complexity reaches 78/212 lines, and the component reaches 2,309 lines. No lint errors occur; splitting the workflow is deferred to avoid an unrelated release refactor.
-8. **Residual validation gap — paid AI visual quality.** Provider orchestration/accounting was tested with deterministic fixtures; identity preservation and image quality were not tested against paid providers.
+4. **P2 — standalone premium add-on purchases are absent.** `CONTEXT.md` says premium augmentations may be purchased additionally; this release deliberately exposes only package-included allowances and says no standalone add-on is available.
+5. **P2 — workspace component remains above repository complexity limits.** Lint reports 35 warnings: template complexity reaches 82, `startEnhancement` complexity reaches 78/212 lines, and the component reaches 2,309 lines. No lint errors occur; splitting the workflow is deferred to avoid an unrelated release refactor.
+6. **P2 — development-only npm audit debt remains.** Production dependency audit is clean. Full-tree audit reports 4 high and 8 moderate advisories confined to Puppeteer/Angular build and development-server tooling; fixing the Puppeteer chain requires a major v25 upgrade, while the current Angular build-tool chain has no published in-range fix. These packages are not shipped in the static frontend runtime.
+7. **Residual validation gap — paid AI visual quality.** Provider orchestration/accounting was tested with deterministic fixtures; identity preservation and image quality were not tested against paid providers.
 
 ## Environment checks
 
 - Azure authentication: valid.
 - Production Container App revision: healthy/running.
-- Production SQL: read-only connection succeeded; 33 migrations applied; 0 pending.
-- EF model: no changes since the latest migration.
+- Production SQL at the read-only review point: 33 migrations applied and 0 pending against the pre-idempotency model. This release now contains 35 migrations; the two new additive migrations have not been applied to production.
+- EF model: no changes since migration `20260905233853_AddStripeWebhookOperationIdempotency`.
 - Database auto-migration: disabled in production.
 - Stripe live endpoint: enabled; Basil API version; required PaymentIntent events configured.
 - Staging: not found.
@@ -65,25 +68,47 @@ Resolved all reported NuGet advisories:
 
 `dotnet list package --vulnerable --include-transitive` reports no vulnerable packages for API or test projects.
 
+Frontend production dependencies were also remediated:
+
+- Angular runtime/compiler packages: 20.3.30.
+- Angular CLI/build tooling: 20.3.36; Angular ESLint: 20.7.0; TypeScript: 5.9.3.
+- `node-fetch`: forced to 2.7.0 under `face-api.js`/TensorFlow through npm `overrides`.
+- `npm audit --omit=dev --audit-level=high`: **0 vulnerabilities**.
+- Full development-tree audit: 4 high and 8 moderate build/test-tool findings remain, as documented under Open findings.
+
 ## Verification
 
-- API: **386 passed, 0 failed**.
-- Angular/Karma: **465 passed, 19 skipped**.
-- Focused Playwright after review fixes: **8 passed** across pricing/dashboard, workspace recovery/accessibility, and premium generation.
+- API: **390 passed, 0 failed**.
+- Angular/Karma on Angular 20: **465 passed, 19 skipped**.
+- Focused Playwright on Angular 20: **8 passed** across pricing/dashboard, workspace recovery/accessibility, and premium generation. Two earlier attempts were environment/setup failures (no server, then an intentionally production-configured Docker frontend without the test-only auth bypass); the final intended development-host run passed after installing the Playwright 1.63 browser.
 - Production UI build: passed; 26 SEO pages generated.
-- Local Docker builds: API and frontend images passed (`Dockerfile.backend` and `Dockerfile.frontend`, `build:docker`); API compiled with 0 warnings/errors.
-- Local Docker runtime smoke: both containers became healthy; API liveness, frontend root, and frontend `/pricing/` route passed.
-- Docker limitation: API ran in `LocalDev` with migrations disabled and dummy local-only configuration; this does not replace SQL/Azurite, Stripe sandbox, or production-like storage staging tests.
-- ESLint: 0 errors, 35 documented complexity warnings in both host and Docker frontend builds.
+- ESLint: 0 errors, 35 documented complexity warnings in host and Docker frontend builds.
+- Local Docker builds: API and Angular 20 frontend images passed (`Dockerfile.backend` and `Dockerfile.frontend`); API compiled with 0 warnings/errors.
+- Fresh full Docker Compose runtime: SQL Server, Azurite, deterministic provider fixture, API, and frontend started; SQL/API/frontend health passed; API liveness, frontend root, and `/pricing/` passed.
+- Fresh SQL migration: **35 migrations**, both idempotency tables, and all required unique indexes verified. Forward idempotent SQL contains no `DROP`, `TRUNCATE`, or `DELETE`.
+- Full workflow stack restart: account, entitlement, and image rows persisted, and the stored Azurite image remained retrievable.
+- Final fresh-schema Compose restart: API/frontend returned healthy and SQL retained all 35 migrations.
 - Bicep compilation: passed.
 - `dotnet ef migrations has-pending-model-changes`: none.
-- Production migration query: 0 pending.
-- NuGet vulnerability scan: 0 vulnerable packages.
+- NuGet vulnerability scan: 0 vulnerable packages in API and tests.
+- npm production vulnerability scan: 0 vulnerabilities.
+- Changed-file credential-pattern scan: clean.
+- `git diff --check`: passed.
+
+## Local integration evidence labels
+
+- **Real Stripe test mode:** a Stripe CLI listener supplied a temporary signing secret outside the repository; a real test-mode PaymentIntent produced a signed webhook, 150 credits, and a Pro entitlement. Replay preserved single fulfillment. No real purchase occurred.
+- **Deterministic AI fixture:** free preview, nine paid candidates, and premium relighting used a local OpenAI-compatible fixture. No paid AI call occurred; visual quality and identity preservation were not evaluated.
+- **Real local persistence:** SQL Server and Azurite used isolated named volumes. Upload, generated-image retrieval, export ZIP, accounting, and restart persistence were exercised against those services rather than mocks.
+- **Private evidence:** detailed scripts, credentials, event payloads, and account data remain under `/tmp/aipm-compose-verify/` and are intentionally excluded from commits.
 
 ## Required approvals/actions
 
-1. Approve creation and cost envelope for an isolated staging API, web app, SQL database, and storage account—or provide an existing staging target.
-2. Approve coordinated Azure Storage key failover/rotation.
-3. Choose a coordinated Stripe rollout strategy for Basil → Clover.
-4. Decide whether atomic generation/webhook idempotency and standalone add-on purchasing block this release.
-5. Repeat staging sandbox checkout, webhook fulfillment, storage, export, and workspace smoke tests before changing the production decision.
+1. Approve creation/cost for isolated staging, provide an existing target, or explicitly accept the higher-risk direct-production maintenance-window exception described in the rollout plan.
+2. Approve coordinated Azure Storage alternate-key failover and compromised-key regeneration.
+3. Approve the coordinated Stripe Basil → Clover endpoint/revision cutover and reconciliation window.
+4. Approve the reviewed branch for commit/push/PR/merge and authorize a named operator and rollback owner.
+5. Apply and verify the two additive idempotency migrations before routing traffic to the new revision.
+6. Repeat checkout/webhook, storage, export, accounting, and workspace smoke on staging or the approved zero-traffic/canary production revision before changing the production decision.
+
+See `docs/deployments/2026-09-06-photo-workspace-production-rollout-plan.md`. No production mutation, push, merge, or deployment was performed during this review.

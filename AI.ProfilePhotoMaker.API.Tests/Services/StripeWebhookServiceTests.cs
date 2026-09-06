@@ -8,6 +8,7 @@ using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.Payments;
 using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Services.Notifications;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -478,6 +479,125 @@ public class StripeWebhookServiceTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.HandleEventAsync(stripeEvent));
 
         Assert.Empty(await context.CreditPurchases.ToListAsync());
+        var failedOperation = await context.StripeWebhookOperations.SingleAsync();
+        Assert.Equal(StripeWebhookOperationStatus.Failed, failedOperation.Status);
+        Assert.Equal(1, failedOperation.AttemptCount);
+
+        await CreateService(context).HandleEventAsync(stripeEvent);
+
+        Assert.Single(await context.CreditPurchases.ToListAsync());
+        var completedOperation = await context.StripeWebhookOperations.SingleAsync();
+        Assert.Equal(StripeWebhookOperationStatus.Succeeded, completedOperation.Status);
+        Assert.Equal(2, completedOperation.AttemptCount);
+    }
+
+    [Fact]
+    public async Task HandleEventAsync_ConcurrentDiscountedReplayAcrossContextsFulfillsExactlyOnce()
+    {
+        var databaseName = $"stripe-{Guid.NewGuid():N}";
+        var connectionString = $"Data Source={databaseName};Mode=Memory;Cache=Shared;Default Timeout=30";
+        await using var keeper = new SqliteConnection(connectionString);
+        await keeper.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connectionString)
+            .Options;
+
+        string userId;
+        PaymentTransaction transaction;
+        CreditPackage package;
+        await using (var setup = new ApplicationDbContext(options))
+        {
+            await setup.Database.EnsureCreatedAsync();
+            package = await setup.CreditPackages.SingleAsync(p => p.Id == 1);
+            var user = new ApplicationUser
+            {
+                Id = Guid.NewGuid().ToString(),
+                UserName = "stripe-concurrency@example.com",
+                Email = "stripe-concurrency@example.com"
+            };
+            userId = user.Id;
+            setup.Users.Add(user);
+            setup.UserProfiles.Add(new UserProfile
+            {
+                UserId = userId,
+                User = user,
+                SubscriptionTier = SubscriptionTier.Basic,
+                Credits = 5,
+                LastCreditReset = DateTime.UtcNow
+            });
+            setup.Coupons.Add(new AI.ProfilePhotoMaker.API.Models.Coupon
+            {
+                Code = "CONCURRENT20",
+                DiscountType = DiscountType.FixedAmount,
+                DiscountValue = 2m,
+                MaxUsages = 10,
+                IsActive = true,
+                CreatedByAdminId = "admin-test",
+                CreatedAt = DateTime.UtcNow
+            });
+            transaction = new PaymentTransaction
+            {
+                UserId = userId,
+                User = user,
+                ExternalTransactionId = $"pi_{Guid.NewGuid():N}",
+                Amount = 7.99m,
+                Currency = "usd",
+                PaymentProvider = "stripe",
+                Status = PaymentStatus.Pending,
+                Type = PaymentType.OneTime,
+                Description = "Discounted package purchase",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            setup.PaymentTransactions.Add(transaction);
+            await setup.SaveChangesAsync();
+        }
+
+        var metadata = new Dictionary<string, string>
+        {
+            ["user_id"] = userId,
+            ["package_id"] = package.Id.ToString(),
+            ["payment_transaction_id"] = transaction.Id.ToString(),
+            ["coupon_code"] = "CONCURRENT20",
+            ["original_price"] = "9.99",
+            ["discount_amount"] = "2.00"
+        };
+        var stripeEvent = CreateStripeEvent(PaymentIntentSucceededEvent, transaction.ExternalTransactionId, metadata);
+
+        await using var firstContext = new ApplicationDbContext(options);
+        var blockingCoupon = new BlockingCouponService(new AI.ProfilePhotoMaker.API.Services.CouponService(firstContext, NullLogger<AI.ProfilePhotoMaker.API.Services.CouponService>.Instance));
+        var first = CreateRealService(firstContext, blockingCoupon).HandleEventAsync(stripeEvent);
+        await blockingCoupon.Started.WaitAsync(TimeSpan.FromSeconds(10));
+
+        await using (var secondContext = new ApplicationDbContext(options))
+        {
+            var duplicateTask = CreateRealService(
+                    secondContext,
+                    new AI.ProfilePhotoMaker.API.Services.CouponService(secondContext, NullLogger<AI.ProfilePhotoMaker.API.Services.CouponService>.Instance))
+                .HandleEventAsync(stripeEvent);
+            await Task.WhenAny(duplicateTask, Task.Delay(TimeSpan.FromSeconds(2)));
+            blockingCoupon.Release();
+            await Assert.ThrowsAsync<InvalidOperationException>(() => duplicateTask);
+        }
+        await first;
+
+        await using (var replayContext = new ApplicationDbContext(options))
+        {
+            await CreateRealService(
+                    replayContext,
+                    new AI.ProfilePhotoMaker.API.Services.CouponService(replayContext, NullLogger<AI.ProfilePhotoMaker.API.Services.CouponService>.Instance))
+                .HandleEventAsync(stripeEvent);
+        }
+
+        await using var verify = new ApplicationDbContext(options);
+        Assert.Equal(5 + package.TotalCredits, (await verify.UserProfiles.SingleAsync(p => p.UserId == userId)).Credits);
+        Assert.Single(await verify.CouponRedemptions.ToListAsync());
+        Assert.Equal(1, (await verify.Coupons.SingleAsync(c => c.Code == "CONCURRENT20")).CurrentUsages);
+        Assert.Single(await verify.CreditPurchases.Where(p => p.PaymentTransactionId == transaction.Id.ToString()).ToListAsync());
+        Assert.Single(await verify.UserPackageEntitlements.Where(e => e.SourcePaymentTransactionId == transaction.Id).ToListAsync());
+        var operation = await verify.StripeWebhookOperations.SingleAsync();
+        Assert.Equal(StripeWebhookOperationStatus.Succeeded, operation.Status);
+        Assert.Equal(1, operation.AttemptCount);
     }
 
     [Fact]
@@ -540,6 +660,52 @@ public class StripeWebhookServiceTests
             new DummyCouponService());
     }
 
+    private static StripeWebhookService CreateRealService(ApplicationDbContext context, ICouponService couponService)
+    {
+        var basicTierService = new BasicTierService(context, NullLogger<BasicTierService>.Instance);
+        var outcomePackageService = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance);
+        var creditPackageService = new CreditPackageService(
+            context,
+            basicTierService,
+            NullLogger<CreditPackageService>.Instance,
+            Options.Create(new StripeOptions
+            {
+                PublishableKey = "pk_test_default",
+                SecretKey = "sk_test_default",
+                WebhookSecret = "whsec_default"
+            }),
+            Options.Create(new PaymentSimulationOptions()),
+            stripeClient: null,
+            outcomePackageService: outcomePackageService);
+        return new StripeWebhookService(
+            context,
+            creditPackageService,
+            NullLogger<StripeWebhookService>.Instance,
+            new DummyEmailNotificationService(),
+            couponService);
+    }
+
+    private sealed class BlockingCouponService : ICouponService
+    {
+        private readonly ICouponService _inner;
+        private readonly TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public BlockingCouponService(ICouponService inner) => _inner = inner;
+        public Task Started => _started.Task;
+        public void Release() => _release.TrySetResult();
+
+        public Task<(bool IsValid, string Message, decimal DiscountAmount)> ValidateCouponAsync(string code, string userId, decimal originalPrice)
+            => _inner.ValidateCouponAsync(code, userId, originalPrice);
+
+        public async Task<bool> RedeemCouponAsync(string code, string userId, decimal originalPrice, decimal discountApplied, int? paymentTransactionId = null)
+        {
+            _started.TrySetResult();
+            await _release.Task;
+            return await _inner.RedeemCouponAsync(code, userId, originalPrice, discountApplied, paymentTransactionId);
+        }
+    }
+
     private sealed class UnavailableStripeHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -566,7 +732,7 @@ public class StripeWebhookServiceTests
         public Task<(bool IsValid, string Message, decimal DiscountAmount)> ValidateCouponAsync(string code, string userId, decimal originalPrice)
             => Task.FromResult((true, "ok", 0m));
 
-        public Task<bool> RedeemCouponAsync(string code, string userId, decimal originalPrice, decimal discountApplied)
+        public Task<bool> RedeemCouponAsync(string code, string userId, decimal originalPrice, decimal discountApplied, int? paymentTransactionId = null)
             => Task.FromResult(true);
     }
 

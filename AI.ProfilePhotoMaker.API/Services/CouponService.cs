@@ -74,7 +74,7 @@ public class CouponService : ICouponService
         return (true, "Coupon is valid", discountAmount);
     }
 
-    public async Task<bool> RedeemCouponAsync(string code, string userId, decimal originalPrice, decimal discountApplied)
+    public async Task<bool> RedeemCouponAsync(string code, string userId, decimal originalPrice, decimal discountApplied, int? paymentTransactionId = null)
     {
         if (string.IsNullOrWhiteSpace(code) || discountApplied <= 0)
         {
@@ -93,7 +93,23 @@ public class CouponService : ICouponService
                 var coupon = await _context.Coupons
                     .FirstOrDefaultAsync(c => c.Code == normalizedCode);
 
-                if (coupon == null || !coupon.IsActive)
+                if (coupon == null)
+                {
+                    return false;
+                }
+
+                var existingRedemption = await _context.CouponRedemptions
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.CouponId == coupon.Id && r.UserId == userId);
+                if (existingRedemption != null)
+                {
+                    return paymentTransactionId.HasValue &&
+                           existingRedemption.PaymentTransactionId == paymentTransactionId &&
+                           existingRedemption.OriginalPrice == originalPrice &&
+                           existingRedemption.DiscountApplied == discountApplied;
+                }
+
+                if (!coupon.IsActive)
                 {
                     return false;
                 }
@@ -104,14 +120,6 @@ public class CouponService : ICouponService
                 }
 
                 if (coupon.CurrentUsages >= coupon.MaxUsages)
-                {
-                    return false;
-                }
-
-                var existingRedemption = await _context.CouponRedemptions
-                    .AnyAsync(r => r.CouponId == coupon.Id && r.UserId == userId);
-
-                if (existingRedemption)
                 {
                     return false;
                 }
@@ -127,6 +135,7 @@ public class CouponService : ICouponService
                     DiscountApplied = discountApplied,
                     OriginalPrice = originalPrice,
                     FinalPrice = finalPrice,
+                    PaymentTransactionId = paymentTransactionId,
                     RedeemedAt = DateTime.UtcNow
                 });
 

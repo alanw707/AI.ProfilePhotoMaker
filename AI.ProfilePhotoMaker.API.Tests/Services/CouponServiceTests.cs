@@ -143,6 +143,20 @@ public class CouponServiceTests
     }
 
     [Fact]
+    public async Task RedeemCoupon_RetryForSamePaymentTransactionIsIdempotent()
+    {
+        using var context = CreateContext();
+        var coupon = await SeedCouponAsync(context);
+        var service = CreateService(context);
+
+        Assert.True(await service.RedeemCouponAsync("SAVE20", "u1", 10m, 2m, 42));
+        Assert.True(await service.RedeemCouponAsync("SAVE20", "u1", 10m, 2m, 42));
+
+        Assert.Single(await context.CouponRedemptions.ToListAsync());
+        Assert.Equal(1, (await context.Coupons.SingleAsync(c => c.Id == coupon.Id)).CurrentUsages);
+    }
+
+    [Fact]
     public async Task RedeemCoupon_UsesTransaction()
     {
         using var context = CreateContext();

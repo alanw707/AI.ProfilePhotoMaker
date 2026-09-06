@@ -21,5 +21,7 @@ public class CouponRedemption
 
     public decimal FinalPrice { get; set; }
 
+    public int? PaymentTransactionId { get; set; }
+
     public Coupon Coupon { get; set; } = null!;
 }

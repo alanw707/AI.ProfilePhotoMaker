@@ -3,7 +3,6 @@ using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Stripe;
@@ -210,74 +209,72 @@ public class CreditPackageService : ICreditPackageService
             .FirstOrDefaultAsync(t => t.ExternalTransactionId == paymentTransactionId);
     }
 
-    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
-    {
-        if (exception.InnerException is SqlException sqlException)
-        {
-            return sqlException.Number is 2601 or 2627;
-        }
-
-        return false;
-    }
-
     private async Task<CreditPurchase> CreatePurchaseAndApplyCreditsAsync(string userId, CreditPackage package, string? paymentTransactionId, decimal amountPaid, string creditSource, string? externalTransactionId = null)
     {
-        var purchase = new CreditPurchase
-        {
-            UserId = userId,
-            PackageId = package.Id,
-            PurchaseDate = DateTime.UtcNow,
-            CreditsAwarded = package.TotalCredits,
-            AmountPaid = amountPaid,
-            PaymentTransactionId = paymentTransactionId,
-            PaymentProvider = externalTransactionId == null ? "simulation" : "stripe",
-            Status = PaymentStatus.Pending,
-            ExternalTransactionId = externalTransactionId
-        };
-
-        _context.CreditPurchases.Add(purchase);
-
+        var strategy = _context.Database.CreateExecutionStrategy();
         try
         {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex) && !string.IsNullOrWhiteSpace(paymentTransactionId))
-        {
-            _context.Entry(purchase).State = EntityState.Detached;
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var transaction = _context.Database.IsRelational()
+                    ? await _context.Database.BeginTransactionAsync()
+                    : null;
 
+                var purchase = new CreditPurchase
+                {
+                    UserId = userId,
+                    PackageId = package.Id,
+                    PurchaseDate = DateTime.UtcNow,
+                    CreditsAwarded = package.TotalCredits,
+                    AmountPaid = amountPaid,
+                    PaymentTransactionId = paymentTransactionId,
+                    PaymentProvider = externalTransactionId == null ? "simulation" : "stripe",
+                    Status = PaymentStatus.Pending,
+                    ExternalTransactionId = externalTransactionId
+                };
+
+                _context.CreditPurchases.Add(purchase);
+                await _context.SaveChangesAsync();
+
+                var creditsAdded = await _basicTierService.AddPurchasedCreditsAsync(userId, package.TotalCredits, creditSource);
+                purchase.Status = creditsAdded ? PaymentStatus.Completed : PaymentStatus.Failed;
+                purchase.CompletedAt = creditsAdded ? DateTime.UtcNow : null;
+
+                if (!creditsAdded)
+                {
+                    _logger.LogError(
+                        "Failed to add credits to user {UserId} for purchase {PurchaseId}",
+                        LoggingSanitizer.SanitizeId(userId),
+                        purchase.Id);
+                }
+                else if (_outcomePackageService != null)
+                {
+                    await _outcomePackageService.GrantEntitlementForCreditPackageAsync(userId, package.Id, paymentTransactionId);
+                }
+
+                await _context.SaveChangesAsync();
+                if (transaction != null)
+                {
+                    await transaction.CommitAsync();
+                }
+
+                purchase.Package = package;
+                return purchase;
+            });
+        }
+        catch (DbUpdateException) when (!string.IsNullOrWhiteSpace(paymentTransactionId))
+        {
+            _context.ChangeTracker.Clear();
             var existingPurchase = await _context.CreditPurchases
                 .Include(p => p.Package)
                 .AsNoTracking()
-                .FirstAsync(p => p.PaymentTransactionId == paymentTransactionId);
-
-            return existingPurchase;
-        }
-
-        var creditsAdded = await _basicTierService.AddPurchasedCreditsAsync(userId, package.TotalCredits, creditSource);
-
-        purchase.Status = creditsAdded ? PaymentStatus.Completed : PaymentStatus.Failed;
-        purchase.CompletedAt = creditsAdded ? DateTime.UtcNow : null;
-
-        if (!creditsAdded)
-        {
-            _logger.LogError(
-                "Failed to add credits to user {UserId} for purchase {PurchaseId}",
-                LoggingSanitizer.SanitizeId(userId),
-                purchase.Id);
-        }
-
-        await _context.SaveChangesAsync();
-
-        if (creditsAdded)
-        {
-            if (_outcomePackageService != null)
+                .FirstOrDefaultAsync(p => p.PaymentTransactionId == paymentTransactionId);
+            if (existingPurchase != null)
             {
-                await _outcomePackageService.GrantEntitlementForCreditPackageAsync(userId, package.Id, paymentTransactionId);
+                return existingPurchase;
             }
+            throw;
         }
-
-        purchase.Package = package;
-        return purchase;
     }
 
     private async Task<bool?> VerifyAndRefreshStripeTransactionAsync(PaymentTransaction transaction, int packageId)
