@@ -98,7 +98,7 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
         storagePath: 'generated/candidate.jpg',
         processedImageId: 1,
       },
-      premiumAugmentations: [],
+      premiumAugmentations: [{ type: 'relighting', label: 'Relighting', options: [] }],
       turnstileSiteKey: 'site-key',
       turnstileToken: 'expired-token',
     });
@@ -115,6 +115,7 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
         })),
     };
 
+    spyOn(component, 'hasPremiumAugmentationEntitlement').and.returnValue(true);
     component.applyPremiumAugmentation('relighting');
 
     expect(component.turnstileToken).toBe('');
@@ -172,6 +173,7 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
       },
     };
 
+    spyOn(component, 'hasPremiumAugmentationEntitlement').and.returnValue(true);
     component.selectPremiumAugmentation('background_upgrade');
     component.applySelectedPremiumAugmentation();
 

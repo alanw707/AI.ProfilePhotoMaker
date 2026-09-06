@@ -1,0 +1,51 @@
+{
+  "imageProvider": "local fixed-image fixture, not AI",
+  "payments": "real Stripe test mode through browser card entry",
+  "checks": [
+    {
+      "name": "Free Preview generation",
+      "status": 200,
+      "candidates": 1,
+      "processedImageId": 19
+    },
+    {
+      "name": "Real browser sandbox checkout returns to photo workspace",
+      "url": "/app/enhance",
+      "paidGenerationRequestsBeforeConfirmation": 0
+    },
+    {
+      "name": "Preview promotion plus remaining Starter candidates",
+      "status": 200,
+      "success": true,
+      "error": null,
+      "returnedCandidates": 3
+    }
+  ],
+  "generations": [
+    {
+      "packageCode": "free_preview",
+      "numOutputs": 1
+    },
+    {
+      "packageCode": "starter_package",
+      "numOutputs": 2,
+      "reusedPreviewProcessedImageId": 19
+    }
+  ],
+  "pageErrors": [],
+  "entitlements": [
+    {
+      "id": 4,
+      "packageCode": "starter_package",
+      "packageName": "Starter Package",
+      "status": "active",
+      "remainingPackageUses": 0,
+      "remainingCandidates": 0,
+      "remainingRefinements": 2,
+      "remainingPremiumAugmentations": 0,
+      "platformExportKitAvailable": true,
+      "activatedAt": "2026-09-05T19:19:35.441655",
+      "expiresAt": null
+    }
+  ]
+}

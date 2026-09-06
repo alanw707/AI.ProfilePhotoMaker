@@ -552,6 +552,7 @@ public class OutcomePackageService : IOutcomePackageService
         {
             return candidateCount == 1;
         }
+        if (candidateCount <= 0) return false;
 
         var entitlement = await GetActiveEntitlementAsync(userId, packageCode, cancellationToken);
         if (entitlement == null || entitlement.RemainingPackageUses <= 0 || entitlement.RemainingCandidates < candidateCount)
@@ -564,9 +565,7 @@ public class OutcomePackageService : IOutcomePackageService
         {
             entitlement.RemainingPackageUses = Math.Max(0, entitlement.RemainingPackageUses - 1);
         }
-        MarkConsumedIfEmpty(entitlement);
-        await _context.SaveChangesAsync(cancellationToken);
-        return true;
+        return await SaveConsumptionAsync(entitlement, cancellationToken);
     }
 
     public async Task<bool> ConsumeRefinementAsync(string userId, string? packageCode = null, CancellationToken cancellationToken = default)
@@ -585,9 +584,7 @@ public class OutcomePackageService : IOutcomePackageService
         if (entitlement == null) return false;
 
         entitlement.RemainingRefinements--;
-        MarkConsumedIfEmpty(entitlement);
-        await _context.SaveChangesAsync(cancellationToken);
-        return true;
+        return await SaveConsumptionAsync(entitlement, cancellationToken);
     }
 
     public async Task<bool> ConsumePremiumAugmentationAsync(string userId, CancellationToken cancellationToken = default)
@@ -601,9 +598,7 @@ public class OutcomePackageService : IOutcomePackageService
         if (entitlement == null) return false;
 
         entitlement.RemainingPremiumAugmentations--;
-        MarkConsumedIfEmpty(entitlement);
-        await _context.SaveChangesAsync(cancellationToken);
-        return true;
+        return await SaveConsumptionAsync(entitlement, cancellationToken);
     }
 
     public async Task<bool> ConsumeExportKitAsync(string userId, CancellationToken cancellationToken = default)
@@ -617,9 +612,24 @@ public class OutcomePackageService : IOutcomePackageService
         if (entitlement == null) return false;
 
         entitlement.PlatformExportKitAvailable = false;
+        return await SaveConsumptionAsync(entitlement, cancellationToken);
+    }
+
+    private async Task<bool> SaveConsumptionAsync(UserPackageEntitlement entitlement, CancellationToken cancellationToken)
+    {
         MarkConsumedIfEmpty(entitlement);
-        await _context.SaveChangesAsync(cancellationToken);
-        return true;
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Another operation consumed or revoked this allowance. Do not let a
+            // caller's later save flush our rejected tracked decrement.
+            _context.Entry(entitlement).State = EntityState.Detached;
+            return false;
+        }
     }
 
     private IQueryable<UserPackageEntitlement> QueryActiveEntitlements(string userId)
@@ -674,7 +684,9 @@ public class OutcomePackageService : IOutcomePackageService
             Id = entitlement.Id,
             PackageCode = entitlement.OutcomePackageDefinition.Code,
             PackageName = entitlement.OutcomePackageDefinition.Name,
-            Status = entitlement.Status.ToString().ToLowerInvariant(),
+            Status = entitlement.ExpiresAt.HasValue && entitlement.ExpiresAt <= DateTime.UtcNow
+                ? "expired"
+                : entitlement.Status.ToString().ToLowerInvariant(),
             RemainingPackageUses = entitlement.RemainingPackageUses,
             RemainingCandidates = entitlement.RemainingCandidates,
             RemainingRefinements = entitlement.RemainingRefinements,

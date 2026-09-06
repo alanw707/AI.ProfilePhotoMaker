@@ -1,0 +1,180 @@
+[
+  {
+    "width": 1440,
+    "theme": "light",
+    "overflow": false,
+    "brokenVisibleImages": 0,
+    "contrastCandidates": [
+      {
+        "text": "AI Profile Photo Maker",
+        "ratio": 3.68,
+        "fontSize": 14.08,
+        "tag": "SPAN"
+      },
+      {
+        "text": "Balance shadows and add cleaner studio-style light.",
+        "ratio": 4.26,
+        "fontSize": 10.88,
+        "tag": "SMALL"
+      },
+      {
+        "text": "Generate one finishing pass and compare it with your candidate.",
+        "ratio": 4.26,
+        "fontSize": 11.2,
+        "tag": "SPAN"
+      }
+    ],
+    "contrastCandidateCount": 3,
+    "inspectorHeight": 232.71875,
+    "keyboardSample": [
+      {
+        "tag": "A",
+        "label": "AI Profile Photo Maker"
+      },
+      {
+        "tag": "A",
+        "label": "Packages"
+      },
+      {
+        "tag": "A",
+        "label": "Photo workspace"
+      },
+      {
+        "tag": "A",
+        "label": "My photos"
+      },
+      {
+        "tag": "A",
+        "label": "Settings"
+      },
+      {
+        "tag": "A",
+        "label": "Support"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Switch to dark theme"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Sign out"
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "theme": "dark",
+    "overflow": false,
+    "brokenVisibleImages": 0,
+    "contrastCandidates": [
+      {
+        "text": "Pro Package active",
+        "ratio": 1.1,
+        "fontSize": 12.8,
+        "tag": "SPAN"
+      },
+      {
+        "text": "1",
+        "ratio": 1.1,
+        "fontSize": 10.88,
+        "tag": "SPAN"
+      },
+      {
+        "text": "Source photo",
+        "ratio": 1.02,
+        "fontSize": 11.52,
+        "tag": "STRONG"
+      },
+      {
+        "text": "Direction",
+        "ratio": 1.02,
+        "fontSize": 11.52,
+        "tag": "STRONG"
+      },
+      {
+        "text": "Photo workspace",
+        "ratio": 1.02,
+        "fontSize": 11.52,
+        "tag": "STRONG"
+      },
+      {
+        "text": "Your candidate is ready",
+        "ratio": 1,
+        "fontSize": 23.2,
+        "tag": "H2"
+      },
+      {
+        "text": "Linkedin · LinkedIn",
+        "ratio": 1.1,
+        "fontSize": 12.8,
+        "tag": "P"
+      },
+      {
+        "text": "Paid candidate",
+        "ratio": 1.04,
+        "fontSize": 11.2,
+        "tag": "SPAN"
+      },
+      {
+        "text": "Source",
+        "ratio": 1.1,
+        "fontSize": 11.2,
+        "tag": "SPAN"
+      },
+      {
+        "text": "Result",
+        "ratio": 1.1,
+        "fontSize": 11.2,
+        "tag": "SPAN"
+      },
+      {
+        "text": "Your generated photo is available for 30 days. Manage retention a",
+        "ratio": 1.1,
+        "fontSize": 11.68,
+        "tag": "SPAN"
+      },
+      {
+        "text": "Settings",
+        "ratio": 1.23,
+        "fontSize": 11.68,
+        "tag": "A"
+      }
+    ],
+    "contrastCandidateCount": 50,
+    "inspectorHeight": 251.4375,
+    "keyboardSample": [
+      {
+        "tag": "BUTTON",
+        "label": "Toggle navigation"
+      },
+      {
+        "tag": "A",
+        "label": "Settings"
+      },
+      {
+        "tag": "INPUT",
+        "label": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Reset adjustments"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "RelightingBalance shadows and add cleaner studio-s"
+      }
+    ]
+  }
+]

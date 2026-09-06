@@ -426,12 +426,14 @@
                 class="option-card workflow-card portrait-style-card"
                 type="button"
                 [class.selected]="selectedPortraitStyle?.key === option.key"
+                [attr.aria-pressed]="selectedPortraitStyle?.key === option.key"
                 *ngFor="let option of getVisiblePortraitStyles()"
                 (click)="selectPortraitStyle(option)">
                 <img
                   [src]="option.previewUrl"
                   [alt]="option.name + ' portrait style preview'"
                   class="workflow-preview"
+                  (error)="onPortraitStylePreviewError(option)"
                   loading="lazy" />
                 <div class="option-content">
                   <div class="option-text">

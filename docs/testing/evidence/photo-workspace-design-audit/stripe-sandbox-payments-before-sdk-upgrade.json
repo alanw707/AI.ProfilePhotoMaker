@@ -1,0 +1,45 @@
+{
+  "environment": "isolated local API/database + real Stripe test mode; no UI card-entry verification",
+  "checks": [
+    {
+      "name": "real Stripe success webhook grants one Pro entitlement",
+      "pass": false,
+      "paymentIntentId": "pi_3UCNR9LxCaLUJOXx1C54ovyL",
+      "before": 0,
+      "after": 0
+    },
+    {
+      "name": "client purchase confirmation 1",
+      "status": 200,
+      "success": true
+    },
+    {
+      "name": "client purchase confirmation 2",
+      "status": 200,
+      "success": true
+    },
+    {
+      "name": "locally signed replay of actual sandbox event",
+      "eventId": "evt_3UCNR9LxCaLUJOXx1OWHSewb",
+      "status": 400
+    },
+    {
+      "name": "no duplicate entitlement after client confirmations and event replay",
+      "pass": true
+    },
+    {
+      "name": "declined payment does not fulfill",
+      "stripeStatus": "card_declined",
+      "status": 202,
+      "success": false,
+      "pass": true
+    },
+    {
+      "name": "cancelled payment does not fulfill",
+      "stripeStatus": "canceled",
+      "status": 202,
+      "success": false,
+      "pass": true
+    }
+  ]
+}

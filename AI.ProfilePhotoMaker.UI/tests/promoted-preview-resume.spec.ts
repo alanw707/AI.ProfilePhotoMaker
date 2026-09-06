@@ -23,7 +23,7 @@ test('renders promoted private preview with authorized blob bytes', async ({ pag
     if (path.includes('generated-private')) return route.fulfill({ status: 404 });
     return route.fulfill({ json: { success: true, data: [] } });
   });
-  await page.goto('http://localhost:4200/app/enhance');
+  await page.goto('/app/enhance');
   const image = page.locator('img[alt="Selected generated candidate"]');
   await expect(image).toBeVisible({ timeout: 10000 });
   await expect(image).toHaveAttribute('src', /^blob:/);

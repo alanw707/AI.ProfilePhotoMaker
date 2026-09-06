@@ -20,12 +20,12 @@ if (typeof navigator !== 'undefined' && navigator.locks) {
   const originalRequest = navigator.locks.request;
   navigator.locks.request = function (
     name: string,
-    optionsOrCallback: LockOptions | LockGrantedCallback,
-    callback?: LockGrantedCallback
+    optionsOrCallback: LockOptions | LockGrantedCallback<unknown>,
+    callback?: LockGrantedCallback<unknown>
   ): Promise<unknown> {
     // Extract the actual callback and options
     const hasOptions = typeof optionsOrCallback === 'object' && optionsOrCallback !== null;
-    const actualCallback = hasOptions ? callback : (optionsOrCallback as LockGrantedCallback);
+    const actualCallback = hasOptions ? callback : (optionsOrCallback as LockGrantedCallback<unknown>);
     const actualOptions = hasOptions ? (optionsOrCallback as LockOptions) : {};
 
     // Add a timeout to prevent infinite waiting

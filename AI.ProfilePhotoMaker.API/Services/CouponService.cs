@@ -74,7 +74,14 @@ public class CouponService : ICouponService
         return (true, "Coupon is valid", discountAmount);
     }
 
-    public async Task<bool> RedeemCouponAsync(string code, string userId, decimal originalPrice, decimal discountApplied)
+    public async Task<bool> RedeemCouponAsync(
+        string code,
+        string userId,
+        decimal originalPrice,
+        decimal discountApplied,
+        int? paymentTransactionId = null,
+        string? webhookOperationKey = null,
+        string? webhookOperationToken = null)
     {
         if (string.IsNullOrWhiteSpace(code) || discountApplied <= 0)
         {
@@ -84,16 +91,52 @@ public class CouponService : ICouponService
         var normalizedCode = code.Trim().ToUpperInvariant();
 
         var strategy = _context.Database.CreateExecutionStrategy();
+        var firstAttempt = true;
         try
         {
             return await strategy.ExecuteAsync(async () =>
             {
+                if (!firstAttempt)
+                {
+                    _context.ChangeTracker.Clear();
+                }
+                firstAttempt = false;
                 await using var transaction = await _context.Database.BeginTransactionAsync();
+
+                if (!string.IsNullOrWhiteSpace(webhookOperationKey) && !string.IsNullOrWhiteSpace(webhookOperationToken))
+                {
+                    var fenced = await _context.StripeWebhookOperations
+                        .Where(operation => operation.OperationKey == webhookOperationKey &&
+                                            operation.OperationToken == webhookOperationToken &&
+                                            operation.Status == StripeWebhookOperationStatus.Processing)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(operation => operation.UpdatedAt, operation => operation.UpdatedAt));
+                    if (fenced != 1)
+                    {
+                        throw new InvalidOperationException("Stripe webhook operation ownership was lost before coupon redemption.");
+                    }
+                }
 
                 var coupon = await _context.Coupons
                     .FirstOrDefaultAsync(c => c.Code == normalizedCode);
 
-                if (coupon == null || !coupon.IsActive)
+                if (coupon == null)
+                {
+                    return false;
+                }
+
+                var existingRedemption = await _context.CouponRedemptions
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.CouponId == coupon.Id && r.UserId == userId);
+                if (existingRedemption != null)
+                {
+                    return paymentTransactionId.HasValue &&
+                           existingRedemption.PaymentTransactionId == paymentTransactionId &&
+                           existingRedemption.OriginalPrice == originalPrice &&
+                           existingRedemption.DiscountApplied == discountApplied;
+                }
+
+                if (!coupon.IsActive)
                 {
                     return false;
                 }
@@ -104,14 +147,6 @@ public class CouponService : ICouponService
                 }
 
                 if (coupon.CurrentUsages >= coupon.MaxUsages)
-                {
-                    return false;
-                }
-
-                var existingRedemption = await _context.CouponRedemptions
-                    .AnyAsync(r => r.CouponId == coupon.Id && r.UserId == userId);
-
-                if (existingRedemption)
                 {
                     return false;
                 }
@@ -127,6 +162,7 @@ public class CouponService : ICouponService
                     DiscountApplied = discountApplied,
                     OriginalPrice = originalPrice,
                     FinalPrice = finalPrice,
+                    PaymentTransactionId = paymentTransactionId,
                     RedeemedAt = DateTime.UtcNow
                 });
 
@@ -137,10 +173,12 @@ public class CouponService : ICouponService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to redeem coupon {CouponCode} for user {UserId}",
+            // Rolled-back entities must not leak into the caller's receipt-status save.
+            _context.ChangeTracker.Clear();
+            _logger.LogError(ex, "Coupon redemption persistence failed for {CouponCode} and user {UserId}",
                 LoggingSanitizer.SanitizeId(code),
                 LoggingSanitizer.SanitizeId(userId));
-            return false;
+            throw;
         }
     }
 }

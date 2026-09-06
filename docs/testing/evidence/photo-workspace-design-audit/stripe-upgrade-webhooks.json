@@ -1,0 +1,19 @@
+{
+  "sdk": "49.1.0",
+  "apiVersion": "2025-10-29.clover",
+  "environment": "Stripe test mode / isolated local database",
+  "deliveries": [
+    {
+      "status": 200,
+      "eventId": "evt_3UCOmMLxCaLUJOXx1j4y0NTO"
+    },
+    {
+      "status": 200,
+      "eventId": "evt_3UCOmPLxCaLUJOXx1wKeWpAk"
+    },
+    {
+      "status": 200,
+      "eventId": "evt_3UCOmTLxCaLUJOXx1ImG0ZHR"
+    }
+  ]
+}

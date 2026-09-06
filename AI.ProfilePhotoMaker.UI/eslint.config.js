@@ -48,6 +48,7 @@ module.exports = tseslint.config(
       "@angular-eslint/no-output-native": "error",
       "@angular-eslint/no-output-on-prefix": "error",
       "@angular-eslint/prefer-on-push-component-change-detection": "off", // Disabled to reduce warnings
+      "@angular-eslint/prefer-inject": "off", // Preserve established constructor DI; migrate separately if desired
       
       // TypeScript rules for better code quality - Strategic adjustments
       "@typescript-eslint/no-unused-vars": ["warn", { 

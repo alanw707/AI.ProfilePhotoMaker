@@ -223,7 +223,7 @@ public class EnhancementController : ControllerBase
                     error = new
                     {
                         code = "PremiumAugmentationEntitlementRequired",
-                        message = "Unlock a Pro Package or add-on before applying premium augmentations."
+                        message = "Unlock a Pro Package before applying premium augmentations."
                     }
                 });
             }

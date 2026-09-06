@@ -20,6 +20,7 @@ public class ProcessedImage
     public string? GenerationMode { get; set; }
     public string? PromptVersion { get; set; }
     public string? CorrelationId { get; set; }
+    public string? GenerationOperationToken { get; set; }
     public int? CreditCost { get; set; }
     public string? GenerationStatus { get; set; }
     public string? FailureReason { get; set; }

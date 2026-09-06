@@ -61,6 +61,7 @@ export interface ResumableHeadshotPreview {
   style: string;
   createdAt: string;
   hasRawPreview: boolean;
+  isPaidCandidate?: boolean;
   canPromotePreview: boolean;
   activePackageCode?: 'starter_package' | 'pro_package' | string | null;
   remainingCandidateCount: number;

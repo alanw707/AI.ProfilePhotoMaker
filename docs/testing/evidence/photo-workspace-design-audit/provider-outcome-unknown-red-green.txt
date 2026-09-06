@@ -1,0 +1,59 @@
+Ambiguous provider outcome — local HTTP fault injection and separate SQLite contexts
+Real OpenAI adapter/image service; no external provider request or paid AI call.
+Timeout, network loss and malformed successful response retain Processing and charge.
+Expired-claim replay rejects before another provider call. Existing definitive-failure refund tests remain.
+Stale-worker test now expects retained charge: it cannot compensate unpersisted provider work.
+
+--- RED ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:02.56]     AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_AmbiguousOpenAIOutcomeBlocksReplayAcrossContexts(failure: "network") [FAIL]
+[xUnit.net 00:00:02.67]     AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_AmbiguousOpenAIOutcomeBlocksReplayAcrossContexts(failure: "timeout") [FAIL]
+[xUnit.net 00:00:02.90]     AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_AmbiguousOpenAIOutcomeBlocksReplayAcrossContexts(failure: "malformed-response") [FAIL]
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_AmbiguousOpenAIOutcomeBlocksReplayAcrossContexts(failure: "network") [2 s]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: Processing
+Actual:   Failed
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_AmbiguousOpenAIOutcomeBlocksReplayAcrossContexts(String failure) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/HeadshotGenerationServiceTests.cs:line 403
+   at AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_AmbiguousOpenAIOutcomeBlocksReplayAcrossContexts(String failure) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/HeadshotGenerationServiceTests.cs:line 413
+--- End of stack trace from previous location ---
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_AmbiguousOpenAIOutcomeBlocksReplayAcrossContexts(failure: "timeout") [113 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: Processing
+Actual:   Failed
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_AmbiguousOpenAIOutcomeBlocksReplayAcrossContexts(String failure) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/HeadshotGenerationServiceTests.cs:line 403
+   at AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_AmbiguousOpenAIOutcomeBlocksReplayAcrossContexts(String failure) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/HeadshotGenerationServiceTests.cs:line 413
+--- End of stack trace from previous location ---
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_AmbiguousOpenAIOutcomeBlocksReplayAcrossContexts(failure: "malformed-response") [219 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: Processing
+Actual:   Failed
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_AmbiguousOpenAIOutcomeBlocksReplayAcrossContexts(String failure) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/HeadshotGenerationServiceTests.cs:line 403
+   at AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_AmbiguousOpenAIOutcomeBlocksReplayAcrossContexts(String failure) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/HeadshotGenerationServiceTests.cs:line 413
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     3, Passed:     0, Skipped:     0, Total:     3, Duration: 2 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- GREEN ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    20, Skipped:     0, Total:    20, Duration: 4 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- FULL API ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   406, Skipped:     0, Total:   406, Duration: 1 m 15 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)

@@ -1,0 +1,34 @@
+Final-image paid workflow verification after coupon-capacity concurrency fix
+
+Local Docker SQL Server/Azurite/API/frontend; deterministic fixed-image provider,
+not paid AI. Fresh local account registered/confirmed/logged in; upload/scoring,
+free preview and blob round trip passed. Real Stripe TEST-mode purchase and
+16 concurrent locally HMAC-signed event deliveries preceded paid generation.
+
+Command: node /tmp/aipm-compose-verify/paid-workflow.cjs
+Execution output:
+PASS local Docker paid generation, entitlement accounting, premium augmentation, and export ZIP
+
+Sanitized result:
+{
+  "provider": "local deterministic fixed-image fixture, not AI",
+  "candidates": 9,
+  "premiumAugmentation": true,
+  "exportBytes": 349235,
+  "candidateAllowanceConsumed": 9,
+  "premiumAllowanceConsumed": 1,
+  "exportKitConsumed": 1,
+  "creditsConsumed": 10,
+  "pageErrors": []
+}
+
+The browser check asserts generation success and nine candidates, successful
+premium response, successful export with >500 bytes, and before/after credit
+and entitlement deltas. This does not assess AI quality or independently inspect
+every ZIP member. Paid-workflow state and blob retrieval survived stack restart.
+
+Private execution logs: /tmp/aipm-compose-verify/
+paid-workflow-coupon-final.txt, preview-coupon-final.txt,
+stripe-coupon-final.txt, restart-coupon-verify.txt,
+docker-coupon-limit-final.txt, api-coupon-limit-final.txt.
+No production changes, real-money purchase, or paid-provider calls.

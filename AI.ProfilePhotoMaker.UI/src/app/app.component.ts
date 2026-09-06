@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, HostListener, inject, OnInit } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
+import { ChangeDetectionStrategy, Component, HostListener, inject, OnInit, DOCUMENT } from '@angular/core';
+
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';

@@ -18,7 +18,7 @@ import {
 import { AuthService } from '../../services/auth.service';
 import { NotificationService } from '../../services/notification.service';
 import { ThemeService } from '../../services/theme.service';
-import { Subscription } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import {
   loadStripe,
@@ -156,14 +156,18 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   loadPackages(): void {
     this.isLoadingPackages = true;
 
-    this._profileWorkflowService.getOutcomePackages().subscribe({
-      next: response => this._handleOutcomePackagesResponse(response),
-      error: error => this._handlePackagesError(error),
-      complete: () => {
-        this.isLoadingPackages = false;
-        this._cdr.detectChanges();
-      },
-    });
+    this._profileWorkflowService
+      .getOutcomePackages()
+      .pipe(
+        finalize(() => {
+          this.isLoadingPackages = false;
+          this._cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: response => this._handleOutcomePackagesResponse(response),
+        error: error => this._handlePackagesError(error),
+      });
   }
 
   private _handleOutcomePackagesResponse(response: {

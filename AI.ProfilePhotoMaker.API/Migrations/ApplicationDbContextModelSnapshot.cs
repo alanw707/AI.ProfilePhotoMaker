@@ -193,6 +193,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("CurrentUsages")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<int>("DiscountType")
@@ -203,12 +204,15 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasColumnType("decimal(10,2)");
 
                     b.Property<DateTime?>("ExpiresAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsActive")
+                        .IsConcurrencyToken()
                         .HasColumnType("bit");
 
                     b.Property<int>("MaxUsages")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -246,6 +250,9 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<int?>("PaymentTransactionId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("RedeemedAt")
                         .HasColumnType("datetime2");
 
@@ -254,6 +261,10 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PaymentTransactionId")
+                        .IsUnique()
+                        .HasFilter("[PaymentTransactionId] IS NOT NULL");
 
                     b.HasIndex("CouponId", "UserId")
                         .IsUnique()
@@ -456,6 +467,57 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasDatabaseName("IX_FeedbackSubmissions_UserId");
 
                     b.ToTable("FeedbackSubmissions");
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.HeadshotGenerationOperation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("LeaseExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OperationToken")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Status", "LeaseExpiresAt");
+
+                    b.ToTable("HeadshotGenerationOperations");
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.MarketingCampaign", b =>
@@ -939,6 +1001,10 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<string>("GenerationOperationToken")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("GenerationStatus")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
@@ -1051,6 +1117,73 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasDatabaseName("IX_RetentionDeletionWarningLogs_UserId_DaysBeforeDeletion_DeletionDate");
 
                     b.ToTable("RetentionDeletionWarningLogs");
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.StripeWebhookOperation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime>("LeaseExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OperationKey")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("nvarchar(320)");
+
+                    b.Property<string>("OperationToken")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("PaymentIntentId")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StripeEventId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationKey")
+                        .IsUnique();
+
+                    b.HasIndex("StripeEventId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "LeaseExpiresAt");
+
+                    b.ToTable("StripeWebhookOperations");
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Style", b =>
@@ -1522,30 +1655,37 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("ExpiresAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("datetime2");
 
                     b.Property<int>("OutcomePackageDefinitionId")
                         .HasColumnType("int");
 
                     b.Property<bool>("PlatformExportKitAvailable")
+                        .IsConcurrencyToken()
                         .HasColumnType("bit");
 
                     b.Property<int>("RemainingCandidates")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<int>("RemainingPackageUses")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<int>("RemainingPremiumAugmentations")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<int>("RemainingRefinements")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<int?>("SourcePaymentTransactionId")
                         .HasColumnType("int");
 
                     b.Property<int>("Status")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -1582,6 +1722,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Credits")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<string>("Ethnicity")
@@ -1798,6 +1939,11 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.PaymentTransaction", null)
+                        .WithMany()
+                        .HasForeignKey("PaymentTransactionId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.Navigation("Coupon");
                 });
 
@@ -1829,6 +1975,15 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.HeadshotGenerationOperation", b =>
+                {
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.MarketingEmailLog", b =>
