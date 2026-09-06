@@ -10,6 +10,7 @@ export interface HeadshotGenerationRequest {
   packageCode?: 'free_preview' | 'starter_package' | 'pro_package' | string;
   numOutputs?: number;
   isRegeneration?: boolean;
+  refinementCode?: string;
   reusedPreviewProcessedImageId?: number;
   replacesProcessedImageId?: number;
   useCaseCode?: string;

@@ -794,6 +794,136 @@ public class HeadshotGenerationServiceTests
         Assert.Equal("InvalidImageSource", ex.Code);
     }
 
+    [Theory]
+    [InlineData("instant_headshot", "subtle_smile", "closed-mouth smile")]
+    [InlineData("instant_headshot_promoted_preview", "relaxed_expression", "Relax facial tension")]
+    [InlineData("premium_augmentation", "upright_posture", "shoulder posture")]
+    [InlineData("photo_refinement", "subtle_smile", "closed-mouth smile")]
+    public async Task GuidedRefinement_EditsSelectedProofWithFixedInstructionsAndReplaysOnce(
+        string mode, string code, string instruction)
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, credits: 0);
+        var originalSource = $"dev/enhanced/{userId}/expired-upload.png";
+        var selected = new ProcessedImage
+        {
+            UserProfileId = (await context.UserProfiles.SingleAsync()).Id,
+            OriginalImageUrl = originalSource,
+            ProcessedImageUrl = mode == "instant_headshot_promoted_preview"
+                ? $"dev/generated-private/{userId}/selected.png"
+                : $"dev/generated/{userId}/selected.png",
+            Style = "retired-portrait-style", IsGenerated = true,
+            GenerationMode = mode, GenerationStatus = "succeeded"
+        };
+        context.ProcessedImages.Add(selected);
+        await context.SaveChangesAsync();
+        var initialAllowance = mode == "instant_headshot" ? 1 : 4;
+        var entitlement = new UserPackageEntitlement
+        {
+            Status = PackageEntitlementStatus.Active,
+            RemainingCandidates = 0, RemainingPackageUses = 0,
+            RemainingRefinements = initialAllowance, RemainingPremiumAugmentations = 0,
+            OutcomePackageDefinition = new OutcomePackageDefinition { Code = "pro_package" }
+        };
+        var provider = new FakeHeadshotProvider("data:image/png;base64,AQID");
+        var service = CreateService(context, new FakeStorageService(originalSource), provider,
+            new FakeOutcomePackageService(entitlement));
+        var request = new HeadshotGenerationRequestDto
+        {
+            ImageStoragePath = selected.ProcessedImageUrl, PackageCode = "pro_package",
+            IsRegeneration = true, ReplacesProcessedImageId = selected.Id,
+            RefinementCode = code, ClientRequestId = "deliberate-edit"
+        };
+        var first = await service.GenerateHeadshotAsync(request, userId);
+        var replay = await service.GenerateHeadshotAsync(request, userId);
+        Assert.Equal(first.ProcessedImageId, replay.ProcessedImageId);
+        Assert.Equal(1, provider.CallCount);
+        Assert.Equal(selected.ProcessedImageUrl, provider.Requests.Single().ImageStoragePath);
+        Assert.Equal(selected.Style, provider.Requests.Single().Style);
+        Assert.Contains(instruction, provider.Requests.Single().PromptTemplate);
+        Assert.Contains("Change only", provider.Requests.Single().PromptTemplate);
+        Assert.DoesNotContain("Use-case recipe", provider.Requests.Single().PromptTemplate);
+        Assert.Equal(initialAllowance - 1, entitlement.RemainingRefinements);
+        Assert.Equal(0, entitlement.RemainingPremiumAugmentations);
+        Assert.Equal(0, entitlement.RemainingCandidates);
+        Assert.Equal(selected.Id, (await context.ProcessedImages.FindAsync(first.ProcessedImageId))!.ReplacesProcessedImageId);
+        request.RefinementCode = code == "subtle_smile" ? "relaxed_expression" : "subtle_smile";
+        if (initialAllowance == 1)
+        {
+            var exhausted = await Assert.ThrowsAsync<HeadshotGenerationException>(() => service.GenerateHeadshotAsync(request, userId));
+            Assert.Equal("PackageEntitlementRequired", exhausted.Code);
+            Assert.Equal(1, provider.CallCount);
+            return;
+        }
+        var differentChoice = await service.GenerateHeadshotAsync(request, userId);
+        Assert.NotEqual(first.ProcessedImageId, differentChoice.ProcessedImageId);
+        Assert.Equal(2, provider.CallCount);
+        Assert.NotEqual(provider.Requests[0].PromptTemplate, provider.Requests[1].PromptTemplate);
+        Assert.Equal(2, entitlement.RemainingRefinements);
+    }
+
+    [Theory]
+    [InlineData("foreign-owner")]
+    [InlineData("watermarked-preview")]
+    [InlineData("mismatched-path")]
+    [InlineData("foreign-path")]
+    [InlineData("traversal")]
+    public async Task GuidedRefinement_RejectsUnownedOrUnpaidSource(string invalidSource)
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, credits: 10);
+        var ownerId = invalidSource == "foreign-owner" ? await SeedUserProfileAsync(context, 10) : userId;
+        var selected = new ProcessedImage
+        {
+            UserProfileId = (await context.UserProfiles.SingleAsync(p => p.UserId == ownerId)).Id,
+            ProcessedImageUrl = invalidSource switch
+            {
+                "foreign-path" => "dev/generated/another-user/selected.png",
+                "traversal" => $"dev/generated/{ownerId}/../other/selected.png",
+                _ => $"dev/generated/{ownerId}/selected.png"
+            }, Style = "linkedin",
+            GenerationMode = "instant_headshot", GenerationStatus = "succeeded", IsGenerated = true,
+            RawImageStoragePath = invalidSource == "watermarked-preview" ? "private/raw.png" : null
+        };
+        context.ProcessedImages.Add(selected);
+        await context.SaveChangesAsync();
+        var provider = new FakeHeadshotProvider("data:image/png;base64,AQID");
+        var service = CreateService(context, new FakeStorageService(), provider);
+        var error = await Assert.ThrowsAsync<HeadshotGenerationException>(() => service.GenerateHeadshotAsync(
+            new HeadshotGenerationRequestDto
+            {
+                ImageStoragePath = invalidSource == "mismatched-path" ? "other.png" : selected.ProcessedImageUrl,
+                PackageCode = "pro_package", RefinementCode = "subtle_smile", IsRegeneration = true,
+                ReplacesProcessedImageId = selected.Id
+            }, userId));
+        Assert.Equal("InvalidImageSource", error.Code);
+        Assert.Equal(0, provider.CallCount);
+        Assert.Empty(context.HeadshotGenerationOperations);
+    }
+
+    [Theory]
+    [InlineData("invented", true, 1, "pro_package")]
+    [InlineData("subtle_smile", false, 1, "pro_package")]
+    [InlineData("subtle_smile", true, 9, "pro_package")]
+    [InlineData("subtle_smile", true, 1, "free_preview")]
+    public async Task GuidedRefinement_RejectsInvalidChoiceOrModeBeforeProvider(
+        string code, bool regeneration, int outputs, string packageCode)
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, credits: 10);
+        var provider = new FakeHeadshotProvider("data:image/png;base64,AQID");
+        var service = CreateService(context, new FakeStorageService(), provider);
+        var error = await Assert.ThrowsAsync<HeadshotGenerationException>(() => service.GenerateHeadshotAsync(
+            new HeadshotGenerationRequestDto
+            {
+                ImageStoragePath = $"dev/enhanced/{userId}/source.png", PackageCode = packageCode,
+                RefinementCode = code, IsRegeneration = regeneration, NumOutputs = outputs
+            }, userId));
+        Assert.Equal("InvalidRefinement", error.Code);
+        Assert.Equal(0, provider.CallCount);
+        Assert.Empty(context.HeadshotGenerationOperations);
+    }
+
     [Fact]
     public async Task GenerateHeadshotAsync_StoresRefinementReplacementLink()
     {

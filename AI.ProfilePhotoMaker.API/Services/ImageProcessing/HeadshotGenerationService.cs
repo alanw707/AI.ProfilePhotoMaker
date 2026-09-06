@@ -76,10 +76,13 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             throw new InvalidOperationException("User profile not found.");
         }
 
-        var sourcePath = ValidateAndNormalizeSourcePath(request.ImageStoragePath, userId);
-        var portraitStyle = await ResolvePortraitStyleAsync(request.Style, cancellationToken);
-        request.Style = portraitStyle.Name;
         var packageCode = NormalizePackageCode(request.PackageCode);
+        var refinementPrompt = request.RefinementCode == null ? null : BuildRefinementPrompt(request.RefinementCode);
+        if (refinementPrompt != null && (!request.IsRegeneration || request.NumOutputs != 1 ||
+            packageCode == "free_preview" || request.ReusedPreviewProcessedImageId.HasValue))
+        {
+            throw new HeadshotGenerationException("InvalidRefinement", "Choose one refinement for one paid photo.");
+        }
         ProcessedImage? replacedCandidate = null;
         if (request.IsRegeneration)
         {
@@ -89,16 +92,28 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                     i.UserProfileId == profile.Id &&
                     i.GenerationStatus == "succeeded" &&
                     (i.GenerationMode == "instant_headshot" ||
-                     i.GenerationMode == "instant_headshot_promoted_preview"),
+                     i.GenerationMode == "instant_headshot_promoted_preview" ||
+                     (refinementPrompt != null && (i.GenerationMode == "premium_augmentation" || i.GenerationMode == "photo_refinement"))),
                     cancellationToken)
                 : null;
-            if (replacedCandidate == null || replacedCandidate.OriginalImageUrl != sourcePath)
+            if (replacedCandidate == null ||
+                (refinementPrompt != null
+                    ? replacedCandidate.ProcessedImageUrl != request.ImageStoragePath || !string.IsNullOrEmpty(replacedCandidate.RawImageStoragePath)
+                    : replacedCandidate.OriginalImageUrl != request.ImageStoragePath))
             {
                 throw new HeadshotGenerationException(
                     "InvalidImageSource",
-                    "Choose an owned candidate from this package before using a refinement.");
+                    "Choose an owned, unwatermarked candidate before using a refinement.");
             }
         }
+        // Guided edits use the server-owned selected proof, never regenerate the original upload.
+        var sourcePath = ValidateAndNormalizeSourcePath(
+            refinementPrompt != null ? replacedCandidate!.ProcessedImageUrl : request.ImageStoragePath,
+            userId, selectedProof: refinementPrompt != null);
+        var portraitStyle = refinementPrompt != null
+            ? new Style { Name = replacedCandidate!.Style }
+            : await ResolvePortraitStyleAsync(request.Style, cancellationToken);
+        request.Style = portraitStyle.Name;
         var requestedOutputs = Math.Clamp(request.NumOutputs, 1, 9);
         requestedOutputs = packageCode switch
         {
@@ -261,7 +276,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                 var candidateCorrelationId = requestedOutputs == 1
                     ? correlationId
                     : $"{correlationId}:candidate:{outputIndex + 1}";
-                var recipe = packageCode == "free_preview"
+                var recipe = packageCode == "free_preview" || refinementPrompt != null
                     ? HeadshotRecipeRegistry.None(request.UseCaseCode)
                     : HeadshotRecipeRegistry.Resolve(request.UseCaseCode, request.RecipeCode, outputIndex);
                 await EnsureGenerationOperationOwnershipAsync(userId, correlationId, operationToken, cancellationToken);
@@ -272,7 +287,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                     ImageStoragePath = sourcePath,
                     Style = portraitStyle.Name,
                     Background = request.Background,
-                    PromptTemplate = ApplyRecipeToPrompt(BuildInstantHeadshotPrompt(portraitStyle.PromptTemplate, profile), recipe),
+                    PromptTemplate = refinementPrompt ?? ApplyRecipeToPrompt(BuildInstantHeadshotPrompt(portraitStyle.PromptTemplate, profile), recipe),
                     UseCaseCode = recipe.UseCaseCode,
                     RecipeCode = recipe.Code,
                     Label = recipe.Label,
@@ -293,7 +308,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
 
                 var processedImage = new ProcessedImage
                 {
-                    OriginalImageUrl = sourcePath,
+                    OriginalImageUrl = refinementPrompt != null ? replacedCandidate!.OriginalImageUrl : sourcePath,
                     ProcessedImageUrl = storedOutput.DisplayPath,
                     Style = NormalizeStyle(request.Style),
                     UserProfileId = profile.Id,
@@ -309,7 +324,9 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                     RawImageStoragePath = storedOutput.RawPath,
                     ReplacesProcessedImageId = replacedCandidate?.Id,
                     GenerationOperationToken = operationToken,
-                    PromptVersion = string.IsNullOrWhiteSpace(recipe.Code) ? result.PromptVersion : $"{result.PromptVersion}:{recipe.Code}"
+                    PromptVersion = refinementPrompt != null
+                        ? $"{result.PromptVersion}:refinement-v1:{request.RefinementCode}"
+                        : string.IsNullOrWhiteSpace(recipe.Code) ? result.PromptVersion : $"{result.PromptVersion}:{recipe.Code}"
                 };
                 processedImage.SetScheduledDeletionDate();
 
@@ -783,8 +800,25 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             request.IsRegeneration ? "regenerate" : "generate",
             request.ReplacesProcessedImageId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "none",
             clientRequestId);
+        // Keep legacy receipts stable; guided choices must not collide with each other.
+        if (request.RefinementCode != null) normalized += $"|refinement:{request.RefinementCode}";
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
         return $"{ActionName}:{hash[..32]}";
+    }
+
+    private static string BuildRefinementPrompt(string code)
+    {
+        var instruction = code switch
+        {
+            "subtle_smile" => "Add a slight, natural closed-mouth smile. Do not show teeth or exaggerate the smile.",
+            "relaxed_expression" => "Relax facial tension into a calm, neutral expression. Keep the mouth closed and the existing gaze direction.",
+            "upright_posture" => "Gently straighten shoulder posture. Keep the head angle, facial expression and camera viewpoint unchanged.",
+            _ => throw new HeadshotGenerationException("InvalidRefinement", "Choose a supported refinement before generating.")
+        };
+        return "Edit the supplied selected proof, not a new portrait. Change only the requested detail, using the smallest possible adjustment. " +
+            instruction + " Preserve identity, facial structure, age, skin tone and natural skin texture. " +
+            "Keep clothing, hair, background, lighting, framing and all other details unchanged. " +
+            "Do not add beauty retouching, new objects, text or a different style. If the requested detail already meets the instruction, leave it unchanged.";
     }
 
     private static string ApplyRecipeToPrompt(string basePrompt, HeadshotRecipe recipe)
@@ -797,7 +831,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         return $"{basePrompt}\n\nUse-case recipe: {recipe.PromptModifier}\nKeep the same person, facial structure, and natural skin texture. Avoid over-smoothing, synthetic-looking features, distorted hands, text artifacts, logos, badges, or misleading professional credentials.";
     }
 
-    private string ValidateAndNormalizeSourcePath(string storagePath, string userId)
+    private string ValidateAndNormalizeSourcePath(string storagePath, string userId, bool selectedProof = false)
     {
         if (string.IsNullOrWhiteSpace(storagePath))
         {
@@ -823,11 +857,10 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             throw new HeadshotGenerationException("InvalidImageSource", "Invalid image source.");
         }
 
-        var allowedPrefixes = new[]
-        {
-            _pathResolver.GetDirectoryPrefix(StorageType.Upload, userId),
-            _pathResolver.GetDirectoryPrefix(StorageType.Enhanced, userId)
-        };
+        var allowedTypes = selectedProof
+            ? new[] { StorageType.Enhanced, StorageType.Generated, StorageType.GeneratedPrivate }
+            : new[] { StorageType.Upload, StorageType.Enhanced };
+        var allowedPrefixes = allowedTypes.Select(type => _pathResolver.GetDirectoryPrefix(type, userId));
 
         if (!allowedPrefixes.Any(prefix => trimmed.StartsWith(prefix, StringComparison.Ordinal) && trimmed.Length > prefix.Length))
         {

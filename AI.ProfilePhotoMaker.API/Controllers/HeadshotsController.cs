@@ -175,6 +175,7 @@ public class HeadshotsController : ControllerBase
             {
                 "InsufficientCredits" => 400,
                 "InvalidImageSource" => 400,
+                "InvalidRefinement" => 400,
                 "StyleUnavailable" => 400,
                 "PackageEntitlementRequired" => 402,
                 "GenerationInProgress" => 409,
@@ -259,6 +260,7 @@ public class HeadshotsController : ControllerBase
     {
         "InsufficientCredits" => "You do not have enough credits to generate a headshot.",
         "InvalidImageSource" => "Please upload or select a valid image before generating a headshot.",
+        "InvalidRefinement" => "Choose one supported refinement for your selected paid photo.",
         "StyleUnavailable" => "That portrait style is no longer available. Choose another style.",
         "PackageEntitlementRequired" => "Unlock or select an active profile photo package before generating these candidates.",
         "GenerationInProgress" => "This headshot request is already being generated. Please wait for it to finish.",

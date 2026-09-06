@@ -42,7 +42,7 @@ const score = {
   qualityGate: { status: 'pass', reasons: [], recommendations: [] },
 };
 
-async function installWorkflowMocks(page: import('@playwright/test').Page): Promise<void> {
+async function installWorkflowMocks(page: import('@playwright/test').Page) {
   const packages = [
     {
       id: 1,
@@ -99,7 +99,7 @@ async function installWorkflowMocks(page: import('@playwright/test').Page): Prom
   };
   const candidate = {
     imageUrl: resultImage,
-    storagePath: '',
+    storagePath: 'dev/generated/test-user/candidate.png',
     processedImageId: 101,
     provider: 'openai',
     model: 'gpt-image-2',
@@ -164,6 +164,8 @@ async function installWorkflowMocks(page: import('@playwright/test').Page): Prom
         },
       };
     } else if (path.endsWith('/headshots/generate')) {
+      const refinement = request.postDataJSON().refinementCode;
+      if (refinement) entitlement.remainingRefinements--;
       entitlement.remainingCandidates = 0;
       entitlement.remainingPackageUses = 0;
       body = {
@@ -171,7 +173,7 @@ async function installWorkflowMocks(page: import('@playwright/test').Page): Prom
         data: {
           ...candidate,
           imageUrl: resultImage,
-          candidates: Array.from({ length: 9 }, (_, index) => ({ ...candidate, processedImageId: 101 + index })),
+          candidates: refinement ? [{ ...candidate, processedImageId: 501 }] : Array.from({ length: 9 }, (_, index) => ({ ...candidate, processedImageId: 101 + index })),
           style: 'linkedin',
           background: 'auto',
           creditsCost: 0,
@@ -197,6 +199,7 @@ async function installWorkflowMocks(page: import('@playwright/test').Page): Prom
       body: JSON.stringify(body),
     });
   });
+  return entitlement;
 }
 
 test('Pro package exposes an explicit premium generation action', async ({ page }) => {
@@ -228,6 +231,7 @@ test('Pro package exposes an explicit premium generation action', async ({ page 
   if (await closeNotification.isVisible().catch(() => false)) {
     await closeNotification.click();
   }
+  await page.locator('.premium-edits summary').click();
   await page.getByRole('button', { name: /^Relighting/ }).click();
   const [premiumRequest] = await Promise.all([
     page.waitForRequest(request => new URL(request.url()).pathname.endsWith('/api/enhancement/enhance')),
@@ -236,3 +240,60 @@ test('Pro package exposes an explicit premium generation action', async ({ page 
   expect(premiumRequest.postDataJSON().enhancementType).toBe('relighting');
   expect(premiumRequest.postDataJSON().customPrompt).toBeTruthy();
 });
+
+// Use the dev server for this state-transition check so Angular's debug API can
+// simulate an entitlement refresh without spending a real premium allowance.
+for (const width of [390, 1440]) {
+  test(`exhausted premium picker disappears while guided refinements remain usable (${width})`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 950 });
+    const entitlement = await installWorkflowMocks(page);
+    await page.goto('/app/enhance?e2eAuthBypass=1');
+    const cookies = page.getByRole('button', { name: 'Reject Non-Essential' });
+    if (await cookies.isVisible()) await cookies.click();
+    await page.locator('input[type="file"]').setInputFiles(sourceImage);
+    await expect(page.getByRole('heading', { name: 'Choose your portrait direction' })).toBeVisible();
+    await page.getByRole('checkbox', { name: /I consent/ }).first().check();
+    await page.getByRole('button', { name: 'Generate 9 photos', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Refine the selected proof' })).toBeVisible();
+    const summary = page.locator('.premium-edits summary');
+    if (await summary.isVisible()) await summary.click();
+    await page.getByRole('button', { name: /^Relighting/ }).click();
+    await expect(page.getByRole('button', { name: 'Apply relighting', exact: true })).toBeVisible();
+    const premiumRequests: string[] = [];
+    page.on('request', request => {
+      if (new URL(request.url()).pathname.endsWith('/api/enhancement/enhance')) premiumRequests.push(request.url());
+    });
+    entitlement.remainingPremiumAugmentations = 0;
+    entitlement.remainingRefinements = 4;
+    await page.evaluate(() => {
+      const ng = (window as any).ng;
+      const component = ng.getComponent(document.querySelector('app-photo-enhancement'));
+      component.packageEntitlements = component.packageEntitlements.map((item: any) => ({
+        ...item, remainingPremiumAugmentations: 0, remainingRefinements: 4,
+      }));
+      ng.applyChanges(component);
+    });
+    await expect(page.getByRole('heading', { name: 'Choose the relighting direction' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Apply relighting', exact: true })).not.toBeVisible();
+    await expect(page.getByText('No premium edits remain. Your refinement allowance is unchanged.')).toBeVisible();
+    await expect(page.getByText('4 refinements remaining', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Choose a change', exact: true })).toBeDisabled();
+    await page.getByRole('radio', { name: /^Subtle smile/ }).check();
+    const apply = page.getByRole('button', { name: 'Apply subtle smile', exact: true });
+    await expect(apply).toBeEnabled();
+    await page.locator('.guided-refinement').screenshot({ path: `/tmp/aipm-guided-refinement-${width}.png` });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    const [request] = await Promise.all([
+      page.waitForRequest(request => new URL(request.url()).pathname.endsWith('/api/headshots/generate')),
+      apply.click(),
+    ]);
+    expect(request.postDataJSON()).toMatchObject({
+      refinementCode: 'subtle_smile', isRegeneration: true, numOutputs: 1,
+      imageStoragePath: 'dev/generated/test-user/candidate.png', replacesProcessedImageId: 101,
+    });
+    await expect(page.getByText('Subtle smile applied', { exact: true })).toBeVisible();
+    await expect(page.getByText('3 refinements remaining', { exact: true })).toBeVisible();
+    await expect(page.locator('.premium-edits summary')).toHaveText('Premium edits · 0 remaining');
+    expect(premiumRequests).toHaveLength(0);
+  });
+}

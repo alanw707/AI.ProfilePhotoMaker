@@ -18,6 +18,9 @@ public class HeadshotGenerationRequestDto
 
     public bool IsRegeneration { get; set; }
 
+    [StringLength(32)]
+    public string? RefinementCode { get; set; }
+
     public int? ReusedPreviewProcessedImageId { get; set; }
 
     public int? ReplacesProcessedImageId { get; set; }

@@ -694,21 +694,21 @@
         <div class="add-on-comparison" *ngIf="enhancedImage.previousDisplayUrl">
           <div class="section-heading">
             <h2>{{ enhancedImage.augmentationLabel || 'Premium add-on' }} applied</h2>
-            <p>Compare the selected candidate against the add-on result before exporting.</p>
+            <p>Compare your selected photo with the edited result before exporting.</p>
           </div>
           <div class="add-on-compare-grid">
             <div>
-              <span class="comparison-label">Before add-on</span>
+              <span class="comparison-label">Before edit</span>
               <img
                 [src]="enhancedImage.previousDisplayUrl"
-                alt="Candidate before premium add-on"
+                alt="Selected photo before edit"
                 class="comparison-image add-on-image" />
             </div>
             <div>
-              <span class="comparison-label">After add-on</span>
+              <span class="comparison-label">After edit</span>
               <img
                 [src]="enhancedImage.displayUrl"
-                alt="Candidate after premium add-on"
+                alt="Selected photo after edit"
                 class="comparison-image add-on-image" />
             </div>
           </div>
@@ -817,29 +817,46 @@
             </div>
           </div>
 
-          <ng-container *ngIf="arePremiumAugmentationsVisible && canUseRefinementTools()">
-            <div class="section-heading add-on-heading">
-              <h2>Refine the selected proof</h2>
-              <p>Refinements and Pro add-ons are optional finishing steps. They never count as package candidates.</p>
-            </div>
-            <div class="refinement-action" *ngIf="selectedPackageCode !== 'free_preview'">
-              <div>
-                <strong>Try another version</strong>
-                <span>{{ getCurrentPackageEntitlement()?.remainingRefinements ?? 0 }} refinements remaining</span>
+          <ng-container *ngIf="selectedPackageCode !== 'free_preview' && canUseRefinementTools()">
+            <section class="guided-refinement" *ngIf="isHeadshotMvpEnabled" aria-labelledby="refinement-title">
+              <div class="section-heading add-on-heading">
+                <h2 id="refinement-title">Refine the selected proof</h2>
+                <p>Choose one small change. We edit this photo and ask AI to preserve everything else, rather than create a new portrait. Results can still vary.</p>
               </div>
-              <button
-                class="btn btn-secondary"
-                type="button"
-                (click)="regenerateCurrentCandidate()"
-                [disabled]="!canStartRegeneration()">
-                Regenerate selected proof
-              </button>
-            </div>
+              <p class="refinement-balance" aria-live="polite">{{ getCurrentPackageEntitlement()?.remainingRefinements ?? 0 }} refinements remaining</p>
+              <fieldset class="refinement-options" *ngIf="hasSelectedPackageEntitlement(true)"
+                [disabled]="isProcessing || isApplyingPremiumAugmentation || !!interruptedGeneration">
+                <legend>What would you like to change?</legend>
+                <label *ngFor="let option of refinementOptions" class="refinement-option">
+                  <input type="radio" name="refinement" [value]="option.code" [(ngModel)]="selectedRefinementCode" />
+                  <span><strong>{{ option.label }}</strong><small>{{ option.description }}</small></span>
+                </label>
+              </fieldset>
+              <div class="refinement-action" *ngIf="hasSelectedPackageEntitlement(true)">
+                <p>Uses <strong>1 refinement</strong>, not a premium edit. Your previous photo stays saved.</p>
+                <button class="btn btn-primary" type="button"
+                  (click)="regenerateCurrentCandidate()" [disabled]="!canStartRegeneration()"
+                  aria-describedby="refinement-blocker">
+                  {{ getSelectedRefinement() ? 'Apply ' + getSelectedRefinement()!.label.toLowerCase() : 'Choose a change' }}
+                </button>
+              </div>
+              <p id="refinement-blocker" class="action-blocker" aria-live="polite">{{ getRefinementBlockerText() }}</p>
+              <p class="refinement-note">For predictable crop, brightness and rotation changes, use the adjustment controls above. They do not use refinements.</p>
+              <label class="consent-checkbox" *ngIf="!biometricConsentAccepted">
+                <input type="checkbox" [(ngModel)]="biometricConsentAccepted" (ngModelChange)="onBiometricConsentChange($event)" />
+                <span>I consent to AI processing of my selected photo to apply this edit.</span>
+              </label>
+            </section>
             <p class="action-blocker" *ngIf="errorMessage" role="alert">{{ errorMessage }}</p>
             <app-turnstile
               *ngIf="turnstileSiteKey && !turnstileToken"
               [siteKey]="turnstileSiteKey"
               (tokenChange)="onTurnstileTokenChange($event)"></app-turnstile>
+            <details class="premium-edits" *ngIf="arePremiumAugmentationsVisible">
+              <summary>Premium edits · {{ getRemainingPremiumAugmentationCount() }} remaining</summary>
+              <p>A separate allowance for lighting, clothing, backgrounds and retouching—not your refinements above.</p>
+              <p *ngIf="!hasPremiumAugmentationEntitlement()">No premium edits remain. Your refinement allowance is unchanged.</p>
+              <ng-container *ngIf="hasPremiumAugmentationEntitlement()">
             <div class="add-on-grid" aria-label="Premium add-on types">
               <button
                 class="add-on-card"
@@ -874,7 +891,8 @@
                     type="radio"
                     name="premium-augmentation-option"
                     [value]="option.id"
-                    [(ngModel)]="selectedPremiumAugmentationOptionId" />
+                    [(ngModel)]="selectedPremiumAugmentationOptionId"
+                    [disabled]="!canApplyPremiumAugmentation()" />
                   <span>
                     <strong>{{ option.label }}</strong>
                     <small>{{ option.description }}</small>
@@ -886,11 +904,14 @@
                   <strong>One premium add-on</strong>
                   is used only after this new proof is created.
                 </p>
-                <button class="btn btn-primary" type="button" (click)="applySelectedPremiumAugmentation()">
+                <button class="btn btn-primary" type="button" (click)="applySelectedPremiumAugmentation()"
+                  [disabled]="!canGeneratePremiumAugmentation() || !getSelectedPremiumAugmentationOption()">
                   Apply {{ augmentation.label.toLowerCase() }}
                 </button>
               </div>
             </section>
+              </ng-container>
+            </details>
           </ng-container>
 
           <section

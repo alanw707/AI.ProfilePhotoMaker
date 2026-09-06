@@ -36,6 +36,82 @@ function createComponent(
 }
 
 describe('PhotoEnhancementComponent package fulfillment', () => {
+  it('can retrieve a saved refinement receipt after the last allowance was consumed', () => {
+    const component = createComponent('pro_package', 9);
+    Object.assign(component, {
+      isEmailConfirmed: true, biometricConsentAccepted: true, enhancementType: 'headshot',
+      turnstileSiteKey: '',
+      packageEntitlements: [{ packageCode: 'pro_package', status: 'active',
+        remainingCandidates: 0, remainingPackageUses: 0, remainingRefinements: 0 }],
+      interruptedGeneration: {
+        clientRequestId: 'same-request', imageStoragePath: 'saved/proof.png',
+        styleName: 'linkedin', packageCode: 'pro_package', useCaseCode: 'linkedin_executive',
+        isRegeneration: true, refinementCode: 'subtle_smile', replacesProcessedImageId: 99,
+        candidateSlotId: 4, startedAt: new Date().toISOString(),
+      },
+    });
+    (component as any)._cdr = { markForCheck: () => undefined };
+    (component as any).selectPortraitStyleByName = () => undefined;
+    (component as any).getStorageProxyUrl = (path: string) => path;
+    (component as any).createEnhancedImageViewModel = (url: string, type: string, processedImageId: number, storagePath: string) => ({ url, type, processedImageId, storagePath });
+    const start = spyOn(component, 'startEnhancement').and.resolveTo();
+    expect(component.canResumeInterruptedGeneration()).toBeTrue();
+    component.resumeInterruptedGeneration();
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(component.canStartEnhancement(true)).toBeTrue();
+    expect(component.canStartRegeneration()).toBeFalse();
+    expect((component as any)._activeGenerationClientRequestId).toBe('same-request');
+    component.selectedRefinementCode = 'upright_posture';
+    expect(component.canStartEnhancement(true)).toBeFalse();
+  });
+
+  for (const enhancementType of ['headshot', 'headshot_linkedin']) {
+    it(`sends a deliberate selected-photo edit through the fenced API (${enhancementType})`, async () => {
+      const component = createComponent('pro_package', 9);
+      Object.assign(component, {
+        enhancementType, selectedFile: null, previewSourceStoragePath: null,
+        selectedPortraitStyle: null, selectedCandidateId: 4,
+        enhancedImage: { processedImageId: 99, storagePath: 'generated/premium-result.png', url: 'selected.jpg', displayUrl: 'selected.jpg' },
+        isEmailConfirmed: true, biometricConsentAccepted: true,
+        turnstileSiteKey: '', isProfilePhotoScoreVisible: false, arePremiumAugmentationsVisible: true,
+        packageEntitlements: [{ packageCode: 'pro_package', status: 'active',
+          remainingCandidates: 0, remainingPackageUses: 0, remainingRefinements: 4,
+          remainingPremiumAugmentations: 0 }],
+      });
+      expect(component.canStartRegeneration()).toBeFalse();
+      component.selectedRefinementCode = 'subtle_smile';
+      expect(component.canStartRegeneration()).toBeTrue();
+      expect(component.canApplyPremiumAugmentation()).toBeFalse();
+      let sent: any;
+      (component as any)._headshotGenerationService = {
+        generateHeadshot: (request: any) => {
+          sent = request;
+          return of({ success: true, data: { ...candidate(100), candidates: [candidate(100)] } });
+        },
+      };
+      (component as any)._cdr = { detectChanges: () => undefined, markForCheck: () => undefined };
+      (component as any)._stateService = { refreshGeneratedPhotosCount: () => undefined };
+      (component as any)._analytics = { trackEvent: () => undefined };
+      (component as any)._interruptedGenerationKey = 'guided-refinement-test';
+      (component as any).createEnhancedImageViewModel = (url: string, type: string, processedImageId: number, storagePath: string) => ({ url, type, processedImageId, storagePath });
+      spyOn(component as any, 'loadAuthorizedCandidateImages').and.callFake(async (images: any) => images);
+      const upload = spyOn(component as any, 'uploadImageForEnhancement');
+      spyOn(component as any, 'refreshCreditState').and.resolveTo();
+      (component as any)._nextRequestIsRegeneration = true;
+      await component.startEnhancement();
+      expect(sent).toEqual(jasmine.objectContaining({
+        imageStoragePath: 'generated/premium-result.png', replacesProcessedImageId: 99,
+        refinementCode: 'subtle_smile', numOutputs: 1, isRegeneration: true,
+      }));
+      expect(upload).not.toHaveBeenCalled();
+      expect(component.enhancedImage?.previousDisplayUrl).toBe('selected.jpg');
+      expect(component.generatedCandidates.length).toBe(9);
+      expect(component.generatedCandidates[3].processedImageId).toBe(100);
+      expect(component.selectedRefinementCode).toBeNull();
+      expect(localStorage.getItem('guided-refinement-test')).toBeNull();
+    });
+  }
+
   it('sends only the storage path when legacy enhancement upload returns a relative display URL', async () => {
     const component = createComponent('free_preview', 0);
     let request: any;
@@ -335,6 +411,8 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.isPaidPackageFulfillmentPending()).toBeFalse();
     expect(component.getPackageTicketStatus()).toBe('Refining saved photo');
     spyOn(component, 'canStartEnhancement').and.returnValue(true);
+    expect(component.canStartRegeneration()).toBeFalse();
+    component.selectedRefinementCode = 'subtle_smile';
     expect(component.canStartRegeneration()).toBeTrue();
   });
 
