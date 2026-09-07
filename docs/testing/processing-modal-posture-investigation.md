@@ -76,4 +76,10 @@ The old browser regression expected a fresh Generate action after an HTTP 500. I
 
 **Final gates:** 490 API tests, 517 UI tests (two existing skips), 21 browser tests and production build/lint pass. Durable evidence: `docs/testing/evidence/processing-modal-audit-correction-gates.txt`; raw logs `/tmp/aipm-audit-correction-{api,ui,build,browser}.txt`. Earlier red logs include `/tmp/aipm-unresolved-{reset,reload,rejection,entry,preview}-red.txt`.
 
-Next: deploy this verified correction, check live revisions/health, then request a fresh independent completion audit. The initial release is not retrospectively claimed to have passed that audit.
+The verified correction deployed in workflow `34069232031` as `a00d574`; API image `589-34069232031`, revision `aipm-api-v1--0000862`; frontend image `589-34069232031`, revision `aipm-web-v1--0000377`. Live API was Healthy (42 applied/0 pending migrations), and the frontend returned HTTP 200 with Sign In rendered. No authenticated or paid request was made.
+
+## Post-deployment integration-audit correction
+
+The auditor correctly found that the original real SQL/Azurite smoke omitted source/provider/result byte and lineage assertions. `docs/testing/verify-posture-chain.cjs` now drives the real local API, SQL Server, Azurite, storage proxy and OpenAI adapter against a deterministic local provider that captures its actual multipart request. It verifies the selected saved proof reaches the provider; provider prompt/model include the fixed shoulder instruction and preservation terms; distinct returned bytes are saved; source row/bytes remain unchanged; owned replacement/lineage/prompt audit metadata are correct; and replay leaves bytes/lineage stable without a provider call or second debit. Evidence and non-AI-quality boundary: `docs/testing/posture-chain-integration.md`.
+
+The first new fixture parser failed against the real .NET multipart request and the fixture SQL seed initially lacked `QUOTED_IDENTIFIER`; both failures were corrected without weakening the assertions. The final chain check passed, followed by complete 490 API, 517 UI (two existing skips), 21 browser and production build/lint gates. The new chain documentation and checks are local and not deployed yet; deployment and fresh independent audit remain required.
