@@ -1,0 +1,8 @@
+Duplicate-action release verification
+API full suite: 490 passed.
+Angular full suite: 517 passed; two existing skips.
+Browser full suite: 25 passed.
+Production build/lint: exit status 0.
+Deterministic real source/provider/result/lineage chain: PASS rerun after browser change (/tmp/aipm-duplicate-posture-chain.txt).
+Rapid genuine double-click browser regressions: candidate generation + Straighter posture refinement at 390px and 1440px; one held-pending request observed per double-click.
+No paid AI request or production account allowance was used.

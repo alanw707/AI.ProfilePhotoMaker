@@ -442,6 +442,41 @@ for (const width of [390, 1440]) {
     });
   }
 
+  for (const mode of ['generation', 'refinement'] as const) {
+    test(`rapid double-click submits one pending ${mode} request (${width})`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await installWorkflowMocks(page);
+      await openUploadedWorkspace(page);
+      if (mode === 'refinement') {
+        await page.getByRole('button', { name: 'Generate 9 photos', exact: true }).click();
+        await page.getByRole('radio', { name: /^Straighter posture/ }).check();
+      }
+      let release!: () => void;
+      const pending = new Promise<void>(resolve => { release = resolve; });
+      let submissions = 0;
+      await page.route('**/api/headshots/generate', async route => {
+        submissions++;
+        await pending;
+        await route.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ success: false,
+          error: { code: 'ProviderOutcomeUnknown', message: 'The request could not be confirmed.' } }) });
+      });
+      try {
+        const action = page.getByRole('button', { name: mode === 'refinement' ? 'Apply straighter posture' : 'Generate 9 photos', exact: true });
+        await action.scrollIntoViewIfNeeded();
+        const box = await action.boundingBox();
+        expect(box).not.toBeNull();
+        // Two genuine pointer clicks are delivered before the held request resolves.
+        await page.mouse.dblclick(box!.x + box!.width / 2, box!.y + box!.height / 2);
+        await expect(page.getByRole('dialog')).toBeVisible();
+        await expect.poll(() => submissions).toBe(1);
+      } finally {
+        release();
+      }
+      await expect(page.getByRole('heading', { name: 'We could not finish that action' })).toBeVisible();
+      expect(await page.evaluate(() => localStorage.getItem('photoWorkspaceInterruptedGeneration'))).not.toBeNull();
+    });
+  }
+
   test(`posture comparison keeps distinct result and contained frames (${width})`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     // Committed marketing fixtures verify presentation, not actual posture-edit quality.

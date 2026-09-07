@@ -66,13 +66,14 @@ export class PhotoProcessingDialogComponent implements AfterViewInit, OnDestroy 
   ngOnDestroy(): void {
     this.dialog.nativeElement.close();
     const workspace = this.workspace;
-    queueMicrotask(() => {
+    requestAnimationFrame(() => {
       if (!workspace?.isConnected) {
         return;
       }
       const target = workspace.querySelector<HTMLElement>('.error-section h2') ??
+        workspace.querySelector<HTMLElement>('.proof-results-heading h2') ??
         (this.previousFocus?.isConnected && !this.previousFocus.matches(':disabled') ? this.previousFocus :
-          workspace.querySelector<HTMLElement>('.proof-results-heading h2, .file-preview-section h2'));
+          workspace.querySelector<HTMLElement>('.file-preview-section h2'));
       if (target?.matches('h2')) {
         target.setAttribute('tabindex', '-1');
       }
