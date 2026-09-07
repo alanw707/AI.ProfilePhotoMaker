@@ -64,7 +64,13 @@ test('unavailable portrait previews use a working placeholder', async ({ page })
   await expect.poll(() => image.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
 });
 
-test('dismissing a generation error preserves the photo and retry action', async ({ page }) => {
+test('dismissing a generation error preserves the photo and resumes only the saved request', async ({ page }) => {
+  const requests: Record<string, unknown>[] = [];
+  let uploads = 0;
+  page.on('request', request => {
+    if (new URL(request.url()).pathname.endsWith('/headshots/generate')) requests.push(request.postDataJSON());
+    if (new URL(request.url()).pathname.endsWith('/image/upload')) uploads++;
+  });
   await page.getByRole('checkbox', { name: /I consent/ }).first().check();
   const generate = page.getByRole('button', { name: 'Generate Free Preview', exact: true });
   await expect(generate).toBeEnabled();
@@ -73,5 +79,13 @@ test('dismissing a generation error preserves the photo and retry action', async
   await page.getByRole('button', { name: 'Return to your work' }).click();
   await expect(page.getByRole('heading', { name: 'We could not finish that action' })).not.toBeVisible();
   await expect(page.getByRole('heading', { name: 'Choose your portrait direction' })).toBeVisible();
-  await expect(generate).toBeEnabled();
+  await expect(generate).not.toBeVisible();
+  const resume = page.getByRole('button', { name: 'Resume generation', exact: true });
+  await expect(resume).toBeEnabled();
+  await resume.click();
+  await expect(page.getByRole('heading', { name: 'We could not finish that action' })).toBeVisible();
+  expect(requests).toHaveLength(2);
+  expect(requests[1]).toEqual(requests[0]);
+  expect(uploads).toBe(1);
+  expect(await page.evaluate(() => localStorage.getItem('photoWorkspaceInterruptedGeneration'))).not.toBeNull();
 });

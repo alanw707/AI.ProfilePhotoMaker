@@ -58,4 +58,22 @@ The visual effectiveness of the user's particular real posture edit remains unve
 
 **Final gates:** 490 API tests, 510 Angular tests (two existing skips), 21 browser tests, and production build/lint passed. Durable summary: `docs/testing/evidence/processing-modal-posture-release-gates.txt`. Raw local logs: `/tmp/aipm-modal-reviewed-{api,ui,build,browser}.txt`.
 
-User-authorized deployment through the existing main-push workflow is next; live release identifiers and health will be recorded after completion.
+## Initial deployment and rejected completion audit
+
+`5e34e31` deployed successfully in workflow `34066367578`, images `588-34066367578`, API revision `aipm-api-v1--0000859`, frontend revision `aipm-web-v1--0000376`. Live API health and frontend checks passed (42 applied/0 pending migrations). The independent completion auditor nevertheless rejected completion: the recovery Start over action could still erase an unknown request after processing stopped. The goal remains incomplete; this deployed release is not claimed to meet the final safety contract.
+
+## Verified audit correction
+
+New red regressions reproduced (1) discard after processing stops, (2) automatic deletion after 24 hours, and (3) Start over exposure after unknown-outcome/reload at both widths. The current local correction removes Start over, preserves aged request identities, blocks discard/reset for unresolved state, and fails closed on unreadable recovery data rather than deleting it. The recovery section is also available when a selected photo remains.
+
+A further red regression showed that a later validation error could erase a request with an earlier unknown outcome. A persisted uncertainty marker now survives reload and repeated persistence. Such requests are not cleared by later validation errors; only first-attempt definitive rejections retain the existing editable-rejection behavior.
+
+The entry-point review also found that ordinary generation, or restoration of unrelated preview candidates, could bypass recovery. Both now preserve unresolved identity. Explicit resume supplies the matching saved client request ID; ordinary or stale callbacks cannot replace it. Resume uses the original storage path without uploading again and preserves style, package, use case, replacement ID and preview reuse metadata. Candidate receipt lookup runs at least once even when the remaining candidate count is zero. Existing non-refinement generation drafts remain supported; incomplete legacy replacement metadata requires support rather than a guessed new request.
+
+The old browser regression expected a fresh Generate action after an HTTP 500. It now verifies the stronger contract: the photo stays available, only Resume is offered, the second request is identical to the first, no second upload occurs, and unresolved identity remains. Both-width refinement regressions retain the request across a 48-hour reload and recover an authoritative success receipt with zero remaining refinements before clearing the draft.
+
+**Review:** Direct standards/spec re-review checked every `clearInterruptedGeneration` caller and generation entry point. Only authoritative successful generation or a first-attempt definitive validation rejection clears an existing request. Other saved photos are not treated as proof that the unresolved request completed. No backend accounting, dependency or migration changes were made. No remaining release blocker was identified by this review; independent re-audit is still required.
+
+**Final gates:** 490 API tests, 517 UI tests (two existing skips), 21 browser tests and production build/lint pass. Durable evidence: `docs/testing/evidence/processing-modal-audit-correction-gates.txt`; raw logs `/tmp/aipm-audit-correction-{api,ui,build,browser}.txt`. Earlier red logs include `/tmp/aipm-unresolved-{reset,reload,rejection,entry,preview}-red.txt`.
+
+Next: deploy this verified correction, check live revisions/health, then request a fresh independent completion audit. The initial release is not retrospectively claimed to have passed that audit.

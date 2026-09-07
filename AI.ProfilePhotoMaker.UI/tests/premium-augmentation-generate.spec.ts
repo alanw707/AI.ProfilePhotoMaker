@@ -339,7 +339,7 @@ for (const width of [390, 1440]) {
   for (const operation of ['generation', 'refinement', 'rejection', 'unknown']) {
     test(`processing modal remains visible from a scrolled action (${operation}, ${width})`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
-      await installWorkflowMocks(page);
+      const entitlement = await installWorkflowMocks(page);
       await openUploadedWorkspace(page);
       if (operation !== 'generation') {
         await page.getByRole('button', { name: 'Generate 9 photos', exact: true }).click();
@@ -405,6 +405,37 @@ for (const width of [390, 1440]) {
       if (operation === 'rejection' || operation === 'unknown') {
         await expect(page.getByRole('heading', { name: 'We could not finish that action' })).toBeFocused();
         expect(await page.evaluate(() => localStorage.getItem('photoWorkspaceInterruptedGeneration') !== null)).toBe(operation === 'unknown');
+        if (operation === 'unknown') {
+          const savedRequest = await page.evaluate(() => {
+            const draft = JSON.parse(localStorage.getItem('photoWorkspaceInterruptedGeneration')!);
+            draft.startedAt = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+            localStorage.setItem('photoWorkspaceInterruptedGeneration', JSON.stringify(draft));
+            return draft;
+          });
+          const savedIdentity = savedRequest.clientRequestId;
+          entitlement.remainingRefinements = 0;
+          await page.reload();
+          await expect(page.getByRole('heading', { name: 'Resume your interrupted generation' })).toBeVisible();
+          await expect(page.getByRole('button', { name: 'Start over', exact: true })).toHaveCount(0);
+          expect(await page.evaluate(() => JSON.parse(localStorage.getItem('photoWorkspaceInterruptedGeneration')!).clientRequestId)).toBe(savedIdentity);
+          expect(submissions).toBe(1);
+          await page.route('**/api/headshots/generate', async route => {
+            expect(route.request().postDataJSON()).toMatchObject({
+              clientRequestId: savedIdentity, imageStoragePath: savedRequest.imageStoragePath,
+              refinementCode: savedRequest.refinementCode, replacesProcessedImageId: savedRequest.replacesProcessedImageId,
+            });
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true,
+              data: { imageUrl: resultImage, storagePath: 'generated/test-user/refined.png', processedImageId: 501,
+                candidates: [{ imageUrl: resultImage, storagePath: 'generated/test-user/refined.png', processedImageId: 501 }],
+                style: 'linkedin', creditsCost: 0, remainingCredits: 50 } }) });
+          });
+          const consent = page.getByRole('checkbox', { name: /I consent to biometric processing for this saved request/ });
+          if (await consent.isVisible()) await consent.check();
+          await page.getByRole('button', { name: 'Resume generation', exact: true }).click();
+          await expect(page.getByRole('heading', { name: 'Straighter posture result', exact: true })).toBeVisible();
+          expect(await page.evaluate(() => localStorage.getItem('photoWorkspaceInterruptedGeneration'))).toBeNull();
+          expect(entitlement.remainingRefinements).toBe(0);
+        }
       } else {
         await expect(page.locator('.proof-results-heading h2')).toBeFocused();
       }

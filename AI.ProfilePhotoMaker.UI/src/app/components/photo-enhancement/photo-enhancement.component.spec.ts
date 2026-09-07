@@ -36,6 +36,82 @@ function createComponent(
 }
 
 describe('PhotoEnhancementComponent package fulfillment', () => {
+  for (const raw of ['{', '{"clientRequestId":"unresolved"}']) {
+    it(`preserves unreadable recovery state and blocks new generation: ${raw}`, async () => {
+      const component = createComponent('pro_package', 9);
+      const key = 'unreadable-request-regression';
+      Object.assign(component, { _interruptedGenerationKey: key });
+      localStorage.setItem(key, raw);
+      try {
+        (component as any).restoreInterruptedGeneration();
+        expect(component.unrecoverableGenerationDraft).toBeTrue();
+        expect(component.canStartEnhancement()).toBeFalse();
+        await component.startEnhancement();
+        component.enhanceAnother();
+        component.discardInterruptedGeneration();
+        expect(localStorage.getItem(key)).toBe(raw);
+      } finally { localStorage.removeItem(key); }
+    });
+  }
+
+  it('does not treat a later validation rejection as reconciliation of an unknown outcome', () => {
+    const component = createComponent('pro_package', 9);
+    const key = 'unknown-then-validation';
+    const draft = { clientRequestId: 'unresolved-request' };
+    Object.assign(component, { interruptedGeneration: draft, _interruptedGenerationKey: key,
+      _cdr: { detectChanges: () => undefined } });
+    try {
+      (component as any).handleEnhancementFailure({ status: 502, error: { error: { code: 'ProviderOutcomeUnknown' } } });
+      (component as any).handleEnhancementFailure({ status: 400, error: { error: { code: 'InvalidImageSource' } } });
+      expect(component.interruptedGeneration?.clientRequestId).toBe(draft.clientRequestId);
+      expect(localStorage.getItem(key)).not.toBeNull();
+    } finally { localStorage.removeItem(key); }
+  });
+
+  it('blocks ordinary generation while a request is unresolved', async () => {
+    const component = createComponent('pro_package', 9);
+    const draft = { clientRequestId: 'unresolved-request' };
+    Object.assign(component, { interruptedGeneration: draft, isProcessing: false,
+      isApplyingPremiumAugmentation: false });
+    spyOn(component as any, 'hasEnoughCredits').and.returnValue(true);
+    spyOn(component as any, 'uploadImageForEnhancement').and.rejectWith(new Error('must not upload'));
+    expect(component.canStartEnhancement()).toBeFalse();
+    await component.startEnhancement();
+    await component.startEnhancement('another-request');
+    expect((component as any).uploadImageForEnhancement).not.toHaveBeenCalled();
+    expect(component.interruptedGeneration).toBe(draft as any);
+  });
+
+  it('cannot discard an unresolved request after processing stops', () => {
+    const component = createComponent('pro_package', 9);
+    const draft = { clientRequestId: 'unresolved-request' };
+    Object.assign(component, { interruptedGeneration: draft, isProcessing: false,
+      isApplyingPremiumAugmentation: false, _cdr: { markForCheck: () => undefined } });
+    spyOn(component, 'enhanceAnother');
+    component.discardInterruptedGeneration();
+    expect(component.interruptedGeneration).toBe(draft as any);
+    expect(component.enhanceAnother).not.toHaveBeenCalled();
+  });
+
+  it('restores unresolved request identity even after 24 hours', () => {
+    const component = createComponent('pro_package', 9);
+    const key = 'aged-request-regression';
+    const draft = { clientRequestId: 'old-unresolved-request', imageStoragePath: 'generated/user/saved.png',
+      styleName: 'linkedin', startedAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString() };
+    Object.assign(component, { _interruptedGenerationKey: key, photoWorkspaceSession: {
+      createStoredPreviewSourceState: () => ({ imagePreview: 'saved', beforeImageLoadFailed: false }),
+    } });
+    spyOn(component as any, 'getStorageProxyUrl').and.returnValue('/saved');
+    localStorage.setItem(key, JSON.stringify(draft));
+    try {
+      (component as any).restoreInterruptedGeneration();
+      expect(component.interruptedGeneration).toEqual(jasmine.objectContaining(draft));
+      expect(component.interruptedGeneration?.outcomeUncertain).toBeTrue();
+      expect((component as any)._activeGenerationClientRequestId).toBe(draft.clientRequestId);
+      expect(localStorage.getItem(key)).not.toBeNull();
+    } finally { localStorage.removeItem(key); }
+  });
+
   for (const state of ['processing', 'premium', 'saved']) {
     it(`does not reset a photo with ${state} work`, () => {
       const component = createComponent('pro_package', 9);
@@ -97,12 +173,13 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     const start = spyOn(component, 'startEnhancement').and.resolveTo();
     expect(component.canResumeInterruptedGeneration()).toBeTrue();
     component.resumeInterruptedGeneration();
-    expect(start).toHaveBeenCalledTimes(1);
-    expect(component.canStartEnhancement(true)).toBeTrue();
+    expect(start).toHaveBeenCalledOnceWith('same-request');
+    expect(component.canStartEnhancement(true, true)).toBeTrue();
+    expect(component.canStartEnhancement(true)).toBeFalse();
     expect(component.canStartRegeneration()).toBeFalse();
     expect((component as any)._activeGenerationClientRequestId).toBe('same-request');
     component.selectedRefinementCode = 'upright_posture';
-    expect(component.canStartEnhancement(true)).toBeFalse();
+    expect(component.canStartEnhancement(true, true)).toBeFalse();
   });
 
   for (const enhancementType of ['headshot', 'headshot_linkedin']) {
@@ -662,7 +739,20 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.resumePreview).not.toHaveBeenCalled();
   });
 
-  it('restores saved candidates without retaining an expired source for another generation', async () => {
+  it('does not reconcile an unknown request merely because other candidates exist', () => {
+    const component = createComponent('pro_package', 0);
+    const draft = { clientRequestId: 'unknown-request' };
+    Object.assign(component, { interruptedGeneration: draft,
+      _cdr: { markForCheck: () => undefined },
+      _headshotGenerationService: { getResumablePreview: () => of({ success: true,
+        data: { candidates: [candidate(42)], activePackageCode: 'pro_package' } }) },
+    });
+    spyOn(component, 'resumePreview');
+    (component as any).loadResumablePreview();
+    expect(component.interruptedGeneration).toBe(draft as any);
+  });
+
+  it('restores saved candidates without retaining an expired source or discarding unresolved work', async () => {
     const component = createComponent('pro_package', 0);
     Object.assign(component, {
       photoWorkspaceSession: {
@@ -680,6 +770,7 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
       portraitStyleCatalog: { findByStyleName: () => null },
       portraitStyles: [],
       isProfilePhotoScoreVisible: false,
+      interruptedGeneration: { clientRequestId: 'unknown-request' },
       _interruptedGenerationKey: 'expired-source-resume',
       _cdr: { markForCheck: () => undefined },
     });
@@ -705,6 +796,7 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     expect(component.currentSourceStoragePath).toBeNull();
     expect((component as any).hasEnhancementSourceReady()).toBeFalse();
     expect(component.saveSuccessMessage).toContain('original upload expired');
+    expect(component.interruptedGeneration?.clientRequestId).toBe('unknown-request');
   });
 
   it('restores persisted candidates before resuming an interrupted batch after reload', async () => {

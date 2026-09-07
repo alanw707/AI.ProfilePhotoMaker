@@ -1,0 +1,10 @@
+Independent-audit correction verification
+Baseline deployed: 5e34e31 / workflow 34066367578.
+API full suite: 490 passed.
+UI full suite: 517 passed; two existing skips.
+Browser suite: 21 passed.
+Production build and lint: exit 0.
+New red cases: post-failure discard, aged draft deletion, reload Start over, later validation after unknown outcome, ordinary generation while unresolved, and unrelated preview restoration clearing identity.
+Recovery regressions: exact original payload reused without re-upload; stale/ordinary entry points blocked; unknown request retained across 48-hour reload; receipt recovery with zero refinements; unreadable state retained and generation blocked.
+Backend unchanged. Real local SQL/Azurite fixture integration and replay accounting evidence remain in /tmp/aipm-posture-goal-docker.txt and the original release record.
+No paid production request or allowance consumption during verification.

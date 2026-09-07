@@ -13,7 +13,7 @@ import { CommonModule } from '@angular/common';
       <h2 id="photo-processing-title">{{ title }}</h2>
       <p role="status" aria-live="polite" aria-atomic="true">{{ status || 'Your request is being processed…' }}</p>
       <p id="photo-processing-help">You can hide this window while work continues. If the connection drops,
-        return to this workspace and resume the saved request; do not start another edit.</p>
+        return to this workspace and resume the saved request if shown. Otherwise contact support before trying another edit.</p>
       <button type="button" (click)="hide()">Hide progress — keep working</button>
     </dialog>
     <button #reopen *ngIf="hidden" class="reopen" type="button" (click)="show()">

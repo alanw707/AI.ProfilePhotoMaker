@@ -204,9 +204,13 @@
         </div>
       </section>
 
+      <section class="generation-recovery" *ngIf="unrecoverableGenerationDraft" role="alert">
+        <h2>Your saved request needs support</h2>
+        <p>We cannot safely restore this request. It has not been deleted. Contact support before starting another photo.</p>
+      </section>
       <section
         class="generation-recovery"
-        *ngIf="interruptedGeneration && !enhancedImage && !isProcessing"
+        *ngIf="interruptedGeneration && !unrecoverableGenerationDraft && !isProcessing"
         aria-labelledby="generation-recovery-title">
         <div>
           <h2 id="generation-recovery-title">Resume your interrupted generation</h2>
@@ -234,7 +238,7 @@
             [disabled]="!canResumeInterruptedGeneration()">
             Resume generation
           </button>
-          <button class="btn btn-secondary" type="button" (click)="discardInterruptedGeneration()">Start over</button>
+          <p>Starting over is unavailable until this request is resolved. If it cannot be resumed, contact support.</p>
         </div>
       </section>
 
@@ -1001,7 +1005,7 @@
             {{ saveSuccessMessage }}
           </div>
           <button class="btn btn-outline" (click)="enhanceAnother()"
-            [disabled]="isProcessing || isApplyingPremiumAugmentation || !!interruptedGeneration">Enhance Another Photo</button>
+            [disabled]="isProcessing || isApplyingPremiumAugmentation || !!interruptedGeneration || unrecoverableGenerationDraft">Enhance Another Photo</button>
         </div>
         <p class="export-success" *ngIf="exportSuccessMessage" role="status">
           {{ exportSuccessMessage }}
