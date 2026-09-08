@@ -76,6 +76,85 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
             dataUrl.Should().StartWith("data:image/png;base64,");
         }
 
+        [Theory]
+        [InlineData(3, 2, "1536x1024")]
+        [InlineData(2, 3, "1024x1536")]
+        [InlineData(2, 2, "1024x1024")]
+        public async Task EnhancePhotoQualityAsync_HdUpscale_UsesLargestSizeForSourceOrientation(
+            int width,
+            int height,
+            string expectedSize)
+        {
+            var handler = new CaptureHttpMessageHandler();
+            var httpClient = new HttpClient(handler);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["OpenAI:ApiKey"] = "test-key",
+                    ["OpenAI:ImageModel"] = "gpt-image-2"
+                })
+                .Build();
+            var storage = new Mock<IStorageService>(MockBehavior.Strict);
+            var factory = new Mock<IHttpClientFactory>(MockBehavior.Strict);
+            factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
+            var service = new OpenAIImageGenerationService(
+                httpClient,
+                factory.Object,
+                configuration,
+                NullLogger<OpenAIImageGenerationService>.Instance,
+                storage.Object);
+
+            handler.InputImageBytes = CreatePng(width, height);
+            var expectedDimensions = expectedSize.Split('x');
+            handler.OutputImageBytes = CreatePng(
+                int.Parse(expectedDimensions[0]),
+                int.Parse(expectedDimensions[1]));
+
+            var dataUrl = await service.EnhancePhotoQualityAsync(new EnhancePhotoRequestDto
+            {
+                ImageUrl = "https://example.com/test.png",
+                EnhancementType = "hd_upscale"
+            });
+
+            handler.LastEditPostContent.Should().Contain(expectedSize);
+            using var submitted = Image.Load(handler.SubmittedImageBytes!);
+            submitted.Width.Should().Be(int.Parse(expectedDimensions[0]));
+            submitted.Height.Should().Be(int.Parse(expectedDimensions[1]));
+            using var output = Image.Load(Convert.FromBase64String(dataUrl[(dataUrl.IndexOf(',') + 1)..]));
+            output.Width.Should().Be(int.Parse(expectedDimensions[0]));
+            output.Height.Should().Be(int.Parse(expectedDimensions[1]));
+        }
+
+        [Fact]
+        public async Task EnhancePhotoQualityAsync_HdUpscale_RejectsInvalidOutput()
+        {
+            var handler = new CaptureHttpMessageHandler
+            {
+                InputImageBytes = CreatePng(3, 2),
+                OutputImageBytes = [1, 2, 3]
+            };
+            var httpClient = new HttpClient(handler);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["OpenAI:ApiKey"] = "test-key" })
+                .Build();
+            var factory = new Mock<IHttpClientFactory>(MockBehavior.Strict);
+            factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
+            var service = new OpenAIImageGenerationService(
+                httpClient,
+                factory.Object,
+                configuration,
+                NullLogger<OpenAIImageGenerationService>.Instance,
+                new Mock<IStorageService>(MockBehavior.Strict).Object);
+
+            var act = () => service.EnhancePhotoQualityAsync(new EnhancePhotoRequestDto
+            {
+                ImageUrl = "https://example.com/test.png",
+                EnhancementType = "hd_upscale"
+            });
+
+            await act.Should().ThrowAsync<InvalidOperationException>();
+        }
+
         [Fact]
         public async Task EnhancePhotoQualityAsync_WithStoragePath_LoadsFromStorageAndDoesNotDownloadSourceUrl()
         {
@@ -207,12 +286,22 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
             body.Should().NotContain($"name={fieldName};");
         }
 
+        private static byte[] CreatePng(int width, int height)
+        {
+            using var image = new Image<Rgba32>(width, height, new Rgba32(255, 0, 0, 255));
+            using var stream = new MemoryStream();
+            image.Save(stream, new PngEncoder());
+            return stream.ToArray();
+        }
+
         private sealed class CaptureHttpMessageHandler : HttpMessageHandler
         {
             public string? LastEditPostContent { get; private set; }
+            public byte[]? SubmittedImageBytes { get; private set; }
 
             // Minimal 1x1 transparent PNG
             public byte[]? InputImageBytes { get; set; }
+            public byte[]? OutputImageBytes { get; set; }
             public int SourceImageGetCount { get; private set; }
 
             protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -232,8 +321,9 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
                 // Edits endpoint
                 if (request.Method == HttpMethod.Post && request.RequestUri != null && request.RequestUri.AbsoluteUri.Contains("/images/edits"))
                 {
-                    var body = await request.Content!.ReadAsStringAsync(cancellationToken);
-                    LastEditPostContent = body;
+                    var body = await request.Content!.ReadAsByteArrayAsync(cancellationToken);
+                    LastEditPostContent = Encoding.UTF8.GetString(body);
+                    SubmittedImageBytes = ExtractPng(body);
 
                     // Return a simple OpenAI-like response with a base64 image
                     var openAiResponse = new
@@ -241,7 +331,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
                         created = 123,
                         data = new[]
                         {
-                            new { b64_json = Convert.ToBase64String(InputImageBytes ?? Array.Empty<byte>()) }
+                            new { b64_json = Convert.ToBase64String(OutputImageBytes ?? InputImageBytes ?? Array.Empty<byte>()) }
                         }
                     };
                     var json = JsonSerializer.Serialize(openAiResponse);
@@ -255,6 +345,28 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
                 {
                     Content = new StringContent("Unexpected request in test handler")
                 };
+            }
+
+            private static byte[]? ExtractPng(byte[] body)
+            {
+                byte[] signature = [137, 80, 78, 71, 13, 10, 26, 10];
+                byte[] endMarker = [73, 69, 78, 68, 174, 66, 96, 130];
+                var start = IndexOf(body, signature, 0);
+                var end = start < 0 ? -1 : IndexOf(body, endMarker, start + signature.Length);
+                return end < 0 ? null : body[start..(end + endMarker.Length)];
+            }
+
+            private static int IndexOf(byte[] source, byte[] value, int offset)
+            {
+                for (var index = offset; index <= source.Length - value.Length; index++)
+                {
+                    if (source.AsSpan(index, value.Length).SequenceEqual(value))
+                    {
+                        return index;
+                    }
+                }
+
+                return -1;
             }
         }
     }

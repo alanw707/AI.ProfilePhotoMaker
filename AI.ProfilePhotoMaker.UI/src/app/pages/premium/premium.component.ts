@@ -2,11 +2,8 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
-import { AuthService } from '../../services/auth.service';
-
 import { MarketingHeaderComponent } from '../../shared/marketing-header/marketing-header.component';
 import { CreditPackagesComponent } from '../../components/credit-packages/credit-packages.component';
-import { CreditService, UserCreditStatus } from '../../services/credit.service';
 import { NotificationService } from '../../services/notification.service';
 import { LoggingService } from '../../services/logging.service';
 import { NavigationService } from '../../services/navigation.service';
@@ -77,7 +74,7 @@ import { NavigationService } from '../../services/navigation.service';
                   >see Refund Policy</a
                 >
               </p>
-              <app-credit-packages (packagePurchased)="onCreditPackagePurchased($event)">
+              <app-credit-packages (packagePurchased)="onCreditPackagePurchased()">
               </app-credit-packages>
             </div>
           </section>
@@ -130,53 +127,6 @@ import { NavigationService } from '../../services/navigation.service';
             </div>
           </section>
 
-          <!-- Already Have Credits Section -->
-          <section
-            class="existing-package-section"
-            *ngIf="userCreditStatus && userCreditStatus.credits > 0"
-          >
-            <div class="content-container">
-              <div class="existing-package-card">
-                <div class="package-status">
-                  <h3>🎯 You Have Profile Photo Capacity Available!</h3>
-                  <div class="status-details">
-                    <span class="package-name">Internal balance active</span>
-                    <span class="credits-remaining">Ready to create or refine profile photos</span>
-                  </div>
-                </div>
-                <button class="btn btn-primary" routerLink="/app/enhance">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2" />
-                    <rect
-                      x="13"
-                      y="3"
-                      width="8"
-                      height="5"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <rect
-                      x="13"
-                      y="12"
-                      width="8"
-                      height="9"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <rect
-                      x="3"
-                      y="16"
-                      width="7"
-                      height="5"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                  </svg>
-                  Go to Studio
-                </button>
-              </div>
-            </div>
-          </section>
         </div>
       </main>
     </div>
@@ -184,7 +134,6 @@ import { NavigationService } from '../../services/navigation.service';
   styleUrls: ['./premium.component.sass'],
 })
 export class PremiumComponent implements OnInit, OnDestroy {
-  userCreditStatus: UserCreditStatus | null = null;
   private readonly seoTagSelectors = [
     "name='description'",
     "name='keywords'",
@@ -204,9 +153,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
   ];
 
   constructor(
-    private authService: AuthService,
     private router: Router,
-    private creditService: CreditService,
     private notificationService: NotificationService,
     private logging: LoggingService,
     private meta: Meta,
@@ -223,31 +170,9 @@ export class PremiumComponent implements OnInit, OnDestroy {
       }
     });
     this.setupSEO();
-
-    // Only load credit status after a verified session to avoid anonymous 401s
-    if (this.authService.isAuthenticated() && this.authService.hasVerifiedSession()) {
-      this.loadCreditStatus();
-    }
   }
 
-  loadCreditStatus() {
-    this.creditService.getCreditStatus().subscribe({
-      next: response => {
-        if (response.success) {
-          this.userCreditStatus = response.data;
-        }
-      },
-      error: error => {
-        this.logging.error('Failed to load credit status', error);
-        // User might not have credits yet, that's fine for this page
-      },
-    });
-  }
-
-  onCreditPackagePurchased(creditStatus: UserCreditStatus) {
-    this.logging.debug('Credit package purchased', creditStatus);
-    this.userCreditStatus = creditStatus;
-
+  onCreditPackagePurchased() {
     this.notificationService.success(
       'Package Unlocked!',
       'Your profile photo package is ready. Start from the workspace to score, generate, and export your best shot.'

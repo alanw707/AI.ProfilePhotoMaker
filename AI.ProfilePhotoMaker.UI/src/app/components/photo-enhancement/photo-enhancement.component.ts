@@ -663,8 +663,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         entitlement.status.toLowerCase() === 'active' &&
         (isRegeneration
           ? entitlement.remainingRefinements > 0
-          : entitlement.remainingPackageUses > 0 &&
-            entitlement.remainingCandidates >= requiredCandidates)
+          : entitlement.remainingCandidates >= requiredCandidates)
     );
   }
 
@@ -731,7 +730,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         entitlement.status.toLowerCase() === 'active' &&
         (entitlement.packageCode === 'starter_package' ||
           entitlement.packageCode === 'pro_package') &&
-        (entitlement.remainingPackageUses > 0 ||
+        (entitlement.remainingCandidates > 0 ||
           entitlement.remainingRefinements > 0 ||
           entitlement.remainingPremiumAugmentations > 0)
     );
@@ -743,7 +742,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         entitlement =>
           entitlement.packageCode === packageCode &&
           entitlement.status.toLowerCase() === 'active' &&
-          entitlement.remainingPackageUses > 0 &&
           entitlement.remainingCandidates > 0
       );
 
@@ -843,7 +841,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       entitlement =>
         entitlement.packageCode === packageCode &&
         entitlement.status.toLowerCase() === 'active' &&
-        entitlement.remainingPackageUses > 0 &&
         entitlement.remainingCandidates > 0
     );
   }

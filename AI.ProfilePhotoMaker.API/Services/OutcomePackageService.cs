@@ -555,7 +555,7 @@ public class OutcomePackageService : IOutcomePackageService
         if (candidateCount <= 0) return false;
 
         var entitlement = await GetActiveEntitlementAsync(userId, packageCode, cancellationToken);
-        if (entitlement == null || entitlement.RemainingPackageUses <= 0 || entitlement.RemainingCandidates < candidateCount)
+        if (entitlement == null || entitlement.RemainingCandidates < candidateCount)
         {
             return false;
         }
