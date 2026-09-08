@@ -42,7 +42,7 @@ public static class PackageEntitlementPolicy
                 : PackageGenerationAllowance.Deny("This package has no refinements remaining.");
         }
 
-        return entitlement.RemainingPackageUses > 0 && entitlement.RemainingCandidates >= requestedCandidateCount
+        return entitlement.RemainingCandidates >= requestedCandidateCount
             ? PackageGenerationAllowance.Allow()
             : PackageGenerationAllowance.Deny("Choose or unlock a profile photo package before generating these candidates.");
     }

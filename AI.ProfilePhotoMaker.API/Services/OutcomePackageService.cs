@@ -108,13 +108,17 @@ public class OutcomePackageService : IOutcomePackageService
         if (candidateCount <= 0) return false;
 
         var entitlement = await GetActiveEntitlementAsync(userId, packageCode, cancellationToken);
-        if (entitlement == null || entitlement.RemainingPackageUses <= 0 || entitlement.RemainingCandidates < candidateCount)
+        if (entitlement == null || entitlement.RemainingCandidates < candidateCount)
         {
             return false;
         }
 
         entitlement.RemainingCandidates -= candidateCount;
-        entitlement.RemainingPackageUses = Math.Max(0, entitlement.RemainingPackageUses - 1);
+        // Candidate slots may be fulfilled across requests; close the package on the final slot.
+        if (entitlement.RemainingCandidates == 0)
+        {
+            entitlement.RemainingPackageUses = Math.Max(0, entitlement.RemainingPackageUses - 1);
+        }
         return await SaveConsumptionAsync(entitlement, cancellationToken);
     }
 

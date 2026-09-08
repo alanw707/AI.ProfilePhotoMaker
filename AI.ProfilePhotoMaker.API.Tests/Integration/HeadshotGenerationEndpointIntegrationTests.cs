@@ -237,6 +237,50 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
     }
 
     [Fact]
+    public async Task GenerateHeadshot_ProPackage_AllowsRemainingCandidatesAfterPartialGeneration()
+    {
+        var userId = $"headshot-pro-partial-{Guid.NewGuid():N}";
+        await SeedUserAsync(userId, credits: 20);
+        await GrantPackageEntitlementAsync(userId, "pro_package", candidates: 9, refinements: 0, premiumAugmentations: 0, exportKit: false);
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
+
+        var first = await client.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = $"testing/enhanced/{userId}/source.png",
+            style = "professional",
+            packageCode = "pro_package",
+            numOutputs = 3,
+            clientRequestId = "partial-first"
+        });
+        first.EnsureSuccessStatusCode();
+        var firstData = (await first.Content.ReadFromJsonAsync<HeadshotApiResponse>())!.Data!;
+        Assert.Equal(3, firstData.Candidates.Count);
+        Assert.Equal(17, firstData.RemainingCredits);
+
+        var second = await client.PostAsJsonAsync("/api/headshots/generate", new
+        {
+            imageStoragePath = $"testing/enhanced/{userId}/source.png",
+            style = "professional",
+            packageCode = "pro_package",
+            numOutputs = 6,
+            clientRequestId = "partial-second"
+        });
+        var secondBody = await second.Content.ReadAsStringAsync();
+        Assert.True(second.IsSuccessStatusCode, secondBody);
+        var secondData = (await second.Content.ReadFromJsonAsync<HeadshotApiResponse>())!.Data!;
+        Assert.Equal(6, secondData.Candidates.Count);
+        Assert.Equal(11, secondData.RemainingCredits);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var entitlement = db.UserPackageEntitlements.Single(e => e.UserId == userId);
+        Assert.Equal(PackageEntitlementStatus.Consumed, entitlement.Status);
+        Assert.Equal(0, entitlement.RemainingCandidates);
+        Assert.Equal(0, entitlement.RemainingPackageUses);
+    }
+
+    [Fact]
     public async Task GenerateHeadshot_UnauthenticatedRequest_ReturnsUnauthorized()
     {
         var client = _factory.CreateClient();

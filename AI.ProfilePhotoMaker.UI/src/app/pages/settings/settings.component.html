@@ -33,13 +33,6 @@
             (editProfileClicked)="editProfile()"></app-account-info>
         </section>
 
-        <!-- Credit Management -->
-        <section class="settings-section" *ngIf="creditsInfo || userCreditStatus">
-          <app-credit-management
-            [creditsInfo]="creditsInfo"
-            [userCreditStatus]="userCreditStatus"></app-credit-management>
-        </section>
-
         <!-- Data Overview -->
         <section class="settings-section">
           <div class="section-header">

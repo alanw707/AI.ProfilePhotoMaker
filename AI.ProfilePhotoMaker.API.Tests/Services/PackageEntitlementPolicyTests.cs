@@ -40,6 +40,20 @@ public class PackageEntitlementPolicyTests
     }
 
     [Fact]
+    public void CheckGenerationAllowance_AllowsRemainingCandidatesAfterInitialPackageUse()
+    {
+        var entitlement = new UserPackageEntitlement
+        {
+            RemainingPackageUses = 0,
+            RemainingCandidates = 6
+        };
+
+        var result = PackageEntitlementPolicy.CheckGenerationAllowance("pro_package", 6, false, entitlement);
+
+        Assert.True(result.Allowed);
+    }
+
+    [Fact]
     public void CheckGenerationAllowance_DeniesPaidCandidatesWhenCandidateAllowanceTooSmall()
     {
         var entitlement = new UserPackageEntitlement

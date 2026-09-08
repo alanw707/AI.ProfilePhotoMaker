@@ -77,19 +77,19 @@ public class OpenAIImageGenerationService : IImageProcessingService
 
             // Step 1: Load and process the image. New enhancement uploads pass a storage path
             // so local/container runs do not need to re-download the source through Azurite URLs.
-            (byte[] imageBytes, byte[] maskBytes) imageAndMask;
+            (byte[] imageBytes, byte[] maskBytes, int sourceWidth, int sourceHeight) imageAndMask;
             if (!string.IsNullOrWhiteSpace(request.ImageStoragePath))
             {
-                imageAndMask = await PrepareImageAndMaskFromStorageAsync(request.ImageStoragePath);
+                imageAndMask = await PrepareImageAndMaskFromStorageAsync(request.ImageStoragePath, request.EnhancementType);
             }
             else
             {
                 // Legacy fallback for older clients that only send a URL.
                 var normalizedUrl = await NormalizeImageUrlForServerAccessAsync(request.ImageUrl ?? string.Empty);
-                imageAndMask = await PrepareImageAndMaskFromUrlAsync(normalizedUrl);
+                imageAndMask = await PrepareImageAndMaskFromUrlAsync(normalizedUrl, request.EnhancementType);
             }
 
-            var (imageBytes, _) = imageAndMask;
+            var (imageBytes, _, sourceWidth, sourceHeight) = imageAndMask;
             _logger.LogInformation("Image processed - Original size: {Size} bytes", imageBytes.Length);
 
             var prompt = !string.IsNullOrWhiteSpace(request.CustomPrompt)
@@ -104,9 +104,10 @@ public class OpenAIImageGenerationService : IImageProcessingService
             formData.Add(imageContent, "image", "image.png");
 
             var imageModel = _configuration["OpenAI:ImageModel"] ?? "gpt-image-2";
+            var outputSize = GetOutputSize(request.EnhancementType, sourceWidth, sourceHeight);
             formData.Add(new StringContent(imageModel), "model");
             formData.Add(new StringContent(prompt), "prompt");
-            formData.Add(new StringContent("1024x1024"), "size");
+            formData.Add(new StringContent(outputSize), "size");
 
             _logger.LogInformation(
                 "Posting to OpenAI images/edits: model={Model}, promptLen={PromptLen}, imageBytes={ImageBytes}",
@@ -145,16 +146,14 @@ public class OpenAIImageGenerationService : IImageProcessingService
                 throw new InvalidOperationException("OpenAI returned no data");
             }
 
-            string dataUrl;
+            string output;
             if (!string.IsNullOrEmpty(imageData.B64Json))
             {
-                // Base64 response
-                dataUrl = $"data:image/png;base64,{imageData.B64Json}";
+                output = $"data:image/png;base64,{imageData.B64Json}";
             }
             else if (!string.IsNullOrEmpty(imageData.Url))
             {
-                // URL response fallback when response_format is not supported
-                dataUrl = imageData.Url;
+                output = imageData.Url;
             }
             else
             {
@@ -162,11 +161,17 @@ public class OpenAIImageGenerationService : IImageProcessingService
                 throw new InvalidOperationException("OpenAI returned neither url nor b64_json");
             }
 
+            var outputBytes = await GetOutputImageBytesAsync(output);
+            if (string.Equals(request.EnhancementType, "hd_upscale", StringComparison.OrdinalIgnoreCase))
+            {
+                ValidateHdUpscaleOutput(outputBytes, outputSize);
+            }
+
             var processingTime = DateTime.UtcNow - startTime;
             _logger.LogInformation("OpenAI photo transformation completed in {Time}ms, returning base64 data URL",
                 processingTime.TotalMilliseconds);
 
-            return dataUrl;
+            return $"data:image/png;base64,{Convert.ToBase64String(outputBytes)}";
         }
         catch (Exception ex)
         {
@@ -218,7 +223,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
     /// <summary>
     /// Downloads the image from URL, converts to PNG (square up to 1024), and creates transparent mask
     /// </summary>
-    private async Task<(byte[] imageBytes, byte[] maskBytes)> PrepareImageAndMaskFromStorageAsync(string storagePath)
+    private async Task<(byte[] imageBytes, byte[] maskBytes, int sourceWidth, int sourceHeight)> PrepareImageAndMaskFromStorageAsync(string storagePath, string? enhancementType)
     {
         try
         {
@@ -234,7 +239,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
             var originalImageBytes = memoryStream.ToArray();
             _logger.LogInformation("Loaded storage image - Size: {Size} bytes", originalImageBytes.Length);
 
-            return await PrepareImageAndMaskFromBytesAsync(originalImageBytes, "storage");
+            return await PrepareImageAndMaskFromBytesAsync(originalImageBytes, "storage", enhancementType);
         }
         catch (Exception ex) when (ex is not FileNotFoundException)
         {
@@ -261,7 +266,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
         return null;
     }
 
-    private async Task<(byte[] imageBytes, byte[] maskBytes)> PrepareImageAndMaskFromUrlAsync(string imageUrl)
+    private async Task<(byte[] imageBytes, byte[] maskBytes, int sourceWidth, int sourceHeight)> PrepareImageAndMaskFromUrlAsync(string imageUrl, string? enhancementType)
     {
         try
         {
@@ -292,7 +297,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
             var originalImageBytes = await imageResponse.Content.ReadAsByteArrayAsync();
             _logger.LogInformation("Downloaded image - Size: {Size} bytes", originalImageBytes.Length);
 
-            return await PrepareImageAndMaskFromBytesAsync(originalImageBytes, "url");
+            return await PrepareImageAndMaskFromBytesAsync(originalImageBytes, "url", enhancementType);
         }
         catch (HttpRequestException ex)
         {
@@ -307,23 +312,24 @@ public class OpenAIImageGenerationService : IImageProcessingService
         }
     }
 
-    private async Task<(byte[] imageBytes, byte[] maskBytes)> PrepareImageAndMaskFromBytesAsync(byte[] originalImageBytes, string source)
+    private async Task<(byte[] imageBytes, byte[] maskBytes, int sourceWidth, int sourceHeight)> PrepareImageAndMaskFromBytesAsync(byte[] originalImageBytes, string source, string? enhancementType)
     {
-        // Process image and create mask using ImageSharp (cross-platform)
         using var original = SixLabors.ImageSharp.Image.Load<Rgba32>(originalImageBytes);
-
-        // Determine target square size (up to 1024)
-        var targetSize = Math.Min(1024, Math.Max(original.Width, original.Height));
-
-        // Create square canvas with white background
-        using var squareImage = new SixLabors.ImageSharp.Image<Rgba32>(targetSize, targetSize, new Rgba32(255, 255, 255, 255));
-
-        // Resize down if needed (do not upscale)
-        int drawWidth = original.Width;
-        int drawHeight = original.Height;
-        if (original.Width > targetSize || original.Height > targetSize)
+        var targetWidth = Math.Min(1024, Math.Max(original.Width, original.Height));
+        var targetHeight = targetWidth;
+        if (string.Equals(enhancementType, "hd_upscale", StringComparison.OrdinalIgnoreCase))
         {
-            var scale = Math.Min((double)targetSize / original.Width, (double)targetSize / original.Height);
+            var dimensions = GetOutputSize(enhancementType, original.Width, original.Height).Split('x');
+            targetWidth = int.Parse(dimensions[0]);
+            targetHeight = int.Parse(dimensions[1]);
+        }
+
+        using var canvas = new SixLabors.ImageSharp.Image<Rgba32>(targetWidth, targetHeight, new Rgba32(255, 255, 255, 255));
+        var drawWidth = original.Width;
+        var drawHeight = original.Height;
+        if (original.Width > targetWidth || original.Height > targetHeight)
+        {
+            var scale = Math.Min((double)targetWidth / original.Width, (double)targetHeight / original.Height);
             drawWidth = (int)Math.Round(original.Width * scale);
             drawHeight = (int)Math.Round(original.Height * scale);
         }
@@ -334,27 +340,24 @@ public class OpenAIImageGenerationService : IImageProcessingService
             Mode = ResizeMode.Stretch
         }));
 
-        // Center the (possibly resized) original image onto the white square canvas
-        var offsetX = (targetSize - drawWidth) / 2;
-        var offsetY = (targetSize - drawHeight) / 2;
-        squareImage.Mutate(ctx => ctx.DrawImage(resized, new Point(offsetX, offsetY), 1f));
+        var offsetX = (targetWidth - drawWidth) / 2;
+        var offsetY = (targetHeight - drawHeight) / 2;
+        canvas.Mutate(ctx => ctx.DrawImage(resized, new Point(offsetX, offsetY), 1f));
 
-        // Encode to PNG bytes
         var pngEncoder = new PngEncoder { ColorType = PngColorType.RgbWithAlpha };
         using var imageStream = new MemoryStream();
-        await squareImage.SaveAsync(imageStream, pngEncoder);
+        await canvas.SaveAsync(imageStream, pngEncoder);
         var processedImageBytes = imageStream.ToArray();
 
-        // Create fully transparent mask (edit entire image)
-        using var maskImage = new SixLabors.ImageSharp.Image<Rgba32>(targetSize, targetSize, new Rgba32(255, 255, 255, 0));
+        using var maskImage = new SixLabors.ImageSharp.Image<Rgba32>(targetWidth, targetHeight, new Rgba32(255, 255, 255, 0));
         using var maskStream = new MemoryStream();
         await maskImage.SaveAsync(maskStream, pngEncoder);
         var maskBytes = maskStream.ToArray();
 
-        _logger.LogInformation("Image processed from {Source} to {Size}x{Size} PNG - Image: {ImageSize} bytes, Mask: {MaskSize} bytes",
-            S(source), targetSize, targetSize, processedImageBytes.Length, maskBytes.Length);
+        _logger.LogInformation("Image processed from {Source} to {Width}x{Height} PNG - Image: {ImageSize} bytes, Mask: {MaskSize} bytes",
+            S(source), targetWidth, targetHeight, processedImageBytes.Length, maskBytes.Length);
 
-        return (processedImageBytes, maskBytes);
+        return (processedImageBytes, maskBytes, original.Width, original.Height);
     }
 
     /// <summary>
@@ -445,6 +448,77 @@ public class OpenAIImageGenerationService : IImageProcessingService
         return preserveIdentity + customPrompt.Trim();
     }
 
+    private static string GetOutputSize(string? enhancementType, int sourceWidth, int sourceHeight)
+    {
+        if (!string.Equals(enhancementType, "hd_upscale", StringComparison.OrdinalIgnoreCase))
+        {
+            return "1024x1024";
+        }
+
+        if (sourceWidth == sourceHeight)
+        {
+            return "1024x1024";
+        }
+
+        return sourceHeight > sourceWidth ? "1024x1536" : "1536x1024";
+    }
+
+    private async Task<byte[]> GetOutputImageBytesAsync(string output)
+    {
+        if (output.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            var commaIndex = output.IndexOf(',');
+            if (commaIndex < 0 || !output[..commaIndex].Contains(";base64", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("OpenAI returned an invalid image data URL.");
+            }
+
+            try
+            {
+                return Convert.FromBase64String(output[(commaIndex + 1)..]);
+            }
+            catch (FormatException ex)
+            {
+                throw new InvalidOperationException("OpenAI returned invalid base64 image data.", ex);
+            }
+        }
+
+        if (!Uri.TryCreate(output, UriKind.Absolute, out var outputUri) ||
+            (outputUri.Scheme != Uri.UriSchemeHttp && outputUri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new InvalidOperationException("OpenAI returned an invalid image URL.");
+        }
+
+        using var response = await _downloadClient.GetAsync(outputUri);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsByteArrayAsync();
+    }
+
+    private static void ValidateHdUpscaleOutput(byte[] outputBytes, string expectedSize)
+    {
+        var dimensions = expectedSize.Split('x');
+        if (dimensions.Length != 2 ||
+            !int.TryParse(dimensions[0], out var expectedWidth) ||
+            !int.TryParse(dimensions[1], out var expectedHeight))
+        {
+            throw new InvalidOperationException("HD Upscale output size is invalid.");
+        }
+
+        try
+        {
+            using var image = SixLabors.ImageSharp.Image.Load(outputBytes);
+            if (image.Width != expectedWidth || image.Height != expectedHeight)
+            {
+                throw new InvalidOperationException(
+                    $"HD Upscale output dimensions were {image.Width}x{image.Height}; expected {expectedSize}.");
+            }
+        }
+        catch (UnknownImageFormatException ex)
+        {
+            throw new InvalidOperationException("HD Upscale returned an invalid image.", ex);
+        }
+    }
+
     private static string GenerateTransformationPrompt(string enhancementType)
     {
         var preserveIdentity =
@@ -464,6 +538,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
             "background_upgrade" => preserveIdentity + "Replace or improve the background with a clean professional setting such as a neutral studio backdrop, tasteful office, or warm uncluttered interior. Preserve the person exactly and keep lighting natural.",
             "skin_tone_polish" => preserveIdentity + "Apply subtle natural skin tone polish. Balance redness, shadows, and uneven color while preserving realistic skin texture, age, identity, facial structure, crop, framing, and subject position. Avoid changing ethnicity, face shape, camera angle, pose, body position, or creating a beauty-filter look.",
             "sharpen_detail" => preserveIdentity + "Improve perceived sharpness and detail for a professional profile photo. Enhance crisp focus around eyes, hair, facial contours, and clothing edges while reducing camera softness. Keep lighting, color, face shape, identity, skin texture, crop, framing, subject position, and background composition natural. Avoid halos, over-sharpening, gritty texture, artificial HDR effects, or repositioning the person.",
+            "hd_upscale" => preserveIdentity + "Create the highest-resolution professional result available. Improve natural fine detail while preserving the person's identity, face shape, skin texture, lighting, color, crop, framing, subject position, and background composition. Avoid halos, over-sharpening, artificial HDR effects, or repositioning the person.",
             "skin_smoothing" => preserveIdentity + "Make a minimal localized skin-retouch edit only. Preserve the exact crop, pose, expression, clothing, background, lighting direction, camera angle, and overall composition. Lightly reduce minor blotchiness and camera noise on skin while preserving pores, natural texture, age, identity, and facial structure. Do not change wardrobe, background, face shape, hairstyle, smile, body position, or framing. Avoid waxy or plastic skin.",
             "wrinkle_softening" => preserveIdentity + "Subtly soften harsh wrinkle shadows and under-eye creases for a polished professional profile photo while preserving age, identity, natural expression, facial structure, and realistic skin texture.",
             "headshot_linkedin" => preserveIdentity + "Create a realistic professional-network-ready headshot with head-and-shoulders framing, clean neutral background, confident approachable expression, crisp focus, natural color correction, and subtle realistic retouching. Avoid changing facial features or creating plastic skin.",

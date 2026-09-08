@@ -10,7 +10,6 @@ import { AuthService } from '../../services/auth.service';
 import { ProfileService, UserProfile } from '../../services/profile.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { NotificationService } from '../../services/notification.service';
-import { WorkspaceStateService } from '../../services/workspace-state.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 
 describe('SettingsComponent', () => {
@@ -20,7 +19,6 @@ describe('SettingsComponent', () => {
   let mockProfileService: jasmine.SpyObj<ProfileService>;
   let mockFileUploadService: jasmine.SpyObj<FileUploadService>;
   let mockNotificationService: jasmine.SpyObj<NotificationService>;
-  let mockWorkspaceStateService: jasmine.SpyObj<WorkspaceStateService>;
 
   const mockUserProfile: UserProfile = {
     id: 1,
@@ -42,16 +40,6 @@ describe('SettingsComponent', () => {
     hasTrainedModel: true,
     totalDataSize: 1024 * 1024 * 50, // 50MB
     accountAge: 365,
-  };
-
-  const mockCreditsInfo = {
-    availableCredits: 3,
-  };
-
-  const mockUserCreditStatus = {
-    credits: 13,
-    lastCreditReset: new Date().toISOString(),
-    nextResetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   };
 
   // Stub for header to avoid pulling full component dependencies
@@ -87,28 +75,6 @@ describe('SettingsComponent', () => {
       'info',
       'warning',
     ]);
-    mockWorkspaceStateService = jasmine.createSpyObj(
-      'WorkspaceStateService',
-      ['getState', 'loadInitialWorkspaceData'],
-      {
-        state$: of({
-          userProfile: null,
-          modelStatus: 'Not Started',
-          latestTrainedModel: null,
-          uploadedImages: 0,
-          uploadedImageThumbnails: [],
-          generatedPhotosCount: 0,
-          imagesValidated: false,
-          lastValidationTime: null,
-          userCreditStatus: { credits: 13 },
-          creditsInfo: { availableCredits: 3 },
-          totalCredits: 13,
-          isPremiumWorkflow: false,
-          isLoading: false,
-        }) as any,
-      }
-    );
-
     // Set up default return values
     mockAuthService.isAuthenticated.and.returnValue(true);
     mockProfileService.getCurrentUserProfile.and.returnValue(
@@ -117,18 +83,6 @@ describe('SettingsComponent', () => {
     mockProfileService.getDataStats.and.returnValue(
       of({ success: true, data: mockDataStats, error: null } as any)
     );
-    mockWorkspaceStateService.getState.and.returnValue({
-      userProfile: null,
-      creditsInfo: mockCreditsInfo,
-      userCreditStatus: mockUserCreditStatus,
-      uploadedImages: 0,
-      uploadedImageThumbnails: [],
-      generatedPhotosCount: 0,
-      modelStatus: 'Not Started',
-      isPremiumWorkflow: false,
-      isLoading: false,
-    } as any);
-
     // Default returns for FileUploadService used in Settings flows
     mockFileUploadService.getUserImages.and.returnValue(
       of({
@@ -173,7 +127,6 @@ describe('SettingsComponent', () => {
         { provide: ProfileService, useValue: mockProfileService },
         { provide: FileUploadService, useValue: mockFileUploadService },
         { provide: NotificationService, useValue: mockNotificationService },
-        { provide: WorkspaceStateService, useValue: mockWorkspaceStateService },
       ],
       // Allow unknown elements/attributes (e.g. header component and other standalone deps)
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -186,8 +139,7 @@ describe('SettingsComponent', () => {
 
     fixture = TestBed.createComponent(SettingsComponent);
     component = fixture.componentInstance;
-    // Avoid long timeouts from async loaders in ngOnInit
-    spyOn(component as any, 'loadCreditInfoAsync').and.returnValue(Promise.resolve());
+    // Avoid unrelated model-status work in settings tests.
     spyOn(component as any, 'checkTrainedModelStatus').and.returnValue(Promise.resolve());
   });
 
@@ -231,8 +183,6 @@ describe('SettingsComponent', () => {
       component.userEmail = 'test@example.com';
       component.userProfile = mockUserProfile;
       component.dataStats = { ...mockDataStats } as any;
-      component.creditsInfo = { availableCredits: 13 } as any;
-      component.userCreditStatus = { credits: 13 } as any;
       fixture.detectChanges();
     });
 
@@ -249,10 +199,9 @@ describe('SettingsComponent', () => {
       expect(headings.join(' ')).toMatch(/Account/i);
     });
 
-    it('should render Credit Management section', () => {
+    it('should not render the legacy credit balance section', () => {
       const compiled = fixture.nativeElement as HTMLElement;
-      const headings = Array.from(compiled.querySelectorAll('h2')).map(h => h.textContent || '');
-      expect(headings.join(' ')).toMatch(/Credit/i);
+      expect(compiled.textContent).not.toContain('Your Current Credits');
     });
 
     it('should render Your Data section', () => {
@@ -291,7 +240,6 @@ describe('SettingsComponent', () => {
       // At least one settings section exists
       expect(compiled.querySelector('.settings-section')).toBeTruthy();
 
-      // Credit Management section exists (class names may vary)
       const sections = compiled.querySelectorAll('.settings-section');
       expect(sections.length).toBeGreaterThan(0);
 
@@ -443,10 +391,5 @@ describe('SettingsComponent', () => {
       expect(emptyName).toBe('');
     });
 
-    it('should get total available credits', () => {
-      // Credits come from Photo Workspace state service; use mocked values
-      const total = mockUserCreditStatus.credits || 0;
-      expect(total).toBe(13);
-    });
   });
 });

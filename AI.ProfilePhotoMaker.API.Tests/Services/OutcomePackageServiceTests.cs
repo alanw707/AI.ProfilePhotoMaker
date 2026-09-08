@@ -66,6 +66,40 @@ public class OutcomePackageServiceTests
     }
 
     [Fact]
+    public async Task ConsumeCandidates_AllowsRemainingSlotsAfterPartialGeneration()
+    {
+        await using var context = CreateContext();
+        var package = new OutcomePackageDefinition
+        {
+            Code = "pro_package",
+            Name = "Pro",
+            Description = "Test",
+            IncludedCandidateCount = 9,
+            IsActive = true
+        };
+        context.OutcomePackageDefinitions.Add(package);
+        context.UserPackageEntitlements.Add(new UserPackageEntitlement
+        {
+            UserId = "partial-user",
+            OutcomePackageDefinition = package,
+            Status = PackageEntitlementStatus.Active,
+            RemainingPackageUses = 1,
+            RemainingCandidates = 9
+        });
+        await context.SaveChangesAsync();
+
+        var service = new OutcomePackageService(context, NullLogger<OutcomePackageService>.Instance);
+
+        Assert.True(await service.ConsumeCandidatesAsync("partial-user", "pro_package", 3));
+        Assert.True(await service.ConsumeCandidatesAsync("partial-user", "pro_package", 6));
+
+        var entitlement = await context.UserPackageEntitlements.SingleAsync();
+        Assert.Equal(0, entitlement.RemainingCandidates);
+        Assert.Equal(0, entitlement.RemainingPackageUses);
+        Assert.Equal(PackageEntitlementStatus.Consumed, entitlement.Status);
+    }
+
+    [Fact]
     public async Task ExpiredEntitlement_IsReportedExpired_AndCannotBeConsumed()
     {
         await using var context = CreateContext();

@@ -33,6 +33,30 @@ describe('Photo workspace action recovery', () => {
     );
   });
 
+  it('exposes exactly the five approved premium refinements', () => {
+    const dependencies = Array.from({ length: 15 }, () => ({}));
+    dependencies[5] = {
+      turnstileSiteKey: '',
+      isOpenAIHeadshotMvpEnabled: false,
+      isProfilePhotoWorkflowOverhaulEnabled: false,
+      areOutcomePackagesVisible: false,
+      isProfilePhotoScoreVisible: false,
+      isCreativeStylePackVisible: false,
+      arePremiumAugmentationsVisible: true,
+    };
+    const configuredComponent = new (PhotoEnhancementComponent as unknown as new (
+      ...args: unknown[]
+    ) => PhotoEnhancementComponent)(...dependencies);
+
+    expect(configuredComponent.premiumAugmentations.map(option => option.type)).toEqual([
+      'relighting',
+      'professional_polish',
+      'wrinkle_softening',
+      'sharpen_detail',
+      'hd_upscale',
+    ]);
+  });
+
   it('uses refinement allowance rather than spent candidate slots for the refinement action', () => {
     Object.assign(component, {
       isHeadshotMvpEnabled: true, enhancementType: 'headshot',
@@ -47,6 +71,21 @@ describe('Photo workspace action recovery', () => {
     expect(component.canStartEnhancement(true)).toBeTrue();
     component.packageEntitlements[0].remainingRefinements = 0;
     expect(component.canStartEnhancement(true)).toBeFalse();
+  });
+
+  it('allows candidate slots that remain after the package use was consumed', () => {
+    Object.assign(component, {
+      isHeadshotMvpEnabled: true, enhancementType: 'headshot',
+      selectedPackageCode: 'pro_package', pendingUpgradePackageCode: null,
+      selectedFile: new File(['test'], 'source.jpg'), selectedPortraitStyle: {},
+      biometricConsentAccepted: true,
+      packageOptions: [{ code: 'pro_package', includedCandidateCount: 9 }],
+      packageEntitlements: [{ packageCode: 'pro_package', status: 'active',
+        remainingPackageUses: 0, remainingCandidates: 6, remainingRefinements: 0 }],
+    });
+
+    expect(component.getCandidateRequestCountForSelectedPackage()).toBe(6);
+    expect(component.canStartEnhancement()).toBeTrue();
   });
 
   for (const packageCode of ['pro_package', null]) {

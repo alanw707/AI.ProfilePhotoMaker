@@ -415,10 +415,6 @@
                     </span>
                   </label>
                 </div>
-                <div class="legacy-entitlement" *ngIf="userCreditStatus && !isLoadingCredits">
-                  <strong>{{ getTotalAvailableCredits() }} credits available</strong>
-                  <span>Internal balance for creative transformations.</span>
-                </div>
                 <app-turnstile
                   *ngIf="turnstileSiteKey && isEmailConfirmed"
                   [siteKey]="turnstileSiteKey"
@@ -439,7 +435,7 @@
                 <div class="action-dock">
                   <div>
                     <strong>Creative style pack</strong>
-                    <span>Uses your available internal balance</span>
+                    <span>Choose a creative style to continue</span>
                   </div>
                   <button
                     class="button button-primary button-wide"

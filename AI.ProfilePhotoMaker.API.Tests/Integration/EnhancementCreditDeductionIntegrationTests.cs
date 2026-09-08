@@ -190,6 +190,43 @@ public class EnhancementCreditDeductionIntegrationTests : IClassFixture<CustomWe
         Assert.Equal(20, (await GetProfileAsync()).Credits);
     }
 
+    [Fact]
+    public async Task HdUpscale_InvalidProviderOutput_IsRefundedAndNotPersisted()
+    {
+        await SeedUserAsync(credits: 20);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.UserPackageEntitlements.RemoveRange(db.UserPackageEntitlements.Where(e => e.UserId == UserId));
+            var package = await db.OutcomePackageDefinitions.SingleAsync(p => p.Code == "pro_package");
+            db.UserPackageEntitlements.Add(new UserPackageEntitlement
+            {
+                UserId = UserId,
+                OutcomePackageDefinitionId = package.Id,
+                Status = PackageEntitlementStatus.Active,
+                RemainingPremiumAugmentations = 1
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await _factory.CreateAuthenticatedClient().PostAsJsonAsync("/api/enhancement/enhance", new
+        {
+            imageUrl = FakeOpenAiHttpMessageHandler.SuccessImageUrl,
+            enhancementType = "hd_upscale",
+            turnstileToken = "test"
+        });
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal(20, (await GetProfileAsync()).Credits);
+        using var verify = _factory.Services.CreateScope();
+        var dbContext = verify.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.DoesNotContain(dbContext.ProcessedImages, image => image.Style == "hd_upscale");
+        Assert.Equal(1, await dbContext.UserPackageEntitlements
+            .Where(e => e.UserId == UserId)
+            .Select(e => e.RemainingPremiumAugmentations)
+            .SingleAsync());
+    }
+
     [Theory]
     [InlineData("relighting")]
     [InlineData("professional_polish")]

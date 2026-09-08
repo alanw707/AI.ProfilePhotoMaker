@@ -516,7 +516,7 @@ public class EnhancementController : ControllerBase
     private static bool IsPremiumAugmentation(string? enhancementType)
     {
         var normalized = (enhancementType ?? string.Empty).Trim().ToLowerInvariant();
-        return normalized is "relighting" or "professional_polish" or "outfit_upgrade" or "background_upgrade" or "skin_tone_polish" or "sharpen_detail" or "skin_smoothing" or "wrinkle_softening";
+        return normalized is "relighting" or "professional_polish" or "outfit_upgrade" or "background_upgrade" or "skin_tone_polish" or "sharpen_detail" or "skin_smoothing" or "wrinkle_softening" or "hd_upscale";
     }
 
     private static bool IsProfessionalRefinement(string? enhancementType)

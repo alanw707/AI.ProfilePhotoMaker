@@ -64,6 +64,27 @@ test.describe('Instant headshot mocked flow', () => {
       });
     });
 
+    await page.route('**/api/style', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: [{
+            id: 1,
+            name: 'linkedin',
+            description: 'Professional networking portrait',
+            promptTemplate: '',
+            negativePromptTemplate: '',
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }],
+          error: null,
+        }),
+      });
+    });
+
     await page.route('**/api/profilephotoworkflow/packages', async route => {
       await route.fulfill({
         status: 200,
@@ -211,25 +232,24 @@ test.describe('Instant headshot mocked flow', () => {
 
     await page.goto('/app/enhance?e2eAuthBypass=1');
     await page.getByRole('button', { name: /Accept All/i }).click().catch(() => undefined);
-    await expect(page.getByRole('heading', { name: /Create a platform-ready profile photo|Photo Workspace/i })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText('Upload one photo to score')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Your professional photo|Create your professional profile photo|Create a platform-ready profile photo|Photo Workspace/i })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('Upload one clear photo')).toBeVisible();
 
     const fileChooserPromise = page.waitForEvent('filechooser');
-    await page.getByText(/Upload one photo to score/i).click();
+    await page.getByText(/^Upload one photo$/i).click();
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles({ name: 'source.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgo=', 'base64') });
 
     await expect(page.getByText(/88\/100/).first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('Linkedin').first()).toBeVisible();
-    await page.getByRole('checkbox', { name: /biometric data/i }).check({ force: true });
+    await page.getByRole('checkbox', { name: /face geometry/i }).check({ force: true });
     await expect(page.getByRole('button', { name: /Transform Photo|Generate/i })).toBeEnabled({ timeout: 10_000 });
 
     await page.getByRole('button', { name: /Transform Photo|Generate/i }).click();
-    await expect(page.getByRole('heading', { name: 'Candidate Ready' })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText('Best Shot Selector')).toBeVisible();
-    await expect(page.getByText(/Candidate score: 88\/100/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Your candidate is ready|Candidate Ready/i })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Choose your best shot|Best Shot Selector/i)).toBeVisible();
+    await expect(page.getByText(/88\/100(?: fit)?/).first()).toBeVisible();
 
-    await expect(page.getByRole('button', { name: /Relighting/i })).toBeVisible();
     expect(headshotCalled).toBeTruthy();
   });
 });

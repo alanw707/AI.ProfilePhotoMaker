@@ -286,19 +286,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       description: 'Reduce minor distractions while keeping a natural look.',
     },
     {
-      label: 'Outfit upgrade',
-      type: 'outfit_upgrade',
-      description: 'Try a more polished business-casual wardrobe.',
-    },
-    {
-      label: 'Background upgrade',
-      type: 'background_upgrade',
-      description: 'Swap clutter for a cleaner professional setting.',
-    },
-    {
-      label: 'Skin tone polish',
-      type: 'skin_tone_polish',
-      description: 'Even redness and uneven color without changing identity.',
+      label: 'Wrinkle softening',
+      type: 'wrinkle_softening',
+      description: 'Subtly soften harsh crease shadows.',
     },
     {
       label: 'Sharpen detail',
@@ -306,14 +296,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       description: 'Improve crispness around eyes, hair, and clothing edges.',
     },
     {
-      label: 'Skin smoothing',
-      type: 'skin_smoothing',
-      description: 'Soften camera noise while preserving realistic texture.',
-    },
-    {
-      label: 'Wrinkle softening',
-      type: 'wrinkle_softening',
-      description: 'Subtly soften harsh crease shadows.',
+      label: 'HD Upscale',
+      type: 'hd_upscale',
+      description: 'Create the highest-resolution result OpenAI supports for this photo.',
     },
   ];
   exportOptions: PlatformExportOption[] = [];
@@ -426,8 +411,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         entitlement.status.toLowerCase() === 'active' &&
         (isRegeneration
           ? entitlement.remainingRefinements > 0
-          : entitlement.remainingPackageUses > 0 &&
-            entitlement.remainingCandidates >= requiredCandidates)
+          : entitlement.remainingCandidates >= requiredCandidates)
     );
   }
 
@@ -510,7 +494,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         entitlement.status.toLowerCase() === 'active' &&
         (entitlement.packageCode === 'starter_package' ||
           entitlement.packageCode === 'pro_package') &&
-        (entitlement.remainingPackageUses > 0 ||
+        (entitlement.remainingCandidates > 0 ||
           entitlement.remainingRefinements > 0 ||
           entitlement.remainingPremiumAugmentations > 0)
     );
@@ -522,7 +506,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         entitlement =>
           entitlement.packageCode === packageCode &&
           entitlement.status.toLowerCase() === 'active' &&
-          entitlement.remainingPackageUses > 0 &&
           entitlement.remainingCandidates > 0
       );
 
@@ -631,7 +614,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       entitlement =>
         entitlement.packageCode === packageCode &&
         entitlement.status.toLowerCase() === 'active' &&
-        entitlement.remainingPackageUses > 0 &&
         entitlement.remainingCandidates > 0
     );
   }
@@ -1911,9 +1893,22 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   getCandidateRequestCountForSelectedPackage(): number {
-    return this.selectedPackageCode === 'free_preview'
-      ? 1
-      : this.getRemainingCandidateCount(this.selectedPackageCode);
+    if (this.selectedPackageCode === 'free_preview') {
+      return 1;
+    }
+
+    if (!this.previewCandidate) {
+      const remainingCandidates = this.packageEntitlements.find(
+        entitlement =>
+          entitlement.packageCode === this.selectedPackageCode &&
+          entitlement.status.toLowerCase() === 'active'
+      )?.remainingCandidates;
+      if (remainingCandidates !== undefined) {
+        return Math.max(remainingCandidates, 1);
+      }
+    }
+
+    return this.getRemainingCandidateCount(this.selectedPackageCode);
   }
 
   confirmPaidPackageGeneration(packageCode: 'starter_package' | 'pro_package'): void {
