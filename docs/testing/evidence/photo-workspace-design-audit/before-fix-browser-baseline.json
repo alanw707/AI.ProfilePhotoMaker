@@ -1,0 +1,231 @@
+[
+  {
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "url": "/pricing/",
+    "title": "AI Headshot Pricing Plans - AI Profile Photo Maker",
+    "headings": [
+      "AI Headshot Pricing Plans"
+    ],
+    "overflow": false,
+    "buttons": [],
+    "alerts": [],
+    "errors": [],
+    "screenshot": "pricing-1440.png"
+  },
+  {
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "url": "/auth/register",
+    "title": "Sign Up - AI Profile Photo Maker",
+    "headings": [
+      "AI Profile Photo Maker",
+      "Create Account",
+      "We use cookies"
+    ],
+    "overflow": false,
+    "buttons": [
+      {
+        "text": "Create account via Google",
+        "disabled": true
+      },
+      {
+        "text": "Create Account",
+        "disabled": true
+      },
+      {
+        "text": "Sign in here",
+        "disabled": false
+      },
+      {
+        "text": "↑Top",
+        "disabled": false
+      },
+      {
+        "text": "Manage Preferences",
+        "disabled": false
+      },
+      {
+        "text": "Reject Non-Essential",
+        "disabled": false
+      },
+      {
+        "text": "Accept All",
+        "disabled": false
+      }
+    ],
+    "alerts": [],
+    "errors": [],
+    "screenshot": "auth-register-1440.png"
+  },
+  {
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "url": "/auth/login",
+    "title": "Login - AI Profile Photo Maker",
+    "headings": [
+      "AI Profile Photo Maker",
+      "Sign In"
+    ],
+    "overflow": false,
+    "buttons": [
+      {
+        "text": "",
+        "disabled": false
+      },
+      {
+        "text": "Sign In",
+        "disabled": true
+      },
+      {
+        "text": "Continue with Google",
+        "disabled": true
+      },
+      {
+        "text": "Create one here",
+        "disabled": false
+      },
+      {
+        "text": "↑Top",
+        "disabled": false
+      }
+    ],
+    "alerts": [],
+    "errors": [],
+    "screenshot": "app-enhance-1440.png"
+  },
+  {
+    "paymentConfigStatus": 200,
+    "paymentConfig": {
+      "success": true,
+      "data": {
+        "paymentSimulation": {
+          "enabled": false,
+          "skipStripeIntegration": false,
+          "reason": null
+        },
+        "stripe": {
+          "enabled": true,
+          "publishableKey": "[REDACTED]",
+          "webhookConfigured": true
+        }
+      },
+      "message": null,
+      "error": null
+    }
+  },
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "url": "/pricing/",
+    "title": "AI Headshot Pricing Plans - AI Profile Photo Maker",
+    "headings": [
+      "AI Headshot Pricing Plans"
+    ],
+    "overflow": false,
+    "buttons": [],
+    "alerts": [],
+    "errors": [],
+    "screenshot": "pricing-390.png"
+  },
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "url": "/auth/register",
+    "title": "Sign Up - AI Profile Photo Maker",
+    "headings": [
+      "AI Profile Photo Maker",
+      "Create Account"
+    ],
+    "overflow": false,
+    "buttons": [
+      {
+        "text": "Create account via Google",
+        "disabled": true
+      },
+      {
+        "text": "Create Account",
+        "disabled": true
+      },
+      {
+        "text": "Sign in here",
+        "disabled": false
+      },
+      {
+        "text": "↑Top",
+        "disabled": false
+      }
+    ],
+    "alerts": [],
+    "errors": [],
+    "screenshot": "auth-register-390.png"
+  },
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "url": "/auth/login",
+    "title": "Login - AI Profile Photo Maker",
+    "headings": [
+      "AI Profile Photo Maker",
+      "Sign In"
+    ],
+    "overflow": false,
+    "buttons": [
+      {
+        "text": "",
+        "disabled": false
+      },
+      {
+        "text": "Sign In",
+        "disabled": true
+      },
+      {
+        "text": "Continue with Google",
+        "disabled": true
+      },
+      {
+        "text": "Create one here",
+        "disabled": false
+      },
+      {
+        "text": "↑Top",
+        "disabled": false
+      }
+    ],
+    "alerts": [],
+    "errors": [],
+    "screenshot": "app-enhance-390.png"
+  },
+  {
+    "paymentConfigStatus": 200,
+    "paymentConfig": {
+      "success": true,
+      "data": {
+        "paymentSimulation": {
+          "enabled": false,
+          "skipStripeIntegration": false,
+          "reason": null
+        },
+        "stripe": {
+          "enabled": true,
+          "publishableKey": "[REDACTED]",
+          "webhookConfigured": true
+        }
+      },
+      "message": null,
+      "error": null
+    }
+  }
+]

@@ -10,6 +10,7 @@ export interface HeadshotGenerationRequest {
   packageCode?: 'free_preview' | 'starter_package' | 'pro_package' | string;
   numOutputs?: number;
   isRegeneration?: boolean;
+  refinementCode?: string;
   reusedPreviewProcessedImageId?: number;
   replacesProcessedImageId?: number;
   useCaseCode?: string;
@@ -61,6 +62,7 @@ export interface ResumableHeadshotPreview {
   style: string;
   createdAt: string;
   hasRawPreview: boolean;
+  isPaidCandidate?: boolean;
   canPromotePreview: boolean;
   activePackageCode?: 'starter_package' | 'pro_package' | string | null;
   remainingCandidateCount: number;

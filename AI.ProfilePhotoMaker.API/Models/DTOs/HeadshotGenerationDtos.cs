@@ -18,6 +18,9 @@ public class HeadshotGenerationRequestDto
 
     public bool IsRegeneration { get; set; }
 
+    [StringLength(32)]
+    public string? RefinementCode { get; set; }
+
     public int? ReusedPreviewProcessedImageId { get; set; }
 
     public int? ReplacesProcessedImageId { get; set; }
@@ -73,6 +76,7 @@ public class ResumableHeadshotPreviewDto
     public string Style { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public bool HasRawPreview { get; set; }
+    public bool IsPaidCandidate { get; set; }
     public bool CanPromotePreview { get; set; }
     public string? ActivePackageCode { get; set; }
     public int RemainingCandidateCount { get; set; }

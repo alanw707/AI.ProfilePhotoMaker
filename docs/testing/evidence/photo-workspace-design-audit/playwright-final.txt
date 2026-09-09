@@ -1,0 +1,10 @@
+
+Running 6 tests using 2 workers
+
+[1A[2K[1/6] tests/pricing-entry.spec.ts:3:5 › package load failure leaves a retryable state
+[1A[2K[2/6] tests/workspace-recovery.spec.ts:44:5 › dark workspace headings retain readable contrast against their panels
+[1A[2K[3/6] tests/workspace-recovery.spec.ts:59:5 › unavailable portrait previews use a working placeholder
+[1A[2K[4/6] tests/pricing-entry.spec.ts:18:7 › /pricing loads an interactive package page directly and after refresh
+[1A[2K[5/6] tests/workspace-recovery.spec.ts:65:5 › dismissing a generation error preserves the photo and retry action
+[1A[2K[6/6] tests/pricing-entry.spec.ts:18:7 › /packages loads an interactive package page directly and after refresh
+[1A[2K  6 passed (4.3s)

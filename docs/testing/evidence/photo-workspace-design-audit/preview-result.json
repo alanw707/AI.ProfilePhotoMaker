@@ -1,0 +1,52 @@
+{
+  "canGenerate": true,
+  "alerts": [
+    " Worth a quick review Image sharpness is below ideal quality.Use a less blurry photo for better facial detail."
+  ],
+  "generation": {
+    "status": 200,
+    "success": true,
+    "error": null,
+    "candidateCount": 9,
+    "processedImageId": 2
+  },
+  "headings": [
+    "Create your professional profile photo",
+    " Your candidate is ready ",
+    "Pro Package active",
+    "Choose your best shot",
+    "Make this photo ready to use",
+    "Photo adjustment",
+    "Premium augmentations",
+    "Platform export kit"
+  ],
+  "buttons": [
+    "",
+    "1Best shot 84/100 fit ›",
+    "2Candidate 2 84/100 fit ›",
+    "3Candidate 3 84/100 fit ›",
+    "4Candidate 4 84/100 fit ›",
+    "5Candidate 5 84/100 fit ›",
+    "6Candidate 6 84/100 fit ›",
+    "7Candidate 7 84/100 fit ›",
+    "8Candidate 8 84/100 fit ›",
+    "9Candidate 9 84/100 fit ›",
+    "Reset adjustments",
+    "RelightingBalance shadows and add cleaner studio-style light.Available now",
+    "Professional polishReduce minor distractions while keeping a natural look.Available now",
+    "Outfit upgradeTry a more polished business-casual wardrobe.Available now",
+    "Background upgradeSwap clutter for a cleaner professional setting.Available now",
+    "Skin tone polishEven redness and uneven color without changing identity.Available now",
+    "Sharpen detailImprove crispness around eyes, hair, and clothing edges.Available now",
+    "Skin smoothingSoften camera noise while preserving realistic texture.Available now",
+    "Wrinkle softeningSubtly soften harsh crease shadows.Available now",
+    " Generate premium add-on ",
+    " Regenerate with a refinement ",
+    " Download export kit ",
+    "Share",
+    "Create another photo",
+    "↑Top"
+  ],
+  "errors": [],
+  "provider": "local fixed-image fixture, not AI"
+}

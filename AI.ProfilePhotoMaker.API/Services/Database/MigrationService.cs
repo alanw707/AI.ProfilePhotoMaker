@@ -47,18 +47,15 @@ public class MigrationService : IMigrationService
                 return result;
             }
 
-            if (!await _context.Database.CanConnectAsync())
+            var databaseExists = await DatabaseExistsOnServerAsync();
+            if (databaseExists)
             {
-                _logger.LogInformation("Database not found; attempting to create it before migrations.");
-                if (!await EnsureDatabaseExistsAsync())
-                {
-                    result.Errors.Add("Failed to create database");
-                    return result;
-                }
+                await WaitForExistingDatabaseAsync();
             }
 
-            // Get pending migrations before applying
-            var pendingMigrations = await _context.Database.GetPendingMigrationsAsync();
+            var pendingMigrations = databaseExists
+                ? (await _context.Database.GetPendingMigrationsAsync()).ToList()
+                : _context.Database.GetMigrations().ToList();
             result.AppliedMigrations.AddRange(pendingMigrations);
 
             if (!pendingMigrations.Any())
@@ -72,8 +69,17 @@ public class MigrationService : IMigrationService
             _logger.LogInformation("Applying {Count} pending migrations: {Migrations}",
                 pendingMigrations.Count(), Sl(string.Join(", ", pendingMigrations)));
 
-            // Apply migrations with conflict resolution
-            await ApplyMigrationsWithConflictResolutionAsync(pendingMigrations);
+            if (databaseExists)
+            {
+                await ApplyMigrationsWithConflictResolutionAsync(pendingMigrations);
+            }
+            else
+            {
+                // EF creates a missing database as part of MigrateAsync. Creating it manually first
+                // leaves pooled failed-connection state and can make EF issue CREATE DATABASE twice.
+                _logger.LogInformation("Database not found; creating it through Entity Framework migrations");
+                await _context.Database.MigrateAsync();
+            }
 
             _logger.LogInformation("Successfully applied all migrations");
             result.Success = true;
@@ -218,42 +224,6 @@ public class MigrationService : IMigrationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to ensure database creation: {Message}", S(ex.Message));
-            return false;
-        }
-    }
-
-    private async Task<bool> EnsureDatabaseExistsAsync()
-    {
-        try
-        {
-            var connectionString = _databaseProvider.GetConnectionString();
-            var builder = new SqlConnectionStringBuilder(connectionString);
-            var databaseName = builder.InitialCatalog;
-
-            if (string.IsNullOrWhiteSpace(databaseName))
-            {
-                _logger.LogWarning("Database name missing from connection string; cannot create database.");
-                return false;
-            }
-
-            builder.InitialCatalog = "master";
-            await using var connection = new SqlConnection(builder.ConnectionString);
-            await connection.OpenAsync();
-
-            await using var command = connection.CreateCommand();
-            command.CommandText = "IF DB_ID(@dbName) IS NULL EXEC('CREATE DATABASE [' + @dbName + ']')";
-            var parameter = command.CreateParameter();
-            parameter.ParameterName = "@dbName";
-            parameter.Value = databaseName;
-            command.Parameters.Add(parameter);
-
-            await command.ExecuteNonQueryAsync();
-            _logger.LogInformation("Database ensured: {Database}", S(databaseName));
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create database: {Message}", S(ex.Message));
             return false;
         }
     }
@@ -463,6 +433,54 @@ public class MigrationService : IMigrationService
         await command.ExecuteNonQueryAsync();
 
         _logger.LogInformation("Marked migration {MigrationId} as applied", migrationId);
+    }
+
+    private async Task<bool> DatabaseExistsOnServerAsync()
+    {
+        if (await _context.Database.CanConnectAsync())
+        {
+            return true;
+        }
+
+        if (!_context.Database.IsSqlServer())
+        {
+            return false;
+        }
+
+        var builder = new SqlConnectionStringBuilder(_databaseProvider.GetConnectionString());
+        var databaseName = builder.InitialCatalog;
+        builder.InitialCatalog = "master";
+
+        await using var connection = new SqlConnection(builder.ConnectionString);
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT CASE WHEN DB_ID(@databaseName) IS NULL THEN 0 ELSE 1 END";
+        command.Parameters.AddWithValue("@databaseName", databaseName);
+        return Convert.ToInt32(await command.ExecuteScalarAsync()) == 1;
+    }
+
+    private async Task WaitForExistingDatabaseAsync()
+    {
+        const int attempts = 10;
+        for (var attempt = 1; attempt <= attempts; attempt++)
+        {
+            if (await _context.Database.CanConnectAsync())
+            {
+                return;
+            }
+
+            SqlConnection.ClearAllPools();
+            if (attempt < attempts)
+            {
+                _logger.LogInformation(
+                    "Database exists but is not ready; waiting before migration attempt {Attempt}/{MaxAttempts}",
+                    attempt + 1,
+                    attempts);
+                await Task.Delay(TimeSpan.FromSeconds(2));
+            }
+        }
+
+        throw new InvalidOperationException("Database exists but did not become available for migrations.");
     }
 
     private DbConnection CreateStandaloneConnection()

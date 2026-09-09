@@ -3,7 +3,6 @@ using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Stripe;
@@ -63,7 +62,9 @@ public class CreditPackageService : ICreditPackageService
         string userId,
         int packageId,
         string? paymentTransactionId = null,
-        int? previewProcessedImageId = null)
+        int? previewProcessedImageId = null,
+        string? webhookOperationKey = null,
+        string? webhookOperationToken = null)
     {
         var package = await _context.CreditPackages
             .FirstOrDefaultAsync(p => p.Id == packageId && p.IsActive);
@@ -98,9 +99,9 @@ public class CreditPackageService : ICreditPackageService
 
         if (existingPurchase != null)
         {
-            if (!string.Equals(existingPurchase.UserId, userId, StringComparison.Ordinal))
+            if (!string.Equals(existingPurchase.UserId, userId, StringComparison.Ordinal) || existingPurchase.PackageId != packageId)
             {
-                return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "TransactionMismatch", "Payment transaction does not belong to the current user.");
+                return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "TransactionMismatch", "Payment transaction does not match the current user and package.");
             }
 
             var success = existingPurchase.Status is PaymentStatus.Completed or PaymentStatus.Succeeded;
@@ -149,8 +150,6 @@ public class CreditPackageService : ICreditPackageService
 
         if (transaction != null)
         {
-            await RefreshStripeTransactionStatusAsync(transaction);
-
             if (!string.Equals(transaction.UserId, userId, StringComparison.Ordinal))
             {
                 _logger.LogWarning(
@@ -158,6 +157,31 @@ public class CreditPackageService : ICreditPackageService
                     LoggingSanitizer.SanitizeId(paymentTransactionId ?? transaction.Id.ToString()),
                     LoggingSanitizer.SanitizeId(userId));
                 return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "TransactionMismatch", "Payment transaction does not belong to the current user.");
+            }
+
+            // Manual review must not be bypassed by refreshing a succeeded Stripe intent.
+            if (transaction.Status == PaymentStatus.PendingReview)
+            {
+                return new CreditPurchaseResult(false, transaction.Status, null, "PaymentPendingReview", "Payment requires review before the package can be fulfilled.");
+            }
+
+            if (transaction.Status == PaymentStatus.Refunded)
+            {
+                return new CreditPurchaseResult(false, transaction.Status, null, "PaymentFailed", "This payment has been refunded.");
+            }
+
+            var paymentVerified = await VerifyAndRefreshStripeTransactionAsync(transaction, packageId);
+            if (paymentVerified != true)
+            {
+                var unavailable = paymentVerified == null;
+                return new CreditPurchaseResult(
+                    false,
+                    PaymentStatus.Failed,
+                    null,
+                    unavailable ? "PaymentVerificationUnavailable" : "PaymentVerificationFailed",
+                    unavailable
+                        ? "Payment verification is temporarily unavailable. Please retry."
+                        : "Unable to verify payment for this package. Please retry or contact support.");
             }
 
             if (transaction.Status == PaymentStatus.Pending)
@@ -177,7 +201,9 @@ public class CreditPackageService : ICreditPackageService
                 transaction.Amount,
                 "stripe_credit_purchase",
                 transaction.ExternalTransactionId,
-                previewProcessedImageId);
+                previewProcessedImageId,
+                webhookOperationKey,
+                webhookOperationToken);
 
             var success = purchase.Status is PaymentStatus.Completed or PaymentStatus.Succeeded;
             return new CreditPurchaseResult(success, purchase.Status, purchase);
@@ -217,16 +243,6 @@ public class CreditPackageService : ICreditPackageService
             .FirstOrDefaultAsync(t => t.ExternalTransactionId == paymentTransactionId);
     }
 
-    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
-    {
-        if (exception.InnerException is SqlException sqlException)
-        {
-            return sqlException.Number is 2601 or 2627;
-        }
-
-        return false;
-    }
-
     private async Task<CreditPurchase> CreatePurchaseAndApplyCreditsAsync(
         string userId,
         CreditPackage package,
@@ -234,122 +250,170 @@ public class CreditPackageService : ICreditPackageService
         decimal amountPaid,
         string creditSource,
         string? externalTransactionId = null,
-        int? previewProcessedImageId = null)
+        int? previewProcessedImageId = null,
+        string? webhookOperationKey = null,
+        string? webhookOperationToken = null)
     {
-        var purchase = new CreditPurchase
-        {
-            UserId = userId,
-            PackageId = package.Id,
-            PurchaseDate = DateTime.UtcNow,
-            CreditsAwarded = package.TotalCredits,
-            AmountPaid = amountPaid,
-            PaymentTransactionId = paymentTransactionId,
-            PaymentProvider = externalTransactionId == null ? "simulation" : "stripe",
-            Status = PaymentStatus.Pending,
-            ExternalTransactionId = externalTransactionId
-        };
-
-        _context.CreditPurchases.Add(purchase);
-
+        var strategy = _context.Database.CreateExecutionStrategy();
+        var firstAttempt = true;
         try
         {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex) && !string.IsNullOrWhiteSpace(paymentTransactionId))
-        {
-            _context.Entry(purchase).State = EntityState.Detached;
+            return await strategy.ExecuteAsync(async () =>
+            {
+                if (!firstAttempt)
+                {
+                    _context.ChangeTracker.Clear();
+                }
+                firstAttempt = false;
+                await using var transaction = _context.Database.IsRelational()
+                    ? await _context.Database.BeginTransactionAsync()
+                    : null;
 
+                if (!string.IsNullOrWhiteSpace(webhookOperationKey) && !string.IsNullOrWhiteSpace(webhookOperationToken))
+                {
+                    var ownsOperation = _context.Database.IsRelational()
+                        ? await _context.StripeWebhookOperations
+                            .Where(operation => operation.OperationKey == webhookOperationKey &&
+                                                operation.OperationToken == webhookOperationToken &&
+                                                operation.Status == StripeWebhookOperationStatus.Processing)
+                            .ExecuteUpdateAsync(setters => setters
+                                .SetProperty(operation => operation.UpdatedAt, operation => operation.UpdatedAt)) == 1
+                        : await _context.StripeWebhookOperations.AnyAsync(operation =>
+                            operation.OperationKey == webhookOperationKey &&
+                            operation.OperationToken == webhookOperationToken &&
+                            operation.Status == StripeWebhookOperationStatus.Processing);
+                    if (!ownsOperation)
+                    {
+                        throw new InvalidOperationException("Stripe webhook operation ownership was lost before purchase fulfillment.");
+                    }
+                }
+
+                // A commit may have succeeded even if its acknowledgement was lost.
+                if (!string.IsNullOrWhiteSpace(paymentTransactionId))
+                {
+                    var committed = await _context.CreditPurchases.AsNoTracking()
+                        .FirstOrDefaultAsync(p => p.PaymentTransactionId == paymentTransactionId);
+                    if (committed != null)
+                    {
+                        if (committed.UserId != userId || committed.PackageId != package.Id)
+                        {
+                            throw new InvalidOperationException("Payment transaction does not match the purchase.");
+                        }
+                        committed.Package = package;
+                        return committed;
+                    }
+                }
+
+                var purchase = new CreditPurchase
+                {
+                    UserId = userId,
+                    PackageId = package.Id,
+                    PurchaseDate = DateTime.UtcNow,
+                    CreditsAwarded = package.TotalCredits,
+                    AmountPaid = amountPaid,
+                    PaymentTransactionId = paymentTransactionId,
+                    PaymentProvider = externalTransactionId == null ? "simulation" : "stripe",
+                    Status = PaymentStatus.Pending,
+                    ExternalTransactionId = externalTransactionId
+                };
+
+                _context.CreditPurchases.Add(purchase);
+                await _context.SaveChangesAsync();
+
+                var creditsAdded = await _basicTierService.AddPurchasedCreditsAsync(userId, package.TotalCredits, creditSource);
+                if (!creditsAdded)
+                {
+                    throw new InvalidOperationException("Credit allocation failed; purchase must be retried.");
+                }
+                purchase.Status = PaymentStatus.Completed;
+                purchase.CompletedAt = DateTime.UtcNow;
+
+                if (_outcomePackageService != null)
+                {
+                    await _outcomePackageService.GrantEntitlementForCreditPackageAsync(userId, package.Id, paymentTransactionId, previewProcessedImageId);
+                }
+
+                await _context.SaveChangesAsync();
+                if (transaction != null)
+                {
+                    await transaction.CommitAsync();
+                }
+
+                purchase.Package = package;
+                return purchase;
+            });
+        }
+        catch (DbUpdateException) when (!string.IsNullOrWhiteSpace(paymentTransactionId))
+        {
+            _context.ChangeTracker.Clear();
             var existingPurchase = await _context.CreditPurchases
                 .Include(p => p.Package)
                 .AsNoTracking()
-                .FirstAsync(p => p.PaymentTransactionId == paymentTransactionId);
-
-            return existingPurchase;
-        }
-
-        var creditsAdded = await _basicTierService.AddPurchasedCreditsAsync(userId, package.TotalCredits, creditSource);
-
-        purchase.Status = creditsAdded ? PaymentStatus.Completed : PaymentStatus.Failed;
-        purchase.CompletedAt = creditsAdded ? DateTime.UtcNow : null;
-
-        if (!creditsAdded)
-        {
-            _logger.LogError(
-                "Failed to add credits to user {UserId} for purchase {PurchaseId}",
-                LoggingSanitizer.SanitizeId(userId),
-                purchase.Id);
-        }
-
-        await _context.SaveChangesAsync();
-
-        if (creditsAdded)
-        {
-            if (_outcomePackageService != null)
+                .FirstOrDefaultAsync(p => p.PaymentTransactionId == paymentTransactionId);
+            if (existingPurchase != null && existingPurchase.UserId == userId && existingPurchase.PackageId == package.Id)
             {
-                await _outcomePackageService.GrantEntitlementForCreditPackageAsync(
-                    userId,
-                    package.Id,
-                    paymentTransactionId,
-                    previewProcessedImageId);
+                return existingPurchase;
             }
+            throw;
         }
-
-        purchase.Package = package;
-        return purchase;
+        catch
+        {
+            _context.ChangeTracker.Clear();
+            throw;
+        }
     }
 
-    private async Task RefreshStripeTransactionStatusAsync(PaymentTransaction transaction)
+    private async Task<bool?> VerifyAndRefreshStripeTransactionAsync(PaymentTransaction transaction, int packageId)
     {
-        if (_stripeClient == null || string.IsNullOrWhiteSpace(transaction.ExternalTransactionId))
+        if (_stripeClient == null)
         {
-            return;
+            return true;
         }
-
-        if (transaction.Status is PaymentStatus.Completed or PaymentStatus.Succeeded)
+        if (string.IsNullOrWhiteSpace(transaction.ExternalTransactionId))
         {
-            return;
+            return false;
         }
-
-        var paymentIntentService = new PaymentIntentService(_stripeClient);
 
         try
         {
-            var intent = await paymentIntentService.GetAsync(transaction.ExternalTransactionId);
-
-            switch (intent.Status)
+            // Verify the first fulfillment even when a webhook already marked the local row completed.
+            // The client-supplied package ID is not proof of which package the customer paid for.
+            var intent = await new PaymentIntentService(_stripeClient).GetAsync(transaction.ExternalTransactionId);
+            var expectedAmount = (long)Math.Round(transaction.Amount * 100, MidpointRounding.AwayFromZero);
+            if (intent.Id != transaction.ExternalTransactionId ||
+                intent.Metadata == null ||
+                !intent.Metadata.TryGetValue("package_id", out var paidPackageId) || paidPackageId != packageId.ToString() ||
+                !intent.Metadata.TryGetValue("user_id", out var paidUserId) || paidUserId != transaction.UserId ||
+                intent.Amount != expectedAmount ||
+                !string.Equals(intent.Currency, transaction.Currency, StringComparison.OrdinalIgnoreCase) ||
+                (intent.Status == "succeeded" && intent.AmountReceived != expectedAmount))
             {
-                case "succeeded":
-                    transaction.Status = PaymentStatus.Completed;
-                    transaction.FailureReason = null;
-                    transaction.ProcessedAt ??= DateTime.UtcNow;
-                    transaction.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                    break;
-                case "processing":
-                case "requires_capture":
-                    transaction.Status = PaymentStatus.Pending;
-                    transaction.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                    break;
-                case "requires_payment_method":
-                case "requires_confirmation":
-                    // Payment is waiting for a new confirmation; leave status as-is so UI can retry.
-                    break;
-                default:
-                    break;
+                _logger.LogWarning("Stripe payment does not match transaction {TransactionId} and package {PackageId}", transaction.Id, packageId);
+                return false;
             }
-        }
-        catch (StripeException stripeException)
-        {
-            _logger.LogWarning(stripeException,
-                "Unable to refresh Stripe payment intent {PaymentIntentId}",
-                LoggingSanitizer.SanitizeId(transaction.ExternalTransactionId));
+
+            transaction.Status = intent.Status switch
+            {
+                "succeeded" => PaymentStatus.Completed,
+                "canceled" => PaymentStatus.Cancelled,
+                "requires_payment_method" when intent.LastPaymentError != null => PaymentStatus.Failed,
+                _ => PaymentStatus.Pending
+            };
+            transaction.FailureReason = intent.LastPaymentError?.Message;
+            transaction.UpdatedAt = DateTime.UtcNow;
+            if (transaction.Status != PaymentStatus.Pending)
+            {
+                transaction.ProcessedAt ??= DateTime.UtcNow;
+            }
+            await _context.SaveChangesAsync();
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex,
-                "Unexpected error while refreshing Stripe payment intent {PaymentIntentId}",
+                "Unable to verify Stripe payment intent {PaymentIntentId}",
                 LoggingSanitizer.SanitizeId(transaction.ExternalTransactionId));
+            return null;
         }
     }
 

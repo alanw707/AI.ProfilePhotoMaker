@@ -1,0 +1,10 @@
+Processing modal/posture release verification
+API full suite: 490 passed.
+Angular suite: 510 passed; two existing skips.
+Focused browser suite: 21 passed.
+Production build/lint: exit status 0.
+Guided backend cases: 16 passed.
+Local API + SQL + Azurite smoke: PASS with deterministic provider fixture. One refinement consumed; other balances unchanged; replay reused receipt without another provider call.
+Red checks: 4 missing modal cases; 2 comparison overflows; completion focus; 3 unsafe reset cases.
+Visual review: batched mobile/desktop inspection plus one confirmation. Marketing image fixtures, not paid posture outputs.
+No paid AI generation or production account mutation during verification.

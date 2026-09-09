@@ -15,6 +15,7 @@ namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 public class HeadshotGenerationService : IHeadshotGenerationService
 {
     public const string ActionName = "instant_headshot_generation";
+    private static readonly TimeSpan GenerationLeaseDuration = TimeSpan.FromHours(1);
 
     private readonly ApplicationDbContext _dbContext;
     private readonly IBasicTierService _basicTierService;
@@ -75,10 +76,13 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             throw new InvalidOperationException("User profile not found.");
         }
 
-        var sourcePath = ValidateAndNormalizeSourcePath(request.ImageStoragePath, userId);
-        var portraitStyle = await ResolvePortraitStyleAsync(request.Style, cancellationToken);
-        request.Style = portraitStyle.Name;
         var packageCode = NormalizePackageCode(request.PackageCode);
+        var refinementPrompt = request.RefinementCode == null ? null : BuildRefinementPrompt(request.RefinementCode);
+        if (refinementPrompt != null && (!request.IsRegeneration || request.NumOutputs != 1 ||
+            packageCode == "free_preview" || request.ReusedPreviewProcessedImageId.HasValue))
+        {
+            throw new HeadshotGenerationException("InvalidRefinement", "Choose one refinement for one paid photo.");
+        }
         ProcessedImage? replacedCandidate = null;
         if (request.IsRegeneration)
         {
@@ -88,16 +92,28 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                     i.UserProfileId == profile.Id &&
                     i.GenerationStatus == "succeeded" &&
                     (i.GenerationMode == "instant_headshot" ||
-                     i.GenerationMode == "instant_headshot_promoted_preview"),
+                     i.GenerationMode == "instant_headshot_promoted_preview" ||
+                     (refinementPrompt != null && (i.GenerationMode == "premium_augmentation" || i.GenerationMode == "photo_refinement"))),
                     cancellationToken)
                 : null;
-            if (replacedCandidate == null || replacedCandidate.OriginalImageUrl != sourcePath)
+            if (replacedCandidate == null ||
+                (refinementPrompt != null
+                    ? replacedCandidate.ProcessedImageUrl != request.ImageStoragePath || !string.IsNullOrEmpty(replacedCandidate.RawImageStoragePath)
+                    : replacedCandidate.OriginalImageUrl != request.ImageStoragePath))
             {
                 throw new HeadshotGenerationException(
                     "InvalidImageSource",
-                    "Choose an owned candidate from this package before using a refinement.");
+                    "Choose an owned, unwatermarked candidate before using a refinement.");
             }
         }
+        // Guided edits use the server-owned selected proof, never regenerate the original upload.
+        var sourcePath = ValidateAndNormalizeSourcePath(
+            refinementPrompt != null ? replacedCandidate!.ProcessedImageUrl : request.ImageStoragePath,
+            userId, selectedProof: refinementPrompt != null);
+        var portraitStyle = refinementPrompt != null
+            ? new Style { Name = replacedCandidate!.Style }
+            : await ResolvePortraitStyleAsync(request.Style, cancellationToken);
+        request.Style = portraitStyle.Name;
         var requestedOutputs = Math.Clamp(request.NumOutputs, 1, 9);
         requestedOutputs = packageCode switch
         {
@@ -110,12 +126,18 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         // credit ledger remains only for generation flows without package fulfillment.
         var requiredCredits = _outcomePackageService != null ? 0 : CreditCostConfig.GetCreditCost(ActionName) * requestedOutputs;
         var correlationId = BuildDeterministicCorrelationId(userId, sourcePath, request);
+        var existingOperation = await _dbContext.HeadshotGenerationOperations
+            .AsNoTracking()
+            .Where(o => o.UserId == userId && o.CorrelationId == correlationId)
+            .Select(o => new { o.Status, o.OperationToken })
+            .FirstOrDefaultAsync(cancellationToken);
         var candidateCorrelationPrefix = $"{correlationId}:candidate:";
         var existingGeneratedImages = await _dbContext.ProcessedImages
             .Where(i =>
                 i.UserProfileId == profile.Id &&
                 i.GenerationStatus == "succeeded" &&
                 i.GenerationMode == "instant_headshot" &&
+                (existingOperation == null || (i.GenerationOperationToken ?? "") == existingOperation.OperationToken) &&
                 (i.CorrelationId == correlationId || (i.CorrelationId != null && i.CorrelationId.StartsWith(candidateCorrelationPrefix))))
             .OrderBy(i => i.CorrelationId)
             .Take(requestedOutputs)
@@ -135,7 +157,8 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                     cancellationToken)
             : null;
         var hasCompleteIdempotentResult = existingGeneratedImages.Count >= requestedOutputs &&
-            (request.ReusedPreviewProcessedImageId.HasValue ? existingPromotedPreview != null : existingPromotedPreview == null);
+            (request.ReusedPreviewProcessedImageId.HasValue ? existingPromotedPreview != null : existingPromotedPreview == null) &&
+            (existingOperation == null || existingOperation.Status == HeadshotGenerationOperationStatus.Succeeded);
         if (hasCompleteIdempotentResult)
         {
             var existingRemainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
@@ -179,9 +202,11 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             var entitlement = packageCode == "free_preview"
                 ? null
                 : await _outcomePackageService.GetActiveEntitlementAsync(userId, packageCode, cancellationToken);
+            var candidateSlots = requestedOutputs +
+                (packageCode != "free_preview" && !request.IsRegeneration && request.ReusedPreviewProcessedImageId.HasValue && existingPromotedPreview == null ? 1 : 0);
             var allowance = PackageEntitlementPolicy.CheckGenerationAllowance(
                 packageCode,
-                requestedOutputs,
+                candidateSlots,
                 request.IsRegeneration,
                 entitlement);
             if (!allowance.Allowed)
@@ -198,20 +223,26 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             throw new HeadshotGenerationException("InsufficientCredits", $"Instant headshot generation requires {requiredCredits} credit{(requiredCredits == 1 ? string.Empty : "s")}.");
         }
 
+        var operationToken = await AcquireGenerationOperationAsync(userId, correlationId, cancellationToken);
+
         CreditConsumptionResult? consumed = null;
         var promotionCreated = false;
-        var packageAllowanceConsumed = false;
+        var generationCommitted = false;
+        var providerOutcomeUnknown = false;
+        var debitOutcomeUnknown = false;
 
         try
         {
             if (requiredCredits > 0)
             {
+                debitOutcomeUnknown = true;
                 consumed = await _basicTierService.ConsumeCreditsAsync(
                     userId,
                     requiredCredits,
                     ActionName,
-                    correlationId,
+                    $"{correlationId}:attempt:{operationToken}",
                     cancellationToken);
+                debitOutcomeUnknown = consumed == null;
 
                 if (consumed == null || !consumed.Success)
                 {
@@ -231,6 +262,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                     previewImageId,
                     profile.Id,
                     correlationId,
+                    operationToken,
                     cancellationToken);
                 promotionCreated = promotion.Created;
                 if (promotion.Candidate != null)
@@ -244,16 +276,18 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                 var candidateCorrelationId = requestedOutputs == 1
                     ? correlationId
                     : $"{correlationId}:candidate:{outputIndex + 1}";
-                var recipe = packageCode == "free_preview"
+                var recipe = packageCode == "free_preview" || refinementPrompt != null
                     ? HeadshotRecipeRegistry.None(request.UseCaseCode)
                     : HeadshotRecipeRegistry.Resolve(request.UseCaseCode, request.RecipeCode, outputIndex);
+                await EnsureGenerationOperationOwnershipAsync(userId, correlationId, operationToken, cancellationToken);
+                providerOutcomeUnknown = true;
                 var result = await _provider.GenerateAsync(new HeadshotGenerationRequest
                 {
                     UserId = userId,
                     ImageStoragePath = sourcePath,
                     Style = portraitStyle.Name,
                     Background = request.Background,
-                    PromptTemplate = ApplyRecipeToPrompt(BuildInstantHeadshotPrompt(portraitStyle.PromptTemplate, profile), recipe),
+                    PromptTemplate = refinementPrompt ?? ApplyRecipeToPrompt(BuildInstantHeadshotPrompt(portraitStyle.PromptTemplate, profile), recipe),
                     UseCaseCode = recipe.UseCaseCode,
                     RecipeCode = recipe.Code,
                     Label = recipe.Label,
@@ -262,16 +296,19 @@ public class HeadshotGenerationService : IHeadshotGenerationService
 
                 if (!result.Success)
                 {
+                    providerOutcomeUnknown = result.FailureCode == "ProviderOutcomeUnknown";
                     throw new HeadshotGenerationException(
                         result.FailureCode ?? "ProviderGenerationFailed",
                         result.FailureMessage ?? "Headshot provider failed to generate an image.");
                 }
 
+                await EnsureGenerationOperationOwnershipAsync(userId, correlationId, operationToken, cancellationToken);
                 var storedOutput = await StoreProviderOutputAsync(result.DataUrlOrUrl, userId, packageCode == "free_preview" && _outcomePackageService != null, cancellationToken);
+                await EnsureGenerationOperationOwnershipAsync(userId, correlationId, operationToken, cancellationToken);
 
                 var processedImage = new ProcessedImage
                 {
-                    OriginalImageUrl = sourcePath,
+                    OriginalImageUrl = refinementPrompt != null ? replacedCandidate!.OriginalImageUrl : sourcePath,
                     ProcessedImageUrl = storedOutput.DisplayPath,
                     Style = NormalizeStyle(request.Style),
                     UserProfileId = profile.Id,
@@ -286,34 +323,60 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                     CorrelationId = candidateCorrelationId,
                     RawImageStoragePath = storedOutput.RawPath,
                     ReplacesProcessedImageId = replacedCandidate?.Id,
-                    PromptVersion = string.IsNullOrWhiteSpace(recipe.Code) ? result.PromptVersion : $"{result.PromptVersion}:{recipe.Code}"
+                    GenerationOperationToken = operationToken,
+                    PromptVersion = refinementPrompt != null
+                        ? $"{result.PromptVersion}:refinement-v1:{request.RefinementCode}"
+                        : string.IsNullOrWhiteSpace(recipe.Code) ? result.PromptVersion : $"{result.PromptVersion}:{recipe.Code}"
                 };
                 processedImage.SetScheduledDeletionDate();
 
                 _dbContext.ProcessedImages.Add(processedImage);
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 candidates.Add(ToCandidateDto(processedImage));
+                providerOutcomeUnknown = false;
             }
 
-            if (packageCode != "free_preview" && _outcomePackageService != null)
+            var commitStrategy = _dbContext.Database.CreateExecutionStrategy();
+            await commitStrategy.ExecuteAsync(async () =>
             {
-                var consumedPackageAllowance = request.IsRegeneration
-                    ? await _outcomePackageService.ConsumeRefinementAsync(userId, packageCode, cancellationToken)
-                    : await _outcomePackageService.ConsumeCandidatesAsync(
-                        userId,
-                        packageCode,
-                        requestedOutputs + (promotionCreated ? 1 : 0),
+                // A retry must reload allowance state instead of decrementing a tracked entity twice.
+                _dbContext.ChangeTracker.Clear();
+                var alreadyCommitted = await _dbContext.HeadshotGenerationOperations
+                    .AsNoTracking()
+                    .AnyAsync(o => o.UserId == userId &&
+                                   o.CorrelationId == correlationId &&
+                                   o.OperationToken == operationToken &&
+                                   o.Status == HeadshotGenerationOperationStatus.Succeeded,
                         cancellationToken);
-                if (!consumedPackageAllowance)
+                if (alreadyCommitted)
                 {
-                    await MarkPersistedCandidatesFailedAsync(profile.Id, correlationId, cancellationToken);
-                    throw new HeadshotGenerationException("PackageEntitlementRequired", request.IsRegeneration
-                        ? "Unable to consume package refinement allowance."
-                        : "Unable to consume profile photo package allowance.");
+                    return;
                 }
-                packageAllowanceConsumed = true;
-            }
 
+                await using var commitTransaction = _dbContext.Database.IsRelational()
+                    ? await _dbContext.Database.BeginTransactionAsync(cancellationToken)
+                    : null;
+
+                if (packageCode != "free_preview" && _outcomePackageService != null)
+                {
+                    var consumedPackageAllowance = request.IsRegeneration
+                        ? await _outcomePackageService.ConsumeRefinementAsync(userId, packageCode, cancellationToken)
+                        : await _outcomePackageService.ConsumeCandidatesAsync(userId, packageCode, requestedOutputs + (promotionCreated ? 1 : 0), cancellationToken);
+                    if (!consumedPackageAllowance)
+                    {
+                        throw new HeadshotGenerationException("PackageEntitlementRequired", request.IsRegeneration
+                            ? "Unable to consume package refinement allowance."
+                            : "Unable to consume profile photo package allowance.");
+                    }
+                }
+
+                await CompleteGenerationOperationAsync(userId, correlationId, operationToken, cancellationToken);
+                if (commitTransaction != null)
+                {
+                    await commitTransaction.CommitAsync(cancellationToken);
+                }
+            });
+            generationCommitted = true;
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
             await _basicTierService.LogUsageAsync(
                 userId,
@@ -343,50 +406,244 @@ public class HeadshotGenerationService : IHeadshotGenerationService
                 Candidates = candidates
             };
         }
-        catch
+        catch (Exception ex)
         {
-            if (!packageAllowanceConsumed &&
-                packageCode != "free_preview" &&
-                !request.IsRegeneration &&
-                _outcomePackageService != null)
+            if (providerOutcomeUnknown || debitOutcomeUnknown)
             {
-                var partialCandidateCount = await CountPersistedCandidatesAsync(
+                // A missing consumption receipt does not prove the debit rolled back.
+                // Keep the claim for reconciliation on uncertain debit/provider outcomes;
+                // neither automatic refund nor resubmission is safe.
+                _logger.LogWarning("Generation outcome requires reconciliation for correlation {CorrelationId}; debitUnknown={DebitUnknown}", S(correlationId), debitOutcomeUnknown);
+                throw;
+            }
+            if (!generationCommitted)
+            {
+                // A lost commit acknowledgement is not proof of rollback. Discard tracked
+                // transaction state and consult the durable receipt before compensating.
+                // If this read fails, leave the operation for reconciliation, not retry.
+                _dbContext.ChangeTracker.Clear();
+                generationCommitted = await _dbContext.HeadshotGenerationOperations.AsNoTracking()
+                    .AnyAsync(o => o.UserId == userId && o.CorrelationId == correlationId &&
+                                   o.OperationToken == operationToken &&
+                                   o.Status == HeadshotGenerationOperationStatus.Succeeded,
+                        CancellationToken.None);
+            }
+            if (!generationCommitted)
+            {
+                var failureReason = ex is HeadshotGenerationException { Code: "PackageEntitlementRequired" }
+                    ? "package-entitlement-consumption-failed"
+                    : "generation-incomplete";
+                await MarkPersistedCandidatesFailedAsync(
                     profile.Id,
                     correlationId,
-                    cancellationToken);
-                var partialAllowanceCount = partialCandidateCount + (promotionCreated ? 1 : 0);
-                var partialAllowanceConsumed = partialAllowanceCount == 0 ||
-                    await _outcomePackageService.ConsumeCandidatesAsync(
-                        userId,
-                        packageCode,
-                        partialAllowanceCount,
-                        cancellationToken);
-                if (!partialAllowanceConsumed)
-                {
-                    await MarkPersistedCandidatesFailedAsync(profile.Id, correlationId, cancellationToken);
-                }
+                    operationToken,
+                    CancellationToken.None,
+                    failureReason);
+                await _basicTierService.RefundCreditsAsync(userId, consumed);
+                await FailGenerationOperationAsync(userId, correlationId, operationToken, CancellationToken.None);
             }
-            await _basicTierService.RefundCreditsAsync(userId, consumed);
             throw;
         }
     }
 
-    private Task<int> CountPersistedCandidatesAsync(
-        int userProfileId,
+    private async Task<string> AcquireGenerationOperationAsync(
+        string userId,
         string correlationId,
         CancellationToken cancellationToken)
     {
-        var candidateCorrelationPrefix = $"{correlationId}:candidate:";
-        return _dbContext.ProcessedImages.CountAsync(i =>
-            i.UserProfileId == userProfileId &&
-            i.GenerationMode == "instant_headshot" &&
-            i.GenerationStatus == "succeeded" &&
-            (i.CorrelationId == correlationId ||
-             (i.CorrelationId != null && i.CorrelationId.StartsWith(candidateCorrelationPrefix))),
-            cancellationToken);
+        var now = DateTime.UtcNow;
+        var operationToken = Guid.NewGuid().ToString("N");
+        if (!_dbContext.Database.IsRelational())
+        {
+            var existing = await _dbContext.HeadshotGenerationOperations
+                .FirstOrDefaultAsync(o => o.UserId == userId && o.CorrelationId == correlationId, cancellationToken);
+            if (existing != null)
+            {
+                if (existing.Status != HeadshotGenerationOperationStatus.Failed)
+                {
+                    throw new HeadshotGenerationException(
+                        "GenerationInProgress",
+                        "An identical headshot generation request is already in progress or requires reconciliation.");
+                }
+
+                existing.Status = HeadshotGenerationOperationStatus.Processing;
+                existing.OperationToken = operationToken;
+                existing.FailureCode = null;
+                existing.LeaseExpiresAt = now.Add(GenerationLeaseDuration);
+                existing.UpdatedAt = now;
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                return operationToken;
+            }
+
+            _dbContext.HeadshotGenerationOperations.Add(new HeadshotGenerationOperation
+            {
+                UserId = userId,
+                CorrelationId = correlationId,
+                Status = HeadshotGenerationOperationStatus.Processing,
+                OperationToken = operationToken,
+                LeaseExpiresAt = now.Add(GenerationLeaseDuration),
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return operationToken;
+        }
+
+        // Processing operations are never reclaimed automatically. A crashed operation must be
+        // reconciled before retry so provider work and charging remain at-most-once.
+        var reclaimed = await _dbContext.HeadshotGenerationOperations
+            .Where(o => o.UserId == userId &&
+                        o.CorrelationId == correlationId &&
+                        o.Status == HeadshotGenerationOperationStatus.Failed)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(o => o.Status, HeadshotGenerationOperationStatus.Processing)
+                .SetProperty(o => o.OperationToken, operationToken)
+                .SetProperty(o => o.FailureCode, (string?)null)
+                .SetProperty(o => o.LeaseExpiresAt, now.Add(GenerationLeaseDuration))
+                .SetProperty(o => o.UpdatedAt, now), cancellationToken);
+        if (reclaimed == 1)
+        {
+            return operationToken;
+        }
+
+        var operation = new HeadshotGenerationOperation
+        {
+            UserId = userId,
+            CorrelationId = correlationId,
+            Status = HeadshotGenerationOperationStatus.Processing,
+            OperationToken = operationToken,
+            LeaseExpiresAt = now.Add(GenerationLeaseDuration),
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        _dbContext.HeadshotGenerationOperations.Add(operation);
+
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return operationToken;
+        }
+        catch (DbUpdateException)
+        {
+            _dbContext.Entry(operation).State = EntityState.Detached;
+            var existingOperation = await _dbContext.HeadshotGenerationOperations
+                .AsNoTracking()
+                .AnyAsync(o => o.UserId == userId && o.CorrelationId == correlationId, cancellationToken);
+            if (!existingOperation)
+            {
+                throw;
+            }
+
+            throw new HeadshotGenerationException(
+                "GenerationInProgress",
+                "An identical headshot generation request is already in progress.");
+        }
     }
 
-    private async Task MarkPersistedCandidatesFailedAsync(int userProfileId, string correlationId, CancellationToken cancellationToken)
+    private async Task EnsureGenerationOperationOwnershipAsync(
+        string userId,
+        string correlationId,
+        string operationToken,
+        CancellationToken cancellationToken)
+    {
+        var ownsOperation = await _dbContext.HeadshotGenerationOperations
+            .AsNoTracking()
+            .AnyAsync(o => o.UserId == userId &&
+                           o.CorrelationId == correlationId &&
+                           o.OperationToken == operationToken &&
+                           o.Status == HeadshotGenerationOperationStatus.Processing,
+                cancellationToken);
+        if (!ownsOperation)
+        {
+            throw new HeadshotGenerationException(
+                "GenerationOwnershipLost",
+                "The generation operation is no longer owned by this worker.");
+        }
+    }
+
+    private async Task CompleteGenerationOperationAsync(
+        string userId,
+        string correlationId,
+        string operationToken,
+        CancellationToken cancellationToken)
+    {
+        if (!_dbContext.Database.IsRelational())
+        {
+            var operation = await _dbContext.HeadshotGenerationOperations
+                .FirstOrDefaultAsync(o => o.UserId == userId &&
+                                          o.CorrelationId == correlationId &&
+                                          o.OperationToken == operationToken,
+                    cancellationToken);
+            if (operation?.Status != HeadshotGenerationOperationStatus.Processing)
+            {
+                throw new InvalidOperationException("Unable to complete the generation idempotency operation.");
+            }
+
+            operation.Status = HeadshotGenerationOperationStatus.Succeeded;
+            operation.LeaseExpiresAt = DateTime.UtcNow;
+            operation.UpdatedAt = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        var updated = await _dbContext.HeadshotGenerationOperations
+            .Where(o => o.UserId == userId &&
+                        o.CorrelationId == correlationId &&
+                        o.OperationToken == operationToken &&
+                        o.Status == HeadshotGenerationOperationStatus.Processing)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(o => o.Status, HeadshotGenerationOperationStatus.Succeeded)
+                .SetProperty(o => o.LeaseExpiresAt, DateTime.UtcNow)
+                .SetProperty(o => o.UpdatedAt, DateTime.UtcNow), cancellationToken);
+        if (updated != 1)
+        {
+            throw new InvalidOperationException("Unable to complete the generation idempotency operation.");
+        }
+    }
+
+    private async Task FailGenerationOperationAsync(
+        string userId,
+        string correlationId,
+        string operationToken,
+        CancellationToken cancellationToken)
+    {
+        if (!_dbContext.Database.IsRelational())
+        {
+            var operation = await _dbContext.HeadshotGenerationOperations
+                .FirstOrDefaultAsync(o => o.UserId == userId &&
+                                          o.CorrelationId == correlationId &&
+                                          o.OperationToken == operationToken &&
+                                          o.Status == HeadshotGenerationOperationStatus.Processing,
+                    cancellationToken);
+            if (operation != null)
+            {
+                operation.Status = HeadshotGenerationOperationStatus.Failed;
+                operation.FailureCode = "generation-failed";
+                operation.LeaseExpiresAt = DateTime.UtcNow;
+                operation.UpdatedAt = DateTime.UtcNow;
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+            return;
+        }
+
+        await _dbContext.HeadshotGenerationOperations
+            .Where(o => o.UserId == userId &&
+                        o.CorrelationId == correlationId &&
+                        o.OperationToken == operationToken &&
+                        o.Status == HeadshotGenerationOperationStatus.Processing)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(o => o.Status, HeadshotGenerationOperationStatus.Failed)
+                .SetProperty(o => o.FailureCode, "generation-failed")
+                .SetProperty(o => o.LeaseExpiresAt, DateTime.UtcNow)
+                .SetProperty(o => o.UpdatedAt, DateTime.UtcNow), cancellationToken);
+    }
+
+    private async Task MarkPersistedCandidatesFailedAsync(
+        int userProfileId,
+        string correlationId,
+        string operationToken,
+        CancellationToken cancellationToken,
+        string failureReason = "package-entitlement-consumption-failed")
     {
         var candidateCorrelationPrefix = $"{correlationId}:candidate:";
         var promotedPreviewCorrelationId = $"{correlationId}:promoted-preview";
@@ -394,6 +651,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             .Where(i =>
                 i.UserProfileId == userProfileId &&
                 i.GenerationStatus == "succeeded" &&
+                i.GenerationOperationToken == operationToken &&
                 (i.CorrelationId == correlationId ||
                  i.CorrelationId == promotedPreviewCorrelationId ||
                  (i.CorrelationId != null && i.CorrelationId.StartsWith(candidateCorrelationPrefix))))
@@ -402,7 +660,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         foreach (var candidate in persistedCandidates)
         {
             candidate.GenerationStatus = "failed";
-            candidate.FailureReason = "package-entitlement-consumption-failed";
+            candidate.FailureReason = failureReason;
         }
 
         if (persistedCandidates.Count > 0)
@@ -415,6 +673,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         int processedImageId,
         int userProfileId,
         string paidCorrelationId,
+        string operationToken,
         CancellationToken cancellationToken)
     {
         var image = await _dbContext.ProcessedImages
@@ -455,7 +714,8 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             PromptVersion = image.PromptVersion,
             CreditCost = 0,
             GenerationStatus = "succeeded",
-            CorrelationId = $"{paidCorrelationId}:promoted-preview"
+            CorrelationId = $"{paidCorrelationId}:promoted-preview",
+            GenerationOperationToken = operationToken
         };
         promotedImage.SetScheduledDeletionDate();
         _dbContext.ProcessedImages.Add(promotedImage);
@@ -540,8 +800,25 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             request.IsRegeneration ? "regenerate" : "generate",
             request.ReplacesProcessedImageId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "none",
             clientRequestId);
+        // Keep legacy receipts stable; guided choices must not collide with each other.
+        if (request.RefinementCode != null) normalized += $"|refinement:{request.RefinementCode}";
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
         return $"{ActionName}:{hash[..32]}";
+    }
+
+    private static string BuildRefinementPrompt(string code)
+    {
+        var instruction = code switch
+        {
+            "subtle_smile" => "Add a slight, natural closed-mouth smile. Do not show teeth or exaggerate the smile.",
+            "relaxed_expression" => "Relax facial tension into a calm, neutral expression. Keep the mouth closed and the existing gaze direction.",
+            "upright_posture" => "Gently straighten shoulder posture. Keep the head angle, facial expression and camera viewpoint unchanged.",
+            _ => throw new HeadshotGenerationException("InvalidRefinement", "Choose a supported refinement before generating.")
+        };
+        return "Edit the supplied selected proof, not a new portrait. Change only the requested detail, using the smallest possible adjustment. " +
+            instruction + " Preserve identity, facial structure, age, skin tone and natural skin texture. " +
+            "Keep clothing, hair, background, lighting, framing and all other details unchanged. " +
+            "Do not add beauty retouching, new objects, text or a different style. If the requested detail already meets the instruction, leave it unchanged.";
     }
 
     private static string ApplyRecipeToPrompt(string basePrompt, HeadshotRecipe recipe)
@@ -554,7 +831,7 @@ public class HeadshotGenerationService : IHeadshotGenerationService
         return $"{basePrompt}\n\nUse-case recipe: {recipe.PromptModifier}\nKeep the same person, facial structure, and natural skin texture. Avoid over-smoothing, synthetic-looking features, distorted hands, text artifacts, logos, badges, or misleading professional credentials.";
     }
 
-    private string ValidateAndNormalizeSourcePath(string storagePath, string userId)
+    private string ValidateAndNormalizeSourcePath(string storagePath, string userId, bool selectedProof = false)
     {
         if (string.IsNullOrWhiteSpace(storagePath))
         {
@@ -580,11 +857,17 @@ public class HeadshotGenerationService : IHeadshotGenerationService
             throw new HeadshotGenerationException("InvalidImageSource", "Invalid image source.");
         }
 
-        var allowedPrefixes = new[]
+        var allowedTypes = selectedProof
+            ? new[] { StorageType.Enhanced, StorageType.Generated, StorageType.GeneratedPrivate }
+            : new[] { StorageType.Upload, StorageType.Enhanced };
+        var allowedPrefixes = allowedTypes.Select(type => _pathResolver.GetDirectoryPrefix(type, userId));
+        if (selectedProof)
         {
-            _pathResolver.GetDirectoryPrefix(StorageType.Upload, userId),
-            _pathResolver.GetDirectoryPrefix(StorageType.Enhanced, userId)
-        };
+            // SaveImageAsync uses unprefixed paths; older outputs can also be environment-prefixed.
+            // The selected row has already been checked for ownership and exact path equality.
+            allowedPrefixes = allowedPrefixes.Concat(new[] { "enhanced", "generated", "generated-private" }
+                .Select(folder => $"{folder}/{userId}/"));
+        }
 
         if (!allowedPrefixes.Any(prefix => trimmed.StartsWith(prefix, StringComparison.Ordinal) && trimmed.Length > prefix.Length))
         {

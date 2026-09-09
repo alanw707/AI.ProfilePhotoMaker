@@ -1,0 +1,60 @@
+Integrated source: c03bf4d
+Local-only verification; deterministic image provider and real Stripe test-mode event with locally signed webhook replay.
+
+API
+Passed!  - Failed:     0, Passed:   474, Skipped:     0, Total:   474, Duration: 1 m 5 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+Karma
+TOTAL: 499 SUCCESS
+
+Playwright
+  9 passed (18.4s)
+
+Docker build
+ Image aipmverify-frontend Built
+ Image aipmverify-api Built
+
+Preview
+PASS local Docker upload, score, deterministic free preview, and Azurite image round trip
+
+Stripe sandbox
+PASS Stripe sandbox concurrency: 16 signed deliveries, 150 credits, 1 entitlement, replay 200
+
+Paid workflow
+PASS local Docker paid generation, entitlement accounting, premium augmentation, and export ZIP
+
+Restart
+PASS local Docker SQL, migration, entitlement, and Azurite persistence across restart
+
+Lint
+✖ 5 problems (0 errors, 5 warnings)
+
+Production npm
+found 0 vulnerabilities
+
+NuGet graph
+The given project `AI.ProfilePhotoMaker.API.Tests` has no vulnerable packages given the current sources.
+
+Final workflow accounting
+{
+  "provider": "local deterministic fixed-image fixture, not AI",
+  "candidates": 9,
+  "promotedPreviewCount": 1,
+  "premiumAugmentation": true,
+  "exportBytes": 349235,
+  "candidateAllowanceConsumed": 8,
+  "premiumAllowanceConsumed": 1,
+  "exportKitConsumed": 1,
+  "creditsConsumed": 0,
+  "pageErrors": []
+}
+
+Persistence
+{
+  "sqlRowsPersisted": true,
+  "azuriteFilesPersisted": true,
+  "migrations": 41,
+  "imageRoundTripAfterRestart": true
+}
+
+Production deployment remains blocked by SQL firewall access from operator host. No production changes.

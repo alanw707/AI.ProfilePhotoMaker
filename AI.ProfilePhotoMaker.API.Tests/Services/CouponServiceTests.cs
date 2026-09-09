@@ -143,6 +143,20 @@ public class CouponServiceTests
     }
 
     [Fact]
+    public async Task RedeemCoupon_RetryForSamePaymentTransactionIsIdempotent()
+    {
+        using var context = CreateContext();
+        var coupon = await SeedCouponAsync(context);
+        var service = CreateService(context);
+
+        Assert.True(await service.RedeemCouponAsync("SAVE20", "u1", 10m, 2m, 42));
+        Assert.True(await service.RedeemCouponAsync("SAVE20", "u1", 10m, 2m, 42));
+
+        Assert.Single(await context.CouponRedemptions.ToListAsync());
+        Assert.Equal(1, (await context.Coupons.SingleAsync(c => c.Id == coupon.Id)).CurrentUsages);
+    }
+
+    [Fact]
     public async Task RedeemCoupon_UsesTransaction()
     {
         using var context = CreateContext();
@@ -152,6 +166,117 @@ public class CouponServiceTests
         var ok = await service.RedeemCouponAsync("SAVE20", "u1", 10m, 2m);
         Assert.False(ok);
         Assert.Empty(await context.CouponRedemptions.ToListAsync());
+    }
+
+    [Fact]
+    public async Task RedeemCoupon_PersistenceFailureDoesNotLeakChangesIntoLaterSave()
+    {
+        var interceptor = new FailRedemptionSaveOnce();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .AddInterceptors(interceptor)
+            .Options;
+        using var context = new ApplicationDbContext(options);
+        await SeedCouponAsync(context);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateService(context).RedeemCouponAsync("SAVE20", "u1", 10m, 2m, 42));
+
+        // Saving a failed webhook receipt must not flush the rejected redemption.
+        await context.SaveChangesAsync();
+        Assert.Empty(await context.CouponRedemptions.ToListAsync());
+        Assert.Equal(0, (await context.Coupons.AsNoTracking().SingleAsync()).CurrentUsages);
+        Assert.True(await CreateService(context).RedeemCouponAsync("SAVE20", "u1", 10m, 2m, 42));
+        Assert.Single(await context.CouponRedemptions.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RedeemCoupon_ExecutionStrategyRetryRedeemsExactlyOnce(bool afterCommit)
+    {
+        var fault = new CreditPackageServiceTests.CommitFault(afterCommit);
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite("Data Source=:memory:")
+            .ReplaceService<Microsoft.EntityFrameworkCore.Storage.IExecutionStrategyFactory,
+                CreditPackageServiceTests.RetryFactory>()
+            .AddInterceptors(fault).Options;
+        using var context = new ApplicationDbContext(options);
+        await context.Database.OpenConnectionAsync();
+        await context.Database.EnsureCreatedAsync();
+        context.Users.Add(new ApplicationUser { Id = "u1", UserName = "retry-test" });
+        context.PaymentTransactions.Add(new PaymentTransaction
+        {
+            Id = 42, UserId = "u1", Amount = 10m, Status = PaymentStatus.Completed,
+            Type = PaymentType.OneTime
+        });
+        await SeedCouponAsync(context);
+        fault.Armed = true;
+
+        Assert.True(await CreateService(context).RedeemCouponAsync("SAVE20", "u1", 10m, 2m, 42));
+
+        Assert.True(fault.Fired);
+        Assert.Single(await context.CouponRedemptions.AsNoTracking().ToListAsync());
+        Assert.Equal(1, (await context.Coupons.AsNoTracking().SingleAsync()).CurrentUsages);
+    }
+
+    private sealed class FailRedemptionSaveOnce : SaveChangesInterceptor
+    {
+        private bool _failed;
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (!_failed && eventData.Context!.ChangeTracker.Entries<CouponRedemption>()
+                    .Any(entry => entry.State == EntityState.Added))
+            {
+                _failed = true;
+                throw new InvalidOperationException("Injected coupon persistence outage");
+            }
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    [Fact]
+    public async Task RedeemCoupon_DifferentPaymentsCompeteForLastUseWithoutOversubscription()
+    {
+        await using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        using var first = new ApplicationDbContext(options);
+        await first.Database.EnsureCreatedAsync();
+        foreach (var id in new[] { 101, 102 })
+        {
+            var userId = $"coupon-user-{id}";
+            first.Users.Add(new ApplicationUser { Id = userId, UserName = userId });
+            first.PaymentTransactions.Add(new PaymentTransaction
+            {
+                Id = id, UserId = userId, Amount = 8m,
+                ExternalTransactionId = $"pi_coupon_{id}", Status = PaymentStatus.Completed,
+                Type = PaymentType.OneTime
+            });
+        }
+        var coupon = await SeedCouponAsync(first, c => c.MaxUsages = 1);
+        using var second = new ApplicationDbContext(options);
+        // Both payment contexts read the final available use before either redemption.
+        await second.Coupons.SingleAsync(c => c.Id == coupon.Id);
+        Assert.True(await CreateService(first).RedeemCouponAsync("SAVE20", "coupon-user-101", 10m, 2m, 101));
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() =>
+            CreateService(second).RedeemCouponAsync("SAVE20", "coupon-user-102", 10m, 2m, 102));
+        Assert.Empty(second.ChangeTracker.Entries());
+        await second.SaveChangesAsync();
+
+        using var replay = new ApplicationDbContext(options);
+        Assert.Equal(1, (await replay.Coupons.SingleAsync()).CurrentUsages);
+        var redemption = Assert.Single(await replay.CouponRedemptions.ToListAsync());
+        Assert.Equal(101, redemption.PaymentTransactionId);
+        Assert.True(await CreateService(replay).RedeemCouponAsync("SAVE20", "coupon-user-101", 10m, 2m, 101));
+        Assert.False(await CreateService(replay).RedeemCouponAsync("SAVE20", "coupon-user-102", 10m, 2m, 102));
+        Assert.Single(await replay.CouponRedemptions.ToListAsync());
+        Assert.Equal(1, (await replay.Coupons.AsNoTracking().SingleAsync()).CurrentUsages);
     }
 
     private static ApplicationDbContext CreateContext()

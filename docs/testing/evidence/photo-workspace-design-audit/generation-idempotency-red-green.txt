@@ -1,0 +1,34 @@
+Generation idempotency red/green evidence
+=========================================
+
+Red: baseline worktree before database operation claim. Green: final fenced/no-auto-reclaim implementation.
+No credentials, payloads, or customer data included.
+
+--- RED ---
+
+AI.ProfilePhotoMaker.API -> /tmp/aipm-pre-idempotency/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> /tmp/aipm-pre-idempotency/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for /tmp/aipm-pre-idempotency/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:04.14]     AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_ConcurrentDuplicateAcrossContextsRunsProviderAndAccountingOnce [FAIL]
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_ConcurrentDuplicateAcrossContextsRunsProviderAndAccountingOnce [3 s]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(AI.ProfilePhotoMaker.API.Services.ImageProcessing.HeadshotGenerationException)
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_ConcurrentDuplicateAcrossContextsRunsProviderAndAccountingOnce() in /tmp/aipm-pre-idempotency/AI.ProfilePhotoMaker.API.Tests/Services/HeadshotGenerationServiceTests.cs:line 410
+   at AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_ConcurrentDuplicateAcrossContextsRunsProviderAndAccountingOnce() in /tmp/aipm-pre-idempotency/AI.ProfilePhotoMaker.API.Tests/Services/HeadshotGenerationServiceTests.cs:line 412
+   at AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_ConcurrentDuplicateAcrossContextsRunsProviderAndAccountingOnce() in /tmp/aipm-pre-idempotency/AI.ProfilePhotoMaker.API.Tests/Services/HeadshotGenerationServiceTests.cs:line 429
+   at AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_ConcurrentDuplicateAcrossContextsRunsProviderAndAccountingOnce() in /tmp/aipm-pre-idempotency/AI.ProfilePhotoMaker.API.Tests/Services/HeadshotGenerationServiceTests.cs:line 429
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 3 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- GREEN ---
+
+AI.ProfilePhotoMaker.API -> /home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> /home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for /home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     3, Skipped:     0, Total:     3, Duration: 3 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)

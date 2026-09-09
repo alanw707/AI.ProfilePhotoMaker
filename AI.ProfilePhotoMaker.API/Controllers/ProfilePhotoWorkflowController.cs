@@ -175,11 +175,6 @@ public class ProfilePhotoWorkflowController : BaseController
             return ErrorResponse("ImageMissing", "The selected image file is no longer available.", 404);
         }
 
-        if (!await _outcomePackageService.ConsumeExportKitAsync(userId, cancellationToken))
-        {
-            return ErrorResponse("ExportKitEntitlementRequired", "Unlock a Starter or Pro Package to download a platform export kit.", 402);
-        }
-
         var baseName = $"profile-photo-{image.Id}";
         var adjustments = new PlatformExportAdjustmentOptions
         {
@@ -192,6 +187,12 @@ public class ProfilePhotoWorkflowController : BaseController
             CropOffsetYPercent = request.CropOffsetYPercent
         };
         var zipBytes = await _platformExportService.CreateExportPackageAsync(sourceStream, baseName, request.ExportCodes, adjustments, cancellationToken);
+        // Failed rendering must leave the customer's export allowance available for retry.
+        if (!await _outcomePackageService.ConsumeExportKitAsync(userId, cancellationToken))
+        {
+            return ErrorResponse("ExportKitEntitlementRequired", "Unlock a Starter or Pro Package to download a platform export kit.", 402);
+        }
+
         var fileName = $"{baseName}-platform-export-kit.zip";
 
         return File(zipBytes, "application/zip", fileName);

@@ -1,0 +1,49 @@
+
+> ai.profile-photo-maker.ui@0.0.0 lint
+> ng lint
+
+
+Linting "AI.ProfilePhotoMaker.UI"...
+
+/home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html
+  494:48  warning  The cyclomatic complexity 51 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  499:14  warning  The cyclomatic complexity 52 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  505:45  warning  The cyclomatic complexity 53 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  514:45  warning  The cyclomatic complexity 54 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  547:43  warning  The cyclomatic complexity 55 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  566:63  warning  The cyclomatic complexity 56 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  579:14  warning  The cyclomatic complexity 57 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  590:39  warning  The cyclomatic complexity 58 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  613:19  warning  The cyclomatic complexity 59 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  614:19  warning  The cyclomatic complexity 60 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  616:24  warning  The cyclomatic complexity 61 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  620:19  warning  The cyclomatic complexity 62 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  628:14  warning  The cyclomatic complexity 63 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  639:64  warning  The cyclomatic complexity 64 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  646:22  warning  The cyclomatic complexity 65 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  647:22  warning  The cyclomatic complexity 66 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  656:48  warning  The cyclomatic complexity 67 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  666:39  warning  The cyclomatic complexity 68 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  694:38  warning  The cyclomatic complexity 69 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  739:59  warning  The cyclomatic complexity 70 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  748:42  warning  The cyclomatic complexity 71 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  760:48  warning  The cyclomatic complexity 72 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  778:16  warning  The cyclomatic complexity 73 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  785:16  warning  The cyclomatic complexity 74 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  793:19  warning  The cyclomatic complexity 75 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  796:19  warning  The cyclomatic complexity 76 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  800:39  warning  The cyclomatic complexity 77 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  801:60  warning  The cyclomatic complexity 78 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  819:14  warning  The cyclomatic complexity 79 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  827:14  warning  The cyclomatic complexity 80 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  837:14  warning  The cyclomatic complexity 81 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+  840:44  warning  The cyclomatic complexity 82 exceeds the defined limit 50  @angular-eslint/template/cyclomatic-complexity
+
+/home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.ts
+  1516:3   warning  Async method 'startEnhancement' has too many lines (212). Maximum allowed is 200  max-lines-per-function
+  1516:25  warning  Async method 'startEnhancement' has a complexity of 78. Maximum allowed is 60     complexity
+  1675:1   warning  File has too many lines (2309). Maximum allowed is 1500                           max-lines
+
+✖ 35 problems (0 errors, 35 warnings)
+
+Lint warnings found in the listed files.

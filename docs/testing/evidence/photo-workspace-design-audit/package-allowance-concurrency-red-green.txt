@@ -1,0 +1,80 @@
+Package allowance concurrency — real service, separate SQLite contexts
+SaveChanges barriers ensure both callers read the same last allowance before
+either writes. Covers candidates/package uses, refinements, premium and export.
+Red: both return true. Green: one true, one false, exact remaining balances;
+a later save cannot flush the rejected decrement. No paid/cloud calls.
+Conditional EF writes compare all allowance fields, status and expiry.
+
+
+--- allowance-concurrency-red.txt ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:03.01]     AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(kind: "refinement") [FAIL]
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(kind: "refinement") [2 s]
+  Error Message:
+   Assert.False() Failure
+Expected: False
+Actual:   True
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(String kind) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/OutcomePackageServiceTests.cs:line 155
+   at AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(String kind) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/OutcomePackageServiceTests.cs:line 171
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.11]     AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(kind: "premium") [FAIL]
+[xUnit.net 00:00:03.23]     AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(kind: "export") [FAIL]
+[xUnit.net 00:00:03.32]     AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(kind: "candidates") [FAIL]
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(kind: "premium") [96 ms]
+  Error Message:
+   Assert.False() Failure
+Expected: False
+Actual:   True
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(String kind) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/OutcomePackageServiceTests.cs:line 155
+   at AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(String kind) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/OutcomePackageServiceTests.cs:line 171
+--- End of stack trace from previous location ---
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(kind: "export") [118 ms]
+  Error Message:
+   Assert.False() Failure
+Expected: False
+Actual:   True
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(String kind) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/OutcomePackageServiceTests.cs:line 155
+   at AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(String kind) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/OutcomePackageServiceTests.cs:line 171
+--- End of stack trace from previous location ---
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(kind: "candidates") [88 ms]
+  Error Message:
+   Assert.False() Failure
+Expected: False
+Actual:   True
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(String kind) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/OutcomePackageServiceTests.cs:line 155
+   at AI.ProfilePhotoMaker.API.Tests.Services.OutcomePackageServiceTests.CompetingConsumptionAcrossContexts_OnlyOneRequestConsumesLastAllowance(String kind) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/OutcomePackageServiceTests.cs:line 171
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     4, Passed:     0, Skipped:     0, Total:     4, Duration: 2 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- allowance-concurrency-green.txt ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    28, Skipped:     0, Total:    28, Duration: 3 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- api-allowance-final.txt ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   414, Skipped:     0, Total:   414, Duration: 1 m 15 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- paid-workflow-allowance-final.txt ---
+PASS local Docker paid generation, entitlement accounting, premium augmentation, and export ZIP
+
+--- restart-allowance-verify.txt ---
+PASS local Docker SQL, migration, entitlement, and Azurite persistence across restart
+
+--- model-allowance-final.txt ---
+No changes have been made to the model since the last migration.

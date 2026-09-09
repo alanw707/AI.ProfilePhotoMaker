@@ -59,9 +59,9 @@ public class OpenAIHeadshotGenerationProvider : IHeadshotGenerationProvider
                 FailureCode = ex switch
                 {
                     UnauthorizedAccessException => "ProviderAuthenticationFailed",
-                    TaskCanceledException => "ProviderTimeout",
-                    HttpRequestException => "ProviderNetworkError",
-                    _ => "ProviderGenerationFailed"
+                    // A timeout, lost connection, malformed reply, or server error does not
+                    // prove that generation did not happen. Do not automatically resubmit.
+                    _ => "ProviderOutcomeUnknown"
                 },
                 FailureMessage = ex.Message
             };

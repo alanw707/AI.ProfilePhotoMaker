@@ -21,7 +21,9 @@ public sealed class FakeCreditPackageService : ICreditPackageService
         string userId,
         int packageId,
         string? paymentTransactionId = null,
-        int? previewProcessedImageId = null)
+        int? previewProcessedImageId = null,
+        string? webhookOperationKey = null,
+        string? webhookOperationToken = null)
     {
         var result = new CreditPurchaseResult(
             false,

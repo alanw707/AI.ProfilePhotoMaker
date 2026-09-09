@@ -1,0 +1,69 @@
+Account balance concurrency: deterministic stale-read interleavings in separate SQLite contexts
+Distinct completed payment transactions use real CreditPackageService/BasicTierService.
+Both contexts read balance B before first award; second stale write must conflict,
+its purchase rolls back, and fresh-context replay awards exactly once.
+Purchase versus real generation credit-debit method tested in both write orders.
+These are local database fixtures, not separate real Stripe PaymentIntents.
+Credits is an EF concurrency token: UPDATE matches original Credits; no new DB column.
+Purchase conflicts remain retryable through failed receipts; generation conflicts
+conservatively retain their claim under uncertain-debit handling for reconciliation.
+
+--- RED ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:02.44]     AI.ProfilePhotoMaker.API.Tests.Services.CreditPackageServiceTests.DistinctPayments_StaleAccountBalanceCannotLoseAwardAndReplayCompletes [FAIL]
+[xUnit.net 00:00:02.58]     AI.ProfilePhotoMaker.API.Tests.Services.CreditPackageServiceTests.PurchaseAndGenerationDebit_StaleBalanceCannotOverwriteOtherChange(purchaseFirst: False) [FAIL]
+[xUnit.net 00:00:02.65]     AI.ProfilePhotoMaker.API.Tests.Services.CreditPackageServiceTests.PurchaseAndGenerationDebit_StaleBalanceCannotOverwriteOtherChange(purchaseFirst: True) [FAIL]
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.CreditPackageServiceTests.DistinctPayments_StaleAccountBalanceCannotLoseAwardAndReplayCompletes [2 s]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.CreditPackageServiceTests.DistinctPayments_StaleAccountBalanceCannotLoseAwardAndReplayCompletes() in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/CreditPackageServiceTests.cs:line 411
+   at AI.ProfilePhotoMaker.API.Tests.Services.CreditPackageServiceTests.DistinctPayments_StaleAccountBalanceCannotLoseAwardAndReplayCompletes() in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/CreditPackageServiceTests.cs:line 419
+--- End of stack trace from previous location ---
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.CreditPackageServiceTests.PurchaseAndGenerationDebit_StaleBalanceCannotOverwriteOtherChange(purchaseFirst: False) [142 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.CreditPackageServiceTests.PurchaseAndGenerationDebit_StaleBalanceCannotOverwriteOtherChange(Boolean purchaseFirst) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/CreditPackageServiceTests.cs:line 449
+   at AI.ProfilePhotoMaker.API.Tests.Services.CreditPackageServiceTests.PurchaseAndGenerationDebit_StaleBalanceCannotOverwriteOtherChange(Boolean purchaseFirst) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/CreditPackageServiceTests.cs:line 466
+--- End of stack trace from previous location ---
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.CreditPackageServiceTests.PurchaseAndGenerationDebit_StaleBalanceCannotOverwriteOtherChange(purchaseFirst: True) [65 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.CreditPackageServiceTests.PurchaseAndGenerationDebit_StaleBalanceCannotOverwriteOtherChange(Boolean purchaseFirst) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/CreditPackageServiceTests.cs:line 443
+   at AI.ProfilePhotoMaker.API.Tests.Services.CreditPackageServiceTests.PurchaseAndGenerationDebit_StaleBalanceCannotOverwriteOtherChange(Boolean purchaseFirst) in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/CreditPackageServiceTests.cs:line 466
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     3, Passed:     0, Skipped:     0, Total:     3, Duration: 2 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- GREEN ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     3, Skipped:     0, Total:     3, Duration: 2 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- FULL API ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   410, Skipped:     0, Total:   410, Duration: 1 m 5 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- FINAL DOCKER FULL PAID FLOW ---
+PASS local Docker paid generation, entitlement accounting, premium augmentation, and export ZIP
+
+--- FINAL RESTART ---
+PASS local Docker SQL, migration, entitlement, and Azurite persistence across restart
+
+--- MODEL CHECK ---
+No changes have been made to the model since the last migration.

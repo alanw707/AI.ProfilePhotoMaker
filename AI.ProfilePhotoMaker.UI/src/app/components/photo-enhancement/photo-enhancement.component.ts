@@ -44,6 +44,8 @@ import { FreePreviewPromotionModule } from './free-preview-promotion';
 import { PhotoWorkspaceSessionModule } from './photo-workspace-session';
 import { PortraitStyleCatalogModule, PortraitStyleGroup } from './portrait-style-catalog';
 
+import { PhotoProcessingDialogComponent } from './photo-processing-dialog.component';
+
 type EnhancedImage = PhotoWorkspaceImageView;
 
 interface CandidateViewModel extends HeadshotCandidate {
@@ -91,15 +93,26 @@ const premiumOption = (
   prompt: `Preserve the person's identity, age, facial structure, skin tone, expression, hairstyle, body shape, pose, crop, and camera angle. Keep all non-requested parts of the photo unchanged. ${direction}`,
 });
 
+const REFINEMENT_OPTIONS = [
+  { code: 'subtle_smile', label: 'Subtle smile', description: 'A slight, closed-mouth smile. No exaggerated grin.' },
+  { code: 'relaxed_expression', label: 'Relaxed expression', description: 'A calmer, neutral expression. Keep the existing gaze.' },
+  { code: 'upright_posture', label: 'Straighter posture', description: 'Gently straighten slouched or uneven shoulders. Already upright poses may change very little. Keep the expression and head angle.' },
+];
+
 interface InterruptedGenerationDraft {
   clientRequestId: string;
   imageStoragePath: string;
   styleName: string;
-  packageCode: 'free_preview' | 'starter_package' | 'pro_package';
+  packageCode: 'free_preview' | 'starter_package' | 'pro_package' | 'paid_photo';
   useCaseCode: PackUseCaseCode;
   isRegeneration: boolean;
+  refinementCode?: string;
+  candidateSlotId?: number;
   replacesProcessedImageId?: number;
   startedAt: string;
+  outcomeUncertain?: boolean;
+  requestVersion?: number;
+  reusedPreviewProcessedImageId?: number;
 }
 
 interface PortraitStyleCard {
@@ -116,7 +129,7 @@ interface PortraitStyleCard {
 @Component({
   selector: 'app-photo-enhancement',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, HeaderNavigationComponent, TurnstileComponent],
+  imports: [CommonModule, FormsModule, RouterModule, HeaderNavigationComponent, TurnstileComponent, PhotoProcessingDialogComponent],
   templateUrl: './photo-enhancement.component.html',
   styleUrls: ['./photo-enhancement.component.sass'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -201,7 +214,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   portraitStyles: PortraitStyleCard[] = [];
   isLoadingPortraitStyles = false;
   portraitStyleError = '';
-  selectedPackageCode: 'free_preview' | 'starter_package' | 'pro_package' = 'free_preview';
+  selectedPackageCode: 'free_preview' | 'starter_package' | 'pro_package' | 'paid_photo' = 'free_preview';
+  pendingUpgradePackageCode: 'starter_package' | 'pro_package' | null = null;
+  private hasConfirmedPaidGenerationForCurrentResult = false;
   pendingPaidStyleName: string | null = null;
   previewStyleName: string | null = null;
   previewSourceStoragePath: string | null = null;
@@ -214,6 +229,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   selectedCandidateId: number | null = null;
   private readonly candidateObjectUrls = new Set<string>();
   interruptedGeneration: InterruptedGenerationDraft | null = null;
+  unrecoverableGenerationDraft = false;
   readonly roleOptions = [
     {
       value: 'general_professional',
@@ -518,7 +534,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       ],
     },
   ];
-  selectedPremiumAugmentationType: string | null = null;
   selectedPremiumAugmentationOptionId: string | null = null;
   exportOptions: PlatformExportOption[] = [];
   selectedExportCodes = new Set<string>([
@@ -530,6 +545,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   isDownloadingPackage = false;
   exportSuccessMessage = '';
   isApplyingPremiumAugmentation = false;
+  selectedPremiumAugmentationType: string | null = 'relighting';
   adjustmentZoom = 100;
   adjustmentRotate = 0;
   adjustmentBrightness = 100;
@@ -543,6 +559,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   private _stateSubscription!: Subscription;
   private _consentSubscription?: Subscription;
   private _selectedFileToken = 0;
+  readonly refinementOptions = REFINEMENT_OPTIONS;
+  selectedRefinementCode: string | null = null;
   private _nextRequestIsRegeneration = false;
   private _activeGenerationClientRequestId: string | null = null;
   private readonly _interruptedGenerationKey = 'photoWorkspaceInterruptedGeneration';
@@ -592,7 +610,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   // Check whether the selected operation has its own package allowance.
-  hasEnoughCredits(isRegeneration = false): boolean {
+  hasEnoughCredits(isRegeneration = this._nextRequestIsRegeneration): boolean {
     const usesPackageRefinement = [
       'headshot_linkedin',
       'headshot_creator',
@@ -613,15 +631,26 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     return totalCredits >= requiredCredits;
   }
 
-  hasSelectedPackageEntitlement(isRegeneration = false): boolean {
+  hasSelectedPackageEntitlement(isRegeneration = this._nextRequestIsRegeneration): boolean {
     if (this.selectedPackageCode === 'free_preview') {
       return !isRegeneration;
+    }
+
+    if (this.pendingUpgradePackageCode) {
+      return false;
     }
 
     return this.hasPackageEntitlementForGeneration(this.selectedPackageCode, isRegeneration);
   }
 
-  private hasPackageEntitlementForGeneration(packageCode: string, isRegeneration = false): boolean {
+  hasPendingUpgradeEntitlement(): boolean {
+    return !!(
+      this.pendingUpgradePackageCode &&
+      this.hasPackageEntitlementForGeneration(this.pendingUpgradePackageCode)
+    );
+  }
+
+  private hasPackageEntitlementForGeneration(packageCode: string, isRegeneration = this._nextRequestIsRegeneration): boolean {
     const requiredCandidates =
       packageCode === this.selectedPackageCode
         ? isRegeneration
@@ -634,8 +663,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         entitlement.status.toLowerCase() === 'active' &&
         (isRegeneration
           ? entitlement.remainingRefinements > 0
-          : entitlement.remainingPackageUses > 0 &&
-            entitlement.remainingCandidates >= requiredCandidates)
+          : entitlement.remainingCandidates >= requiredCandidates)
     );
   }
 
@@ -702,7 +730,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         entitlement.status.toLowerCase() === 'active' &&
         (entitlement.packageCode === 'starter_package' ||
           entitlement.packageCode === 'pro_package') &&
-        (entitlement.remainingPackageUses > 0 ||
+        (entitlement.remainingCandidates > 0 ||
           entitlement.remainingRefinements > 0 ||
           entitlement.remainingPremiumAugmentations > 0)
     );
@@ -714,7 +742,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         entitlement =>
           entitlement.packageCode === packageCode &&
           entitlement.status.toLowerCase() === 'active' &&
-          entitlement.remainingPackageUses > 0 &&
           entitlement.remainingCandidates > 0
       );
 
@@ -736,11 +763,36 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     );
   }
 
+  canGeneratePremiumAugmentation(): boolean {
+    return this.canApplyPremiumAugmentation() && !!this.selectedPremiumAugmentationType;
+  }
+
+  getSelectedPremiumAugmentationLabel(): string {
+    return (
+      this.premiumAugmentations.find(
+        augmentation => augmentation.type === this.selectedPremiumAugmentationType
+      )?.label ?? 'premium add-on'
+    );
+  }
+
+  generateSelectedPremiumAugmentation(): void {
+    if (!this.selectedPremiumAugmentationType) {
+      this.errorMessage = 'Choose a premium add-on before generating.';
+      this._cdr.markForCheck();
+      return;
+    }
+
+    this.applyPremiumAugmentation(this.selectedPremiumAugmentationType);
+  }
+
   getSelectedPackageLabel(): string {
     return this.getPackageLabel(this.selectedPackageCode);
   }
 
   getPackageLabel(packageCode: string): string {
+    if (packageCode === 'paid_photo') {
+      return 'Paid photo';
+    }
     return this.packageOptions.find(option => option.code === packageCode)?.name ?? 'Free Preview';
   }
 
@@ -789,12 +841,14 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       entitlement =>
         entitlement.packageCode === packageCode &&
         entitlement.status.toLowerCase() === 'active' &&
-        entitlement.remainingPackageUses > 0 &&
         entitlement.remainingCandidates > 0
     );
   }
 
   getSelectedPackageStatus(): string {
+    if (this.selectedPackageCode === 'paid_photo') {
+      return 'Paid photo restored. Download your saved image; finishing tools require remaining package allowance.';
+    }
     if (this.selectedPackageCode === 'free_preview') {
       return 'Free Preview is active: one watermarked preview candidate. Upgrade to unlock paid candidates, add-ons, and exports.';
     }
@@ -922,10 +976,29 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     return this.selectedCandidateId === candidate.processedImageId;
   }
 
+  getSelectedRefinement() {
+    return REFINEMENT_OPTIONS.find(option => option.code === this.selectedRefinementCode) ?? null;
+  }
+
+  getRefinementBlockerText(): string {
+    if (this.isProcessing || this.isApplyingPremiumAugmentation) {
+      return 'An edit is still running. Use Show progress to view its status.';
+    }
+    if (this.interruptedGeneration) {return 'Resolve the saved request above before starting another edit.';}
+    if (!this.hasSelectedPackageEntitlement(true)) {return 'No refinements remain for this package.';}
+    if (!this.getSelectedRefinement()) {return 'Choose one change above to continue.';}
+    if (!this.enhancedImage?.storagePath || !this.enhancedImage?.processedImageId) {return 'Select a saved photo to refine.';}
+    if (!this.isEmailConfirmed) {return 'Verify your email before refining.';}
+    if (!this.biometricConsentAccepted) {return 'Accept the photo-processing consent below to continue.';}
+    if (this.requiresTurnstile() && !this.turnstileToken) {return 'Complete the bot check below to continue.';}
+    return '';
+  }
+
   canStartRegeneration(): boolean {
     return (
       this.selectedPackageCode !== 'free_preview' &&
-      !!this.enhancedImage &&
+      this.isHeadshotMvpEnabled && !!this.getSelectedRefinement() &&
+      !this.interruptedGeneration &&
       this.canUseRefinementTools() &&
       this.canStartEnhancement(true)
     );
@@ -935,18 +1008,34 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     return !!this.turnstileSiteKey;
   }
 
-  canStartEnhancement(isRegeneration = false): boolean {
+  private isSavedRefinementReplay(): boolean {
+    const draft = this.interruptedGeneration;
+    return !!draft?.isRegeneration && !!draft.refinementCode &&
+      draft.clientRequestId === this._activeGenerationClientRequestId &&
+      draft.refinementCode === this.selectedRefinementCode &&
+      draft.replacesProcessedImageId === this.enhancedImage?.processedImageId &&
+      draft.imageStoragePath === this.enhancedImage?.storagePath;
+  }
+
+  canStartEnhancement(isRegeneration = this._nextRequestIsRegeneration, resumeSavedRequest = false): boolean {
+    const guidedRefinement = !!isRegeneration && !!this.getSelectedRefinement();
+    const savedReplay = resumeSavedRequest && !!this.interruptedGeneration &&
+      (guidedRefinement ? this.isSavedRefinementReplay() :
+        this.interruptedGeneration.isRegeneration === false || !!this.interruptedGeneration.replacesProcessedImageId || this.interruptedGeneration.requestVersion === 2);
     return (
       !this.isLoadingAccountStatus &&
+      !this.unrecoverableGenerationDraft &&
+      (!this.interruptedGeneration || resumeSavedRequest) &&
       this.isEmailConfirmed &&
       !this.isProcessing &&
-      this.hasEnhancementSourceReady() &&
-      this.hasEnoughCredits(isRegeneration) &&
-      (!this.isHeadshotMvpEnabled || !!this.selectedPortraitStyle) &&
-      (!this.isHeadshotMvpEnabled || isRegeneration || this.getRemainingCandidateSlots() > 0) &&
+      !this.isApplyingPremiumAugmentation &&
+      (savedReplay || (guidedRefinement ? !!this.enhancedImage?.storagePath && !!this.enhancedImage?.processedImageId : this.hasEnhancementSourceReady())) &&
+      (this.hasEnoughCredits(isRegeneration) || savedReplay) &&
+      (savedReplay || guidedRefinement || !this.isHeadshotMvpEnabled || !!this.selectedPortraitStyle) &&
+      (savedReplay || !this.isHeadshotMvpEnabled || isRegeneration || this.getRemainingCandidateSlots() > 0) &&
       (!this.requiresTurnstile() || !!this.turnstileToken) &&
       this.biometricConsentAccepted &&
-      !this.isQualityGateBlockingGeneration()
+      (savedReplay || guidedRefinement || !this.isQualityGateBlockingGeneration())
     );
   }
 
@@ -976,7 +1065,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   getPrimaryCtaLabel(): string {
     if (!this.isHeadshotMvpEnabled) {
-      return 'Transform Photo';
+      return 'Create creative photo';
     }
 
     if (this.selectedPackageCode === 'free_preview') {
@@ -1033,15 +1122,25 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   canResumeInterruptedGeneration(): boolean {
+    if (this.unrecoverableGenerationDraft) {
+      return false;
+    }
+    const draft = this.interruptedGeneration;
+    if (draft?.isRegeneration && draft.refinementCode) {
+      return !!draft.replacesProcessedImageId && REFINEMENT_OPTIONS.some(option => option.code === draft.refinementCode) &&
+        !this.isLoadingAccountStatus && this.isEmailConfirmed && !this.isProcessing && !this.isApplyingPremiumAugmentation &&
+        this.biometricConsentAccepted && (!this.requiresTurnstile() || !!this.turnstileToken);
+    }
     return (
       !!this.interruptedGeneration &&
-      this.canStartEnhancement(this.interruptedGeneration.isRegeneration)
+      (this.interruptedGeneration.isRegeneration === false || !!this.interruptedGeneration.replacesProcessedImageId || this.interruptedGeneration.requestVersion === 2) &&
+      this.canStartEnhancement(this.interruptedGeneration.isRegeneration, true)
     );
   }
 
   resumeInterruptedGeneration(): void {
     const draft = this.interruptedGeneration;
-    if (!draft) {
+    if (!draft || !this.canResumeInterruptedGeneration()) {
       return;
     }
 
@@ -1053,7 +1152,19 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this.selectPortraitStyleByName(draft.styleName);
     this._activeGenerationClientRequestId = draft.clientRequestId;
     this._nextRequestIsRegeneration = draft.isRegeneration;
-    if (!this.canStartEnhancement(draft.isRegeneration)) {
+    if (draft.isRegeneration && draft.refinementCode) {
+      this.selectedRefinementCode = draft.refinementCode;
+      this.selectedCandidateId = draft.candidateSlotId ?? draft.replacesProcessedImageId ?? null;
+      this.enhancedImage = this.createEnhancedImageViewModel(
+        this.getStorageProxyUrl(draft.imageStoragePath) ?? '', 'enhanced',
+        draft.replacesProcessedImageId, draft.imageStoragePath
+      );
+      if (this.canStartEnhancement(true, true)) {void this.startEnhancement(draft.clientRequestId);}
+      else {this.errorMessage = 'Accept consent and complete the bot check before resuming this edit.';}
+      this._cdr.markForCheck();
+      return;
+    }
+    if (!this.canStartEnhancement(draft.isRegeneration, true)) {
       this.errorMessage = draft.isRegeneration
         ? 'Complete the requirement shown above before resuming this refinement.'
         : this.getDisabledCtaLabel();
@@ -1066,13 +1177,16 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         const preview = response.success ? response.data : null;
         if (!preview?.hasRawPreview) {
           this.resumablePreview = preview;
+          if (this.canStartEnhancement(draft.isRegeneration, true)) {
+            void this.startEnhancement(draft.clientRequestId);
+          }
           this._cdr.markForCheck();
           return;
         }
 
         void this.resumePreview(preview).then(() => {
-          if (this.canStartEnhancement(draft.isRegeneration)) {
-            void this.startEnhancement();
+          if (this.canStartEnhancement(draft.isRegeneration, true)) {
+            void this.startEnhancement(draft.clientRequestId);
           }
         });
       },
@@ -1084,6 +1198,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   discardInterruptedGeneration(): void {
+    if (this.isProcessing || this.isApplyingPremiumAugmentation || this.interruptedGeneration || this.unrecoverableGenerationDraft) {
+      return;
+    }
     this.clearInterruptedGeneration();
     this.enhanceAnother();
     this._cdr.markForCheck();
@@ -1096,20 +1213,17 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         return;
       }
       const draft = JSON.parse(raw) as InterruptedGenerationDraft;
-      const age = Date.now() - Date.parse(draft.startedAt);
       if (
-        !draft.clientRequestId ||
+        !draft?.clientRequestId ||
         !draft.imageStoragePath ||
-        !draft.styleName ||
-        !Number.isFinite(age) ||
-        age > 24 * 60 * 60 * 1000
+        !draft.styleName
       ) {
-        localStorage.removeItem(this._interruptedGenerationKey);
+        this.unrecoverableGenerationDraft = true;
         return;
       }
 
-      this.interruptedGeneration = draft;
-      this._activeGenerationClientRequestId = draft.clientRequestId;
+      // Reload may follow a lost response even when no error handler ran.
+      this.persistInterruptedGeneration({ ...draft, outcomeUncertain: true });
       this.previewSourceStoragePath = draft.imageStoragePath;
       this.currentSourceStoragePath = draft.imageStoragePath;
       this.pendingPaidStyleName = draft.styleName;
@@ -1120,11 +1234,15 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       this.imagePreview = sourceState.imagePreview;
       this.beforeImageLoadFailed = sourceState.beforeImageLoadFailed;
     } catch {
-      localStorage.removeItem(this._interruptedGenerationKey);
+      // Unreadable state does not prove the server did no work. Preserve it for reconciliation.
+      this.unrecoverableGenerationDraft = true;
     }
   }
 
   private persistInterruptedGeneration(draft: InterruptedGenerationDraft): void {
+    if (this.interruptedGeneration?.clientRequestId === draft.clientRequestId && this.interruptedGeneration.outcomeUncertain) {
+      draft.outcomeUncertain = true;
+    }
     this.interruptedGeneration = draft;
     this._activeGenerationClientRequestId = draft.clientRequestId;
     localStorage.setItem(this._interruptedGenerationKey, JSON.stringify(draft));
@@ -1249,7 +1367,11 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
           source.storagePath
         );
         this.enhancementType = 'headshot_linkedin';
-        this.selectedPackageCode = this.getBestActivePaidPackageCode() ?? this.selectedPackageCode;
+        const refinementPackage = this.packageEntitlements.find(entitlement =>
+          entitlement.status.toLowerCase() === 'active' && entitlement.remainingRefinements > 0 &&
+          (entitlement.packageCode === 'starter_package' || entitlement.packageCode === 'pro_package'))?.packageCode;
+        this.selectedPackageCode = refinementPackage === 'starter_package' || refinementPackage === 'pro_package'
+          ? refinementPackage : this.getBestActivePaidPackageCode() ?? this.selectedPackageCode;
         this.saveSuccessMessage =
           'Photo loaded from your workspace. Choose a refinement to continue.';
         this._cdr.markForCheck();
@@ -1366,9 +1488,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       next: response => {
         this.isLoadingResumablePreview = false;
         this.resumablePreview = response.success ? response.data : null;
-        if (this.resumablePreview?.candidates?.length) {
-          this.clearInterruptedGeneration();
-        }
+        // Other saved candidates are not a receipt for the unresolved request.
         const hasPaidCandidates =
           !!this.resumablePreview?.candidates?.length &&
           (this.resumablePreview.activePackageCode === 'starter_package' ||
@@ -1402,7 +1522,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     const resumedCandidates = await this.loadAuthorizedCandidateImages(
       preview.candidates?.length ? preview.candidates.map(item => ({ ...item })) : [candidate]
     );
-    this.previewCandidate = resumedCandidates[0];
+    this.previewCandidate = preview.isPaidCandidate ? null : resumedCandidates[0];
     this.resumablePreview = null;
     this.previewStyleName = preview.style;
     const sourceState = this.photoWorkspaceSession.createStoredPreviewSourceState(
@@ -1416,12 +1536,20 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this.beforeImageLoadFailed = sourceState.beforeImageLoadFailed;
     this.generatedCandidates = resumedCandidates;
     this.selectCandidate(resumedCandidates[0]);
-    this.clearInterruptedGeneration();
     this.selectPortraitStyleByName(preview.style);
     if (this.isProfilePhotoScoreVisible && resumedCandidates.length > 1) {
       this.scoreAllCandidates();
     }
-    if (
+    if (preview.isPaidCandidate) {
+      // These are current account allowances, not a new purchase or preview promotion.
+      this.selectedPackageCode =
+        preview.activePackageCode === 'starter_package' || preview.activePackageCode === 'pro_package'
+          ? preview.activePackageCode
+          : 'paid_photo';
+      this.pendingUpgradePackageCode = null;
+      this.hasConfirmedPaidGenerationForCurrentResult = true;
+      this.saveSuccessMessage = preview.message || 'Paid photo restored.';
+    } else if (
       preview.activePackageCode === 'starter_package' ||
       preview.activePackageCode === 'pro_package'
     ) {
@@ -1672,6 +1800,12 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     );
   }
 
+  onPortraitStylePreviewError(option: PortraitStyleCard): void {
+    const placeholder = this._configService.getFullUrl('/placeholder/style-preview');
+    option.previewUrl = option.previewUrl === placeholder ? '' : placeholder;
+    this._cdr.markForCheck();
+  }
+
   getVisiblePortraitStyles(): PortraitStyleCard[] {
     const styles = this.portraitStyleCatalog.getVisibleStyles(
       this.portraitStyles,
@@ -1765,7 +1899,12 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   private applyActiveEntitlementSelection(): void {
     const activePackageCode = this.getBestActivePaidPackageCode();
-    if (!activePackageCode) {
+    if (
+      !activePackageCode ||
+      this.pendingUpgradePackageCode ||
+      this.hasConfirmedPaidGenerationForCurrentResult ||
+      this.selectedPackageCode === 'paid_photo'
+    ) {
       return;
     }
 
@@ -1829,6 +1968,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
     this.selectedFile = file;
     this.errorMessage = '';
+    this.hasConfirmedPaidGenerationForCurrentResult = false;
     this.profileScore = null;
     this.generatedScore = null;
     this.qualityGateOverrideAccepted = false;
@@ -1908,6 +2048,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   removeFile() {
     this._selectedFileToken++;
     this.selectedFile = null;
+    this.hasConfirmedPaidGenerationForCurrentResult = false;
     Object.assign(this, this.photoWorkspaceSession.createClearedSourceState());
     this.rawPreviewAvailable = false;
     sessionStorage.removeItem('enhanceUpgradeDraft');
@@ -1947,32 +2088,50 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (!this.canStartRegeneration()) {
+      this.errorMessage = this.getRefinementBlockerText();
+      this._cdr.markForCheck();
+      return;
+    }
     this._nextRequestIsRegeneration = true;
     void this.startEnhancement();
   }
 
   // eslint-disable-next-line max-lines-per-function, complexity -- provider and package branches share one guarded transaction
-  async startEnhancement() {
+  async startEnhancement(resumeClientRequestId?: string) {
+    if (this.isProcessing || this.isApplyingPremiumAugmentation || this.unrecoverableGenerationDraft ||
+        (this.interruptedGeneration ? this.interruptedGeneration.clientRequestId !== resumeClientRequestId : !!resumeClientRequestId)) {
+      return;
+    }
     if (!this.isEmailConfirmed) {
       this.verificationMessage =
-        'Please verify your email address to use Photo Transform. Check your inbox (and spam) or resend verification.';
+        'Please verify your email address before creating a profile photo. Check your inbox (and spam) or resend verification.';
       this._cdr.detectChanges();
       return;
     }
 
     if (!this.biometricConsentAccepted) {
       this.errorMessage =
-        'Please accept the biometric consent notice before transforming your photo.';
+        'Please accept the biometric consent notice before creating your profile photo.';
       this._cdr.detectChanges();
       return;
     }
 
+    const savedRequest = resumeClientRequestId ? this.interruptedGeneration : null;
+    if (savedRequest) {
+      this._nextRequestIsRegeneration = savedRequest.isRegeneration;
+    }
+    const refinement = savedRequest
+      ? REFINEMENT_OPTIONS.find(option => option.code === savedRequest.refinementCode) ?? null
+      : this._nextRequestIsRegeneration ? this.getSelectedRefinement() : null;
+    const selectedProof = refinement ? this.enhancedImage : null;
     const canUseStoredPreviewSource = this.canUseStoredPreviewSource();
-    if (!this.selectedFile && !canUseStoredPreviewSource) {
+    if (refinement && (!selectedProof?.storagePath || !selectedProof.processedImageId)) {return;}
+    if (!savedRequest && !refinement && !this.selectedFile && !canUseStoredPreviewSource) {
       return;
     }
 
-    if (this.isQualityGateBlockingGeneration()) {
+    if (!savedRequest && !refinement && this.isQualityGateBlockingGeneration()) {
       this.errorMessage =
         this.profileScore?.qualityGate?.status === 'blocked'
           ? 'Upload a clearer single-person portrait before generating.'
@@ -1981,7 +2140,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.hasEnoughCredits(this._nextRequestIsRegeneration)) {
+    if (!savedRequest && !this.hasEnoughCredits(this._nextRequestIsRegeneration) && !(refinement && this.isSavedRefinementReplay())) {
       this.errorMessage = this.isHeadshotMvpEnabled
         ? this._nextRequestIsRegeneration
           ? 'No refinements remain for this package.'
@@ -2007,39 +2166,45 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       this.processingStatus = canUseStoredPreviewSource
         ? 'Preparing your package...'
         : 'Uploading image...';
-      const uploadResult = canUseStoredPreviewSource
-        ? { url: this.previewSourceStoragePath!, storagePath: this.previewSourceStoragePath! }
-        : await this.uploadImageForEnhancement();
+      const uploadResult = savedRequest
+        ? { url: savedRequest.imageStoragePath, storagePath: savedRequest.imageStoragePath }
+        : refinement
+        ? { url: selectedProof!.url, storagePath: selectedProof!.storagePath! }
+        : canUseStoredPreviewSource
+          ? { url: this.previewSourceStoragePath!, storagePath: this.previewSourceStoragePath! }
+          : await this.uploadImageForEnhancement();
 
       if (!uploadResult?.url) {
         throw new Error('Failed to upload image');
       }
-      this.currentSourceStoragePath = uploadResult.storagePath ?? null;
+      if (!refinement) {this.currentSourceStoragePath = uploadResult.storagePath ?? null;}
 
       // Step 2: Call the provider-agnostic instant headshot API when the MVP flag is enabled.
       this.processingProgress = 30;
-      this.processingStatus = this.isHeadshotMvpEnabled
-        ? 'Generating your professional headshot...'
-        : 'Starting AI enhancement...';
+      this.processingStatus = refinement
+        ? `Applying ${refinement.label.toLowerCase()} to your selected photo…`
+        : this.isHeadshotMvpEnabled ? 'Generating your professional headshot...' : 'Starting AI enhancement...';
 
       let finalResult;
 
-      if (this.isHeadshotMvpEnabled && this.enhancementType === 'headshot') {
+      if (this.isHeadshotMvpEnabled && (this.enhancementType === 'headshot' || refinement)) {
         if (!uploadResult.storagePath) {
           throw new Error('Uploaded image source was not returned by the server');
         }
 
-        const candidateBeingRegeneratedId = this._nextRequestIsRegeneration
-          ? this.selectedCandidateId
+        const candidateSlotId = savedRequest?.candidateSlotId ?? this.selectedCandidateId;
+        const candidateBeingRegeneratedId = savedRequest ? savedRequest.replacesProcessedImageId ?? null : this._nextRequestIsRegeneration
+          ? selectedProof?.processedImageId ?? this.selectedCandidateId
           : null;
         const promotedPreview =
           !this._nextRequestIsRegeneration && this.canPromotePreviewCandidate()
             ? this.previewCandidate
             : null;
-        const styleName = this.selectedPortraitStyle?.style.name ?? 'linkedin';
+        const styleName = savedRequest?.styleName ?? this.selectedPortraitStyle?.style.name ?? 'linkedin';
+        const reusedPreviewProcessedImageId = savedRequest ? savedRequest.reusedPreviewProcessedImageId : promotedPreview?.processedImageId;
         const requestCount = this._nextRequestIsRegeneration
           ? 1
-          : this.getCandidateRequestCountForSelectedPackage();
+          : Math.max(savedRequest ? 1 : 0, this.getCandidateRequestCountForSelectedPackage());
         let resultCandidate: CandidateViewModel | null = null;
 
         // Keep every provider request below ingress/mobile connection limits. Each completed
@@ -2048,15 +2213,19 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         for (let requestIndex = 0; requestIndex < requestCount; requestIndex++) {
           const clientRequestId =
             requestIndex === 0
-              ? (this._activeGenerationClientRequestId ?? this.createGenerationClientRequestId())
+              ? (savedRequest?.clientRequestId ?? this._activeGenerationClientRequestId ?? this.createGenerationClientRequestId())
               : this.createGenerationClientRequestId();
           this.persistInterruptedGeneration({
             clientRequestId,
+            requestVersion: 2,
+            reusedPreviewProcessedImageId,
             imageStoragePath: uploadResult.storagePath,
             styleName,
-            packageCode: this.selectedPackageCode,
-            useCaseCode: this.selectedUseCaseCode,
+            packageCode: savedRequest?.packageCode ?? this.selectedPackageCode,
+            useCaseCode: savedRequest?.useCaseCode ?? this.selectedUseCaseCode,
             isRegeneration: this._nextRequestIsRegeneration,
+            refinementCode: refinement?.code,
+            candidateSlotId: refinement ? candidateSlotId ?? undefined : undefined,
             replacesProcessedImageId: candidateBeingRegeneratedId ?? undefined,
             startedAt: this.interruptedGeneration?.startedAt ?? new Date().toISOString(),
           });
@@ -2065,12 +2234,13 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
               imageStoragePath: uploadResult.storagePath,
               style: styleName,
               background: 'auto',
-              packageCode: this.selectedPackageCode,
+              packageCode: savedRequest?.packageCode ?? this.selectedPackageCode,
               numOutputs: 1,
               isRegeneration: this._nextRequestIsRegeneration,
-              reusedPreviewProcessedImageId: promotedPreview?.processedImageId,
+              refinementCode: refinement?.code,
+              reusedPreviewProcessedImageId,
               replacesProcessedImageId: candidateBeingRegeneratedId ?? undefined,
-              useCaseCode: this.selectedUseCaseCode,
+              useCaseCode: savedRequest?.useCaseCode ?? this.selectedUseCaseCode,
               clientRequestId,
               turnstileToken: this.turnstileSiteKey ? this.turnstileToken : undefined,
             })
@@ -2086,7 +2256,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
             this.toCandidateViewModels(headshotResponse.data)
           );
           resultCandidate = this._nextRequestIsRegeneration
-            ? this.replaceRegeneratedCandidate(responseCandidates, candidateBeingRegeneratedId)
+            ? this.replaceRegeneratedCandidate(responseCandidates, refinement ? candidateSlotId : candidateBeingRegeneratedId)
             : this.mergeGeneratedCandidates(responseCandidates);
           if (!resultCandidate) {
             throw new Error('Generated candidate was not returned');
@@ -2111,6 +2281,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
             style: this.previewStyleName,
           });
         } else {
+          this.hasConfirmedPaidGenerationForCurrentResult = true;
           this.trackVerticalFunnelEvent('vertical_pack_paid_generation_confirmed', {
             candidateCount: this.generatedCandidates.length,
             style: this.selectedPortraitStyle?.style.name ?? null,
@@ -2211,6 +2382,13 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
           finalResult.storagePath
         );
 
+        if (refinement) {
+          this.enhancedImage.previousDisplayUrl = selectedProof?.displayUrl;
+          this.enhancedImage.augmentationLabel = refinement.label;
+          this.saveSuccessMessage = `${refinement.label} saved. Used 1 refinement; your previous photo remains in your workspace.`;
+          this.selectedRefinementCode = null;
+        }
+
         // Update processing state
         this.isProcessing = false;
         this.processingProgress = 100;
@@ -2261,6 +2439,20 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     });
 
     this.isProcessing = false;
+    // A first-attempt validation rejection is editable. A later validation error
+    // cannot reconcile an earlier unknown outcome for the same saved request.
+    const rejectionCode = error.error?.error?.code;
+    if (!this.interruptedGeneration?.outcomeUncertain && error.status === 400 && ['InvalidImageSource', 'InvalidRefinement', 'InvalidRequest', 'StyleUnavailable', 'BotVerificationFailed'].includes(rejectionCode)) {
+      this.clearInterruptedGeneration();
+      this._nextRequestIsRegeneration = false;
+    } else if (this.interruptedGeneration) {
+      this.interruptedGeneration.outcomeUncertain = true;
+      try {
+        this.persistInterruptedGeneration(this.interruptedGeneration);
+      } catch {
+        this.unrecoverableGenerationDraft = true;
+      }
+    }
     if (error.status === 401) {
       if (error.error?.error?.code === 'EmailNotVerified') {
         this.isEmailConfirmed = false;
@@ -2285,11 +2477,15 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     }
 
     if (error.message?.includes('Enhancement failed')) {
-      return 'AI enhancement failed. Please try again or contact support.';
+      return this.isHeadshotMvpEnabled
+        ? 'We could not create your profile photo. Please try again or contact support.'
+        : 'The creative style could not be applied. Please try again or contact support.';
     }
 
     if (error.message?.includes('Enhancement timed out')) {
-      return 'Enhancement is taking longer than expected. Please try again.';
+      return this.isHeadshotMvpEnabled
+        ? 'Creating your profile photo is taking longer than expected. Please try again.'
+        : 'Creating the creative photo is taking longer than expected. Please try again.';
     }
 
     if (error.status === 401) {
@@ -2297,7 +2493,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     }
 
     if (error.status === 403) {
-      return 'Insufficient permissions or credits. Please check your account.';
+      return this.isHeadshotMvpEnabled
+        ? 'This package is not available for your account. Choose another package or contact support.'
+        : 'Your creative style balance is unavailable. Please check your account.';
     }
 
     const apiMessage = error.error?.error?.message ?? error.error?.message;
@@ -2468,6 +2666,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   selectCandidate(candidate: CandidateViewModel): void {
+    this.selectedRefinementCode = null;
     this.selectedCandidateId = candidate.processedImageId;
     this.enhancedImage = this.createEnhancedImageViewModel(
       candidate.imageUrl,
@@ -2820,6 +3019,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this.selectedPremiumAugmentationType = augmentation.type;
     this.selectedPremiumAugmentationOptionId = augmentation.options[0]?.id ?? null;
     this.errorMessage = '';
+    this._cdr.markForCheck();
   }
 
   getSelectedPremiumAugmentation(): PremiumAugmentation | null {
@@ -2860,6 +3060,13 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (
+      !this.canApplyPremiumAugmentation() ||
+      !this.premiumAugmentations.some(augmentation => augmentation.type === type)
+    ) {
+      return;
+    }
+
     const previousImage = this.enhancedImage;
     this.isApplyingPremiumAugmentation = true;
     this.processingStatus = 'Applying premium augmentation to selected candidate...';
@@ -2879,7 +3086,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       .subscribe({
         next: response => {
           if (!response?.success) {
-            throw new Error(response?.error?.message || 'Premium augmentation failed');
+            this.errorMessage = response?.error?.message || 'Premium augmentation failed. Please try again.';
+            this._cdr.markForCheck();
+            return;
           }
           const data = response.data;
           const currentImage = this.enhancedImage;
@@ -2943,6 +3152,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.errorMessage = '';
     this.isDownloadingPackage = true;
     this._profileWorkflowService
       .createExportPackage(
@@ -2956,6 +3166,10 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
           sharpnessPercent: 100,
         }
       )
+      .pipe(finalize(() => {
+        this.isDownloadingPackage = false;
+        this._cdr.markForCheck();
+      }))
       .subscribe({
         next: blob => {
           const url = URL.createObjectURL(blob);
@@ -3105,9 +3319,13 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   enhanceAnother() {
+    if (this.isProcessing || this.isApplyingPremiumAugmentation || this.interruptedGeneration || this.unrecoverableGenerationDraft) {
+      return;
+    }
     this.clearInterruptedGeneration();
     this.selectedFile = null;
     this.imagePreview = null;
+    this.hasConfirmedPaidGenerationForCurrentResult = false;
     this.enhancedImage = null;
     this.selectedCandidateId = null;
     this.errorMessage = '';

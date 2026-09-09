@@ -1,0 +1,37 @@
+Stripe webhook idempotency red/green evidence
+=============================================
+
+Red: baseline worktree before database receipt claim. Green: final discounted concurrency, transient replay, fencing, and no-auto-reclaim implementation.
+No credentials, payloads, or customer data included.
+
+--- RED ---
+
+Determining projects to restore...
+  Restored /tmp/aipm-pre-webhook-idempotency/AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj (in 1.19 sec).
+  Restored /tmp/aipm-pre-webhook-idempotency/AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj (in 1.22 sec).
+  AI.ProfilePhotoMaker.API -> /tmp/aipm-pre-webhook-idempotency/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> /tmp/aipm-pre-webhook-idempotency/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for /tmp/aipm-pre-webhook-idempotency/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:02.35]     AI.ProfilePhotoMaker.API.Tests.Services.StripeWebhookServiceTests.HandleEventAsync_ConcurrentDiscountedReplayAcrossContextsFulfillsExactlyOnce [FAIL]
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.StripeWebhookServiceTests.HandleEventAsync_ConcurrentDiscountedReplayAcrossContextsFulfillsExactlyOnce [2 s]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(System.InvalidOperationException)
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.StripeWebhookServiceTests.HandleEventAsync_ConcurrentDiscountedReplayAcrossContextsFulfillsExactlyOnce() in /tmp/aipm-pre-webhook-idempotency/AI.ProfilePhotoMaker.API.Tests/Services/StripeWebhookServiceTests.cs:line 570
+   at AI.ProfilePhotoMaker.API.Tests.Services.StripeWebhookServiceTests.HandleEventAsync_ConcurrentDiscountedReplayAcrossContextsFulfillsExactlyOnce() in /tmp/aipm-pre-webhook-idempotency/AI.ProfilePhotoMaker.API.Tests/Services/StripeWebhookServiceTests.cs:line 571
+   at AI.ProfilePhotoMaker.API.Tests.Services.StripeWebhookServiceTests.HandleEventAsync_ConcurrentDiscountedReplayAcrossContextsFulfillsExactlyOnce() in /tmp/aipm-pre-webhook-idempotency/AI.ProfilePhotoMaker.API.Tests/Services/StripeWebhookServiceTests.cs:line 587
+   at AI.ProfilePhotoMaker.API.Tests.Services.StripeWebhookServiceTests.HandleEventAsync_ConcurrentDiscountedReplayAcrossContextsFulfillsExactlyOnce() in /tmp/aipm-pre-webhook-idempotency/AI.ProfilePhotoMaker.API.Tests/Services/StripeWebhookServiceTests.cs:line 587
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 2 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- GREEN ---
+
+AI.ProfilePhotoMaker.API -> /home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> /home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for /home/alanw/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     4, Skipped:     0, Total:     4, Duration: 3 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)

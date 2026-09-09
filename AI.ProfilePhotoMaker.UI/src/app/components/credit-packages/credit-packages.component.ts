@@ -13,12 +13,10 @@ import {
   CreditService,
   CreatePaymentIntentResponse,
   PaymentConfig,
-  UserCreditStatus,
 } from '../../services/credit.service';
-import { AuthService } from '../../services/auth.service';
 import { NotificationService } from '../../services/notification.service';
 import { ThemeService } from '../../services/theme.service';
-import { Subscription } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import {
   loadStripe,
@@ -56,15 +54,12 @@ interface BillingDetailsForm {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CreditPackagesComponent implements OnInit, OnDestroy {
-  @Output() packagePurchased = new EventEmitter<UserCreditStatus>();
+  @Output() packagePurchased = new EventEmitter<void>();
 
   packages: CreditPackage[] = [];
-  userCreditStatus: UserCreditStatus | null = null;
   paymentConfig: PaymentConfig | null = null;
-  isAuthenticated = false;
 
   isLoadingPackages = true;
-  isLoadingStatus = false;
   isPurchasing = false; // legacy flag used by simulation flow
 
   selectedPackage: CreditPackage | null = null;
@@ -97,10 +92,8 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   private _stripePublishableKey: string | null = null;
   private readonly _emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   private readonly _countryCodePattern = /^[A-Za-z]{2}$/;
-  private _hasLoadedStatus = false;
 
   private _themeSubscription: Subscription | null = null;
-  private _authSubscription: Subscription | null = null;
   private _stripe: Stripe | null = null;
   private _stripeElements: StripeElements | null = null;
   private _stripeCardElement: StripeCardElement | null = null;
@@ -108,7 +101,6 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   constructor(
     private _creditService: CreditService,
     private _profileWorkflowService: ProfileWorkflowService,
-    private _authService: AuthService,
     private _notificationService: NotificationService,
     private _themeService: ThemeService,
     private _route: ActivatedRoute,
@@ -124,19 +116,6 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       });
     });
 
-    this._authSubscription = this._authService.isAuthenticated$.subscribe(isAuth => {
-      this.isAuthenticated = isAuth;
-      if (isAuth && !this._hasLoadedStatus && this._shouldLoadStatusOnInit()) {
-        this._hasLoadedStatus = true;
-        this.loadCreditStatus();
-      }
-      if (!isAuth) {
-        this.userCreditStatus = null;
-        this.isLoadingStatus = false;
-      }
-      this._cdr.markForCheck();
-    });
-
     this.loadPackages();
     this.loadPaymentConfig();
   }
@@ -145,10 +124,6 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     if (this._themeSubscription) {
       this._themeSubscription.unsubscribe();
     }
-    if (this._authSubscription) {
-      this._authSubscription.unsubscribe();
-    }
-
     this._clearPendingPaymentWatch();
     this._teardownStripeElements();
   }
@@ -156,14 +131,18 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   loadPackages(): void {
     this.isLoadingPackages = true;
 
-    this._profileWorkflowService.getOutcomePackages().subscribe({
-      next: response => this._handleOutcomePackagesResponse(response),
-      error: error => this._handlePackagesError(error),
-      complete: () => {
-        this.isLoadingPackages = false;
-        this._cdr.detectChanges();
-      },
-    });
+    this._profileWorkflowService
+      .getOutcomePackages()
+      .pipe(
+        finalize(() => {
+          this.isLoadingPackages = false;
+          this._cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: response => this._handleOutcomePackagesResponse(response),
+        error: error => this._handlePackagesError(error),
+      });
   }
 
   private _handleOutcomePackagesResponse(response: {
@@ -270,27 +249,6 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       title: 'Network Error',
       message: `Error ${error.status}: ${error.message || 'Please try again.'}`,
     };
-  }
-
-  loadCreditStatus(): void {
-    if (!this.isAuthenticated) {
-      this.isLoadingStatus = false;
-      return;
-    }
-    this.isLoadingStatus = true;
-    this._creditService.getCreditStatus().subscribe({
-      next: response => {
-        if (response.success) {
-          this.userCreditStatus = response.data;
-        }
-      },
-      error: error => {
-        console.error('Failed to load credit status:', error);
-      },
-      complete: () => {
-        this.isLoadingStatus = false;
-      },
-    });
   }
 
   loadPaymentConfig(): void {
@@ -571,7 +529,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
               'Package Unlocked',
               `${this.selectedPackage?.name ?? 'Your package'} is ready for your profile photo workflow.`
             );
-            this._finalizeSuccess(response.data.updatedCredits ?? null);
+            this._finalizeSuccess();
             return;
           }
 
@@ -636,7 +594,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
                 'Package Unlocked',
                 `${this.selectedPackage?.name ?? 'Your package'} is ready for your profile photo workflow.`
               );
-              this._finalizeSuccess(response.data.updatedCredits ?? null);
+              this._finalizeSuccess();
               this._clearPendingPaymentWatch();
               return;
             }
@@ -696,13 +654,9 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     this._pendingPaymentPackageId = null;
   }
 
-  private _finalizeSuccess(updatedCredits: UserCreditStatus | null): void {
+  private _finalizeSuccess(): void {
     this._trackPurchase();
-    this.loadCreditStatus();
-
-    if (updatedCredits) {
-      this.packagePurchased.emit(updatedCredits);
-    }
+    this.packagePurchased.emit();
 
     this._resetStripeState();
     this.selectedPackage = null;
@@ -781,21 +735,14 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
               );
               this.isPurchasing = false;
               this.selectedPackage = null;
-              this.loadCreditStatus();
-              if (response.data.updatedCredits) {
-                this.packagePurchased.emit({
-                  credits: response.data.updatedCredits.credits,
-                  lastCreditReset: new Date().toISOString(),
-                  nextResetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-                });
-              }
+              this.packagePurchased.emit();
               return;
             }
 
             if ((response as any)?.error?.code === 'PaymentPending') {
               this._notificationService.info(
                 'Payment Processing',
-                'Payment is still processing. We will refresh your credits once it completes.'
+                'Payment is still processing. We will refresh your package entitlement once it completes.'
               );
               this.isPurchasing = false;
               return;
@@ -882,11 +829,6 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       return 'Best value for content creators and businesses';
     }
     return '';
-  }
-
-  private _shouldLoadStatusOnInit(): boolean {
-    const path = window.location.pathname || '';
-    return path.startsWith('/app') || path.startsWith('/account') || path.startsWith('/admin');
   }
 
   getCreditsPerDollar(pkg: CreditPackage): number {

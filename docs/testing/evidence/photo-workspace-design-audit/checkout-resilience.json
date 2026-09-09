@@ -1,0 +1,30 @@
+{
+  "payments": "real Stripe test mode through browser card entry",
+  "checks": [
+    {
+      "name": "Checkout cancel returns to package choices without entitlement",
+      "passed": true
+    },
+    {
+      "name": "Declined card stays in checkout, exposes error, grants nothing",
+      "error": "!\nYour card has been declined.",
+      "entitlements": 0
+    },
+    {
+      "name": "3DS challenge displayed",
+      "passed": true
+    },
+    {
+      "name": "Completed 3DS returns to workspace and grants one Starter entitlement",
+      "url": "/app/enhance",
+      "entitlements": [
+        {
+          "packageCode": "starter_package",
+          "status": "active",
+          "remainingCandidates": 3
+        }
+      ]
+    }
+  ],
+  "pageErrors": []
+}

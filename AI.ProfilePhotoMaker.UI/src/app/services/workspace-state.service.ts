@@ -234,24 +234,6 @@ export class WorkspaceStateService implements IWorkspaceStateService {
   }
 
   /**
-   * Load basic data for settings page (counts only, no validation)
-   */
-  async loadBasicDataForSettings(): Promise<void> {
-    try {
-      // Load profile data
-      await this.loadProfileData();
-
-      // Load only internal credits (faster)
-      await this._subscriptionState.loadCreditsOnly();
-
-      // Load user images without validation
-      await this._imageState.loadUserImages();
-    } catch (error) {
-      console.error('❌ Settings data load failed:', error);
-    }
-  }
-
-  /**
    * Load only internal credits
    */
   async loadCreditsOnly(): Promise<void> {

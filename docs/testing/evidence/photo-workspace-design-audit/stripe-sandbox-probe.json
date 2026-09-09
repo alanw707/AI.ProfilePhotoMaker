@@ -1,0 +1,5 @@
+{
+  "command": "stripe get /v1/balance (test key via environment)",
+  "exitCode": 0,
+  "livemode": false
+}

@@ -1,0 +1,1541 @@
+CHECK 1: anonymous workspace access control
+{
+  "name": "anonymous workspace access control",
+  "requested": "/app/enhance",
+  "resultUrl": "/auth/login",
+  "status": "redirected"
+}
+
+CHECK 2: registration validation at 390px
+{
+  "name": "registration validation at 390px",
+  "messages": [
+    "You must confirm you are at least 13 years old to create an account.",
+    "First name is required",
+    "Last name is required",
+    "Gender is required",
+    "Ethnicity is required",
+    "Email is required",
+    "Password is required",
+    "Please confirm your password"
+  ],
+  "facts": {
+    "url": "/auth/register",
+    "title": "Sign Up - AI Profile Photo Maker",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "horizontalOverflow": false,
+    "headings": [
+      {
+        "level": 1,
+        "text": "AI Profile Photo Maker"
+      },
+      {
+        "level": 2,
+        "text": "Create Account"
+      }
+    ],
+    "visibleControlCount": 13,
+    "unnamedControls": [],
+    "controls": [
+      {
+        "tag": "INPUT",
+        "type": "checkbox",
+        "role": null,
+        "name": "I confirm that I am at least 13 years old and have read the Children's Privacy Policy . Required for email and Google sign-up.",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Children's Privacy Policy",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Create account via Google",
+        "disabled": true
+      },
+      {
+        "tag": "INPUT",
+        "type": "text",
+        "role": null,
+        "name": "First Name",
+        "disabled": false
+      },
+      {
+        "tag": "INPUT",
+        "type": "text",
+        "role": null,
+        "name": "Last Name",
+        "disabled": false
+      },
+      {
+        "tag": "SELECT",
+        "type": null,
+        "role": null,
+        "name": "Gender",
+        "disabled": false
+      },
+      {
+        "tag": "SELECT",
+        "type": null,
+        "role": null,
+        "name": "Ethnicity",
+        "disabled": false
+      },
+      {
+        "tag": "INPUT",
+        "type": "email",
+        "role": null,
+        "name": "Email Address",
+        "disabled": false
+      },
+      {
+        "tag": "INPUT",
+        "type": "password",
+        "role": null,
+        "name": "Password",
+        "disabled": false
+      },
+      {
+        "tag": "INPUT",
+        "type": "password",
+        "role": null,
+        "name": "Confirm Password",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "submit",
+        "role": null,
+        "name": "Create Account",
+        "disabled": true
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Sign in here",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Scroll to top",
+        "disabled": false
+      }
+    ],
+    "focusOrder": [
+      {
+        "tag": "INPUT",
+        "name": "I confirm that I am at least 13 years old and have read the Children's Privacy Policy . Required for email and Google sign-up.",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "A",
+        "name": "Children's Privacy Policy",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "INPUT",
+        "name": "First Name",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "INPUT",
+        "name": "Last Name",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "SELECT",
+        "name": "Gender",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "SELECT",
+        "name": "Ethnicity",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "INPUT",
+        "name": "Email Address",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "INPUT",
+        "name": "Password",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "INPUT",
+        "name": "Confirm Password",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Sign in here",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Scroll to top",
+        "outline": "solid 2px rgb(79, 209, 199)"
+      },
+      {
+        "tag": "BODY",
+        "name": "AI Profile Photo MakerCreate AccountJoin us to create amazing AI-generated profile photos I confirm that I am at least 13 years old and have",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "INPUT",
+        "name": "I confirm that I am at least 13 years old and have read the Children's Privacy Policy . Required for email and Google sign-up.",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "A",
+        "name": "Children's Privacy Policy",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "INPUT",
+        "name": "First Name",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "INPUT",
+        "name": "Last Name",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "SELECT",
+        "name": "Gender",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "SELECT",
+        "name": "Ethnicity",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "INPUT",
+        "name": "Email Address",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "INPUT",
+        "name": "Password",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "INPUT",
+        "name": "Confirm Password",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Sign in here",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Scroll to top",
+        "outline": "solid 2px rgb(79, 209, 199)"
+      },
+      {
+        "tag": "BODY",
+        "name": "AI Profile Photo MakerCreate AccountJoin us to create amazing AI-generated profile photos I confirm that I am at least 13 years old and have",
+        "outline": "none 3px rgb(26, 32, 44)"
+      }
+    ],
+    "ariaSnapshot": "- heading \"AI Profile Photo Maker\" [level=1]\n- heading \"Create Account\" [level=2]\n- paragraph: Join us to create amazing AI-generated profile photos\n- checkbox \"I confirm that I am at least 13 years old and have read the Children's Privacy Policy . Required for email and Google sign-up.\"\n- text: I confirm that I am at least 13 years old and have read the\n- link \"Children's Privacy Policy\":\n  - /url: /legal/children-privacy\n- text: . Required for email and Google sign-up. You must confirm you are at least 13 years old to create an account.\n- button \"Create account via Google\" [disabled]:\n  - img\n  - text: Create account via Google\n- text: OR First Name\n- textbox \"First Name\"\n- text: First name is required Last Name\n- textbox \"Last Name\"\n- text: Last name is required Gender\n- combobox \"Gender\":\n  - option \"Select Gender\" [selected]\n  - option \"Male\"\n  - option \"Female\"\n  - option \"Non-binary\"\n  - option \"Prefer not to say\"\n- text: Gender is required Ethnicity\n- combobox \"Ethnicity\":\n  - option \"Select Ethnicity\" [selected]\n  - option \"East Asian\"\n  - option \"South Asian\"\n  - option \"Southeast Asian\"\n  - option \"Middle Eastern / North African\"\n  - option \"Black / African / African American\"\n  - option \"Hispanic / Latino\"\n  - option \"Native American / Indigenous\"\n  - option \"Pacific Islander\"\n  - option \"White\"\n  - option \"Mixed / Multiracial\"\n  - option \"Other\"\n  - option \"Prefer not to say\"\n- text: Ethnicity is required Self-identified. We do not infer this from your photos. Email Address\n- textbox \"Email Address\"\n- text: Email is required Password\n- textbox \"Password\"\n- text: Password is required Confirm Password\n- textbox \"Confirm Password\"\n- text: Please confirm your password\n- button \"Create Account\" [disabled]\n- paragraph:\n  - text: Already have an account?\n  - button \"Sign in here\"\n- button \"Scroll to top\": Top"
+  }
+}
+
+CHECK 3: real local password login
+{
+  "name": "real local password login",
+  "resultUrl": "/app/enhance",
+  "responses": [
+    {
+      "method": "GET",
+      "path": "/auth/login",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@ng/component",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@ng/component",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@ng/component",
+      "status": 200
+    }
+  ],
+  "facts": {
+    "url": "/app/enhance",
+    "title": "Photo Workspace - AI Profile Photo Maker",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "horizontalOverflow": false,
+    "headings": [
+      {
+        "level": 1,
+        "text": "Create your professional profile photo"
+      },
+      {
+        "level": 2,
+        "text": "Start with a clear, front-facing photo"
+      },
+      {
+        "level": 2,
+        "text": "A clearer path to your best photo"
+      }
+    ],
+    "visibleControlCount": 11,
+    "unnamedControls": [],
+    "controls": [
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Go to home page",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Packages",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Photo workspace",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "My photos",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Settings",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Support",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Switch to dark theme",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Sign out",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Upload one photoDrag and drop or browse your deviceJPG, PNG, or WebP · Up to 7 MB",
+        "disabled": false
+      },
+      {
+        "tag": "INPUT",
+        "type": "file",
+        "role": null,
+        "name": "Choose a source photo",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Scroll to top",
+        "disabled": false
+      }
+    ],
+    "focusOrder": [
+      {
+        "tag": "A",
+        "name": "Go to home page",
+        "outline": "solid 3px rgba(15, 118, 110, 0.3)"
+      },
+      {
+        "tag": "A",
+        "name": "Packages",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "Photo workspace",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "My photos",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "Settings",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "Support",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Switch to dark theme",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Sign out",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Upload one photoDrag and drop or browse your deviceJPG, PNG, or WebP · Up to 7 MB",
+        "outline": "solid 3px rgb(11, 95, 89)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Scroll to top",
+        "outline": "solid 2px rgb(79, 209, 199)"
+      },
+      {
+        "tag": "BODY",
+        "name": "AI Profile Photo MakerPackages Photo workspace My photos Settings Support WWorkspace Auditcheckout-resilience-audit@example.invalidSign outC",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "A",
+        "name": "Go to home page",
+        "outline": "solid 3px rgba(15, 118, 110, 0.3)"
+      },
+      {
+        "tag": "A",
+        "name": "Packages",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "Photo workspace",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "My photos",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "Settings",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "Support",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Switch to dark theme",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Sign out",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Upload one photoDrag and drop or browse your deviceJPG, PNG, or WebP · Up to 7 MB",
+        "outline": "solid 3px rgb(11, 95, 89)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Scroll to top",
+        "outline": "solid 2px rgb(79, 209, 199)"
+      },
+      {
+        "tag": "BODY",
+        "name": "AI Profile Photo MakerPackages Photo workspace My photos Settings Support WWorkspace Auditcheckout-resilience-audit@example.invalidSign outC",
+        "outline": "none 3px rgb(26, 32, 44)"
+      },
+      {
+        "tag": "A",
+        "name": "Go to home page",
+        "outline": "solid 3px rgba(15, 118, 110, 0.3)"
+      },
+      {
+        "tag": "A",
+        "name": "Packages",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "Photo workspace",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "My photos",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      }
+    ],
+    "ariaSnapshot": "- banner:\n  - link \"AI Profile Photo Maker AI Profile Photo Maker\":\n    - /url: /\n    - img \"AI Profile Photo Maker\"\n    - text: AI Profile Photo Maker\n  - navigation \"Primary navigation\":\n    - link \"Packages\":\n      - /url: /pricing\n    - link \"Photo workspace\":\n      - /url: /app/enhance\n    - link \"My photos\":\n      - /url: /app/gallery\n    - link \"Settings\":\n      - /url: /app/settings\n    - link \"Support\":\n      - /url: /app/support\n  - button \"Switch to dark theme\"\n  - strong: Workspace Audit\n  - text: checkout-resilience-audit@example.invalid\n  - button \"Sign out\"\n- main:\n  - heading \"Create your professional profile photo\" [level=1]\n  - paragraph: Start with one clear photo. We will score the source, help you choose a direction, and create a result you can use with confidence.\n  - text: Starter Package active\n  - navigation \"Photo workflow\":\n    - text: \"1\"\n    - strong: Source photo\n    - text: Upload one clear photo 2\n    - strong: Direction\n    - text: Choose a role and style 3\n    - strong: Photo workspace\n    - text: Your result lives here\n  - region \"Source photo preview\":\n    - heading \"Start with a clear, front-facing photo\" [level=2]\n    - paragraph: Good light, a simple background, and a visible face give the score and generation the best chance to help.\n    - button \"Upload one photo Drag and drop or browse your device JPG, PNG, or WebP · Up to 7 MB\":\n      - strong: Upload one photo\n      - text: Drag and drop or browse your device JPG, PNG, or WebP · Up to 7 MB\n    - button \"Choose a source photo\"\n  - complementary \"Photo setup\":\n    - heading \"A clearer path to your best photo\" [level=2]\n    - list:\n      - listitem:\n        - strong: Score first.\n        - text: See what is already working before you generate.\n      - listitem:\n        - strong: Choose with context.\n        - text: Roles and use cases make style recommendations more useful.\n      - listitem:\n        - strong: Upgrade after proof.\n        - text: Try a Free Preview before deciding whether you need more candidates.\n    - paragraph: Your source photo stays in your workspace so you can return to it later.\n- button \"Scroll to top\": Top"
+  }
+}
+
+CHECK 4: mobile keyboard controls
+{
+  "name": "mobile keyboard controls",
+  "theme": "dark",
+  "menuExpanded": "true",
+  "facts": {
+    "url": "/app/enhance",
+    "title": "Photo Workspace - AI Profile Photo Maker",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "horizontalOverflow": false,
+    "headings": [
+      {
+        "level": 1,
+        "text": "Create your professional profile photo"
+      },
+      {
+        "level": 2,
+        "text": "Start with a clear, front-facing photo"
+      },
+      {
+        "level": 2,
+        "text": "A clearer path to your best photo"
+      }
+    ],
+    "visibleControlCount": 12,
+    "unnamedControls": [],
+    "controls": [
+      {
+        "tag": "DIV",
+        "type": null,
+        "role": "button",
+        "name": "Close navigation",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Go to home page",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Packages",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Photo workspace",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "My photos",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Settings",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Support",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Switch to light theme",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Toggle navigation",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Upload one photoDrag and drop or browse your deviceJPG, PNG, or WebP · Up to 7 MB",
+        "disabled": false
+      },
+      {
+        "tag": "INPUT",
+        "type": "file",
+        "role": null,
+        "name": "Choose a source photo",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Scroll to top",
+        "disabled": false
+      }
+    ],
+    "focusOrder": [
+      {
+        "tag": "A",
+        "name": "Go to home page",
+        "outline": "solid 3px rgba(15, 118, 110, 0.3)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Switch to light theme",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Toggle navigation",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Upload one photoDrag and drop or browse your deviceJPG, PNG, or WebP · Up to 7 MB",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Scroll to top",
+        "outline": "solid 2px rgb(79, 209, 199)"
+      },
+      {
+        "tag": "BODY",
+        "name": "AI Profile Photo MakerPackages Photo workspace My photos Settings Support WWorkspace Auditcheckout-resilience-audit@example.invalidSign outC",
+        "outline": "none 3px rgb(255, 255, 255)"
+      },
+      {
+        "tag": "A",
+        "name": "Go to home page",
+        "outline": "solid 3px rgba(15, 118, 110, 0.3)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Switch to light theme",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Toggle navigation",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Upload one photoDrag and drop or browse your deviceJPG, PNG, or WebP · Up to 7 MB",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Scroll to top",
+        "outline": "solid 2px rgb(79, 209, 199)"
+      },
+      {
+        "tag": "BODY",
+        "name": "AI Profile Photo MakerPackages Photo workspace My photos Settings Support WWorkspace Auditcheckout-resilience-audit@example.invalidSign outC",
+        "outline": "none 3px rgb(255, 255, 255)"
+      },
+      {
+        "tag": "A",
+        "name": "Go to home page",
+        "outline": "solid 3px rgba(15, 118, 110, 0.3)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Switch to light theme",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Toggle navigation",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Upload one photoDrag and drop or browse your deviceJPG, PNG, or WebP · Up to 7 MB",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Scroll to top",
+        "outline": "solid 2px rgb(79, 209, 199)"
+      },
+      {
+        "tag": "BODY",
+        "name": "AI Profile Photo MakerPackages Photo workspace My photos Settings Support WWorkspace Auditcheckout-resilience-audit@example.invalidSign outC",
+        "outline": "none 3px rgb(255, 255, 255)"
+      },
+      {
+        "tag": "A",
+        "name": "Go to home page",
+        "outline": "solid 3px rgba(15, 118, 110, 0.3)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Switch to light theme",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Toggle navigation",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Upload one photoDrag and drop or browse your deviceJPG, PNG, or WebP · Up to 7 MB",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Scroll to top",
+        "outline": "solid 2px rgb(79, 209, 199)"
+      },
+      {
+        "tag": "BODY",
+        "name": "AI Profile Photo MakerPackages Photo workspace My photos Settings Support WWorkspace Auditcheckout-resilience-audit@example.invalidSign outC",
+        "outline": "none 3px rgb(255, 255, 255)"
+      },
+      {
+        "tag": "A",
+        "name": "Go to home page",
+        "outline": "solid 3px rgba(15, 118, 110, 0.3)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Switch to light theme",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      }
+    ],
+    "ariaSnapshot": "- banner:\n  - link \"AI Profile Photo Maker AI Profile Photo Maker\":\n    - /url: /\n    - img \"AI Profile Photo Maker\"\n    - text: AI Profile Photo Maker\n  - button \"Switch to light theme\"\n  - button \"Toggle navigation\"\n- main:\n  - heading \"Create your professional profile photo\" [level=1]\n  - paragraph: Start with one clear photo. We will score the source, help you choose a direction, and create a result you can use with confidence.\n  - text: Starter Package active\n  - navigation \"Photo workflow\":\n    - text: \"1\"\n    - strong: Source photo\n    - text: \"2\"\n    - strong: Direction\n    - text: \"3\"\n    - strong: Photo workspace\n  - region \"Source photo preview\":\n    - heading \"Start with a clear, front-facing photo\" [level=2]\n    - paragraph: Good light, a simple background, and a visible face give the score and generation the best chance to help.\n    - button \"Upload one photo Drag and drop or browse your device JPG, PNG, or WebP · Up to 7 MB\":\n      - strong: Upload one photo\n      - text: Drag and drop or browse your device JPG, PNG, or WebP · Up to 7 MB\n    - button \"Choose a source photo\"\n  - complementary \"Photo setup\":\n    - heading \"A clearer path to your best photo\" [level=2]\n    - list:\n      - listitem:\n        - strong: Score first.\n        - text: See what is already working before you generate.\n      - listitem:\n        - strong: Choose with context.\n        - text: Roles and use cases make style recommendations more useful.\n      - listitem:\n        - strong: Upgrade after proof.\n        - text: Try a Free Preview before deciding whether you need more candidates.\n    - paragraph: Your source photo stays in your workspace so you can return to it later.\n- button \"Scroll to top\": Top"
+  }
+}
+
+CHECK 5: pricing delayed-real-response loading state
+{
+  "name": "pricing delayed-real-response loading state",
+  "loadingText": "Loading profile photo packages...",
+  "packageCards": [
+    "Free PreviewFreeScore your source photo and try a same-quality watermarked preview before buying a package.Freescore + preview path✓ 1 generated candidate🎯 Best shot selector📦 Download package Start Free Preview  14-day satisfaction guarantee — see Refund Policy",
+    "Starter Package$9.99Three profile-photo candidates, best shot selector, basic adjustment, and selected platform exports.3candidate photosPlatform export kit included2guided refinements✓ 3 generated candidates✓ 2 guided refinements✓ Platform export kit🎯 Best shot selector📦 Download package Choose Package  14-day satisfaction guarantee — see Refund Policy",
+    "Pro Package$19.99Nine candidates, best shot selector, score delta, exports, refinements, and premium augmentations.9candidate photosPlatform export kit included 3 premium augmentations included 5guided refinements✓ Score improvement delta✓ 9 generated candidates✓ 5 guided refinements✓ 3 premium augmentations✓ Platform export kit✓ Before/after score delta🎯 Best shot selector📦 Download package Choose Package  14-day satisfaction guarantee — see Refund Policy"
+  ],
+  "facts": {
+    "url": "/pricing",
+    "title": "AI Headshot Pricing - AI Profile Photo Maker",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "horizontalOverflow": false,
+    "headings": [
+      {
+        "level": 1,
+        "text": "Profile Photo Packages"
+      },
+      {
+        "level": 3,
+        "text": "Profile Photo Score"
+      },
+      {
+        "level": 3,
+        "text": "Best Shot Selector"
+      },
+      {
+        "level": 3,
+        "text": "Privacy First"
+      },
+      {
+        "level": 3,
+        "text": "Platform Export Kit"
+      },
+      {
+        "level": 2,
+        "text": "Choose Your Profile Photo Package"
+      },
+      {
+        "level": 3,
+        "text": "Free Preview"
+      },
+      {
+        "level": 3,
+        "text": "Starter Package"
+      },
+      {
+        "level": 3,
+        "text": "Pro Package"
+      },
+      {
+        "level": 3,
+        "text": "Data Retention Policy"
+      },
+      {
+        "level": 3,
+        "text": "What makes a package different?"
+      },
+      {
+        "level": 2,
+        "text": "How It Works"
+      },
+      {
+        "level": 3,
+        "text": "Upload One Photo"
+      },
+      {
+        "level": 3,
+        "text": "Score and Choose Role"
+      },
+      {
+        "level": 3,
+        "text": "Generate Candidates"
+      },
+      {
+        "level": 3,
+        "text": "Download Package"
+      }
+    ],
+    "visibleControlCount": 19,
+    "unnamedControls": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Toggle theme",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "AI Profile Photo Maker home",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Toggle navigation",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Features",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Use Cases",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Compare",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Pricing",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Reviews",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Blog",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Go to Photo Workspace",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Logout",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "see Refund Policy",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": null,
+        "role": null,
+        "name": "Start Free Preview",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "see Refund Policy",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": null,
+        "role": null,
+        "name": "Choose Package",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "see Refund Policy",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": null,
+        "role": null,
+        "name": "Choose Package",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "see Refund Policy",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Scroll to top",
+        "disabled": false
+      }
+    ],
+    "focusOrder": [
+      {
+        "tag": "A",
+        "name": "AI Profile Photo Maker home",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Toggle navigation",
+        "outline": "solid 2px rgb(79, 209, 199)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Features",
+        "outline": "solid 3px rgba(226, 232, 240, 0.82)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Use Cases",
+        "outline": "solid 3px rgba(226, 232, 240, 0.82)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Compare",
+        "outline": "solid 3px rgba(226, 232, 240, 0.82)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Pricing",
+        "outline": "solid 3px rgba(226, 232, 240, 0.82)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Reviews",
+        "outline": "solid 3px rgba(226, 232, 240, 0.82)"
+      },
+      {
+        "tag": "A",
+        "name": "Blog",
+        "outline": "solid 3px rgba(226, 232, 240, 0.82)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Go to Photo Workspace",
+        "outline": "solid 3px rgba(226, 232, 240, 0.82)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Logout",
+        "outline": "solid 3px rgba(226, 232, 240, 0.82)"
+      },
+      {
+        "tag": "A",
+        "name": "see Refund Policy",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Start Free Preview",
+        "outline": "solid 2px rgb(240, 245, 249)"
+      },
+      {
+        "tag": "A",
+        "name": "see Refund Policy",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Choose Package",
+        "outline": "solid 3px rgb(241, 245, 249)"
+      },
+      {
+        "tag": "A",
+        "name": "see Refund Policy",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Choose Package",
+        "outline": "solid 3px rgb(241, 245, 249)"
+      },
+      {
+        "tag": "A",
+        "name": "see Refund Policy",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Scroll to top",
+        "outline": "solid 2px rgb(79, 209, 199)"
+      },
+      {
+        "tag": "BODY",
+        "name": "AI Profile Photo Maker Features OverviewHow it worksExamplesAI headshot generatorHelp & FAQ Use Cases LinkedIn headshotsProfessional headsho",
+        "outline": "none 3px rgb(255, 255, 255)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Toggle theme",
+        "outline": "solid 3px rgb(241, 245, 249)"
+      },
+      {
+        "tag": "A",
+        "name": "AI Profile Photo Maker home",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Toggle navigation",
+        "outline": "solid 2px rgb(79, 209, 199)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Features",
+        "outline": "solid 3px rgba(226, 232, 240, 0.82)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Use Cases",
+        "outline": "solid 3px rgba(226, 232, 240, 0.82)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Compare",
+        "outline": "solid 3px rgba(226, 232, 240, 0.82)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Pricing",
+        "outline": "solid 3px rgba(226, 232, 240, 0.82)"
+      }
+    ],
+    "ariaSnapshot": "- button \"Toggle theme\"\n- link \"AI Profile Photo Maker home\":\n  - /url: /\n  - img \"AI Profile Photo Maker\"\n  - text: AI Profile Photo Maker\n- button \"Toggle navigation\"\n- navigation \"Marketing navigation\":\n  - button \"Features\"\n  - button \"Use Cases\"\n  - button \"Compare\"\n  - button \"Pricing\"\n  - button \"Reviews\"\n  - link \"Blog\":\n    - /url: /blog\n  - button \"Go to Photo Workspace\"\n  - button \"Logout\"\n- main:\n  - heading \"Profile Photo Packages\" [level=1]\n  - paragraph: \"Get your best professional profile photo from one upload: score it, generate focused candidates, choose the best shot, refine it, and download platform-ready exports.\"\n  - text: 🎯\n  - heading \"Profile Photo Score\" [level=3]\n  - paragraph: Understand what is working before you buy, then see how much your final photo improves.\n  - text: ⚡\n  - heading \"Best Shot Selector\" [level=3]\n  - paragraph: Generate a focused candidate set and get guidance on which image is strongest.\n  - text: 🔒\n  - heading \"Privacy First\" [level=3]\n  - paragraph: Input photos deleted after 30 days, AI headshots stored 30 days. Full data control in account settings.\n  - text: 📸\n  - heading \"Platform Export Kit\" [level=3]\n  - paragraph: Download user-selected crops for LinkedIn, Gmail, Slack, GitHub, resumes, and websites.\n  - paragraph:\n    - text: 14-day satisfaction guarantee —\n    - link \"see Refund Policy\":\n      - /url: /legal/refund-policy\n  - heading \"Choose Your Profile Photo Package\" [level=2]\n  - paragraph: \"Pay for a finished outcome: score, candidates, refinements, and platform-ready exports.\"\n  - heading \"Free Preview\" [level=3]\n  - text: Free\n  - paragraph: Score your source photo and try a same-quality watermarked preview before buying a package.\n  - text: Free score + preview path ✓ 1 generated candidate 🎯 Best shot selector 📦 Download package\n  - button \"Start Free Preview\"\n  - paragraph:\n    - text: 14-day satisfaction guarantee —\n    - link \"see Refund Policy\":\n      - /url: /legal/refund-policy\n  - heading \"Starter Package\" [level=3]\n  - text: $ 9.99\n  - paragraph: Three profile-photo candidates, best shot selector, basic adjustment, and selected platform exports.\n  - text: 3 candidate photos Platform export kit included 2 guided refinements ✓ 3 generated candidates ✓ 2 guided refinements ✓ Platform export kit 🎯 Best shot selector 📦 Download package\n  - button \"Choose Package\"\n  - paragraph:\n    - text: 14-day satisfaction guarantee —\n    - link \"see Refund Policy\":\n      - /url: /legal/refund-policy\n  - heading \"Pro Package\" [level=3]\n  - text: $ 19.99\n  - paragraph: Nine candidates, best shot selector, score delta, exports, refinements, and premium augmentations.\n  - text: 9 candidate photos Platform export kit included 3 premium augmentations included 5 guided refinements ✓ Score improvement delta ✓ 9 generated candidates ✓ 5 guided refinements ✓ 3 premium augmentations ✓ Platform export kit ✓ Before/after score delta 🎯 Best shot selector 📦 Download package\n  - button \"Choose Package\"\n  - paragraph:\n    - text: 14-day satisfaction guarantee —\n    - link \"see Refund Policy\":\n      - /url: /legal/refund-policy\n  - heading \"Data Retention Policy\" [level=3]\n  - text: \"Input Photos: Deleted after 30 days AI Headshots: Stored for 30 days Your Control: Delete data anytime via account settings\"\n  - heading \"What makes a package different?\" [level=3]\n  - text: Profile Photo Score Included Clear guidance before and after generation. Best Shot Selector Included in paid packages A small candidate set, ranked for professional use. Platform Export Kit User-selected LinkedIn, Gmail, Slack, GitHub, resume, website, and high-res exports.\n  - heading \"How It Works\" [level=2]\n  - paragraph: Get a ready-to-use professional profile photo package in four steps\n  - text: \"1\"\n  - heading \"Upload One Photo\" [level=3]\n  - paragraph: Start with one clear photo or an existing professional headshot.\n  - text: \"2\"\n  - heading \"Score and Choose Role\" [level=3]\n  - paragraph: See profile-photo readiness and pick the role you want to optimize for.\n  - text: \"3\"\n  - heading \"Generate Candidates\" [level=3]\n  - paragraph: Create a focused set of candidates and pick the best shot.\n  - text: \"4\"\n  - heading \"Download Package\" [level=3]\n  - paragraph: Choose platform exports and download a ready-to-use profile photo package.\n- button \"Scroll to top\": Top"
+  }
+}
+
+CHECK 6: pricing empty/retry
+{
+  "name": "pricing empty/retry",
+  "fixture": "first profilephotoworkflow/packages response mocked to empty; retry passed through to real local API",
+  "recoveredCards": 3
+}
+
+CHECK 7: pricing error/retry
+{
+  "name": "pricing error/retry",
+  "fixture": "first profilephotoworkflow/packages response injected HTTP 503; retry passed through to real local API",
+  "visibleErrorExcerpt": [
+    "Retry",
+    "Network Error",
+    "Error 503: Http failure response for http://localhost:4200/api/profilephotoworkflow/packages: 503 Service Unavailable"
+  ],
+  "recoveredCards": 3
+}
+
+CHECK 8: workspace delayed-real-score loading state
+{
+  "name": "workspace delayed-real-score loading state",
+  "response": {
+    "path": "/api/profilephotoworkflow/score",
+    "status": 200
+  },
+  "loadingLiveText": "Checking lighting, framing, and face clarity",
+  "facts": {
+    "url": "/app/enhance",
+    "title": "Photo Workspace - AI Profile Photo Maker",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "horizontalOverflow": false,
+    "headings": [
+      {
+        "level": 1,
+        "text": "Create your professional profile photo"
+      },
+      {
+        "level": 2,
+        "text": "Review your source photo"
+      },
+      {
+        "level": 2,
+        "text": "Choose the direction that fits your work"
+      }
+    ],
+    "visibleControlCount": 28,
+    "unnamedControls": [],
+    "controls": [
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Go to home page",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Packages",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Photo workspace",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "My photos",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Settings",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Support",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Switch to light theme",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Sign out",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Choose a different photo",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Continue anyway",
+        "disabled": false
+      },
+      {
+        "tag": "SELECT",
+        "type": null,
+        "role": null,
+        "name": "Who is this photo for?",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "LinkedInBest for LinkedIn, resumes, avatars, and executive profile pages.",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "RealtorTrust-building portraits for Zillow, Realtor.com, flyers, and social posts.",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "FounderFounder portraits for press bios, podcasts, website bios, and social banners.",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Recommended",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "More styles",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "GeneralLinkedinBalanced professional look for broad career use.",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "LeadershipExecutiveBoardroom-ready polish for founders and leaders.",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "FounderEntrepreneurConfident, modern profile for builders and owners.",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "StartupStartupApproachable, high-energy look for startup teams.",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "TechTech ProfessionalClean, modern profile for engineering and product roles.",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "HealthcareMedicalCalm, trusted presentation for clinical profiles.",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "AcademicAcademicCredible portrait for educators, authors, and researchers.",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "CreativeCreativeProfessional polish with a more expressive feel.",
+        "disabled": false
+      },
+      {
+        "tag": "INPUT",
+        "type": "checkbox",
+        "role": null,
+        "name": "I consent to the processing of face geometry for this photo. Read the consent notice .",
+        "disabled": false
+      },
+      {
+        "tag": "A",
+        "type": null,
+        "role": null,
+        "name": "Read the consent notice",
+        "disabled": false
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Generate paid candidates",
+        "disabled": true
+      },
+      {
+        "tag": "BUTTON",
+        "type": "button",
+        "role": null,
+        "name": "Scroll to top",
+        "disabled": false
+      }
+    ],
+    "focusOrder": [
+      {
+        "tag": "A",
+        "name": "Go to home page",
+        "outline": "solid 3px rgba(15, 118, 110, 0.3)"
+      },
+      {
+        "tag": "A",
+        "name": "Packages",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "Photo workspace",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "My photos",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "Settings",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "A",
+        "name": "Support",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Switch to light theme",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Sign out",
+        "outline": "solid 2px rgb(125, 211, 216)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Choose a different photo",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Continue anyway",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "SELECT",
+        "name": "Who is this photo for?",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "LinkedInBest for LinkedIn, resumes, avatars, and executive profile pages.",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "RealtorTrust-building portraits for Zillow, Realtor.com, flyers, and social posts.",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "FounderFounder portraits for press bios, podcasts, website bios, and social banners.",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Recommended",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "More styles",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "GeneralLinkedinBalanced professional look for broad career use.",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "LeadershipExecutiveBoardroom-ready polish for founders and leaders.",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "FounderEntrepreneurConfident, modern profile for builders and owners.",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "StartupStartupApproachable, high-energy look for startup teams.",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "TechTech ProfessionalClean, modern profile for engineering and product roles.",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "HealthcareMedicalCalm, trusted presentation for clinical profiles.",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "AcademicAcademicCredible portrait for educators, authors, and researchers.",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "CreativeCreativeProfessional polish with a more expressive feel.",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "INPUT",
+        "name": "I consent to the processing of face geometry for this photo. Read the consent notice .",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "A",
+        "name": "Read the consent notice",
+        "outline": "solid 3px rgb(166, 236, 226)"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "Scroll to top",
+        "outline": "solid 2px rgb(79, 209, 199)"
+      },
+      {
+        "tag": "BODY",
+        "name": "AI Profile Photo MakerPackages Photo workspace My photos Settings Support WWorkspace Auditcheckout-resilience-audit@example.invalidSign outC",
+        "outline": "none 3px rgb(255, 255, 255)"
+      },
+      {
+        "tag": "A",
+        "name": "Go to home page",
+        "outline": "solid 3px rgba(15, 118, 110, 0.3)"
+      },
+      {
+        "tag": "A",
+        "name": "Packages",
+        "outline": "auto 1px rgb(16, 16, 16)"
+      }
+    ],
+    "ariaSnapshot": "- banner:\n  - link \"AI Profile Photo Maker AI Profile Photo Maker\":\n    - /url: /\n    - img \"AI Profile Photo Maker\"\n    - text: AI Profile Photo Maker\n  - navigation \"Primary navigation\":\n    - link \"Packages\":\n      - /url: /pricing\n    - link \"Photo workspace\":\n      - /url: /app/enhance\n    - link \"My photos\":\n      - /url: /app/gallery\n    - link \"Settings\":\n      - /url: /app/settings\n    - link \"Support\":\n      - /url: /app/support\n  - button \"Switch to light theme\"\n  - strong: Workspace Audit\n  - text: checkout-resilience-audit@example.invalid\n  - button \"Sign out\"\n- main:\n  - heading \"Create your professional profile photo\" [level=1]\n  - paragraph: Start with one clear photo. We will score the source, help you choose a direction, and create a result you can use with confidence.\n  - text: Starter Package active\n  - navigation \"Photo workflow\":\n    - text: \"1\"\n    - strong: Source photo\n    - text: Ready to review 2\n    - strong: Direction\n    - text: Choose a role and style 3\n    - strong: Photo workspace\n    - text: Your result lives here\n  - region \"Source photo preview\":\n    - heading \"Review your source photo\" [level=2]\n    - text: Scored\n    - img \"Selected source photo\"\n    - strong: set-1-before.jpg\n    - text: 220,024 bytes · JPG, PNG, or WebP\n    - button \"Choose a different photo\"\n  - complementary \"Photo setup\":\n    - heading \"Choose the direction that fits your work\" [level=2]\n    - paragraph: Your selections guide the look and the platform-ready exports.\n    - text: Source photo score\n    - strong: 77/100\n    - text: Good starting point Good starting point\n    - paragraph: Image-quality checks show this photo can work well after generation/refinement. Improve the weakest subscores first.\n    - strong: Worth a quick review\n    - list:\n      - listitem: Image sharpness is below ideal quality.\n    - paragraph: Use a less blurry photo for better facial detail.\n    - button \"Continue anyway\"\n    - text: Who is this photo for?\n    - combobox \"Who is this photo for?\":\n      - option \"General professional\" [selected]\n      - option \"Founder / executive\"\n      - option \"Tech / engineering\"\n      - option \"Healthcare / clinical\"\n      - option \"Realtor / sales\"\n      - option \"Creative / creator\"\n      - option \"Legal / lawyer\"\n      - option \"Finance\"\n    - text: Balanced polish for LinkedIn, resumes, and internal directories. What are you using it for? LinkedIn\n    - button \"LinkedIn Best for LinkedIn, resumes, avatars, and executive profile pages.\":\n      - strong: LinkedIn\n      - text: Best for LinkedIn, resumes, avatars, and executive profile pages.\n    - button \"Realtor Trust-building portraits for Zillow, Realtor.com, flyers, and social posts.\":\n      - strong: Realtor\n      - text: Trust-building portraits for Zillow, Realtor.com, flyers, and social posts.\n    - button \"Founder Founder portraits for press bios, podcasts, website bios, and social banners.\":\n      - strong: Founder\n      - text: Founder portraits for press bios, podcasts, website bios, and social banners.\n    - text: Choose a portrait style Start with Recommended for the safest professional fit. Linkedin\n    - tablist \"Portrait style groups\":\n      - button \"Recommended\"\n      - button \"More styles\"\n    - button \"Linkedin portrait style preview General Linkedin Balanced professional look for broad career use.\":\n      - img \"Linkedin portrait style preview\"\n      - text: General\n      - strong: Linkedin\n      - emphasis: Balanced professional look for broad career use.\n    - button \"Executive portrait style preview Leadership Executive Boardroom-ready polish for founders and leaders.\":\n      - img \"Executive portrait style preview\"\n      - text: Leadership\n      - strong: Executive\n      - emphasis: Boardroom-ready polish for founders and leaders.\n    - button \"Entrepreneur portrait style preview Founder Entrepreneur Confident, modern profile for builders and owners.\":\n      - img \"Entrepreneur portrait style preview\"\n      - text: Founder\n      - strong: Entrepreneur\n      - emphasis: Confident, modern profile for builders and owners.\n    - button \"Startup portrait style preview Startup Startup Approachable, high-energy look for startup teams.\":\n      - img \"Startup portrait style preview\"\n      - text: Startup\n      - strong: Startup\n      - emphasis: Approachable, high-energy look for startup teams.\n    - button \"Tech Professional portrait style preview Tech Tech Professional Clean, modern profile for engineering and product roles.\":\n      - img \"Tech Professional portrait style preview\"\n      - text: Tech\n      - strong: Tech Professional\n      - emphasis: Clean, modern profile for engineering and product roles.\n    - button \"Medical portrait style preview Healthcare Medical Calm, trusted presentation for clinical profiles.\":\n      - img \"Medical portrait style preview\"\n      - text: Healthcare\n      - strong: Medical\n      - emphasis: Calm, trusted presentation for clinical profiles.\n    - button \"Academic portrait style preview Academic Academic Credible portrait for educators, authors, and researchers.\":\n      - img \"Academic portrait style preview\"\n      - text: Academic\n      - strong: Academic\n      - emphasis: Credible portrait for educators, authors, and researchers.\n    - button \"Creative portrait style preview Creative Creative Professional polish with a more expressive feel.\":\n      - img \"Creative portrait style preview\"\n      - text: Creative\n      - strong: Creative\n      - emphasis: Professional polish with a more expressive feel.\n    - checkbox \"I consent to the processing of face geometry for this photo. Read the consent notice .\"\n    - text: I consent to the processing of face geometry for this photo.\n    - link \"Read the consent notice\":\n      - /url: /legal/biometric-consent\n    - text: .\n    - paragraph: Consent is required before generation.\n    - strong: Starter Package\n    - text: \"Starter Package active: 3 candidates, 2 refinements, 0 premium add-ons, export kit available.\"\n    - button \"Generate paid candidates\" [disabled]\n    - text: Accept Consent to Continue\n- button \"Scroll to top\": Top"
+  }
+}

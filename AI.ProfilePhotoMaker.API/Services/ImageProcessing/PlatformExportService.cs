@@ -1,7 +1,9 @@
 using System.IO.Compression;
+using System.Numerics;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
 namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
@@ -29,7 +31,7 @@ public class PlatformExportService : IPlatformExportService
     public async Task<byte[]> CreateExportPackageAsync(Stream sourceImage, string baseFileName, IReadOnlyCollection<string> exportCodes, PlatformExportAdjustmentOptions? adjustments = null, CancellationToken cancellationToken = default)
     {
         var selected = ResolveSelectedOptions(exportCodes);
-        using var image = await Image.LoadAsync(sourceImage, cancellationToken);
+        using var image = await Image.LoadAsync<Rgba32>(sourceImage, cancellationToken);
         await using var output = new MemoryStream();
 
         using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
@@ -77,19 +79,14 @@ public class PlatformExportService : IPlatformExportService
         var rotate = Math.Clamp(adjustments.RotateDegrees, -8, 8);
         var zoom = Math.Clamp(adjustments.ZoomPercent, 80, 140) / 100f;
 
-        if (Math.Abs(rotate) > 0)
+        if (rotate != 0 || Math.Abs(zoom - 1f) > 0.001f)
         {
-            ctx.Rotate(rotate);
-        }
-
-        if (Math.Abs(zoom - 1f) > 0.001f)
-        {
-            ctx.Resize(new ResizeOptions
-            {
-                Size = new Size((int)Math.Round(originalSize.Width * zoom), (int)Math.Round(originalSize.Height * zoom)),
-                Mode = ResizeMode.Crop,
-                Position = ResolveCropAnchor(adjustments)
-            });
+            // Transform within a fixed frame so the platform resize cannot undo zoom.
+            var center = new Vector2(originalSize.Width / 2f, originalSize.Height / 2f);
+            var transform = Matrix3x2.CreateScale(zoom, center) *
+                            Matrix3x2.CreateRotation(rotate * MathF.PI / 180f, center);
+            ctx.Transform(new Rectangle(Point.Empty, originalSize), transform, originalSize, KnownResamplers.Bicubic)
+                .BackgroundColor(Color.White);
         }
 
         if (Math.Abs(brightness - 1f) > 0.001f)

@@ -1,0 +1,33 @@
+Generation lost-commit-acknowledgement regression
+
+Environment: local SQLite, real generation service, deterministic image provider,
+DbTransactionInterceptor throwing TimeoutException after successful commit.
+No SQL Server outage, real AI call, or production activity.
+
+RED command:
+dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --no-restore --filter FullyQualifiedName~GenerateHeadshotAsync_LostCommitAcknowledgement
+Failed: 1, Passed: 0, Total: 1
+Assert.Equal() Failure: Strings differ
+Expected: "succeeded"
+Actual:   "failed"
+
+Fix: discard tracked transaction state and read the durable generation receipt
+before compensation. A succeeded receipt suppresses candidate failure/refund;
+if receipt verification fails, do not automatically compensate or reopen work.
+
+GREEN command:
+dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --no-restore --filter FullyQualifiedName~HeadshotGenerationServiceTests
+Passed: 17, Failed: 0, Skipped: 0, Duration: 3 s
+Regression checks succeeded receipt and candidates, retained charge, successful
+replay, and exactly one provider request.
+
+Private original logs: /tmp/aipm-compose-verify/generation-commit-ack-red.txt
+and /tmp/aipm-compose-verify/generation-commit-ack-green.txt.
+FINAL full API suite after this fix:
+dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --no-restore --logger 'console;verbosity=minimal'
+Passed: 403, Failed: 0, Skipped: 0, Duration: 1 m 15 s.
+API Docker image rebuilt; fresh local account confirmation/login, upload/score,
+deterministic preview, Azurite retrieval, and real Stripe sandbox concurrency
+script passed against that image. No production activity.
+Private logs: api-generation-ack-final.txt, docker-generation-ack-final.txt,
+free-preview-ack-final.txt, stripe-ack-final.txt under the same private directory.

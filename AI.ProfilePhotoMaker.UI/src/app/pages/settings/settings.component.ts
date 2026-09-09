@@ -7,12 +7,9 @@ import { HeaderNavigationComponent } from '../../shared/header-navigation/header
 import { ProfileService, UserProfile } from '../../services/profile.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { NotificationService } from '../../services/notification.service';
-import { WorkspaceStateService } from '../../services/workspace-state.service';
 import { CookieConsentService } from '../../services/cookie-consent.service';
 import { AccountInfoComponent } from '../../components/settings/account-info/account-info.component';
-import { CreditManagementComponent } from '../../components/settings/credit-management/credit-management.component';
 import { firstValueFrom, timeout, Subscription, TimeoutError } from 'rxjs';
-import { filter } from 'rxjs/operators';
 import {
   ETHNICITY_OPTIONS_WITH_LEGACY_GENERIC_ASIAN,
   normalizeEthnicityValue,
@@ -37,7 +34,6 @@ type DeletionType = 'photos' | 'model' | 'all' | 'account';
     FormsModule,
     HeaderNavigationComponent,
     AccountInfoComponent,
-    CreditManagementComponent,
   ],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.sass'],
@@ -87,10 +83,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
     ethnicity: '',
   };
 
-  // Credit Management State
-  creditsInfo: any = null;
-  userCreditStatus: any = null;
-
   // Subscription Management
   private subscriptions: Subscription[] = [];
 
@@ -100,7 +92,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
     private profileService: ProfileService,
     private fileUploadService: FileUploadService,
     private notificationService: NotificationService,
-    private workspaceStateService: WorkspaceStateService,
     private cookieConsentService: CookieConsentService,
     private cdr: ChangeDetectorRef
   ) {}
@@ -119,7 +110,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.loadUserInfoAsync(),
         this.loadDataStats(),
         this.loadUserProfileAsync(),
-        this.loadCreditInfoAsync(),
       ]);
     } catch (error) {
       console.error('Error loading settings data:', error);
@@ -671,21 +661,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
     void this.router.navigate(['/app/support'], { queryParams: { category: 'Question' } });
   }
 
-  // Credit Management Methods
-  loadCreditInfo() {
-    // Subscribe to Photo Workspace state for credit information with proper cleanup
-    const subscription = this.workspaceStateService.state$.subscribe(state => {
-      this.creditsInfo = state.creditsInfo;
-      this.userCreditStatus = state.userCreditStatus;
-    });
-
-    // Store subscription for cleanup
-    this.subscriptions.push(subscription);
-
-    // Load initial credit data
-    this.workspaceStateService.loadInitialWorkspaceData();
-  }
-
   // Async versions for proper loading state management
   async loadUserInfoAsync(): Promise<void> {
     try {
@@ -734,37 +709,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Failed to load user profile:', error);
       // Don't show error notification here - let parent handle it
-    }
-  }
-
-  async loadCreditInfoAsync(): Promise<void> {
-    try {
-      const statePromise = firstValueFrom(
-        this.workspaceStateService.state$.pipe(
-          filter(state => !!state.userCreditStatus || !!state.creditsInfo),
-          timeout({ first: 8000 })
-        )
-      );
-
-      await this.workspaceStateService.loadBasicDataForSettings();
-
-      const state = await statePromise;
-
-      this.creditsInfo = state.creditsInfo;
-      this.userCreditStatus = state.userCreditStatus;
-
-      if (state.uploadedImages !== undefined) {
-        this.dataStats.inputPhotos = state.uploadedImages;
-      }
-      if (state.generatedPhotosCount !== undefined) {
-        this.dataStats.generatedPhotos = state.generatedPhotosCount;
-      }
-    } catch (error) {
-      if (error instanceof TimeoutError) {
-        console.warn('loadCreditInfoAsync timed out');
-      } else {
-        console.error('Failed to load credit info:', error);
-      }
     }
   }
 

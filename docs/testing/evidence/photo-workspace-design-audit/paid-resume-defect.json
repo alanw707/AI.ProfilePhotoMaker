@@ -1,0 +1,22 @@
+{
+  "paidCandidateId": 2,
+  "resumeResponse": {
+    "success": true,
+    "data": null,
+    "error": null
+  },
+  "workspaceHeadings": [
+    "Create your professional profile photo",
+    "Start with a clear, front-facing photo",
+    "A clearer path to your best photo"
+  ],
+  "galleryHeadings": [
+    "Photo Workspace",
+    "Your Photos"
+  ],
+  "galleryActions": [
+    " Continue in Photo Workspace ",
+    " Continue in Photo Workspace ",
+    " Continue in Photo Workspace "
+  ]
+}

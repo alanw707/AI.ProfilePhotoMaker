@@ -1,0 +1,44 @@
+Debit acknowledgement ambiguity — separate SQLite contexts, real BasicTierService
+SavedChanges interceptor throws after persisted debit, before consumption receipt/log.
+Regression verifies persisted balance, Processing claim, expired-claim replay refusal,
+no second charge, no provider call, and absent usage log. No production or paid calls.
+
+--- RED ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:02.33]     AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_LostDebitAcknowledgementBlocksReplayAcrossContexts [FAIL]
+  Failed AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_LostDebitAcknowledgementBlocksReplayAcrossContexts [2 s]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: Processing
+Actual:   Failed
+  Stack Trace:
+     at AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_LostDebitAcknowledgementBlocksReplayAcrossContexts() in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/HeadshotGenerationServiceTests.cs:line 460
+   at AI.ProfilePhotoMaker.API.Tests.Services.HeadshotGenerationServiceTests.GenerateHeadshotAsync_LostDebitAcknowledgementBlocksReplayAcrossContexts() in <repo>/AI.ProfilePhotoMaker.API.Tests/Services/HeadshotGenerationServiceTests.cs:line 468
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 2 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- GREEN ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    21, Skipped:     0, Total:    21, Duration: 4 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- FULL API ---
+  AI.ProfilePhotoMaker.API -> <repo>/AI.ProfilePhotoMaker.API/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.dll
+  AI.ProfilePhotoMaker.API.Tests -> <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll
+Test run for <repo>/AI.ProfilePhotoMaker.API.Tests/bin/Debug/net10.0/AI.ProfilePhotoMaker.API.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   407, Skipped:     0, Total:   407, Duration: 1 m 18 s - AI.ProfilePhotoMaker.API.Tests.dll (net10.0)
+
+--- FINAL DOCKER PAID WORKFLOW ---
+PASS local Docker paid generation, entitlement accounting, premium augmentation, and export ZIP
+
+--- FINAL RESTART ---
+PASS local Docker SQL, migration, entitlement, and Azurite persistence across restart

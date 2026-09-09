@@ -1,0 +1,55 @@
+Local purchase and coupon retry regression evidence
+==================================================
+Environment: local .NET 10 test runner. SQLite purchase rollback test;
+InMemory coupon SaveChanges interception test. Neither is a Stripe integration.
+No real purchase or paid provider call.
+
+COUPON RED — before ChangeTracker cleanup
+Command filter: FullyQualifiedName~RedeemCoupon_PersistenceFailureDoesNotLeakChangesIntoLaterSave
+Failed: CouponServiceTests.RedeemCoupon_PersistenceFailureDoesNotLeakChangesIntoLaterSave
+Assert.Empty() Failure: Collection was not empty
+A later SaveChanges persisted the redemption rejected by the injected outage.
+Failed: 1, Passed: 0, Total: 1
+
+COUPON GREEN — after cleanup on failure and execution-strategy retry
+Command filter: FullyQualifiedName~CouponServiceTests|FullyQualifiedName~StripeWebhookServiceTests
+Passed! Failed: 0, Passed: 31, Skipped: 0, Total: 31
+
+PURCHASE RED — before credit-allocation failure rollback
+Command filter: FullyQualifiedName~PurchaseCreditPackageAsync_CreditAllocationFailureRollsBackAndAllowsReplay
+Failed: CreditPackageServiceTests.PurchaseCreditPackageAsync_CreditAllocationFailureRollsBackAndAllowsReplay
+Assert.Throws() Failure: No exception was thrown
+Expected: typeof(System.InvalidOperationException)
+Failed: 1, Passed: 0, Total: 1
+
+PURCHASE GREEN — after rollback and tracked-state cleanup
+Test setup additionally attaches the existing user before restoring its deleted
+profile, avoiding an unrelated duplicate-user insert after tracker cleanup.
+Command filter: FullyQualifiedName~CreditPackageServiceTests|FullyQualifiedName~StripeWebhookServiceTests|FullyQualifiedName~CouponServiceTests
+Passed! Failed: 0, Passed: 44, Skipped: 0, Total: 44
+SQLite regression checks rollback leaves no purchase even after another save,
+then repairs missing profile and replays twice: one purchase and one credit award.
+
+FULL API GREEN — after both fixes
+Command: dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --no-restore --logger 'console;verbosity=minimal'
+Passed! Failed: 0, Passed: 397, Skipped: 0, Total: 397, Duration: 59 s
+
+COMMIT-BOUNDARY FAULT INJECTION — subsequent local verification
+Command: dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --no-restore --filter FullyQualifiedName~ExecutionStrategyRetry
+Passed! Failed: 0, Passed: 4, Skipped: 0, Total: 4, Duration: 2 s
+SQLite with EF execution strategy configured for one TimeoutException retry.
+DbTransactionInterceptor throws once either immediately before commit or after
+successful commit (lost acknowledgement). Both purchase and coupon paths return
+success with one persisted purchase/redemption and one credit/usage increment.
+These are deterministic database fixtures, not SQL Server outage or Stripe tests.
+FINAL FULL API SUITE — including all four commit-boundary tests
+Command: dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --no-restore --logger 'console;verbosity=minimal'
+Passed! Failed: 0, Passed: 401, Skipped: 0, Total: 401, Duration: 1 m 5 s
+Private original log: /tmp/aipm-compose-verify/api-commit-retry-final.txt
+Additional release verification and independent review remain open.
+Private original runner logs: /tmp/aipm-compose-verify/
+  coupon-tracker-red.txt
+  coupon-tracker-green.txt
+  purchase-allocation-red.txt
+  purchase-allocation-green.txt
+  api-purchase-retry-final.txt
