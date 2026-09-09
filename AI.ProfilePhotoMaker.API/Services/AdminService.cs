@@ -891,6 +891,7 @@ public class AdminService : IAdminService
             .Where(entitlement => entitlement.CreatedAt >= fromUtc && entitlement.CreatedAt <= toUtc)
             .Select(entitlement => new
             {
+                entitlement.SourcePaymentTransactionId,
                 entitlement.Status,
                 entitlement.RemainingCandidates,
                 entitlement.RemainingRefinements,
@@ -898,6 +899,17 @@ public class AdminService : IAdminService
                 entitlement.PlatformExportKitAvailable,
                 PackageCode = entitlement.OutcomePackageDefinition.Code,
                 PackageName = entitlement.OutcomePackageDefinition.Name
+            })
+            .ToListAsync();
+
+        // Keep purchase reporting on simple date-filtered reads. Correlated package lookups inside
+        // the payment projections made this endpoint slow enough to leave the admin page loading.
+        var packageDefinitions = await _context.OutcomePackageDefinitions.AsNoTracking()
+            .Select(definition => new
+            {
+                definition.InternalCreditPackageId,
+                definition.Code,
+                definition.Name
             })
             .ToListAsync();
 
@@ -910,15 +922,7 @@ public class AdminService : IAdminService
             {
                 purchase.PaymentTransactionId,
                 purchase.PackageId,
-                purchase.AmountPaid,
-                PackageCode = _context.OutcomePackageDefinitions
-                    .Where(definition => definition.InternalCreditPackageId == purchase.PackageId)
-                    .Select(definition => definition.Code)
-                    .FirstOrDefault(),
-                PackageName = _context.OutcomePackageDefinitions
-                    .Where(definition => definition.InternalCreditPackageId == purchase.PackageId)
-                    .Select(definition => definition.Name)
-                    .FirstOrDefault()
+                purchase.AmountPaid
             })
             .ToListAsync();
 
@@ -930,29 +934,47 @@ public class AdminService : IAdminService
                 transaction.Status == PaymentStatus.Completed)
             .Select(transaction => new
             {
-                TransactionId = transaction.Id.ToString(),
-                transaction.Amount,
-                PackageCode = _context.UserPackageEntitlements
-                    .Where(entitlement => entitlement.SourcePaymentTransactionId == transaction.Id)
-                    .Select(entitlement => entitlement.OutcomePackageDefinition.Code)
-                    .FirstOrDefault(),
-                PackageName = _context.UserPackageEntitlements
-                    .Where(entitlement => entitlement.SourcePaymentTransactionId == transaction.Id)
-                    .Select(entitlement => entitlement.OutcomePackageDefinition.Name)
-                    .FirstOrDefault()
+                transaction.Id,
+                transaction.Amount
             })
             .ToListAsync();
 
+        var packageByCreditPackageId = packageDefinitions
+            .Where(definition => definition.InternalCreditPackageId.HasValue)
+            .GroupBy(definition => definition.InternalCreditPackageId!.Value)
+            .ToDictionary(group => group.Key, group => group.First());
+        var entitlementByTransactionId = entitlementRows
+            .Where(entitlement => entitlement.SourcePaymentTransactionId.HasValue)
+            .GroupBy(entitlement => entitlement.SourcePaymentTransactionId!.Value)
+            .ToDictionary(group => group.Key, group => group.First());
         var representedTransactionIds = paidPurchaseRows
             .Where(purchase => !string.IsNullOrWhiteSpace(purchase.PaymentTransactionId))
             .Select(purchase => purchase.PaymentTransactionId!)
             .ToHashSet(StringComparer.Ordinal);
         var paidProductRows = paidPurchaseRows
-            .Select(purchase => (purchase.PaymentTransactionId, purchase.PackageId, purchase.AmountPaid, purchase.PackageCode, purchase.PackageName))
+            .Select(purchase =>
+            {
+                packageByCreditPackageId.TryGetValue(purchase.PackageId, out var package);
+                return (
+                    purchase.PaymentTransactionId,
+                    purchase.PackageId,
+                    purchase.AmountPaid,
+                    PackageCode: package?.Code,
+                    PackageName: package?.Name);
+            })
             .ToList();
         paidProductRows.AddRange(paidTransactionRows
-            .Where(transaction => !representedTransactionIds.Contains(transaction.TransactionId))
-            .Select(transaction => ((string?)transaction.TransactionId, 0, transaction.Amount, transaction.PackageCode, transaction.PackageName)));
+            .Where(transaction => !representedTransactionIds.Contains(transaction.Id.ToString()))
+            .Select(transaction =>
+            {
+                entitlementByTransactionId.TryGetValue(transaction.Id, out var entitlement);
+                return (
+                    PaymentTransactionId: (string?)transaction.Id.ToString(),
+                    PackageId: 0,
+                    AmountPaid: transaction.Amount,
+                    PackageCode: entitlement?.PackageCode,
+                    PackageName: entitlement?.PackageName);
+            }));
 
         var uploads = imageRows.Count(image => image.IsOriginalUpload);
         var successfulPreviewGenerations = imageRows.Count(image =>
