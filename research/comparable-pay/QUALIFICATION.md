@@ -6,7 +6,7 @@ Status: **research complete, production personalized pay blocked**. Read-only ch
 
 No evaluated source currently clears all four gates for the proposed U.S. career product: permitted ongoing use and retention, broad U.S. occupation/geography coverage, explicit comparable pay/level/arrangement attributes, and enough independent employers for a stable cohort. The first release must not display the occupational wage benchmark as an individualized pay range. A dated benchmark can still be developed and shown under its own label.
 
-Adzuna is the most plausible national feed to qualify next, because its documented search API exposes U.S. listings and pay fields; **selection for production is conditional** on a key, direct U.S. data sampling, negotiated ongoing aggregation/storage rights, attribution, price and measured cohort coverage. Its public terms explicitly limit non-permitted ongoing aggregated use after a 14-day trial. There is no approved provider or quote at this point.
+Adzuna is the most plausible national feed to qualify next, because its documented search API exposes U.S. listings and pay fields; **selection for production is conditional** on a key, direct U.S. data sampling, negotiated ongoing aggregation/storage rights, attribution, price and measured cohort coverage. Its public terms explicitly limit non-permitted ongoing aggregated use after a 14-day trial. The project owner confirmed on 2026-09-23 that no Adzuna account exists yet. There is no approved provider or quote at this point; no account or terms have been accepted on the owner's behalf.
 
 ## Candidate assessment
 
