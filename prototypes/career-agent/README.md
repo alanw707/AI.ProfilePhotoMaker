@@ -49,7 +49,7 @@ Run the existing Playwright package against the prototype with:
 NODE_PATH=/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/node_modules node prototypes/career-agent/smoke.cjs
 ```
 
-The smoke script visits all six pages, tests the profile proposal, location selection, roadmap task, materials download and mobile assistant, captures desktop/mobile review images, checks mobile overflow and reports JavaScript page errors. It also checks focus and scroll restoration on route history, sampled text contrast, reduced-motion styling, and reflow at a 640-CSS-pixel viewport with device scale factor 2 (a 1280-physical-pixel, 200%-scale equivalent). This is not a native browser-zoom or assistive-technology audit. It uses `CHROME_BIN` if the local Chrome binary differs.
+The smoke script visits all six pages, tests the profile proposal, location selection, roadmap task, materials download and mobile assistant, captures desktop/mobile review images, checks mobile overflow and reports JavaScript page errors. It also checks focus and scroll restoration on route history, visible keyboard focus and assistant focus return, 47 representative text/background contrast pairs across six pages (lowest measured ratio 4.6:1), reduced-motion styling, and reflow at a 640-CSS-pixel viewport with device scale factor 2 (a 1280-physical-pixel, 200%-scale equivalent). This is not a native browser-zoom, exhaustive contrast, or assistive-technology audit. It uses `CHROME_BIN` if the local Chrome binary differs.
 
 Current review captures are under `review/`. They were generated from the WSL browser pass; inspect them before treating any visual decision as complete. This prototype has not been merged into the production Angular routes.
 

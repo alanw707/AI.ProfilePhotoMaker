@@ -54,6 +54,7 @@ const fs = require('node:fs');
   await phone.screenshot({path:path.join(review,'mobile-assistant.png'),fullPage:true});
   await phone.keyboard.press('Escape');
   assert.equal(await phone.locator('#assistant').isVisible(),false);
+  assert.equal(await phone.evaluate(()=>document.activeElement.id),'mobile-agent');
   const width=await phone.evaluate(()=>({scroll:document.documentElement.scrollWidth,inner:innerWidth}));
   assert.ok(width.scroll<=width.inner,'mobile horizontal overflow: '+JSON.stringify(width));
   for(const viewport of [{width:320,height:640},{width:720,height:450}]){
@@ -68,6 +69,9 @@ const fs = require('node:fs');
   await phone.reload();
   await phone.keyboard.press('Tab');
   assert.equal(await phone.evaluate(()=>document.activeElement.classList.contains('skip-link')),true);
+  await phone.keyboard.press('Tab');
+  assert.equal(await phone.evaluate(()=>document.activeElement.id),'mobile-menu');
+  assert.notEqual(await phone.evaluate(()=>getComputedStyle(document.activeElement).outlineStyle),'none');
   const zoom=await browser.newContext({viewport:{width:640,height:400},deviceScaleFactor:2});
   const zoomPage=await zoom.newPage();
   for(const route of ['agent','profile','analytics','heatmap','roadmaps','materials']){
@@ -79,20 +83,31 @@ const fs = require('node:fs');
   const reducedPage=await reduced.newPage();
   await reducedPage.goto(base);
   assert.equal(await reducedPage.evaluate(()=>getComputedStyle(document.documentElement).scrollBehavior),'auto');
-  await page.goto(base+'#analytics');
-  const contrast=await page.evaluate(()=>{
-    const luminance=css=>{
-      const channels=css.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>v/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4);
-      return channels[0]*0.2126+channels[1]*0.7152+channels[2]*0.0722;
-    };
-    return ['.page-head p','.button.primary','.nav-link[aria-current="page"]','.comparison p','.note','.status'].map(selector=>{
-      const element=document.querySelector(selector);if(!element)return null;
-      const style=getComputedStyle(element);const fg=luminance(style.color);const bg=luminance(style.backgroundColor==='rgba(0, 0, 0, 0)'?'rgb(247, 247, 242)':style.backgroundColor);
-      return {selector,ratio:(Math.max(fg,bg)+0.05)/(Math.min(fg,bg)+0.05)};
-    }).filter(Boolean);
-  });
-  assert.ok(contrast.every(({ratio})=>ratio>=4.5),'sampled text contrast below 4.5: '+JSON.stringify(contrast));
+  const contrast=[];
+  for(const route of ['agent','profile','analytics','heatmap','roadmaps','materials']){
+    await page.goto(base+'#'+route);
+    contrast.push(...await page.evaluate(()=>{
+      const luminance=css=>{
+        const channels=css.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>v/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4);
+        return channels[0]*0.2126+channels[1]*0.7152+channels[2]*0.0722;
+      };
+      const background=element=>{
+        for(let node=element;node;node=node.parentElement){
+          const color=getComputedStyle(node).backgroundColor;
+          if(color&&!/^rgba\([^)]*,\s*0\)$/.test(color))return color;
+        }
+        return 'rgb(255,255,255)';
+      };
+      return ['.nav-label','.sidebar-help','.sidebar-help-link','.page-head p','.section-lead','.label','.artifact-row p','.paper p','.note','.status','.assistant-compose small','.map-legend','.range-labels'].flatMap(selector=>{
+        const element=[...document.querySelectorAll(selector)].find(e=>e.getClientRects().length&&e.textContent.trim());
+        if(!element)return [];
+        const fg=luminance(getComputedStyle(element).color),bg=luminance(background(element));
+        return [{route:location.hash.slice(1),selector,ratio:Math.round((Math.max(fg,bg)+0.05)/(Math.min(fg,bg)+0.05)*100)/100}];
+      });
+    }));
+  }
+  assert.ok(contrast.every(({ratio})=>ratio>=4.5),'sampled text contrast below 4.5: '+JSON.stringify(contrast.filter(({ratio})=>ratio<4.5)));
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({pages:6,profileReview:true,marketSelection:true,roadmapTask:true,materialsDownload:true,mobileAssistant:true,viewports:[320,390,720,1440],zoomEquivalent:'1280 physical px / 640 CSS px at DPR 2',reducedMotion:true,contrast,scrollRestoration:true,horizontalOverflow:false,keyboardSkipLink:true,pageErrors:errors,review},null,2));
+  console.log(JSON.stringify({pages:6,profileReview:true,marketSelection:true,roadmapTask:true,materialsDownload:true,mobileAssistant:true,viewports:[320,390,720,1440],zoomEquivalent:'1280 physical px / 640 CSS px at DPR 2',reducedMotion:true,contrastSamples:contrast.length,lowestSampledContrast:Math.min(...contrast.map(x=>x.ratio)),scrollRestoration:true,horizontalOverflow:false,keyboardSkipLink:true,visibleFocus:true,assistantFocusReturn:true,pageErrors:errors,review},null,2));
   await browser.close();
 })().catch(e=>{console.error(e);process.exit(1);});
