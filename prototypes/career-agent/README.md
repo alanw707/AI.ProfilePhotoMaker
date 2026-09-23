@@ -37,6 +37,8 @@ Observe an experienced U.S. professional without explaining the UI:
 
 Record task success, errors, hesitation and direct quotes with the participant's consent. The researcher must distinguish prototype limitations from comprehension failures. **No target-user sessions have been conducted yet.** This remains the human validation gate of ticket #377.
 
+Use the [anonymized observation template](review/session-template.md) for each session, then summarize the counts, severe failures, fixes and retests in the ticket. Keep participant contact details and any real career data outside this repository.
+
 ## Technical verification
 
 Run the existing Playwright package against the prototype with:
