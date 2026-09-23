@@ -39,6 +39,8 @@ Record task success, errors, hesitation and direct quotes with the participant's
 
 Use the [anonymized observation template](review/session-template.md) for each session, then summarize the counts, severe failures, fixes and retests in the ticket. Keep participant contact details and any real career data outside this repository.
 
+If no participant is available, the [opt-in LinkedIn recruitment draft](review/linkedin-recruitment-draft.md) is ready for the account owner to review. It has **not** been posted or sent to anyone.
+
 ## Technical verification
 
 Run the existing Playwright package against the prototype with:
