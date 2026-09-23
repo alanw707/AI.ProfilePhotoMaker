@@ -36,6 +36,23 @@ The title/category matching is a deliberately broad diagnostic heuristic, not an
 
 The sampler prints per-family/borough counts, exclusion outcomes and two shortened SHA-256 hashes of public job IDs, with no raw salary rows. Re-run with `node research/comparable-pay/sample-nyc.mjs` from the worktree root. Live counts will change and should be treated as a dated sample, not a stable fixture.
 
+## Cross-employer public-board probe
+
+A second ephemeral research probe at [sample-greenhouse.mjs](sample-greenhouse.mjs) read 14 publicly accessible Greenhouse employer boards on **2026-09-23 11:24 UTC**. The script selects a few broad role families and three named metros, extracts at most one plausible annual USD pay interval from each posting's public text, deduplicates by employer/job ID, and prints counts only. It stores no posting text, job rows or actual observed pay values. This activity tests source feasibility; Greenhouse's documented public GET access does **not** establish permission for a commercial salary aggregation product.
+
+| Role / metro | Matching posts | Posts with one plausible annual range | Included after recency/dedup | Employers with included pay | Candidate decision |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Software / San Francisco | 96 | 20 | 19 | 3 | Fallback: below five-employer floor |
+| Software / New York | 37 | 5 | 5 | 3 | Fallback |
+| Software / Seattle | 17 | 5 | 5 | 1 | Fallback |
+| Product design / San Francisco | 15 | 5 | 5 | 2 | Fallback |
+| Operations / San Francisco | 17 | 6 | 6 | 3 | Fallback |
+| Operations / New York | 6 | 1 | 1 | 1 | Fallback |
+
+The remaining sampled family/metro cells also fell back; several had no parseable pay. This independently tests three role families across San Francisco, New York and Seattle and demonstrates that even a 96-post software candidate pool does not meet the proposed five-employer floor after pay and freshness filtering. The source may contain more valid pay in structured or differently formatted fields; the conservative text parser is **not** a production extractor. Cross-board posting terms, exact work arrangements, seniority and role-code mapping remain unverified. No positive covered cohort from real postings was established.
+
+The probe reinforces the stop decision: do not relax the 10-observation/five-employer floor merely to display a number. To meet the first-release personalized requirement, obtain a source with rights and enough well-structured observed pay across employers and regions, then run the same covered/sparse evaluation on a permitted retained snapshot.
+
 ## Candidate calculation rule, version 1.0
 
 The deterministic [cohort.mjs](cohort.mjs) and [synthetic fixtures](fixtures.mjs) define the proposed starting rule. This rule is **validated as code behavior**, not validated as an estimator of real offers.
