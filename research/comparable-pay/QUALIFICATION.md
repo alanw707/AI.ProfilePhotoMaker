@@ -53,6 +53,12 @@ The remaining sampled family/metro cells also fell back; several had no parseabl
 
 The probe reinforces the stop decision: do not relax the 10-observation/five-employer floor merely to display a number. To meet the first-release personalized requirement, obtain a source with rights and enough well-structured observed pay across employers and regions, then run the same covered/sparse evaluation on a permitted retained snapshot.
 
+### Structured pay-transparency field check
+
+The [Greenhouse Job Board API documentation](https://docs.greenhouse.io/job-board.html) also exposes `pay_input_ranges` through an individual public job GET with `pay_transparency=true`. The first text-only probe did not inspect that field. A bounded follow-up on **2026-09-23 11:56 UTC** ran [probe-greenhouse-structured.mjs](probe-greenhouse-structured.mjs) against the first eight matching software/San Francisco jobs per each of the same 14 boards. Five boards returned at least one structured USD min/max range: Airbnb 2, Databricks 8, Reddit 1, Figma 2 and Coinbase 1, **14 sampled posts total**. Asana and Stripe returned no structured ranges for their sampled posts; Discord had two detail errors; Gusto timed out. These are counts, not retained pay amounts or a representative coverage estimate.
+
+This improves the field-feasibility picture but does **not** create a qualified covered cohort. The documented structured range object contains amount and currency but no normalized annual/hourly basis, and this probe did not validate basis from the public post, level, employment type, age/deduplication across cross-postings, or remote restrictions. Its 14 results cannot be merged mechanically with the text probe's 19 because they may be the same requisitions. Public GET access still does not establish a license for a commercial cross-employer salary product. A production adapter would need to verify those fields and rights before evaluating the 10/5 rule.
+
 ## Candidate calculation rule, version 1.0
 
 The deterministic [cohort.mjs](cohort.mjs) and [synthetic fixtures](fixtures.mjs) define the proposed starting rule. This rule is **validated as code behavior**, not validated as an estimator of real offers.
