@@ -16,6 +16,6 @@ The detector's earlier broad findings were largely scoped to the root portrait d
 
 ## Release gates not discharged
 
-1. Ticket #377: observe the five README tasks with experienced U.S. professionals and record comprehension failures/hesitation. No participant sessions have occurred.
-2. Ticket #383: no provider cleared U.S. multi-employer coverage plus ongoing commercial aggregation rights and pricing. Personalized pay remains unavailable and ticket #384 remains gated.
+1. Ticket #377: the owner will run the five-task walkthrough and report failures/hesitation. No session has occurred yet; owner testing is not independent target-user validation.
+2. Ticket #383: the owner selected a BLS occupational benchmark for the first release. No provider cleared U.S. multi-employer coverage plus ongoing commercial aggregation rights and pricing. Personalized pay remains deferred and ticket #384 remains gated. BLS ingestion and suppression QA are not implemented.
 3. Production integration: no authenticated state, market feed, model response, photo checkout, or existing Angular route was changed by this prototype.

@@ -25,6 +25,8 @@ The photo button demonstrates a handoff message only. No account, upload, real c
 
 ## Five-task target-user review
 
+The owner elected to run the first walkthrough personally. Use the [owner walkthrough](review/owner-walkthrough.md) and record its findings as an **owner test**, not as an independent participant session. Owner feedback can fix the prototype, but it does not by itself satisfy the original representative-user observation criterion.
+
 Observe an experienced U.S. professional without explaining the UI:
 
 | Task | Successful evidence |
@@ -56,6 +58,6 @@ Current review captures are under `review/`. They were generated from the WSL br
 ## Known handoff boundaries
 
 - The simplified geography drawing is a layout sketch. Production heatmap requires validated U.S. state/metro boundaries and accessible table parity.
-- Source and pay displays use fictional numbers until the evidence pipeline passes ticket #383 and subsequent implementation tickets.
+- Source and pay displays use fictional numbers. For the first career release, the owner selected a separately labeled BLS occupational benchmark and deferred personalized advertised-pay estimates. Real values require verified BLS ingestion, occupation/geography matching, suppression handling and source metadata; this prototype has none of those yet.
 - Browser session persistence demonstrates navigation recovery, not authenticated, durable account storage.
 - The prototype uses existing logo and a separate career design record. Product implementation must reconcile shared site shell and final branding rules.
