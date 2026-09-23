@@ -18,6 +18,18 @@ const fs = require('node:fs');
     assert.match(await page.locator('h1').textContent(),new RegExp(title));
   }
   await page.goto(base+'#profile');
+  await page.evaluate(()=>window.scrollTo(0,260));
+  const profileScroll=await page.evaluate(()=>window.scrollY);
+  assert.ok(profileScroll>0,'profile must be long enough to test scroll restoration');
+  await page.locator('#primary-nav').getByRole('link',{name:'Career analytics'}).click();
+  await page.waitForFunction(()=>document.activeElement.id==='workspace');
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'workspace');
+  assert.equal(await page.evaluate(()=>window.scrollY),0);
+  await page.goBack();
+  await page.waitForFunction(()=>document.activeElement.id==='workspace');
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'workspace');
+  assert.ok(Math.abs((await page.evaluate(()=>window.scrollY))-profileScroll)<2,'back navigation restores prior route scroll');
+  await page.goto(base+'#profile');
   await page.getByRole('button',{name:'Review a proposed edit'}).click();
   assert.equal(await page.locator('.review-change').count(),1);
   await page.getByRole('button',{name:'Accept change'}).click();
@@ -56,7 +68,31 @@ const fs = require('node:fs');
   await phone.reload();
   await phone.keyboard.press('Tab');
   assert.equal(await phone.evaluate(()=>document.activeElement.classList.contains('skip-link')),true);
+  const zoom=await browser.newContext({viewport:{width:640,height:400},deviceScaleFactor:2});
+  const zoomPage=await zoom.newPage();
+  for(const route of ['agent','profile','analytics','heatmap','roadmaps','materials']){
+    await zoomPage.goto(base+'#'+route);
+    const measured=await zoomPage.evaluate(()=>({scroll:document.documentElement.scrollWidth,inner:innerWidth,wide:[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1).slice(0,8).map(e=>({tag:e.tagName,cls:e.className,right:Math.round(e.getBoundingClientRect().right)}))}));
+    assert.ok(measured.scroll<=measured.inner,route+' overflows at 200% zoom: '+JSON.stringify(measured));
+  }
+  const reduced=await browser.newContext({reducedMotion:'reduce',viewport:{width:390,height:844}});
+  const reducedPage=await reduced.newPage();
+  await reducedPage.goto(base);
+  assert.equal(await reducedPage.evaluate(()=>getComputedStyle(document.documentElement).scrollBehavior),'auto');
+  await page.goto(base+'#analytics');
+  const contrast=await page.evaluate(()=>{
+    const luminance=css=>{
+      const channels=css.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>v/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4);
+      return channels[0]*0.2126+channels[1]*0.7152+channels[2]*0.0722;
+    };
+    return ['.page-head p','.button.primary','.nav-link[aria-current="page"]','.comparison p','.note','.status'].map(selector=>{
+      const element=document.querySelector(selector);if(!element)return null;
+      const style=getComputedStyle(element);const fg=luminance(style.color);const bg=luminance(style.backgroundColor==='rgba(0, 0, 0, 0)'?'rgb(247, 247, 242)':style.backgroundColor);
+      return {selector,ratio:(Math.max(fg,bg)+0.05)/(Math.min(fg,bg)+0.05)};
+    }).filter(Boolean);
+  });
+  assert.ok(contrast.every(({ratio})=>ratio>=4.5),'sampled text contrast below 4.5: '+JSON.stringify(contrast));
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({pages:6,profileReview:true,marketSelection:true,roadmapTask:true,materialsDownload:true,mobileAssistant:true,viewports:[320,390,720,1440],horizontalOverflow:false,keyboardSkipLink:true,pageErrors:errors,review},null,2));
+  console.log(JSON.stringify({pages:6,profileReview:true,marketSelection:true,roadmapTask:true,materialsDownload:true,mobileAssistant:true,viewports:[320,390,720,1440],zoomEquivalent:'1280 physical px / 640 CSS px at DPR 2',reducedMotion:true,contrast,scrollRestoration:true,horizontalOverflow:false,keyboardSkipLink:true,pageErrors:errors,review},null,2));
   await browser.close();
-})().catch(e=>{console.error(e);process.exitCode=1;});
+})().catch(e=>{console.error(e);process.exit(1);});

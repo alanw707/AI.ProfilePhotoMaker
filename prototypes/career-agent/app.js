@@ -17,6 +17,8 @@ const seeded = {
   showMap:false, messageHistory:[], assistantOpen:false
 };
 const storeKey='career-prototype-v1';
+const routeScroll=Object.create(null);
+if('scrollRestoration' in history)history.scrollRestoration='manual';
 let state;
 try { state = {...seeded,...JSON.parse(sessionStorage.getItem(storeKey)||'{}')}; } catch { state={...seeded}; }
 const $=(sel)=>document.querySelector(sel);
@@ -125,7 +127,17 @@ function render(){
   renderAssistant();save();
   document.title=`${pages.find(p=>p[0]===state.page)[1]} · AI Profile Photo Maker prototype`;
 }
-function navigate(){const previous=state.page;render();$('#mobile-nav').hidden=true;$('#mobile-menu').setAttribute('aria-expanded','false');if(previous!==state.page){$('#workspace').focus({preventScroll:true});window.scrollTo({top:0,behavior:'instant'});}}
+function navigate(){
+  const previous=state.page;
+  routeScroll[previous]=window.scrollY;
+  render();
+  $('#mobile-nav').hidden=true;
+  $('#mobile-menu').setAttribute('aria-expanded','false');
+  if(previous!==state.page){
+    $('#workspace').focus({preventScroll:true});
+    window.scrollTo({top:routeScroll[state.page]??0,behavior:'instant'});
+  }
+}
 window.addEventListener('hashchange',navigate);
 document.addEventListener('click',event=>{
   const trigger=event.target.closest('[data-action]');if(!trigger)return;

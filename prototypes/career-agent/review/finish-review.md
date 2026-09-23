@@ -6,7 +6,7 @@ This is an inline Impeccable review because the available harness had no design-
 
 - `desktop-agent.png` and `desktop-materials.png`: current goal and next action lead; the six-page navigation and contextual assistant remain visible; optional photos do not block text editing.
 - `mobile-heatmap.png` and `mobile-assistant.png`: the comparison table becomes labeled cards and the assistant opens below the mobile header. The initial table overflow and assistant/header overlap were corrected before these captures.
-- The browser smoke covers six page visits, profile correction, market selection, roadmap progress, text download, mobile assistant, 320/390/720/1440px overflow checks, skip link, and JavaScript errors.
+- The browser smoke covers six page visits, profile correction, market selection, roadmap progress, text download, mobile assistant, 320/390/720/1440px overflow checks, route focus and scroll restoration, sampled text contrast, reduced motion, a 640-CSS-pixel/2× reflow equivalent, skip link, and JavaScript errors. It is not a native zoom or assistive-technology audit.
 
 ## Reviewer disposition
 
