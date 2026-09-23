@@ -26,24 +26,31 @@ for(const board of boards){
     const matching=(list.data.jobs||[]).filter(candidate);
     const sample=matching.slice(0,PER_BOARD);
     const details=await Promise.all(sample.map(job=>getJson(`https://boards-api.greenhouse.io/v1/boards/${board}/jobs/${job.id}?pay_transparency=true`).catch(error=>({error:error.name}))));
-    let withRanges=0,validUsd=0,unknownBasis=0;
-    for(const detail of details){
+    let withRanges=0,validUsd=0,explicitAnnual=0,explicitHourly=0,unknownBasis=0,recentUsd=0;
+    for(const [index,detail] of details.entries()){
       const ranges=detail.data?.pay_input_ranges;
       if(!Array.isArray(ranges)||!ranges.length)continue;
       withRanges++;
-      const valid=ranges.some(range=>range.currency_type==='USD'&&Number.isFinite(range.min_cents)
+      const eligibleRanges=ranges.filter(range=>range.currency_type==='USD'&&Number.isFinite(range.min_cents)
         && Number.isFinite(range.max_cents)&&range.min_cents>0&&range.max_cents>=range.min_cents);
-      if(valid)validUsd++;
-      // The documented range object has no normalized annual/hourly basis field.
-      if(valid)unknownBasis++;
+      if(!eligibleRanges.length)continue;
+      validUsd++;
+      const ageDays=(Date.now()-Date.parse(sample[index].updated_at))/86400000;
+      if(Number.isFinite(ageDays)&&ageDays>=0&&ageDays<=90)recentUsd++;
+      // Title/blurb are employer-authored free text, not a normalized basis field.
+      const basisText=eligibleRanges.map(range=>`${range.title||''} ${range.blurb||''}`).join(' ').toLowerCase();
+      if(/\b(per year|yearly|annually|annual)\b/.test(basisText))explicitAnnual++;
+      else if(/\b(per hour|hourly)\b/.test(basisText))explicitHourly++;
+      else unknownBasis++;
     }
     results.push({board,status:list.status,matchingSoftwareSf:matching.length,sampled:sample.length,
-      withStructuredPayRanges:withRanges,validUsdRanges:validUsd,annualBasisUnknown:unknownBasis,
+      withStructuredPayRanges:withRanges,validUsdRanges:validUsd,recentUsdRanges:recentUsd,
+      explicitAnnualText:explicitAnnual,explicitHourlyText:explicitHourly,annualBasisUnknown:unknownBasis,
       detailErrors:details.filter(x=>x.error||!x.data).length});
   }catch(error){results.push({board,error:error.name});}
 }
 console.log(JSON.stringify({retrievedAt:new Date().toISOString(),source:'Public Greenhouse Job Board GET endpoints',sampleLimitPerBoard:PER_BOARD,results,
   limits:['First matching posts per board only; not a representative national sample.',
-    'Structured min/max cents are not normalized to annual pay without explicit basis.',
+    'Free-text annual/hourly signals are diagnostic only and do not establish normalized pay basis.',
     'Public GET access does not grant commercial cross-employer aggregation or retention rights.',
     'No job text, identity, or observed pay value is saved by this probe.']},null,2));
