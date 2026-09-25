@@ -550,6 +550,17 @@
         [title]="isApplyingPremiumAugmentation ? 'Applying your premium edit' : getSelectedRefinement() ? 'Applying ' + getSelectedRefinement()!.label.toLowerCase() : isHeadshotMvpEnabled ? 'Creating your photos' : 'Transforming your photo'"
         [status]="processingStatus" />
 
+      <div
+        class="processing-turnstile-check"
+        *ngIf="shouldShowProcessingTurnstile()"
+        role="region"
+        aria-label="Bot verification">
+        <p>Complete the bot check below to continue generating your photos. Hide progress to access it.</p>
+        <app-turnstile
+          [siteKey]="turnstileSiteKey"
+          (tokenChange)="onTurnstileTokenChange($event)"></app-turnstile>
+      </div>
+
       <!-- Results Section -->
       <section class="results-section" *ngIf="enhancedImage">
         <div class="augmentation-progress" *ngIf="isApplyingPremiumAugmentation" aria-live="polite">
@@ -647,7 +658,7 @@
               <span>I consent to biometric processing for these remaining package photos.</span>
             </label>
             <app-turnstile
-              *ngIf="turnstileSiteKey && !turnstileToken"
+              *ngIf="turnstileSiteKey && !turnstileToken && !isProcessing"
               [siteKey]="turnstileSiteKey"
               (tokenChange)="onTurnstileTokenChange($event)"></app-turnstile>
             <p class="action-blocker" *ngIf="!canStartEnhancement()" role="status">
@@ -832,7 +843,7 @@
             </section>
             <p class="action-blocker" *ngIf="errorMessage" role="alert">{{ errorMessage }}</p>
             <app-turnstile
-              *ngIf="turnstileSiteKey && !turnstileToken"
+              *ngIf="turnstileSiteKey && !turnstileToken && !isProcessing"
               [siteKey]="turnstileSiteKey"
               (tokenChange)="onTurnstileTokenChange($event)"></app-turnstile>
             <details class="premium-edits" *ngIf="arePremiumAugmentationsVisible">
