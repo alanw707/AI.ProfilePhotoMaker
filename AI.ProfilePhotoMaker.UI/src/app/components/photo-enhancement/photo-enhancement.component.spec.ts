@@ -229,6 +229,93 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
     });
   }
 
+  it('uses a fresh one-use bot token for each candidate request without double-counting candidates', async () => {
+    const component = createComponent('starter_package', 0);
+    const requests: any[] = [];
+    Object.assign(component, {
+      enhancementType: 'headshot',
+      selectedFile: new File(['photo'], 'source.jpg', { type: 'image/jpeg' }),
+      selectedPortraitStyle: { style: { name: 'linkedin' } },
+      selectedUseCaseCode: 'linkedin_executive',
+      isEmailConfirmed: true,
+      biometricConsentAccepted: true,
+      turnstileSiteKey: 'site-key',
+      turnstileToken: 'turnstile-token-1',
+      isProfilePhotoScoreVisible: false,
+      areOutcomePackagesVisible: true,
+      interruptedGeneration: null,
+      unrecoverableGenerationDraft: false,
+    });
+    (component as any)._pendingTurnstileTokenWaiter = null;
+    (component as any)._cdr = {
+      detectChanges: () => {
+        if ((component as any)._pendingTurnstileTokenWaiter) {
+          component.onTurnstileTokenChange(`turnstile-token-${requests.length + 1}`);
+        }
+      },
+      markForCheck: () => undefined,
+    };
+    (component as any)._stateService = { refreshGeneratedPhotosCount: () => undefined };
+    (component as any)._headshotGenerationService = {
+      generateHeadshot: (request: any) => {
+        requests.push(request);
+        const id = 100 + requests.length;
+        return of({
+          success: true,
+          data: {
+            imageUrl: `candidate-${id}.jpg`,
+            storagePath: `generated/candidate-${id}.jpg`,
+            processedImageId: id,
+            candidates: [candidate(id)],
+          },
+        });
+      },
+    };
+
+    spyOn(component, 'hasEnoughCredits').and.returnValue(true);
+    spyOn(component, 'canPromotePreviewCandidate').and.returnValue(false);
+    spyOn(component, 'getCandidateRequestCountForSelectedPackage').and.returnValue(3);
+    spyOn(component as any, 'isQualityGateBlockingGeneration').and.returnValue(false);
+    spyOn(component as any, 'canUseStoredPreviewSource').and.returnValue(false);
+    spyOn(component as any, 'uploadImageForEnhancement').and.resolveTo({
+      url: 'uploads/source.jpg',
+      storagePath: 'uploads/source.jpg',
+    });
+    spyOn(component as any, 'createGenerationClientRequestId').and.returnValues(
+      'request-1', 'request-2', 'request-3'
+    );
+    spyOn(component as any, 'persistInterruptedGeneration').and.callFake((draft: any) => {
+      component.interruptedGeneration = draft;
+    });
+    spyOn(component as any, 'clearInterruptedGeneration').and.callFake(() => {
+      component.interruptedGeneration = null;
+    });
+    spyOn(component as any, 'toCandidateViewModels').and.callFake((data: any) => data.candidates);
+    spyOn(component as any, 'loadAuthorizedCandidateImages').and.callFake(async (images: any[]) => images);
+    spyOn(component as any, 'mergeGeneratedCandidates').and.callFake((images: any[]) => {
+      component.generatedCandidates.push(...images);
+      return images[images.length - 1];
+    });
+    spyOn(component as any, 'trackVerticalFunnelEvent');
+    spyOn(component as any, 'loadPackageEntitlements');
+    spyOn(component as any, 'createEnhancedImageViewModel').and.callFake(
+      (url: string, type: string, processedImageId: number, storagePath: string) =>
+        ({ url, type, processedImageId, storagePath, displayUrl: url }) as any
+    );
+    spyOn(component as any, 'refreshCreditState').and.resolveTo();
+
+    await component.startEnhancement();
+
+    expect(requests.map(request => request.turnstileToken)).toEqual([
+      'turnstile-token-1',
+      'turnstile-token-2',
+      'turnstile-token-3',
+    ]);
+    expect(requests.map(request => request.numOutputs)).toEqual([1, 1, 1]);
+    expect(component.getGeneratedCandidateCount()).toBe(3);
+    expect(component.getRemainingCandidateSlots()).toBe(0);
+  });
+
   it('sends only the storage path when legacy enhancement upload returns a relative display URL', async () => {
     const component = createComponent('free_preview', 0);
     let request: any;

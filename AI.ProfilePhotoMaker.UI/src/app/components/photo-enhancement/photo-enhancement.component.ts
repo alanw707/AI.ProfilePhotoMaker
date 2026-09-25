@@ -563,6 +563,11 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   selectedRefinementCode: string | null = null;
   private _nextRequestIsRegeneration = false;
   private _activeGenerationClientRequestId: string | null = null;
+  private _pendingTurnstileTokenWaiter: {
+    resolve: (token: string) => void;
+    reject: (reason?: unknown) => void;
+    timeout: ReturnType<typeof setTimeout>;
+  } | null = null;
   private readonly _interruptedGenerationKey = 'photoWorkspaceInterruptedGeneration';
 
   constructor(
@@ -1914,6 +1919,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.cancelPendingTurnstileTokenWaiter();
     if (this._stateSubscription) {
       this._stateSubscription.unsubscribe();
     }
@@ -2058,7 +2064,50 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   onTurnstileTokenChange(token: string): void {
     this.turnstileToken = token;
+    if (token && this._pendingTurnstileTokenWaiter) {
+      const waiter = this._pendingTurnstileTokenWaiter;
+      this._pendingTurnstileTokenWaiter = null;
+      clearTimeout(waiter.timeout);
+      waiter.resolve(token);
+    }
     this._cdr.markForCheck();
+  }
+
+  private refreshTurnstileTokenForNextCandidate(): Promise<string> {
+    if (this._pendingTurnstileTokenWaiter) {
+      return Promise.reject(this.createTurnstileTokenFailure('A bot check is already in progress.'));
+    }
+
+    this.processingStatus = 'Complete the bot check to continue generating your photos. Hide progress to access it.';
+    this.turnstileToken = '';
+
+    const tokenPromise = new Promise<string>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this._pendingTurnstileTokenWaiter = null;
+        reject(this.createTurnstileTokenFailure('The bot check took too long. Complete it and retry the remaining photos.'));
+      }, 120_000);
+      this._pendingTurnstileTokenWaiter = { resolve, reject, timeout };
+    });
+
+    // The active widget is conditional on an empty token. Clearing the consumed
+    // token replaces it with a fresh Turnstile widget for the next API request.
+    this._cdr.detectChanges();
+    return tokenPromise;
+  }
+
+  private cancelPendingTurnstileTokenWaiter(): void {
+    const waiter = this._pendingTurnstileTokenWaiter;
+    if (!waiter) {
+      return;
+    }
+
+    this._pendingTurnstileTokenWaiter = null;
+    clearTimeout(waiter.timeout);
+    waiter.reject(this.createTurnstileTokenFailure('The bot check was interrupted. Retry the remaining photos.'));
+  }
+
+  private createTurnstileTokenFailure(message: string) {
+    return { status: 400, error: { error: { code: 'BotVerificationFailed', message } } };
   }
 
   onBiometricConsentChange(accepted: boolean): void {
@@ -2229,6 +2278,11 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
             replacesProcessedImageId: candidateBeingRegeneratedId ?? undefined,
             startedAt: this.interruptedGeneration?.startedAt ?? new Date().toISOString(),
           });
+          const requestTurnstileToken = this.turnstileSiteKey
+            ? requestIndex === 0
+              ? this.turnstileToken
+              : await this.refreshTurnstileTokenForNextCandidate()
+            : undefined;
           const headshotResponse = await firstValueFrom(
             this._headshotGenerationService.generateHeadshot({
               imageStoragePath: uploadResult.storagePath,
@@ -2242,7 +2296,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
               replacesProcessedImageId: candidateBeingRegeneratedId ?? undefined,
               useCaseCode: savedRequest?.useCaseCode ?? this.selectedUseCaseCode,
               clientRequestId,
-              turnstileToken: this.turnstileSiteKey ? this.turnstileToken : undefined,
+              turnstileToken: requestTurnstileToken,
             })
           );
 
