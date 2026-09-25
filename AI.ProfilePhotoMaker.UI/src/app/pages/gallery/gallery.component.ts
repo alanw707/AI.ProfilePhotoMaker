@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -22,7 +22,7 @@ import { HeadshotGenerationService } from '../../services/headshot-generation.se
   templateUrl: './gallery.component.html',
   styleUrls: ['./gallery.component.sass'],
 })
-export class GalleryComponent implements OnInit {
+export class GalleryComponent implements OnDestroy, OnInit {
   @ViewChild('photoGallery') photoGallery!: PhotoGalleryComponent;
 
   galleryImages: GalleryImage[] = [];
@@ -30,6 +30,7 @@ export class GalleryComponent implements OnInit {
   isDownloading = false;
   downloadProgress = 0;
   private _hasRunInitialRepair = false;
+  private _galleryImageObjectUrls = new Set<string>();
 
   constructor(
     private _authService: AuthService,
@@ -63,6 +64,10 @@ export class GalleryComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.revokeGalleryImageObjectUrls(this._galleryImageObjectUrls);
+  }
+
   async loadImages(forceRefresh = false) {
     const enableDebug = environment.features.logging?.enableGalleryDebug ?? false;
 
@@ -91,8 +96,9 @@ export class GalleryComponent implements OnInit {
           (img, index, array) => array.findIndex(i => i.id === img.id) === index
         );
 
-        this.galleryImages = uniqueImages
-          .map((img: ProcessedImage) => {
+        const nextObjectUrls = new Set<string>();
+        const mappedImages = await Promise.all(
+          uniqueImages.map(async (img: ProcessedImage) => {
             // Detect enhanced images by style markers
             const styleLower = (img.style || '').toLowerCase();
             const isEnhanced =
@@ -140,21 +146,36 @@ export class GalleryComponent implements OnInit {
                 ? `Generated ${styleDisplay} style profile photo`
                 : 'Original uploaded image';
 
+            let displayUrl = preferredUrl;
+            if (img.generationMode === 'instant_headshot_promoted_preview') {
+              displayUrl = await this.loadPromotedPreviewImageUrl(
+                img.id,
+                preferredUrl,
+                nextObjectUrls
+              );
+            }
+
             return {
               id: img.id,
-              url: preferredUrl,
-              thumbnailUrl: preferredUrl,
+              url: displayUrl,
+              thumbnailUrl: displayUrl,
               title,
               description,
               style: img.style || 'original',
               createdAt: new Date(img.createdAt),
               status: 'completed' as const,
               type,
-              downloadUrl: preferredUrl,
+              downloadUrl: displayUrl,
               canResumePreview: false,
             };
           })
-          .filter(img => img !== null) as any[];
+        );
+
+        this.galleryImages = mappedImages.filter(
+          (img): img is NonNullable<typeof img> => img !== null
+        );
+        this.revokeGalleryImageObjectUrls(this._galleryImageObjectUrls, nextObjectUrls);
+        this._galleryImageObjectUrls = nextObjectUrls;
 
         const resumableIds = await Promise.all(
           response.data.images
@@ -210,6 +231,40 @@ export class GalleryComponent implements OnInit {
         isLoading: this.isLoading,
         galleryImagesCount: this.galleryImages.length,
       });
+    }
+  }
+
+  private async loadPromotedPreviewImageUrl(
+    imageId: number,
+    fallbackUrl: string,
+    objectUrls: Set<string>
+  ): Promise<string> {
+    try {
+      // Promoted previews point at generated-private storage, which the public storage proxy
+      // intentionally blocks. Fetch them through the authenticated owner-scoped download route.
+      const imageBlob = await firstValueFrom(
+        this._headshotGenerationService.getOriginalCandidateImage(imageId)
+      );
+      const objectUrl = URL.createObjectURL(imageBlob);
+      objectUrls.add(objectUrl);
+      return objectUrl;
+    } catch (error) {
+      this._logger.warn('Failed to load promoted preview image through the authorized endpoint', {
+        imageId,
+        error,
+      });
+      return fallbackUrl;
+    }
+  }
+
+  private revokeGalleryImageObjectUrls(
+    urls: Set<string>,
+    retainedUrls: Set<string> = new Set<string>()
+  ): void {
+    for (const url of urls) {
+      if (!retainedUrls.has(url)) {
+        URL.revokeObjectURL(url);
+      }
     }
   }
 
