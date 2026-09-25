@@ -247,9 +247,11 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
       unrecoverableGenerationDraft: false,
     });
     (component as any)._pendingTurnstileTokenWaiter = null;
+    const processingChallengeVisibility: boolean[] = [];
     (component as any)._cdr = {
       detectChanges: () => {
         if ((component as any)._pendingTurnstileTokenWaiter) {
+          processingChallengeVisibility.push(component.shouldShowProcessingTurnstile());
           component.onTurnstileTokenChange(`turnstile-token-${requests.length + 1}`);
         }
       },
@@ -311,9 +313,26 @@ describe('PhotoEnhancementComponent package fulfillment', () => {
       'turnstile-token-2',
       'turnstile-token-3',
     ]);
+    expect(processingChallengeVisibility).toEqual([true, true]);
     expect(requests.map(request => request.numOutputs)).toEqual([1, 1, 1]);
     expect(component.getGeneratedCandidateCount()).toBe(3);
     expect(component.getRemainingCandidateSlots()).toBe(0);
+  });
+
+  it('shows the processing challenge only when a fresh token is needed', () => {
+    const component = createComponent('starter_package', 1);
+    Object.assign(component, {
+      turnstileSiteKey: 'site-key',
+      turnstileToken: '',
+      isProcessing: true,
+    });
+
+    expect(component.shouldShowProcessingTurnstile()).toBeTrue();
+    component.turnstileToken = 'fresh-token';
+    expect(component.shouldShowProcessingTurnstile()).toBeFalse();
+    component.turnstileToken = '';
+    component.isProcessing = false;
+    expect(component.shouldShowProcessingTurnstile()).toBeFalse();
   });
 
   it('sends only the storage path when legacy enhancement upload returns a relative display URL', async () => {

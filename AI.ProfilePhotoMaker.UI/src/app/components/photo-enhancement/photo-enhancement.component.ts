@@ -2073,6 +2073,10 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this._cdr.markForCheck();
   }
 
+  shouldShowProcessingTurnstile(): boolean {
+    return this.isProcessing && !!this.turnstileSiteKey && !this.turnstileToken;
+  }
+
   private refreshTurnstileTokenForNextCandidate(): Promise<string> {
     if (this._pendingTurnstileTokenWaiter) {
       return Promise.reject(this.createTurnstileTokenFailure('A bot check is already in progress.'));
