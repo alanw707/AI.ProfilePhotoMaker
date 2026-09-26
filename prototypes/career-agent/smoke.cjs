@@ -13,6 +13,31 @@ const fs = require('node:fs');
   await page.goto(base);
   assert.match(await page.locator('h1').textContent(),/Make the next move clearer/);
   await page.screenshot({path:path.join(review,'desktop-agent.png'),fullPage:true});
+  assert.equal(await page.locator('.goal-overview .interval-row').count(),2);
+  assert.match(await page.locator('.goal-overview .interval-chart').textContent(),/Fictional 25th–75th percentile examples/);
+  await page.locator('#primary-nav a[href="#analytics"]').click();
+  await page.waitForTimeout(400);
+  assert.equal(await page.locator('#primary-nav').evaluate(el=>el.style.getPropertyValue('--active-index')),'2');
+  assert.equal(await page.locator('#primary-nav .nav-active-indicator').evaluate(el=>Math.round(new DOMMatrix(getComputedStyle(el).transform).m42)),100);
+  assert.equal(await page.locator('#view .interval-band').count(),1);
+  assert.match(await page.locator('#view').textContent(),/\$94k–\$141k/);
+  await page.screenshot({path:path.join(review,'desktop-analytics.png'),fullPage:true});
+  await page.goto(base+'#heatmap');
+  assert.equal(await page.locator('#view .interval-row').count(),5);
+  assert.equal(await page.locator('#view .interval-band').count(),4);
+  assert.match(await page.locator('#view .interval-chart').textContent(),/No example value/);
+  await page.screenshot({path:path.join(review,'desktop-heatmap.png'),fullPage:true});
+  await page.locator('#market-search').fill('Seattle');
+  assert.equal(await page.locator('#view .interval-chart .interval-row:visible').count(),1);
+  assert.equal(await page.locator('#market-table tr:visible').count(),1);
+  await page.locator('#market-table button[data-market="Seattle, WA"]').click();
+  assert.equal(await page.locator('#market-search').inputValue(),'Seattle');
+  assert.equal(await page.locator('#view .interval-chart .interval-row.selected:visible').count(),1);
+  await page.locator('#market-table button[data-market="Seattle, WA"]').click();
+  await page.locator('#market-search').fill('');
+  await page.goto(base+'#roadmaps');
+  assert.equal(await page.locator('.milestone-rail .task-row').count(),4);
+  await page.screenshot({path:path.join(review,'desktop-roadmaps.png'),fullPage:true});
   for(const [hash,title] of [['profile','A profile you can trust'],['analytics','Understand the market'],['heatmap','Find a market'],['roadmaps','Turn a direction'],['materials','Materials for your next move']]){
     await page.goto(base+'#'+hash);
     assert.match(await page.locator('h1').textContent(),new RegExp(title));
@@ -48,6 +73,9 @@ const fs = require('node:fs');
   phone.on('pageerror',e=>errors.push(e.message));
   await phone.goto(base+'#heatmap');
   await phone.screenshot({path:path.join(review,'mobile-heatmap.png'),fullPage:true});
+  await phone.goto(base+'#analytics');
+  await phone.screenshot({path:path.join(review,'mobile-analytics.png'),fullPage:true});
+  await phone.goto(base+'#heatmap');
   assert.equal(await phone.getByRole('button',{name:'Show map'}).count(),1);
   await phone.getByRole('button',{name:'Ask agent'}).click();
   assert.equal(await phone.locator('#assistant').isVisible(),true);
@@ -83,6 +111,8 @@ const fs = require('node:fs');
   const reducedPage=await reduced.newPage();
   await reducedPage.goto(base);
   assert.equal(await reducedPage.evaluate(()=>getComputedStyle(document.documentElement).scrollBehavior),'auto');
+  assert.equal(await reducedPage.locator('.interval-band').first().evaluate(el=>getComputedStyle(el).animationName),'none');
+  assert.ok(await reducedPage.locator('.nav-active-indicator').evaluate(el=>parseFloat(getComputedStyle(el).transitionDuration)<0.001));
   const contrast=[];
   for(const route of ['agent','profile','analytics','heatmap','roadmaps','materials']){
     await page.goto(base+'#'+route);
@@ -98,7 +128,7 @@ const fs = require('node:fs');
         }
         return 'rgb(255,255,255)';
       };
-      return ['.nav-label','.sidebar-help','.sidebar-help-link','.page-head p','.section-lead','.label','.artifact-row p','.paper p','.note','.status','.assistant-compose small','.map-legend','.range-labels'].flatMap(selector=>{
+      return ['.nav-label','.sidebar-help','.sidebar-help-link','.page-head p','.section-lead','.label','.artifact-row p','.paper p','.note','.status','.assistant-compose small','.map-legend','.interval-chart figcaption span','.interval-footnote','.interval-axis','.interval-place','.interval-value','.interval-unavailable'].flatMap(selector=>{
         const element=[...document.querySelectorAll(selector)].find(e=>e.getClientRects().length&&e.textContent.trim());
         if(!element)return [];
         const fg=luminance(getComputedStyle(element).color),bg=luminance(background(element));
@@ -108,6 +138,6 @@ const fs = require('node:fs');
   }
   assert.ok(contrast.every(({ratio})=>ratio>=4.5),'sampled text contrast below 4.5: '+JSON.stringify(contrast.filter(({ratio})=>ratio<4.5)));
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({pages:6,profileReview:true,marketSelection:true,roadmapTask:true,materialsDownload:true,mobileAssistant:true,viewports:[320,390,720,1440],zoomEquivalent:'1280 physical px / 640 CSS px at DPR 2',reducedMotion:true,contrastSamples:contrast.length,lowestSampledContrast:Math.min(...contrast.map(x=>x.ratio)),scrollRestoration:true,horizontalOverflow:false,keyboardSkipLink:true,visibleFocus:true,assistantFocusReturn:true,pageErrors:errors,review},null,2));
+  console.log(JSON.stringify({pages:6,intervalCharts:true,navIndicator:true,roadmapMilestones:true,profileReview:true,marketSelection:true,roadmapTask:true,materialsDownload:true,mobileAssistant:true,viewports:[320,390,720,1440],zoomEquivalent:'1280 physical px / 640 CSS px at DPR 2',reducedMotion:true,contrastSamples:contrast.length,lowestSampledContrast:Math.min(...contrast.map(x=>x.ratio)),scrollRestoration:true,horizontalOverflow:false,keyboardSkipLink:true,visibleFocus:true,assistantFocusReturn:true,pageErrors:errors,review},null,2));
   await browser.close();
 })().catch(e=>{console.error(e);process.exit(1);});

@@ -97,6 +97,12 @@ Controls use gently curved corners; working papers are slightly broader. Active 
 - **Navigation:** six labeled destinations with one solid selected state. Mobile uses the same labels inside a menu.
 - **Assistant:** contextual note, scripted example response and plain input; a sheet on phones with Escape and focus return.
 - **Evidence table:** source and measure remain readable; mobile rows expose labels and their Compare action without horizontal scrolling.
+- **Evidence graphic:** annual wage intervals use a common labeled axis and explicit 25th–75th percentile endpoints. Numeric and unavailable rows remain readable without color, and selected markets are mirrored in the chart and table. Prototype amounts are always named fictional.
+- **Roadmap line:** connects actual steps and reflects checked steps; it is a task sequence, not a career score.
+
+## Motion
+
+The active rail marker travels to the destination as navigation continuity, while the market interval draws once as a bounded evidence reveal. The mobile menu unfolds from its trigger. Routine feedback stays immediate; no section-by-section scroll choreography or looping effects. Reduced-motion mode retains state color and labels without spatial movement. Motion never delays keyboard focus or hides chart content when animation is unavailable.
 
 ## Do's and Don'ts
 
