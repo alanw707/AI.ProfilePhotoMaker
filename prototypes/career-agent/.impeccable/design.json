@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-23T11:35:00Z",
+  "title": "Design System: Career Research Desk prototype",
+  "extensions": {
+    "colorMeta": {
+      "action-teal": {
+        "role": "primary",
+        "displayName": "Evidence Teal",
+        "canonical": "#155e62"
+      },
+      "button-teal": {
+        "role": "primary",
+        "displayName": "Action Teal",
+        "canonical": "#175e61"
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Research Field",
+        "canonical": "#f7f7f2"
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Working Paper",
+        "canonical": "#fffefa"
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Artifact Heading", "purpose": "Current task and route identity." },
+      "body": { "displayName": "Evidence Body", "purpose": "Explanations, controls, and tables." },
+      "label": { "displayName": "Source Label", "purpose": "Compact status and provenance." }
+    },
+    "shadows": [
+      { "name": "mobile-navigation", "value": "0 10px 25px rgba(17,24,21,.15)", "purpose": "Floating mobile menu only." },
+      { "name": "confirmation", "value": "0 5px 25px #18332f30", "purpose": "Transient save feedback only." }
+    ],
+    "motion": [
+      { "name": "reduced-motion", "value": "0.001ms", "purpose": "Suppress animation and transition for reduced-motion preference." }
+    ],
+    "breakpoints": [
+      { "name": "compact-desktop", "value": "1230px" },
+      { "name": "mobile-shell", "value": "980px" },
+      { "name": "phone", "value": "650px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "One clear next action on the active artifact; 44px minimum height.",
+      "html": "<button class=\"button primary\">Continue</button>",
+      "css": ".button.primary{min-height:44px;padding:10px 16px;border:1px solid #175e61;border-radius:9px;background:#175e61;color:#fff;font:700 13px 'DM Sans',sans-serif}.button.primary:hover{background:#0d494b}.button.primary:focus-visible{outline:3px solid #d18a3a;outline-offset:2px}"
+    },
+    {
+      "name": "Working Paper",
+      "kind": "custom",
+      "refersTo": "working-paper",
+      "description": "Evidence-led content surface, flat at rest.",
+      "html": "<section class=\"paper\">Evidence and next action</section>",
+      "css": ".paper{background:#fffefa;border:1px solid #d6ddd6;border-radius:12px;padding:22px}"
+    },
+    {
+      "name": "Current Navigation",
+      "kind": "link",
+      "description": "Labeled destination with an explicit current-page state.",
+      "html": "<a class=\"nav-link\" aria-current=\"page\">Career analytics</a>",
+      "css": ".nav-link{min-height:46px;padding:12px 14px;border-radius:9px;color:#405650}.nav-link[aria-current='page']{background:#185b5d;color:#fff}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Career Research Desk",
+    "overview": "A factual career workspace that lays out evidence, working materials, and the next decision; the assistant is contextual help rather than the only interface.",
+    "keyCharacteristics": [
+      "A contents rail, current artifact, and contextual assistant on desktop.",
+      "Flat working papers with visible source definitions and unavailable states.",
+      "One selected teal action; optional photo handoff separate from core career work."
+    ],
+    "rules": [
+      { "name": "The Evidence Color Rule", "body": "Unknown or suppressed values never share the low-value color; every color-coded value has a text label.", "section": "colors" },
+      { "name": "The Artifact Leads Rule", "body": "Specialist pages lead with the artifact; conversation remains contextual help.", "section": "layout" },
+      { "name": "The Flat At Rest Rule", "body": "Use borders and tonal fields for passive grouping; shadow is reserved for transient layers.", "section": "elevation" }
+    ],
+    "dos": [
+      "Label illustrative pay and distinguish occupational wages from observed advertised pay.",
+      "Keep reviewable edits and explicit stale, error, partial, and quota states.",
+      "Make the map's comparison data available in an accessible table."
+    ],
+    "donts": [
+      "Do not present an unqualified personal salary number or overall career grade.",
+      "Do not make photos required for research or materials.",
+      "Do not inherit the portrait-first photo editor composition on career routes."
+    ]
+  }
+}

@@ -1,0 +1,247 @@
+/* Career Research Desk: evidence graphics and navigation continuity. */
+.primary-nav {
+  position: relative;
+  isolation: isolate;
+  --active-index: 0;
+}
+
+.nav-active-indicator {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 46px;
+  border-radius: 9px;
+  background: #185b5d;
+  transform: translateY(calc(var(--active-index) * 50px));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.primary-nav.nav-ready .nav-active-indicator {
+  transition: transform 340ms cubic-bezier(.16, 1, .3, 1);
+}
+
+.primary-nav .nav-link {
+  position: relative;
+  z-index: 1;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.primary-nav .nav-link[aria-current="page"] {
+  background: transparent;
+  color: #fff;
+}
+
+.primary-nav .nav-link:hover:not([aria-current="page"]) {
+  background: transparent;
+  color: #155e62;
+  text-decoration: underline;
+  text-decoration-color: #94b5a8;
+  text-underline-offset: 4px;
+}
+
+.primary-nav .nav-link[aria-current="page"] .nav-icon {
+  transform: scale(1.08);
+  transition: transform 190ms cubic-bezier(.16, 1, .3, 1);
+}
+
+.goal-overview {
+  display: grid;
+  grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.goal-overview .scenario-banner {
+  flex-direction: column;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.goal-overview .scenario-banner .button {
+  align-self: start;
+}
+
+.interval-chart {
+  --chart-place: 108px;
+  --chart-value: 85px;
+  min-width: 0;
+  margin: 0 0 16px;
+  padding: 20px 20px 15px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffefa;
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-overview .interval-chart { margin: 0; }
+.interval-chart.compact { --chart-place: 85px; --chart-value: 78px; padding: 18px 15px 13px; }
+
+.interval-chart figcaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 9px;
+  margin-bottom: 15px;
+}
+
+.interval-chart figcaption strong {
+  font-family: Manrope, sans-serif;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.interval-chart figcaption span,
+.interval-footnote {
+  color: #53656a;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.interval-chart figcaption span { text-align: right; }
+.interval-footnote { margin: 11px 0 0; }
+
+.interval-axis {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 var(--chart-value) 4px var(--chart-place);
+  color: #53656a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.interval-row {
+  display: grid;
+  grid-template-columns: var(--chart-place) minmax(0, 1fr) var(--chart-value);
+  align-items: center;
+  gap: 0;
+  min-height: 37px;
+  font-size: 12px;
+}
+
+.interval-row.selected {
+  background: #eaf3ed;
+  border-radius: 9px;
+}
+
+.interval-row.selected .interval-place,
+.interval-row.selected .interval-value { color: #155e62; }
+
+.interval-row[hidden],
+#market-table tr[hidden] { display: none !important; }
+
+.interval-place {
+  padding-right: 10px;
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.interval-value {
+  padding-left: 8px;
+  text-align: right;
+  color: var(--muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.interval-track {
+  position: relative;
+  height: 24px;
+  background: repeating-linear-gradient(90deg, transparent 0, transparent calc(33.333% - 1px), var(--line) calc(33.333% - 1px), var(--line) 33.333%);
+  border-bottom: 1px solid var(--line);
+}
+
+.interval-band {
+  position: absolute;
+  top: 50%;
+  left: var(--interval-start);
+  width: calc(var(--interval-end) - var(--interval-start));
+  height: 5px;
+  border-radius: 9px;
+  background: var(--accent);
+  transform: translateY(-50%);
+  animation: interval-draw 530ms cubic-bezier(.16, 1, .3, 1) both;
+  transform-origin: left center;
+}
+
+.interval-band::before,
+.interval-band::after {
+  content: "";
+  position: absolute;
+  top: -5px;
+  width: 2px;
+  height: 15px;
+  background: var(--accent-dark);
+}
+
+.interval-band::before { left: 0; }
+.interval-band::after { right: 0; }
+
+.interval-unavailable {
+  display: block;
+  padding-top: 3px;
+  color: #53656a;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.milestone-rail { margin-top: 16px; }
+.plan-progress { margin: 0 0 10px !important; font-weight: 700; color: var(--accent-dark) !important; }
+.milestone-rail .task-row { position: relative; border: 0; padding: 13px 0 22px 3px; gap: 18px; }
+.milestone-rail .task-row:last-child { padding-bottom: 5px; }
+.milestone-rail .task-row:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 36px;
+  bottom: -5px;
+  left: 12px;
+  width: 2px;
+  background: #cbd9d0;
+  transition: background-color 170ms ease;
+}
+.milestone-rail .task-row.complete:not(:last-child)::after { background: var(--accent); }
+.milestone-rail .task-row input { position: relative; z-index: 1; width: 22px; height: 22px; }
+.milestone-rail .task-row.complete label { color: var(--accent-dark); }
+
+@keyframes interval-draw {
+  from { opacity: .45; transform: translateY(-50%) scaleX(.06); }
+  to { opacity: 1; transform: translateY(-50%) scaleX(1); }
+}
+
+@keyframes nav-unfold {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+@media (max-width: 1230px) {
+  .goal-overview { grid-template-columns: 1fr; }
+  .goal-overview .scenario-banner { flex-direction: row; align-items: center; }
+}
+
+@media (max-width: 980px) {
+  .mobile-nav:not([hidden]) { animation: nav-unfold 270ms cubic-bezier(.16, 1, .3, 1) both; }
+  .goal-overview { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
+  .goal-overview .scenario-banner { flex-direction: column; align-items: start; }
+}
+
+@media (max-width: 650px) {
+  .goal-overview { grid-template-columns: 1fr; }
+  .interval-chart { --chart-place: 80px; --chart-value: 70px; padding: 16px 13px; }
+  .interval-chart figcaption { display: block; }
+  .interval-chart figcaption span { display: block; text-align: left; margin-top: 3px; }
+  .interval-axis { margin: 0 0 4px; }
+  .interval-axis span:nth-child(2), .interval-axis span:nth-child(3) { display: none; }
+  .interval-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; padding: 6px 0; }
+  .interval-place { grid-column: 1; }
+  .interval-value { grid-column: 2; }
+  .interval-track { grid-column: 1 / -1; grid-row: 2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary-nav.nav-ready .nav-active-indicator,
+  .primary-nav .nav-link,
+  .primary-nav .nav-link[aria-current="page"] .nav-icon,
+  .milestone-rail .task-row::after { transition: none; }
+  .interval-band,
+  .mobile-nav:not([hidden]) { animation: none; }
+}
