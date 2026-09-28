@@ -1,5 +1,38 @@
 # Context Glossary
 
+## Career agent
+
+A personal assistant that helps an experienced U.S. professional pursue a career goal through research, guidance, and work inside their career workspace.
+
+## Career profile
+
+The user's confirmed professional background, experience, skills, qualifications, preferences, and supporting evidence. It is separate from account details and photo characteristics.
+
+## Career goal
+
+The professional outcome the user wants to pursue, together with their target roles, location preferences, and practical constraints.
+
+## Career brief
+
+A saved explanation of plausible career options, relevant market evidence, compensation context, and recommended next actions for a career goal.
+
+## Market compensation range
+
+A sourced range of occupational wages or comparable advertised pay for a stated role, geography, and period. It is not personal net worth, guaranteed earnings, or a measure of the person's value.
+_Avoid_: Exact market worth, your dollar value, net worth.
+
+## Earning potential
+
+A conditional career-pay scenario tied to a target role and explicitly stated requirements, evidence, and uncertainty.
+
+## Career roadmap
+
+The user's chosen path toward a career goal, expressed as editable milestones and practical actions with progress and supporting evidence.
+
+## Career materials
+
+The user's resumes, professional summaries, application drafts, and profile-photo assets prepared for a career goal.
+
 ## Advanced custom photoshoot pack
 
 A hidden legacy/fallback capability that uses Replicate custom model training to produce larger sets of consistent styled images. It is not part of the public default product positioning.
