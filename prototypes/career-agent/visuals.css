@@ -73,6 +73,7 @@
   font-variant-numeric: tabular-nums;
 }
 
+.section-actions + .interval-chart { margin-top: 24px; }
 .goal-overview .interval-chart { margin: 0; }
 .interval-chart.compact { --chart-place: 85px; --chart-value: 78px; padding: 18px 15px 13px; }
 

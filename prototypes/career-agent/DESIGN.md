@@ -78,7 +78,7 @@ Manrope carries route headings and artifact names. DM Sans carries controls, den
 
 ## Layout
 
-Desktop uses a 236px contents rail, flexible artifact column and 335px contextual assistant. At widths under 980px the rail becomes a navigation menu and the assistant opens as a full-height sheet. At phone widths the map gives way to a first-class market list, the multi-column forms stack, and compare actions stay visible in each row.
+Desktop uses a 236px contents rail, flexible artifact column and 335px contextual assistant. At widths under 980px the rail becomes a navigation menu and the assistant opens as a full-height sheet. At phone widths the market table becomes a first-class card list, the multi-column forms stack, and compare actions stay visible in each row. The earlier schematic map was removed after the owner found it misleading; no map returns without validated geography and evidence.
 
 **The Artifact Leads Rule.** A specialist page gives its first viewport to the profile, analysis, geography, roadmap or material. The agent panel is persistent help; only the Career agent home leads with conversation and next action.
 

@@ -3,20 +3,21 @@ const pages = [
   ['agent','Career agent','M3 10.5 10.5 3 18 10.5 10.5 18 3 10.5Z M10.5 6.5v8 M6.5 10.5h8'],
   ['profile','Career profile','M5 18v-2a5 5 0 0 1 10 0v2 M10 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z'],
   ['analytics','Career analytics','M3 18V9h3v9 M9 18V5h3v13 M15 18v-7h3v7'],
-  ['heatmap','Career heatmap','M3 7l5-3 5 3 5-3v13l-5 3-5-3-5 3V7Z M8 4v13 M13 7v13'],
+  ['heatmap','Market comparison','M3 17h15 M4 14l4-4 4 2 5-7 M15 5h2v2'],
   ['roadmaps','Career roadmaps','M4 17h5v-5h5V7h5 M16 7h3v3 M4 17l3-3'],
   ['materials','Career materials','M5 3h9l4 4v14H5z M14 3v5h4 M8 12h7 M8 16h7']
 ];
 const seeded = {
-  page:'agent', name:'Maya Rivera', title:'Operations lead', city:'Denver, CO',
+  page:'agent', name:'Maya Rivera', title:'Operations lead', city:'Denver, CO', targetMarket:'', marketToSave:'Denver, CO',
   role:'Operations Manager', arrangement:'Hybrid or remote', weeklyHours:'4 hours', canRelocate:false,
   confirmed:true, profileEdit:false, runState:'complete', selectedMarkets:['Denver, CO'],
   selectedRoute:'closest', completedTasks:[], materialTab:'resume', editedResume:false,
   resume:'Maya Rivera\nOperations Lead\n\nSUMMARY\nOperations leader with 9 years of experience improving cross-team workflows, service delivery, and reporting.\n\nEXPERIENCE\nLed process redesign across three departments. Reduced handoff time by documenting responsibilities and introducing shared reporting.\n\nSKILLS\nProcess improvement · Stakeholder coordination · Reporting',
   summary:'Operations leader focused on making complex work easier to run. Experienced in process improvement, team coordination, and clear reporting.',
-  showMap:false, marketQuery:'', messageHistory:[], assistantOpen:false
+  marketQuery:'', messageHistory:[], assistantOpen:false
 };
-const storeKey='career-prototype-v1';
+// v1 saved the chosen destination over the home city. Reset that ambiguous fictional state.
+const storeKey='career-prototype-v2';
 const routeScroll=Object.create(null);
 if('scrollRestoration' in history)history.scrollRestoration='manual';
 let state;
@@ -31,11 +32,11 @@ const head=(title,desc,tools='')=>`<header class="page-head"><div><h1>${title}</
 const section=(title,body,lead='')=>`<section class="section"><h2>${title}</h2>${lead?'<p class="section-lead">'+lead+'</p>':''}${body}</section>`;
 const statusText={empty:'No profile yet',working:'Research in progress',input:'Your answer is needed',partial:'Partial result saved',complete:'Brief ready',stale:'Needs refresh',error:'Source unavailable',quota:'Free limit reached'};
 const marketRows=[
-  {city:'Denver, CO',pay:'$94k–$141k',low:94,high:141,signal:'Illustrative wage benchmark',fit:'Current market',value:'mid'},
-  {city:'Seattle, WA',pay:'$110k–$165k',low:110,high:165,signal:'Illustrative wage benchmark',fit:'Relocation required',value:'high'},
-  {city:'Minneapolis, MN',pay:'$89k–$134k',low:89,high:134,signal:'Illustrative wage benchmark',fit:'Relocation required',value:'mid'},
-  {city:'Atlanta, GA',pay:'$82k–$123k',low:82,high:123,signal:'Illustrative wage benchmark',fit:'Relocation required',value:'low'},
-  {city:'Boise, ID',pay:'Unavailable',signal:'Suppressed in this example',fit:'Evidence unavailable',value:'unknown'}
+  {city:'Denver, CO',pay:'$94k–$141k',low:94,high:141},
+  {city:'Seattle, WA',pay:'$110k–$165k',low:110,high:165},
+  {city:'Minneapolis, MN',pay:'$89k–$134k',low:89,high:134},
+  {city:'Atlanta, GA',pay:'$82k–$123k',low:82,high:123},
+  {city:'Boise, ID',pay:'Unavailable'}
 ];
 function intervalPlot(rows,compact=false,showSelection=false){
   const interval=(m)=>m.low==null?'<span class="interval-unavailable">No example value</span>':`<span class="interval-band" style="--interval-start:${((m.low-80)/90*100).toFixed(1)}%;--interval-end:${((m.high-80)/90*100).toFixed(1)}%"></span>`;
@@ -68,7 +69,7 @@ function renderAssistant(){
     agent:'Your fictional brief is ready. Compare markets or choose a next action.',
     profile:'Your confirmed experience anchors the analysis. A proposed change needs your review.',
     analytics:'The occupational wage benchmark and comparable pay answer different questions. Check the definitions before comparing.',
-    heatmap:'The table contains the same illustrative locations as the map. Unknown data is separate from low values.',
+    heatmap:'Use Compare in the table to select places, then save a separate target market. The wage chart is fictional and remote eligibility is unknown.',
     roadmaps:'You can choose a path and change the weekly effort. Timelines are planning scenarios.',
     materials:'This resume draft uses confirmed example facts. Review every sentence before export.'
   };
@@ -80,17 +81,17 @@ function renderAgent(){
   let main='';
   if(run==='empty')main=`<div class="paper"><h2>Start with your background</h2><p>You can enter professional facts manually. A future release will accept a resume for review.</p><div class="button-row">${link('profile','Tell me about my background','primary')}${action('demo-confirm','Use the fictional example')}</div></div>`;
   else if(run==='working')main=`<div class="paper"><span class="status warn">Working · step 2 of 3</span><h2>Comparing your role with market evidence</h2><div class="step-track" aria-hidden="true"><span class="done"></span><span class="active"></span><span></span></div><p>The next step is a saved brief. This is a simulated progress state.</p>${action('cancel-run','Cancel example run')}</div>`;
-  else if(run==='input')main=`<div class="paper"><span class="status warn">Needs your answer</span><h2>Can you relocate for the right role?</h2><p>We will keep the analysis to eligible markets. Your answer is a simulated preference.</p><div class="button-row">${action('answer-no','No relocation','primary')}${action('answer-yes','Yes, I can relocate')}</div></div>`;
+  else if(run==='input')main=`<div class="paper"><span class="status warn">Needs your answer</span><h2>Can you relocate for the right role?</h2><p>Your answer changes the on-site relocation labels in the market comparison. It does not establish remote eligibility or run live research.</p><div class="button-row">${action('answer-no','No relocation','primary')}${action('answer-yes','Yes, I can relocate')}</div></div>`;
   else if(run==='quota')main=`<div class="paper"><span class="status warn">Free research limit reached</span><h2>Your saved work is still here</h2><p>A real release would show the measured allowance and exact reset time. You can review the fictional brief and export the sample materials now.</p>${link('materials','Open saved materials','primary')}</div>`;
   else if(run==='error')main=`<div class="paper"><span class="status error">Market source unavailable</span><h2>We could not refresh this evidence</h2><p>The saved example remains available. Try again when the source returns.</p><div class="button-row">${action('retry-run','Retry example task','primary')}${link('analytics','Read saved analysis')}</div></div>`;
-  else main=`<div class="paper"><span class="status ${run==='partial'||run==='stale'?'warn':''}">${statusText[run]}</span><h2>${run==='stale'?'Your profile changed since this brief':run==='partial'?'One source is missing; your brief is saved':'Your next move, in focus'}</h2><p>Fictional profile: ${clean(state.name)} · ${clean(state.title)}. Target: ${clean(state.role)}. The brief highlights a supported transition and a salary benchmark whose scope is explicit.</p><div class="button-row">${link('analytics','Read the career brief','primary')}${link('heatmap','Compare locations')}${run==='stale'?action('retry-run','Refresh example brief'):''}</div></div>`;
-  const goal=`<div class="goal-overview"><div class="scenario-banner"><div><h2>${clean(state.role)}</h2><p>${clean(state.city)} · ${clean(state.arrangement)} · ${clean(state.weeklyHours)} available weekly</p></div>${link('profile','Review my profile')}</div>${intervalPlot(marketRows.slice(0,2),true)}</div>`;
-  return head('Make the next move clearer','Your goal, recent work, and one useful next action stay together.',stateChoice)+section('Current goal',goal)+section('Your next action',main)+section('Continue the journey',`<div class="choice-list"><div class="artifact-row"><div><h3>Understand the market</h3><p>Inspect illustrative pay evidence, assumptions, and role fit.</p></div>${link('analytics','Open analytics')}</div><div class="artifact-row"><div><h3>Choose where to focus</h3><p>Compare eligible places in a map and equivalent table.</p></div>${link('heatmap','Explore markets')}</div><div class="artifact-row"><div><h3>Prepare to act</h3><p>Turn a target into steps and usable materials.</p></div>${link('roadmaps','Open roadmap')}</div></div>`);
+  else main=`<div class="paper"><span class="status ${run==='partial'||run==='stale'?'warn':''}">${statusText[run]}</span><h2>${run==='stale'?'Your goal changed since this brief':run==='partial'?'One source is missing; your brief is saved':'Your next move, in focus'}</h2><p>Fictional profile: ${clean(state.name)} · ${clean(state.title)}. Target: ${clean(state.role)}. The brief highlights a supported transition and a salary benchmark whose scope is explicit.</p><div class="button-row">${link('analytics','Read the career brief','primary')}${link('heatmap','Compare locations')}${run==='stale'?action('retry-run','Refresh example brief'):''}</div></div>`;
+  const goal=`<div class="goal-overview"><div class="scenario-banner"><div><h2>${clean(state.role)}</h2><p>Home: ${clean(state.city)} · Target market: ${clean(state.targetMarket||'Not selected')} · ${clean(state.arrangement)} · ${clean(state.weeklyHours)} available weekly</p></div>${link('profile','Review my profile')}</div>${intervalPlot(marketRows.slice(0,2),true)}</div>`;
+  return head('Make the next move clearer','Your goal, recent work, and one useful next action stay together.',stateChoice)+section('Current goal',goal)+section('Your next action',main)+section('Continue the journey',`<div class="choice-list"><div class="artifact-row"><div><h3>Understand the market</h3><p>Inspect illustrative pay evidence, assumptions, and role fit.</p></div>${link('analytics','Open analytics')}</div><div class="artifact-row"><div><h3>Choose where to focus</h3><p>Compare places using the fictional wage chart and searchable table; remote eligibility is unknown.</p></div>${link('heatmap','Explore markets')}</div><div class="artifact-row"><div><h3>Prepare to act</h3><p>Turn a target into steps and usable materials.</p></div>${link('roadmaps','Open roadmap')}</div></div>`);
 }
 function renderProfile(){
   const edit=state.profileEdit?`<div class="review-change"><span class="label">Proposed profile update</span><h3>Review before accepting</h3><dl><dt>Current</dt><dd>${clean(state.title)}</dd><dt>Proposed</dt><dd class="new">Senior Operations Lead</dd><dt>Source</dt><dd>Fictional resume excerpt · needs confirmation</dd></dl><div class="button-row">${action('accept-profile','Accept change','primary')}${action('dismiss-profile','Dismiss')}</div></div>`:`<div class="note">This fictional profile is confirmed. Try “Review a proposed edit” to see how uncertain resume facts would be handled.</div>`;
   return head('A profile you can trust','Professional facts are inspectable and correctable before they shape advice.',action('propose-profile','Review a proposed edit','primary'))+
-  section('Professional snapshot',`<div class="grid-2"><div class="paper"><span class="label">Confirmed background</span><h3 style="margin-top:12px">${clean(state.name)}</h3><p>${clean(state.title)} · 9 years in operations</p><p>Process improvement, coordination, and reporting.</p><span class="status">Added by you · confirmed</span></div><div class="paper"><span class="label">Current direction</span><h3 style="margin-top:12px">${clean(state.role)}</h3><p>Based in ${clean(state.city)}. Prefers ${clean(state.arrangement)} roles. ${clean(state.weeklyHours)} each week for the transition.</p><span class="status muted">Preferences · editable</span></div></div>`)+
+  section('Professional snapshot',`<div class="grid-2"><div class="paper"><span class="label">Confirmed background</span><h3 style="margin-top:12px">${clean(state.name)}</h3><p>${clean(state.title)} · 9 years in operations</p><p>Process improvement, coordination, and reporting.</p><span class="status">Added by you · confirmed</span></div><div class="paper"><span class="label">Current direction</span><h3 style="margin-top:12px">${clean(state.role)}</h3><p>Home market: ${clean(state.city)}. Target market: ${clean(state.targetMarket||'Not selected')}. Prefers ${clean(state.arrangement)} roles. ${clean(state.weeklyHours)} each week for the transition.</p><span class="status muted">Preferences · editable</span></div></div>`)+
   section('Evidence and corrections',edit)+
   section('Your goal',`<form id="goal-form"><div class="form-grid"><div><label class="field" for="goal-role">Target role</label><input id="goal-role" type="text" value="${clean(state.role)}" required maxlength="80"></div><div><label class="field" for="goal-city">Home market</label><input id="goal-city" type="text" value="${clean(state.city)}" required maxlength="80"></div><div><label class="field" for="goal-arrangement">Work arrangement</label><select id="goal-arrangement"><option ${state.arrangement==='Hybrid or remote'?'selected':''}>Hybrid or remote</option><option ${state.arrangement==='On-site'?'selected':''}>On-site</option><option ${state.arrangement==='Remote only'?'selected':''}>Remote only</option></select></div><div><label class="field" for="goal-hours">Time available each week</label><select id="goal-hours"><option ${state.weeklyHours==='4 hours'?'selected':''}>4 hours</option><option ${state.weeklyHours==='2 hours'?'selected':''}>2 hours</option><option ${state.weeklyHours==='8 hours'?'selected':''}>8 hours</option></select></div></div><div class="section-actions"><button class="button primary" type="submit">Save goal</button></div></form>`)+
   section('Resume intake',`<div class="paper"><h3>Bring your own experience</h3><p>The first product release will offer private document upload and a line-by-line confirmation step. This prototype demonstrates the review pattern using fictional facts. No file is sent or stored by this page.</p><span class="status muted">Prototype · upload inactive</span></div>`);
@@ -105,12 +106,17 @@ function renderAnalytics(){
  section('Next decision',`<div class="button-row">${link('heatmap','Compare markets','primary')}${link('roadmaps','Plan toward this role')}</div>`);
 }
 function renderHeatmap(){
- const options=marketRows.map(m=>`<tr><td data-label="Market"><strong>${m.city}</strong></td><td data-label="Example annual range">${m.pay}</td><td data-label="Constraint">${m.fit==='Relocation required'&&state.canRelocate?'Relocation possible':m.fit}</td><td data-label="Action"><button class="button ${state.selectedMarkets.includes(m.city)?'selected':''}" type="button" data-action="compare-market" data-market="${m.city}" aria-pressed="${state.selectedMarkets.includes(m.city)}">${state.selectedMarkets.includes(m.city)?'Selected':'Compare'}</button></td></tr>`).join('');
- const selected=state.selectedMarkets.join(' · ');
- return head('Find a market that fits your life','Compare places using the same measure, with location and remote restrictions visible.')+
- section('Explore locations',`<div class="note warn">All values and regions shown here are illustrative. The simplified map is a navigation sketch; the table contains the full comparison.</div><div class="map-controls"><div><label class="field" for="market-search">Search location</label><input id="market-search" type="search" placeholder="Try Seattle" value="${clean(state.marketQuery)}" autocomplete="off"></div><div><label class="field" for="market-metric">Measure</label><select id="market-metric"><option>Annual wage benchmark</option><option disabled>Observed postings · data needed</option><option disabled>Employment concentration · data needed</option></select></div><div><label class="field" for="market-work">Work arrangement</label><select id="market-work"><option>All arrangements</option><option>Hybrid or remote · eligibility unknown</option></select></div></div><button class="button mobile-map-toggle" type="button" data-action="toggle-map">${state.showMap?'Show list first':'Show map'}</button><div class="map-panel ${state.showMap?'':'collapsed'}" role="img" aria-label="Illustrative map sketch. Use the following table for all values."><svg viewBox="0 0 650 270" aria-hidden="true"><path data-value="high" d="M38 54l62 4 10 55-40 22-29-31z"/><path data-value="mid" d="M115 90l93-20 24 62-36 50-88-13z"/><path data-value="mid" d="M245 80l95-8 14 71-59 27-50-32z"/><path data-value="unknown" d="M355 50l80 22-8 100-70 7z"/><path data-value="low" d="M446 105l82 12 23 53-80 31-41-27z"/><path data-value="high" d="M538 49l79 11-9 113-52 14-23-62z"/><text x="47" y="89">WA</text><text x="146" y="121">CO</text><text x="271" y="118">MN</text><text x="371" y="111">ID</text><text x="478" y="150">GA</text><text x="560" y="106">NY</text></svg></div><div class="map-legend"><span><i class="legend-chip" style="background:#277b70"></i> Higher example</span><span><i class="legend-chip" style="background:#57998a"></i> Middle example</span><span><i class="legend-chip" style="background:#bdd0ba"></i> Lower example</span><span><i class="legend-chip" style="background:#c4cac3"></i> Unavailable</span></div>`)+
- section('Compare locations',`<p class="small">Selected: ${clean(selected)}. Choose up to three. Table values are fictional annual wage examples, not current job offers.</p>${intervalPlot(marketRows,false,true)}<div class="table-wrap"><table><thead><tr><th scope="col">Market</th><th scope="col">Example annual range</th><th scope="col">Constraint</th><th scope="col">Action</th></tr></thead><tbody id="market-table">${options}</tbody></table></div><div class="section-actions"><label class="field" for="target-market">Location to save in your goal</label><select id="target-market">${state.selectedMarkets.map(m=>`<option>${clean(m)}</option>`).join('')}</select><div class="button-row" style="margin-top:10px">${action('save-market','Save target market','primary')}</div></div>`)+
- section('Remote eligibility',`<div class="note">“Remote” on a listing does not mean eligible from every U.S. location. This prototype has no live listings, so remote eligibility remains unknown.</div>`);
+ const options=marketRows.map(m=>{
+  const constraint=m.city===state.city?'Home market':state.canRelocate?'Relocation possible for on-site work':'Relocation required for on-site work';
+  const selected=state.selectedMarkets.includes(m.city);
+  return `<tr><td data-label="Market"><strong>${clean(m.city)}</strong></td><td data-label="Example annual range">${clean(m.pay)}</td><td data-label="Constraint">${constraint}</td><td data-label="Action"><button class="button ${selected?'selected':''}" type="button" data-action="compare-market" data-market="${clean(m.city)}" aria-pressed="${selected}">${selected?'Selected':'Compare'}</button></td></tr>`;
+ }).join('');
+ const selected=state.selectedMarkets.length?state.selectedMarkets.join(' · '):'None yet';
+ const choices=state.selectedMarkets.map(m=>`<option ${m===state.marketToSave?'selected':''}>${clean(m)}</option>`).join('');
+ return head('Find a market that fits your life','Compare fictional annual wage examples; remote-job eligibility cannot be checked here.')+
+ section('Explore locations',`<div class="note warn">These are fictional annual wage examples, not job offers or live market data. Search filters the table and chart below. Remote eligibility cannot be filtered without actual listings.</div><label class="field" for="market-search">Search location</label><input id="market-search" type="search" placeholder="Try Seattle" value="${clean(state.marketQuery)}" autocomplete="off">`)+
+ section('Compare locations',`<div class="note" id="market-goal-summary"><strong>Home market: ${clean(state.city)} · Saved target market: ${clean(state.targetMarket||'Not selected')}</strong><p class="small">The target is a separate place to explore, not a change of where the fictional person lives. Saved in this browser session only. Changing it marks the earlier brief outdated; it does not run new analysis.</p></div><p class="small">Use Compare in the table to select up to three places. Selected: ${clean(selected)}. Values are fictional annual wage examples, not current job offers.</p><div class="table-wrap"><table><thead><tr><th scope="col">Market</th><th scope="col">Example annual range</th><th scope="col">Constraint</th><th scope="col">Action</th></tr></thead><tbody id="market-table">${options}</tbody></table></div><div class="section-actions"><p class="small">Choose one of your compared locations as a target; your home market will stay ${clean(state.city)}.</p><label class="field" for="target-market">Location to save as target</label><select id="target-market" ${state.selectedMarkets.length?'':'disabled'}>${choices}</select><div class="button-row" style="margin-top:10px"><button type="button" class="button primary" data-action="save-market" ${state.selectedMarkets.length?'':'disabled'}>Save target market</button></div></div>${intervalPlot(marketRows,false,true)}`)+
+ section('Remote eligibility',`<div class="note">“Remote” on a listing does not mean eligible from every U.S. location. This prototype has no live listings or state restrictions, so remote eligibility remains unknown. A relocation label refers only to on-site work relative to the home market.</div>`);
 }
 function applyMarketSearch(){
   const query=state.marketQuery.trim().toLowerCase();
@@ -167,12 +173,23 @@ document.addEventListener('click',event=>{
   if(a==='demo-confirm'){state.runState='complete';render();}
   if(a==='retry-run'){state.runState='working';render();notify('Example task started. Select “Brief ready” to preview completion.');}
   if(a==='cancel-run'){state.runState='partial';render();notify('Example task cancelled; saved work remains available.');}
-  if(a==='answer-no'||a==='answer-yes'){state.canRelocate=a==='answer-yes';state.runState='complete';render();notify('Example answer recorded; brief ready.');}
+  if(a==='answer-no'||a==='answer-yes'){state.canRelocate=a==='answer-yes';state.runState='complete';render();notify('Relocation preference recorded. No listing eligibility was checked.');}
   if(a==='choose-role'){state.role='Program Manager';state.runState='stale';render();notify('Target changed; earlier analysis needs a refresh.');}
   if(a==='explain-range'){openAssistant();sendPrompt('Explain this pay range');}
-  if(a==='compare-market'){const m=trigger.dataset.market;const ix=state.selectedMarkets.indexOf(m);if(ix>=0)state.selectedMarkets.splice(ix,1);else if(state.selectedMarkets.length<3)state.selectedMarkets.push(m);else return notify('You can compare up to three places. Remove one first.');render();notify('Comparison updated.');}
-  if(a==='save-market'){state.city=$('#target-market')?.value||state.city;state.runState='stale';render();notify('Goal location updated; earlier brief marked outdated.');}
-  if(a==='toggle-map'){state.showMap=!state.showMap;render();}
+  if(a==='compare-market'){
+    const m=trigger.dataset.market;const ix=state.selectedMarkets.indexOf(m);
+    if(ix>=0){state.selectedMarkets.splice(ix,1);if(state.marketToSave===m)state.marketToSave=state.selectedMarkets.at(-1)||'';}
+    else if(state.selectedMarkets.length<3){state.selectedMarkets.push(m);state.marketToSave=m;}
+    else return notify('You can compare up to three places. Remove one first.');
+    render();notify('Comparison updated.');
+  }
+  if(a==='save-market'){
+    const target=$('#target-market')?.value;
+    if(!target||!state.selectedMarkets.includes(target))return notify('Choose a location to compare before saving a target.');
+    if(target===state.targetMarket)return notify(`Target market already saved: ${target}. Home market remains ${state.city}.`);
+    state.targetMarket=target;state.marketToSave=target;state.runState='stale';render();
+    notify(`Saved target: ${target}. Home remains ${state.city}. Earlier brief needs refresh; no new analysis ran.`);
+  }
   if(a==='select-route'){state.selectedRoute=trigger.dataset.route;render();notify('Roadmap route selected.');}
   if(a==='adjust-effort'){state.weeklyHours=state.weeklyHours==='4 hours'?'2 hours':state.weeklyHours==='2 hours'?'8 hours':'4 hours';render();notify('Weekly effort assumption updated.');}
   if(a==='material-tab'){state.materialTab=trigger.dataset.tab;render();const next=document.querySelector(`[data-tab="${state.materialTab}"]`);next?.focus();}
@@ -185,6 +202,7 @@ document.addEventListener('click',event=>{
 });
 document.addEventListener('change',event=>{
  if(event.target.id==='demo-state'){state.runState=event.target.value;render();}
+ if(event.target.id==='target-market'){state.marketToSave=event.target.value;save();}
  if(event.target.matches('[data-task]')){const id=event.target.dataset.task;if(event.target.checked&&!state.completedTasks.includes(id))state.completedTasks.push(id);if(!event.target.checked)state.completedTasks=state.completedTasks.filter(x=>x!==id);event.target.closest('.task-row')?.classList.toggle('complete',event.target.checked);const progress=$('.plan-progress');if(progress)progress.textContent=`${state.completedTasks.length} of 4 steps completed in this example`;save();notify('Roadmap progress updated.');}
 });
 document.addEventListener('submit',event=>{

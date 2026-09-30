@@ -10,14 +10,14 @@ From the WSL worktree root:
 python3 -m http.server 4311 --bind 127.0.0.1
 ```
 
-Then open [the local preview](http://127.0.0.1:4311/prototypes/career-agent/). If another service owns 4311, choose a free port. Assets are served from the repository root because the existing brand logo is referenced. Data stays in browser sessionStorage. Use the browser's session storage clear action to restore the fictional starting point.
+Then open [the local preview](http://127.0.0.1:4311/prototypes/career-agent/). If another service owns 4311, choose a free port. Assets are served from the repository root because the existing brand logo is referenced. Data stays in browser sessionStorage. Use the browser's session storage clear action to restore the fictional starting point. The task-3 correction uses a new session key (`career-prototype-v2`): old fictional sessions reset because the previous save action overwrote the home market with a target market, and those meanings could not safely be migrated.
 
 ## Review journey
 
 1. Career agent: read current goal, inspect a useful next action, and preview empty, working, needs-input, partial, stale, source-error and quota states.
 2. Career profile: propose a resume-derived title change, inspect provenance, accept or dismiss, and edit role/location/time preferences.
 3. Career analytics: explain the fictional occupational wage interval and why a personalized pay interval is unavailable.
-4. Career heatmap: search and compare two locations, switch between list and schematic map on mobile, and save a selected destination.
+4. Market comparison (still at the `#heatmap` URL): search and compare Denver with Seattle using the table and fictional wage chart. Clicking Compare preselects that destination in the save control. Save it as a **target market**, verify that the **home market** remains unchanged, and read the remote-eligibility limitation. The misleading schematic map and inert work-arrangement filter were removed after the owner walkthrough.
 5. Career roadmaps: choose closest fit, higher ambition or steadier transition; adjust available time and complete a task.
 6. Career materials: review a fictional resume and summary, save an edit, download a plain-text example, and see the optional photo handoff.
 
@@ -51,13 +51,13 @@ Run the existing Playwright package against the prototype with:
 NODE_PATH=/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/node_modules node prototypes/career-agent/smoke.cjs
 ```
 
-The smoke script visits all six pages, tests the profile proposal, location selection, roadmap task, materials download and mobile assistant, captures desktop/mobile review images, checks mobile overflow and reports JavaScript page errors. It also checks the fictional interval graphics, chart/search/selection synchronization, navigation indicator position, roadmap milestone line, focus and scroll restoration on route history, visible keyboard focus and assistant focus return, 63 representative text/background contrast pairs across six pages (lowest measured ratio 4.6:1), reduced-motion styling, and reflow at a 640-CSS-pixel viewport with device scale factor 2 (a 1280-physical-pixel, 200%-scale equivalent). This is not a native browser-zoom, exhaustive contrast, or assistive-technology audit. It uses `CHROME_BIN` if the local Chrome binary differs.
+The smoke script visits all six pages, tests the profile proposal, location selection, separate home and target markets, save/reload persistence, disabled save with no selected places, relocation labels after home-market edits, roadmap task, materials download and mobile assistant, captures desktop/mobile review images, checks mobile overflow and reports JavaScript page errors. It also checks the fictional interval graphics, chart/search/selection synchronization, navigation indicator position, roadmap milestone line, focus and scroll restoration on route history, visible keyboard focus and assistant focus return, sampled text/background contrast pairs across six pages (minimum measured ratio reported by the run), reduced-motion styling, and reflow at a 640-CSS-pixel viewport with device scale factor 2 (a 1280-physical-pixel, 200%-scale equivalent). This is not a native browser-zoom, exhaustive contrast, or assistive-technology audit. It uses `CHROME_BIN` if the local Chrome binary differs.
 
 Current review captures are under `review/`. They were generated from the WSL browser pass; inspect them before treating any visual decision as complete. This prototype has not been merged into the production Angular routes.
 
 ## Known handoff boundaries
 
-- The simplified geography drawing is a layout sketch. Production heatmap requires validated U.S. state/metro boundaries and accessible table parity.
+- The prototype deliberately has no geography drawing or remote-work filter: a real map would require validated boundaries, evidence tied to geography, and accessible table parity. Remote eligibility needs actual job-listing restrictions; it cannot be inferred from the fictional wage benchmark.
 - Source and pay displays use fictional numbers. For the first career release, the owner selected a separately labeled BLS occupational benchmark and deferred personalized advertised-pay estimates. Real values require verified BLS ingestion, occupation/geography matching, suppression handling and source metadata; this prototype has none of those yet.
 - Browser session persistence demonstrates navigation recovery, not authenticated, durable account storage.
 - The prototype uses existing logo and a separate career design record. Product implementation must reconcile shared site shell and final branding rules.
