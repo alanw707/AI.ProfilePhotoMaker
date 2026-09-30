@@ -4,7 +4,7 @@ Status: interactive **prototype**, not the authenticated career product. Six lin
 
 ## Open
 
-From the WSL worktree root:
+From the repository root:
 
 ```sh
 python3 -m http.server 4311 --bind 127.0.0.1
@@ -48,7 +48,7 @@ If no participant is available, the [opt-in LinkedIn recruitment draft](review/l
 Run the existing Playwright package against the prototype with:
 
 ```sh
-NODE_PATH=/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/node_modules node prototypes/career-agent/smoke.cjs
+NODE_PATH="$PWD/AI.ProfilePhotoMaker.UI/node_modules" CHROME_BIN="$(command -v chromium || command -v google-chrome)" node prototypes/career-agent/smoke.cjs
 ```
 
 The smoke script visits all six pages, tests the profile proposal, location selection, separate home and target markets, save/reload persistence, disabled save with no selected places, relocation labels after home-market edits, roadmap task, materials download and mobile assistant, captures desktop/mobile review images, checks mobile overflow and reports JavaScript page errors. It also checks the fictional interval graphics, chart/search/selection synchronization, navigation indicator position, roadmap milestone line, focus and scroll restoration on route history, visible keyboard focus and assistant focus return, sampled text/background contrast pairs across six pages (minimum measured ratio reported by the run), reduced-motion styling, and reflow at a 640-CSS-pixel viewport with device scale factor 2 (a 1280-physical-pixel, 200%-scale equivalent). This is not a native browser-zoom, exhaustive contrast, or assistive-technology audit. It uses `CHROME_BIN` if the local Chrome binary differs.
