@@ -224,6 +224,8 @@ builder.Services.AddStorageServices(builder.Configuration, builder.Environment);
 // Additional application services
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ICreditPackageService, AI.ProfilePhotoMaker.API.Services.CreditPackageService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IOutcomePackageService, AI.ProfilePhotoMaker.API.Services.OutcomePackageService>();
+// Career workspace (spec #376); endpoints stay disabled unless Features:CareerWorkspace=true.
+AI.ProfilePhotoMaker.API.Services.Career.CareerWorkspaceServiceCollectionExtensions.AddCareerWorkspace(builder.Services);
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ImageProcessing.IProfilePhotoScoreService, AI.ProfilePhotoMaker.API.Services.ImageProcessing.ProfilePhotoScoreService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ImageProcessing.IPlatformExportService, AI.ProfilePhotoMaker.API.Services.ImageProcessing.PlatformExportService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();

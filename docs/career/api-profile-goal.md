@@ -12,6 +12,8 @@ All endpoints require authentication and `Features:CareerWorkspace=true`. Respon
 | 401 | `Unauthorized` | not signed in |
 | 403 | `CareerWorkspaceDisabled` | flag off |
 | 404 | `CareerProfileNotFound` / `CareerGoalNotFound` / `CareerVersionNotFound` | none yet, or not yours |
+
+`GET /api/career/profile/versions` returns an empty list (200) when no profile exists. An `If-Match` that is not exactly the current `"profile-vN"` / `"goal-vN"` tag (including `*`) is treated as stale (412).
 | 400 | `ValidationError` (+ `fieldErrors`) | invalid input or `confirmed` not true |
 | 409 | `CareerGoalAlreadyExists` | POST goal when one exists |
 | 412 | `CareerVersionConflict` | `If-Match` is stale (body includes `currentVersion`) |
@@ -86,7 +88,7 @@ Writes return the new `ETag` header (`"profile-v3"`, `"goal-v2"`) and the same v
 }
 ```
 
-`isStale` is true when the profile's active version is newer than `basedOnProfileVersion`; re-saving the goal clears it. A goal can be created before a profile exists (`basedOnProfileVersion: null`, not stale).
+`isStale` is true when a profile exists that the goal was not confirmed against: its active version is newer than `basedOnProfileVersion`, or a profile was saved after a goal created without one (`basedOnProfileVersion: null`). Re-saving the goal clears it. A goal created with no profile is not stale until a profile is saved.
 
 `GET /api/career/goals/{id}/versions` → `[{ "version": 2, "createdAt": "...", "targetRole": "...", "isActive": true }]`.
 

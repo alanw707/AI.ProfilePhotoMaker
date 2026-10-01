@@ -1,0 +1,98 @@
+using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Migrations;
+using AI.ProfilePhotoMaker.API.Models.Career;
+using AI.ProfilePhotoMaker.API.Services.Career;
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations.Operations;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+
+namespace AI.ProfilePhotoMaker.API.Tests.Integration.Career;
+
+/// <summary>
+/// Every private career entity participates in owner deletion from first storage
+/// (#378 acceptance criterion; wired to user controls in #392).
+/// </summary>
+public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactory>
+{
+    private readonly CareerWorkspaceEnabledFactory _factory;
+
+    public CareerPrivateDataTests(CareerWorkspaceEnabledFactory factory)
+    {
+        _factory = factory;
+    }
+
+    [Fact]
+    public void DeletionCoversEveryCareerEntityInTheModel()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var careerEntities = db.Model.GetEntityTypes()
+            .Select(t => t.ClrType)
+            .Where(t => t.Namespace == typeof(CareerProfile).Namespace)
+            .ToHashSet();
+
+        careerEntities.Should().NotBeEmpty();
+        CareerPrivateDataService.CoveredEntityTypes.Should().BeEquivalentTo(careerEntities,
+            "a new private career entity must be added to owner deletion");
+    }
+
+    [Fact]
+    public async Task DeleteAllForOwnerRemovesOnlyThatOwnersCareerData()
+    {
+        var alice = new CareerClient(_factory);
+        var bob = new CareerClient(_factory);
+        foreach (var user in new[] { alice, bob })
+        {
+            await user.CreateProfileAsync();
+            await CareerClient.ReadDataAsync(await user.PutProfileAsync(CareerClient.ValidProfile("Analyst II"), "\"profile-v1\""), 200);
+            await user.CreateGoalAsync();
+        }
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var service = scope.ServiceProvider.GetRequiredService<ICareerPrivateDataService>();
+            await service.DeleteAllForOwnerAsync(alice.UserId);
+        }
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            (await db.CareerProfiles.CountAsync(p => p.OwnerId == alice.UserId)).Should().Be(0);
+            (await db.CareerProfileVersions.CountAsync(v => v.OwnerId == alice.UserId)).Should().Be(0);
+            (await db.CareerGoals.CountAsync(g => g.OwnerId == alice.UserId)).Should().Be(0);
+            (await db.CareerGoalVersions.CountAsync(v => v.OwnerId == alice.UserId)).Should().Be(0);
+
+            (await db.CareerProfileVersions.CountAsync(v => v.OwnerId == bob.UserId)).Should().Be(2);
+            (await db.CareerGoalVersions.CountAsync(v => v.OwnerId == bob.UserId)).Should().Be(1);
+        }
+
+        await CareerClient.ReadErrorAsync(await alice.GetAsync("/api/career/profile"), 404);
+        await CareerClient.ReadDataAsync(await bob.GetAsync("/api/career/profile"), 200);
+    }
+
+    [Fact]
+    public void CareerMigrationIsAdditiveOnly()
+    {
+        var migration = new AddCareerProfileAndGoal();
+        var careerTables = new[] { "CareerProfiles", "CareerProfileVersions", "CareerGoals", "CareerGoalVersions" };
+
+        migration.UpOperations.Should().NotBeEmpty();
+        foreach (var operation in migration.UpOperations)
+        {
+            switch (operation)
+            {
+                case CreateTableOperation create:
+                    careerTables.Should().Contain(create.Name);
+                    break;
+                case CreateIndexOperation index:
+                    careerTables.Should().Contain(index.Table);
+                    break;
+                default:
+                    throw new Xunit.Sdk.XunitException($"Career migration must only create career tables and indexes, found {operation.GetType().Name}");
+            }
+        }
+    }
+}
