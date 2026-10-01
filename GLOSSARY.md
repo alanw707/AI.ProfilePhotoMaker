@@ -1,4 +1,4 @@
-# Context Glossary
+# Glossary
 
 ## Advanced custom photoshoot pack
 
