@@ -3,6 +3,7 @@ import { Router, Routes } from '@angular/router';
 import { LoginComponent } from './auth/login/login.component';
 import { RegisterComponent } from './auth/register/register.component';
 import { guestGuard } from './guards/guest.guard';
+import { careerWorkspaceGuard } from './guards/career-workspace.guard';
 import { AppGuard } from './guards/app.guard';
 import { AdminGuard } from './guards/admin.guard';
 import { seoPages } from './pages/marketing/seo-pages.data';
@@ -126,6 +127,24 @@ export const routes: Routes = [
           breadcrumb: 'Photo Workspace',
           hideNavigation: false,
         },
+      },
+      {
+        path: 'career',
+        canActivate: [careerWorkspaceGuard],
+        loadComponent: () => import('./pages/career/career-home.component').then(m => m.CareerHomeComponent),
+        title: 'Career workspace',
+      },
+      {
+        path: 'career/setup',
+        canActivate: [careerWorkspaceGuard],
+        loadComponent: () => import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
+        title: 'Set up your career workspace',
+      },
+      {
+        path: 'career/profile',
+        canActivate: [careerWorkspaceGuard],
+        loadComponent: () => import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
+        title: 'Your career profile',
       },
       {
         path: 'settings',
