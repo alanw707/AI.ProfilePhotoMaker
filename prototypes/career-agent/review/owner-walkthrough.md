@@ -20,3 +20,16 @@ After each task, record: **completed / partly / stuck**, first confusing label o
 - The assistant is scripted, not live AI research. Photos are optional and the button is a handoff demonstration, not checkout.
 
 Please report misunderstandings even if you eventually found the right control. An owner walkthrough can reveal defects and test whether the flow matches the intended product, but it is not independent target-user validation. We will log your results honestly and decide whether a later external review is needed before production release.
+
+## Recorded results
+
+### Task 3 retest (2026-09-30, after commit 50269106): stuck
+
+- Saving a target market had no visible effect beyond one line of small text and a toast.
+- Home could not be set on the market page (it lived only in the Profile goal form), and Denver appeared in the compare list as if it were an option.
+- Compare only highlighted a row in the range chart, often off-screen; it did not open a comparison.
+- Owner direction: simplify into wizard steps, keep the charts for visual appeal.
+
+**Change:** market comparison rebuilt as a four-step wizard (where you live → places to consider → side by side → pick your target) with a before/after confirmation. Charts kept: step 2 highlights chosen places, step 3 charts only home and chosen places. Retest pending in a fresh browser window.
+
+Tasks 1, 2, 4 and 5: not yet recorded.

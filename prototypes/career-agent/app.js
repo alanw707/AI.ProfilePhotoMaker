@@ -8,16 +8,17 @@ const pages = [
   ['materials','Career materials','M5 3h9l4 4v14H5z M14 3v5h4 M8 12h7 M8 16h7']
 ];
 const seeded = {
-  page:'agent', name:'Maya Rivera', title:'Operations lead', city:'Denver, CO', targetMarket:'', marketToSave:'Denver, CO',
+  page:'agent', name:'Maya Rivera', title:'Operations lead', city:'Denver, CO', targetMarket:'', marketToSave:'', marketStep:1, marketSaved:false, previousTarget:'',
   role:'Operations Manager', arrangement:'Hybrid or remote', weeklyHours:'4 hours', canRelocate:false,
-  confirmed:true, profileEdit:false, runState:'complete', selectedMarkets:['Denver, CO'],
+  confirmed:true, profileEdit:false, runState:'complete', selectedMarkets:[],
   selectedRoute:'closest', completedTasks:[], materialTab:'resume', editedResume:false,
   resume:'Maya Rivera\nOperations Lead\n\nSUMMARY\nOperations leader with 9 years of experience improving cross-team workflows, service delivery, and reporting.\n\nEXPERIENCE\nLed process redesign across three departments. Reduced handoff time by documenting responsibilities and introducing shared reporting.\n\nSKILLS\nProcess improvement · Stakeholder coordination · Reporting',
   summary:'Operations leader focused on making complex work easier to run. Experienced in process improvement, team coordination, and clear reporting.',
   marketQuery:'', messageHistory:[], assistantOpen:false
 };
-// v1 saved the chosen destination over the home city. Reset that ambiguous fictional state.
-const storeKey='career-prototype-v2';
+// v1 saved the chosen destination over the home city; v2 used a table instead of
+// the step-by-step market wizard. Reset older fictional state.
+const storeKey='career-prototype-v3';
 const routeScroll=Object.create(null);
 if('scrollRestoration' in history)history.scrollRestoration='manual';
 let state;
@@ -40,7 +41,7 @@ const marketRows=[
 ];
 function intervalPlot(rows,compact=false,showSelection=false){
   const interval=(m)=>m.low==null?'<span class="interval-unavailable">No example value</span>':`<span class="interval-band" style="--interval-start:${((m.low-80)/90*100).toFixed(1)}%;--interval-end:${((m.high-80)/90*100).toFixed(1)}%"></span>`;
-  return `<figure class="interval-chart ${compact?'compact':''}" aria-label="Illustrative annual occupational wage intervals, not live BLS data"><figcaption><strong>${compact?'Market glimpse':'Compare wage intervals'}</strong><span>Fictional 25th–75th percentile examples · annual wages</span></figcaption><div class="interval-axis" aria-hidden="true"><span>$80k</span><span>$110k</span><span>$140k</span><span>$170k</span></div><div class="interval-rows">${rows.map(m=>`<div class="interval-row ${showSelection&&state.selectedMarkets.includes(m.city)?'selected':''}" data-market="${clean(m.city)}"><span class="interval-place">${clean(m.city)}</span><span class="interval-track" aria-hidden="true">${interval(m)}</span><span class="interval-value">${clean(m.pay)}</span></div>`).join('')}</div><p class="interval-footnote">Synthetic illustration, not a personal salary estimate or current job offer.</p></figure>`;
+  return `<figure class="interval-chart ${compact?'compact':''}" aria-label="Illustrative annual occupational wage intervals, not live BLS data"><figcaption><strong>${compact?'Market glimpse':'Compare wage intervals'}</strong><span>Fictional 25th–75th percentile examples · annual wages</span></figcaption><div class="interval-axis" aria-hidden="true"><span>$80k</span><span>$110k</span><span>$140k</span><span>$170k</span></div><div class="interval-rows">${rows.map(m=>`<div class="interval-row ${showSelection&&state.selectedMarkets.includes(m.city)?'selected':''} ${showSelection&&m.city===state.city?'home':''}" data-market="${clean(m.city)}"><span class="interval-place">${clean(m.city)}${showSelection&&m.city===state.city?' <span class="interval-tag">Home</span>':''}</span><span class="interval-track" aria-hidden="true">${interval(m)}</span><span class="interval-value">${clean(m.pay)}</span></div>`).join('')}</div><p class="interval-footnote">Synthetic illustration, not a personal salary estimate or current job offer.</p></figure>`;
 }
 function renderNav(){
   const markup=pages.map(([id,label,path])=>`<a href="#${id}" class="nav-link" ${state.page===id?'aria-current="page"':''}><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 21 21"><path d="${path}"/></svg></span>${label}</a>`).join('');
@@ -69,7 +70,7 @@ function renderAssistant(){
     agent:'Your fictional brief is ready. Compare markets or choose a next action.',
     profile:'Your confirmed experience anchors the analysis. A proposed change needs your review.',
     analytics:'The occupational wage benchmark and comparable pay answer different questions. Check the definitions before comparing.',
-    heatmap:'Use Compare in the table to select places, then save a separate target market. The wage chart is fictional and remote eligibility is unknown.',
+    heatmap:'Four steps: confirm where you live, choose up to three places, compare them side by side, then save one as your target. The wage chart is fictional and remote eligibility is unknown.',
     roadmaps:'You can choose a path and change the weekly effort. Timelines are planning scenarios.',
     materials:'This resume draft uses confirmed example facts. Review every sentence before export.'
   };
@@ -105,23 +106,86 @@ function renderAnalytics(){
  section('Evidence notes',`<div class="note"><strong>What a real report must disclose</strong><p>Dataset and release date, wage definition, occupation code, geography, suppressed cells, comparable cohort, exclusions, and limits. The example figure above is deliberately synthetic.</p></div>`)+
  section('Next decision',`<div class="button-row">${link('heatmap','Compare markets','primary')}${link('roadmaps','Plan toward this role')}</div>`);
 }
+const MARKET_STEPS=['Where you live','Places to consider','Side by side','Pick your target'];
+const findMarket=city=>marketRows.find(m=>m.city===city)||{city,pay:'Unavailable'};
+const midpoint=m=>m.low==null?null:(m.low+m.high)/2;
+function relocationLabel(city){
+  if(city===state.city)return 'Home market';
+  return state.canRelocate?'Relocation possible for on-site work':'Relocation required for on-site work';
+}
+function differenceFromHome(m){
+  const home=midpoint(findMarket(state.city)),here=midpoint(m);
+  if(m.city===state.city)return 'Your reference point';
+  if(home==null||here==null)return 'No example value to compare';
+  const diff=Math.round(here-home);
+  return diff===0?'Same example midpoint as home':`${diff>0?'+':'−'}$${Math.abs(diff)}k example midpoint vs. home`;
+}
+function marketStepper(){
+  return `<ol class="wizard-steps" aria-label="Market comparison steps">${MARKET_STEPS.map((label,i)=>{
+    const n=i+1,current=n===state.marketStep,done=n<state.marketStep;
+    const body=`<span class="wizard-num" aria-hidden="true">${done?'✓':n}</span><span>${label}</span>`;
+    return `<li class="${current?'current':''} ${done?'done':''}" ${current?'aria-current="step"':''}>${done?`<button type="button" class="wizard-jump" data-action="market-step" data-step="${n}">${body}<span class="visually-hidden"> (completed, go back)</span></button>`:body}</li>`;
+  }).join('')}</ol>`;
+}
+function stepHead(title,lead){
+  return `<h2 id="market-step-heading" tabindex="-1">Step ${state.marketStep} of 4 · ${title}</h2><p class="section-lead">${lead}</p>`;
+}
+function marketStepBody(){
+  const step=state.marketStep;
+  if(step===1){
+    const cities=marketRows.map(m=>m.city);if(!cities.includes(state.city))cities.unshift(state.city);
+    return stepHead('Where you live now','Your home market is the reference point. It is only used to show which places would need a move for on-site work, and it is the same value as the goal on Career profile.')+
+    `<div class="wizard-panel"><label class="field" for="home-market">Home market</label><select id="home-market">${cities.map(c=>`<option ${c===state.city?'selected':''}>${clean(c)}</option>`).join('')}</select><p class="small">Fictional person · saved in this browser session only.</p></div><div class="button-row wizard-nav">${action('market-next','Next: choose places','primary')}</div>`;
+  }
+  if(step===2){
+    const options=marketRows.filter(m=>m.city!==state.city);
+    const full=state.selectedMarkets.length>=3;
+    return stepHead('Places to consider',`Choose up to three places to compare with your home, ${clean(state.city)}. Chosen places light up in the chart.`)+
+    `<div class="wizard-columns"><div><label class="field" for="market-search">Search places</label><input id="market-search" type="search" placeholder="Try Seattle" value="${clean(state.marketQuery)}" autocomplete="off"><fieldset class="market-options"><legend class="field">Places</legend>${options.map((m,i)=>{const on=state.selectedMarkets.includes(m.city);return `<label class="market-option ${on?'checked':''}" data-market="${clean(m.city)}"><input type="checkbox" id="market-opt-${i}" data-market-choice="${clean(m.city)}" ${on?'checked':''} ${full&&!on?'disabled':''}><span><strong>${clean(m.city)}</strong><span class="small">${clean(m.pay)} · ${relocationLabel(m.city)}</span></span></label>`;}).join('')}</fieldset><p id="market-count" class="wizard-count" aria-live="polite">${state.selectedMarkets.length} of 3 chosen${full?' · remove one to choose another':''}</p></div><div>${intervalPlot(marketRows,false,true)}</div></div>`+
+    `<div class="button-row wizard-nav">${action('market-back','Back')}<button type="button" class="button primary" data-action="market-next" ${state.selectedMarkets.length?'':'disabled'}>Next: compare side by side</button></div>`;
+  }
+  if(step===3){
+    const rows=[state.city,...state.selectedMarkets].map(findMarket);
+    return stepHead('Side by side',`Your home and the ${state.selectedMarkets.length===1?'place':'places'} you chose. Differences use fictional example midpoints, not a pay prediction.`)+
+    `<div class="market-cards">${rows.map(m=>`<article class="market-card ${m.city===state.city?'home':''}"><span class="label">${m.city===state.city?'Home':'Option'}</span><h3>${clean(m.city)}</h3><p class="market-range">${clean(m.pay)}</p><p class="market-diff">${differenceFromHome(m)}</p><span class="status ${m.city===state.city?'':'muted'}">${relocationLabel(m.city)}</span></article>`).join('')}</div>${intervalPlot(rows,false,true)}`+
+    `<div class="button-row wizard-nav">${action('market-back','Back')}${action('market-next','Next: pick a target','primary')}</div>`;
+  }
+  if(!state.marketSaved){
+    const pick=state.selectedMarkets.includes(state.marketToSave)?state.marketToSave:state.selectedMarkets[0];
+    return stepHead('Pick your target','Your target is a place to work toward. Your home stays the same.')+
+    `<fieldset class="market-options"><legend class="field">Target market</legend>${state.selectedMarkets.map((c,i)=>`<label class="market-option ${c===pick?'checked':''}"><input type="radio" name="target-choice" id="target-opt-${i}" value="${clean(c)}" ${c===pick?'checked':''}><span><strong>${clean(c)}</strong><span class="small">${clean(findMarket(c).pay)} · ${differenceFromHome(findMarket(c))}</span></span></label>`).join('')}</fieldset>`+
+    `<div class="button-row wizard-nav">${action('market-back','Back')}${action('save-market','Save as my target','primary')}</div>`;
+  }
+  return stepHead('Target saved','Here is exactly what changed.')+
+  `<div class="wizard-confirm" id="market-confirmation"><dl class="change-list"><div><dt>Target market</dt><dd><span class="was">${clean(state.previousTarget||'Not selected')}</span> → <strong>${clean(state.targetMarket)}</strong></dd></div><div><dt>Home market</dt><dd><strong>${clean(state.city)}</strong> (unchanged)</dd></div></dl><h3>Where you will see it</h3><ul class="change-effects"><li>Your goal on Career agent and Career profile now shows Target: ${clean(state.targetMarket)}.</li><li>Your career brief is marked out of date. No new analysis ran.</li><li>Saved in this browser session only.</li></ul></div>`+
+  `<div class="button-row wizard-nav">${link('roadmaps',`Plan toward ${clean(state.targetMarket)}`,'primary')}${link('agent','Back to Career agent')}${action('market-restart','Compare again')}</div>`;
+}
 function renderHeatmap(){
- const options=marketRows.map(m=>{
-  const constraint=m.city===state.city?'Home market':state.canRelocate?'Relocation possible for on-site work':'Relocation required for on-site work';
-  const selected=state.selectedMarkets.includes(m.city);
-  return `<tr><td data-label="Market"><strong>${clean(m.city)}</strong></td><td data-label="Example annual range">${clean(m.pay)}</td><td data-label="Constraint">${constraint}</td><td data-label="Action"><button class="button ${selected?'selected':''}" type="button" data-action="compare-market" data-market="${clean(m.city)}" aria-pressed="${selected}">${selected?'Selected':'Compare'}</button></td></tr>`;
- }).join('');
- const selected=state.selectedMarkets.length?state.selectedMarkets.join(' · '):'None yet';
- const choices=state.selectedMarkets.map(m=>`<option ${m===state.marketToSave?'selected':''}>${clean(m)}</option>`).join('');
- return head('Find a market that fits your life','Compare fictional annual wage examples; remote-job eligibility cannot be checked here.')+
- section('Explore locations',`<div class="note warn">These are fictional annual wage examples, not job offers or live market data. Search filters the table and chart below. Remote eligibility cannot be filtered without actual listings.</div><label class="field" for="market-search">Search location</label><input id="market-search" type="search" placeholder="Try Seattle" value="${clean(state.marketQuery)}" autocomplete="off">`)+
- section('Compare locations',`<div class="note" id="market-goal-summary"><strong>Home market: ${clean(state.city)} · Saved target market: ${clean(state.targetMarket||'Not selected')}</strong><p class="small">The target is a separate place to explore, not a change of where the fictional person lives. Saved in this browser session only. Changing it marks the earlier brief outdated; it does not run new analysis.</p></div><p class="small">Use Compare in the table to select up to three places. Selected: ${clean(selected)}. Values are fictional annual wage examples, not current job offers.</p><div class="table-wrap"><table><thead><tr><th scope="col">Market</th><th scope="col">Example annual range</th><th scope="col">Constraint</th><th scope="col">Action</th></tr></thead><tbody id="market-table">${options}</tbody></table></div><div class="section-actions"><p class="small">Choose one of your compared locations as a target; your home market will stay ${clean(state.city)}.</p><label class="field" for="target-market">Location to save as target</label><select id="target-market" ${state.selectedMarkets.length?'':'disabled'}>${choices}</select><div class="button-row" style="margin-top:10px"><button type="button" class="button primary" data-action="save-market" ${state.selectedMarkets.length?'':'disabled'}>Save target market</button></div></div>${intervalPlot(marketRows,false,true)}`)+
+ return head('Find a market that fits your life','Four short steps. All wage values are fictional examples; remote-job eligibility cannot be checked here.')+
+ `<section class="section market-wizard"><div class="note" id="market-goal-summary"><strong>Home market: ${clean(state.city)} · Saved target market: ${clean(state.targetMarket||'Not selected')}</strong></div>${marketStepper()}<div class="wizard-body">${marketStepBody()}</div></section>`+
  section('Remote eligibility',`<div class="note">“Remote” on a listing does not mean eligible from every U.S. location. This prototype has no live listings or state restrictions, so remote eligibility remains unknown. A relocation label refers only to on-site work relative to the home market.</div>`);
 }
 function applyMarketSearch(){
   const query=state.marketQuery.trim().toLowerCase();
-  document.querySelectorAll('#market-table tr').forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(query));
+  if(state.marketStep!==2)return;
+  document.querySelectorAll('#view .market-option[data-market]').forEach(row=>row.hidden=!row.dataset.market.toLowerCase().includes(query));
   document.querySelectorAll('#view .interval-chart .interval-row').forEach(row=>row.hidden=!row.dataset.market.toLowerCase().includes(query));
+}
+/** Home is one value shared with the profile goal. A target equal to home is cleared. */
+function setHome(city){
+  if(!city||city===state.city)return false;
+  state.city=city;
+  state.selectedMarkets=state.selectedMarkets.filter(m=>m!==city);
+  if(state.targetMarket===city)state.targetMarket='';
+  state.marketSaved=false;state.runState='stale';
+  return true;
+}
+function goToMarketStep(step){
+  state.marketStep=Math.min(4,Math.max(1,step));
+  render();
+  const heading=$('#market-step-heading');
+  heading?.focus({preventScroll:true});
+  heading?.closest('.market-wizard')?.scrollIntoView({block:'start',behavior:'instant'});
 }
 function renderRoadmaps(){
  const routes=[['closest','Closest fit','Build on existing operations leadership.','Clarify scope and prepare targeted examples.'],['stretch','Higher ambition','Explore program leadership after documenting cross-team ownership.','More evidence and interview preparation needed.'],['steady','Steadier transition','Keep the current role while testing adjacent opportunities.','Lower weekly effort; a longer timeline.']];
@@ -176,18 +240,16 @@ document.addEventListener('click',event=>{
   if(a==='answer-no'||a==='answer-yes'){state.canRelocate=a==='answer-yes';state.runState='complete';render();notify('Relocation preference recorded. No listing eligibility was checked.');}
   if(a==='choose-role'){state.role='Program Manager';state.runState='stale';render();notify('Target changed; earlier analysis needs a refresh.');}
   if(a==='explain-range'){openAssistant();sendPrompt('Explain this pay range');}
-  if(a==='compare-market'){
-    const m=trigger.dataset.market;const ix=state.selectedMarkets.indexOf(m);
-    if(ix>=0){state.selectedMarkets.splice(ix,1);if(state.marketToSave===m)state.marketToSave=state.selectedMarkets.at(-1)||'';}
-    else if(state.selectedMarkets.length<3){state.selectedMarkets.push(m);state.marketToSave=m;}
-    else return notify('You can compare up to three places. Remove one first.');
-    render();notify('Comparison updated.');
-  }
+  if(a==='market-next'){if(state.marketStep===2&&!state.selectedMarkets.length)return notify('Choose at least one place first.');goToMarketStep(state.marketStep+1);}
+  if(a==='market-back'){state.marketSaved=false;goToMarketStep(state.marketStep-1);}
+  if(a==='market-step'){state.marketSaved=false;goToMarketStep(Number(trigger.dataset.step));}
+  if(a==='market-restart'){state.marketSaved=false;state.selectedMarkets=[];state.marketQuery='';goToMarketStep(1);}
   if(a==='save-market'){
-    const target=$('#target-market')?.value;
-    if(!target||!state.selectedMarkets.includes(target))return notify('Choose a location to compare before saving a target.');
-    if(target===state.targetMarket)return notify(`Target market already saved: ${target}. Home market remains ${state.city}.`);
-    state.targetMarket=target;state.marketToSave=target;state.runState='stale';render();
+    const target=document.querySelector('input[name="target-choice"]:checked')?.value;
+    if(!target||!state.selectedMarkets.includes(target))return notify('Choose one of your places first.');
+    state.previousTarget=state.targetMarket;state.targetMarket=target;state.marketToSave=target;state.marketSaved=true;
+    if(state.previousTarget!==target)state.runState='stale';
+    goToMarketStep(4);
     notify(`Saved target: ${target}. Home remains ${state.city}. Earlier brief needs refresh; no new analysis ran.`);
   }
   if(a==='select-route'){state.selectedRoute=trigger.dataset.route;render();notify('Roadmap route selected.');}
@@ -202,12 +264,19 @@ document.addEventListener('click',event=>{
 });
 document.addEventListener('change',event=>{
  if(event.target.id==='demo-state'){state.runState=event.target.value;render();}
- if(event.target.id==='target-market'){state.marketToSave=event.target.value;save();}
+ if(event.target.id==='home-market'){const city=event.target.value;if(setHome(city)){render();$('#home-market')?.focus();notify(`Home market is now ${city}. Your profile goal shows the same value.`);}}
+ if(event.target.name==='target-choice'){state.marketToSave=event.target.value;document.querySelectorAll('input[name="target-choice"]').forEach(r=>r.closest('.market-option').classList.toggle('checked',r.checked));save();}
+ if(event.target.dataset.marketChoice){
+   const m=event.target.dataset.marketChoice,id=event.target.id;
+   if(event.target.checked&&!state.selectedMarkets.includes(m)&&state.selectedMarkets.length<3)state.selectedMarkets.push(m);
+   if(!event.target.checked)state.selectedMarkets=state.selectedMarkets.filter(x=>x!==m);
+   render();document.getElementById(id)?.focus();
+ }
  if(event.target.matches('[data-task]')){const id=event.target.dataset.task;if(event.target.checked&&!state.completedTasks.includes(id))state.completedTasks.push(id);if(!event.target.checked)state.completedTasks=state.completedTasks.filter(x=>x!==id);event.target.closest('.task-row')?.classList.toggle('complete',event.target.checked);const progress=$('.plan-progress');if(progress)progress.textContent=`${state.completedTasks.length} of 4 steps completed in this example`;save();notify('Roadmap progress updated.');}
 });
 document.addEventListener('submit',event=>{
  if(event.target.id!=='goal-form')return;event.preventDefault();
- state.role=$('#goal-role').value.trim()||state.role;state.city=$('#goal-city').value.trim()||state.city;state.arrangement=$('#goal-arrangement').value;state.weeklyHours=$('#goal-hours').value;state.runState='stale';render();notify('Goal saved; existing report needs a refresh.');
+ state.role=$('#goal-role').value.trim()||state.role;if(setHome($('#goal-city').value.trim()))state.marketStep=1;state.arrangement=$('#goal-arrangement').value;state.weeklyHours=$('#goal-hours').value;state.runState='stale';render();notify('Goal saved; existing report needs a refresh.');
 });
 document.addEventListener('input',event=>{
  if(event.target.id==='market-search'){state.marketQuery=event.target.value;applyMarketSearch();save();}

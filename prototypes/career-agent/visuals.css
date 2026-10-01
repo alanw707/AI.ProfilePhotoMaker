@@ -246,3 +246,52 @@
   .interval-band,
   .mobile-nav:not([hidden]) { animation: none; }
 }
+
+/* Market comparison wizard (task-3 redesign after owner walkthrough) */
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.market-wizard #market-goal-summary { margin-bottom: 18px; }
+.wizard-steps { list-style: none; margin: 0 0 22px; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; counter-reset: none; }
+.wizard-steps li { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 10px; border-radius: 9px; border: 1px solid var(--line); background: #fffefa; color: var(--muted); font-size: 13px; font-weight: 700; }
+.wizard-steps li.current { border-color: #155e62; background: #e2efeb; color: #0d4549; }
+.wizard-steps li.done { padding: 0; }
+.wizard-jump { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 6px 10px; border: 0; background: none; color: #155e62; font-weight: 700; text-align: left; border-radius: 9px; }
+.wizard-jump:hover span:last-of-type { text-decoration: underline; }
+.wizard-num { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 1px solid currentColor; font-size: 12px; }
+.wizard-steps li.current .wizard-num { background: #155e62; border-color: #155e62; color: #fff; }
+#market-step-heading { margin-bottom: 6px; }
+#market-step-heading:focus { outline: none; }
+#market-step-heading:focus-visible { outline: 3px solid #d18a3a; outline-offset: 4px; }
+.wizard-panel { max-width: 420px; }
+.wizard-nav { margin-top: 20px; }
+.wizard-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 22px; align-items: start; }
+.market-options { border: 0; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; min-width: 0; }
+.market-option { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; min-height: 44px; border: 1px solid #c9d6ce; border-radius: 10px; background: #fff; cursor: pointer; }
+.market-option.checked { border-color: #347e76; background: #eaf3ed; }
+.market-option[hidden] { display: none; }
+.market-option input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: #1b6a64; flex: none; }
+.market-option > span { display: grid; gap: 2px; min-width: 0; }
+.market-option strong { color: var(--ink); }
+.market-option:has(input:disabled) { opacity: .6; cursor: not-allowed; }
+.wizard-count { margin: 10px 0 0; font-size: 13px; font-weight: 700; color: #275b4b; }
+.market-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.market-card { background: #fffefa; border: 1px solid #d6ddd6; border-radius: 12px; padding: 16px; display: grid; gap: 6px; align-content: start; }
+.market-card.home { border-color: #8fb3a8; background: #f2f7f3; }
+.market-card h3 { margin: 0; font-size: 17px; }
+.market-range { margin: 0; font-size: 22px; font-weight: 800; color: #0d4549; }
+.market-diff { margin: 0; font-size: 13px; color: var(--muted); }
+.market-card .status { justify-self: start; }
+.interval-row.home .interval-place { font-weight: 800; }
+.interval-tag { display: inline-block; margin-left: 4px; padding: 1px 6px; border-radius: 4px; background: #155e62; color: #fff; font-size: 10px; font-weight: 700; vertical-align: 1px; }
+.wizard-confirm { background: #eaf3ed; border: 1px solid #8fb3a8; border-radius: 12px; padding: 18px 20px; }
+.change-list { margin: 0 0 14px; display: grid; gap: 8px; }
+.change-list div { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 10px; }
+.change-list dt { font-weight: 700; color: #3a5851; }
+.change-list dd { margin: 0; }
+.change-list .was { color: #56645c; }
+.wizard-confirm h3 { margin: 0 0 6px; font-size: 15px; }
+.change-effects { margin: 0; padding-left: 20px; color: #365350; font-size: 14px; line-height: 1.6; }
+@media (max-width: 760px) {
+  .wizard-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wizard-columns { grid-template-columns: minmax(0, 1fr); }
+  .change-list div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}
