@@ -24,6 +24,21 @@ if('scrollRestoration' in history)history.scrollRestoration='manual';
 let state;
 try { state = {...seeded,...JSON.parse(sessionStorage.getItem(storeKey)||'{}')}; } catch { state={...seeded}; }
 const $=(sel)=>document.querySelector(sel);
+function currentTheme(){return document.documentElement.dataset.theme==='dark'?'dark':'light';}
+function syncThemeControls(){
+  const dark=currentTheme()==='dark';
+  document.querySelectorAll('.theme-toggle').forEach(b=>{
+    b.setAttribute('aria-label',dark?'Switch to light theme':'Switch to dark theme');
+    b.removeAttribute('aria-pressed');
+    const word=b.querySelector('.theme-word');if(word)word.textContent=dark?'Light':'Dark';
+  });
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',dark?'#0d1011':'#eef1ef');
+}
+function setTheme(theme){
+  document.documentElement.dataset.theme=theme;
+  try{localStorage.setItem('career-theme',theme);}catch{}
+  syncThemeControls();
+}
 const save=()=>{try{sessionStorage.setItem(storeKey,JSON.stringify(state));}catch{}};
 const clean=(s)=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const notify=(msg)=>{ const toast=$('#toast');toast.textContent=msg;toast.hidden=false;clearTimeout(notify.timer);notify.timer=setTimeout(()=>toast.hidden=true,3500);$('#save-status').textContent=msg; };
@@ -60,7 +75,7 @@ function renderAssistant(){
   const prompts={
     agent:['What should I do next?','What is still uncertain?'],
     profile:['Which facts need confirmation?','Help me improve my summary'],
-    analytics:['Explain this pay range','What would strengthen my case?'],
+    analytics:['Explain this pay range','What does evidence strength mean?','What would strengthen my case?'],
     heatmap:['Compare these locations','Am I eligible for remote jobs?'],
     roadmaps:['Why this route?','Adjust to my available time'],
     materials:['Check my resume claims','Do I need a profile photo?']
@@ -69,7 +84,7 @@ function renderAssistant(){
   const intro={
     agent:'Your fictional brief is ready. Compare markets or choose a next action.',
     profile:'Your confirmed experience anchors the analysis. A proposed change needs your review.',
-    analytics:'The occupational wage benchmark and comparable pay answer different questions. Check the definitions before comparing.',
+    analytics:'Every chart here uses fictional example data. The wage tiles describe a whole occupation in one area, not your pay. Ask me what any chart means.',
     heatmap:'Four steps: confirm where you live, choose up to three places, compare them side by side, then save one as your target. The wage chart is fictional and remote eligibility is unknown.',
     roadmaps:'You can choose a path and change the weekly effort. Timelines are planning scenarios.',
     materials:'This resume draft uses confirmed example facts. Review every sentence before export.'
@@ -97,14 +112,77 @@ function renderProfile(){
   section('Your goal',`<form id="goal-form"><div class="form-grid"><div><label class="field" for="goal-role">Target role</label><input id="goal-role" type="text" value="${clean(state.role)}" required maxlength="80"></div><div><label class="field" for="goal-city">Home market</label><input id="goal-city" type="text" value="${clean(state.city)}" required maxlength="80"></div><div><label class="field" for="goal-arrangement">Work arrangement</label><select id="goal-arrangement"><option ${state.arrangement==='Hybrid or remote'?'selected':''}>Hybrid or remote</option><option ${state.arrangement==='On-site'?'selected':''}>On-site</option><option ${state.arrangement==='Remote only'?'selected':''}>Remote only</option></select></div><div><label class="field" for="goal-hours">Time available each week</label><select id="goal-hours"><option ${state.weeklyHours==='4 hours'?'selected':''}>4 hours</option><option ${state.weeklyHours==='2 hours'?'selected':''}>2 hours</option><option ${state.weeklyHours==='8 hours'?'selected':''}>8 hours</option></select></div></div><div class="section-actions"><button class="button primary" type="submit">Save goal</button></div></form>`)+
   section('Resume intake',`<div class="paper"><h3>Bring your own experience</h3><p>The first product release will offer private document upload and a line-by-line confirmation step. This prototype demonstrates the review pattern using fictional facts. No file is sent or stored by this page.</p><span class="status muted">Prototype · upload inactive</span></div>`);
 }
+/* ---------- Career analytics dashboard (all values fictional) ---------- */
+const ICON={
+  cert:'<path d="M12 3l2.4 1.8 3-.2.9 2.8 2.4 1.8-1 2.8 1 2.8-2.4 1.8-.9 2.8-3-.2L12 21l-2.4-1.8-3 .2-.9-2.8L3.3 14.8l1-2.8-1-2.8 2.4-1.8.9-2.8 3 .2Z"/><path d="M9 12l2 2 4-4"/>',
+  edu:'<path d="M3 9l9-5 9 5-9 5Z"/><path d="M7 11.5V16c3 2 7 2 10 0v-4.5"/>',
+  work:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5h6v2M3 13h18"/>',
+  doc:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>',
+  people:'<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5a3 3 0 0 1 0 6M18 20a5 5 0 0 0-2-4"/>',
+  strength:'<path d="M4 15c2-1 3-4 3-7l3-4 2 2-1 4h6a2 2 0 0 1 2 2l-1 6a2 2 0 0 1-2 2H9l-5-2Z"/>',
+  path:'<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+  hurdle:'<path d="M4 20V6M20 20V6M4 9h16M4 15h16"/><path d="M8 9l4 6M12 9l4 6"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'
+};
+const svgIcon=(name)=>`<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[name]}</svg>`;
+const more=(text,lines=3)=>`<div class="more" style="--lines:${lines}"><p class="more-text">${text}</p><button type="button" class="more-toggle" data-action="toggle-more" aria-expanded="false">Show more</button></div>`;
+const panel=(title,sub,body,extra='')=>`<section class="dash-panel" aria-labelledby="${title.toLowerCase().replace(/[^a-z]+/g,'-')}"><header><div><h2 id="${title.toLowerCase().replace(/[^a-z]+/g,'-')}">${title}</h2>${sub?`<p class="panel-sub">${sub}</p>`:''}</div>${extra||'<span class="source-tag">Fictional example</span>'}</header>${body}</section>`;
+
+function evidenceGauge(){
+  const levels=['Strong','Supported','Building','Early'];
+  const current='Supported';
+  return `<div class="gauge"><div class="gauge-levels" aria-hidden="true">${levels.map(l=>`<span class="${l===current?'on':''}">${l}</span>`).join('')}</div><div class="gauge-track" aria-hidden="true"><span class="gauge-fill" style="--fill:62%"></span></div><div class="gauge-card"><div class="gauge-badge"><small>Evidence for ${clean(state.role)}</small><strong>${current}</strong></div>${more(`6 of 9 common requirements for this role have confirmed evidence in the fictional profile: process redesign, cross-team coordination and reporting are strong. Budget ownership and people management have no confirmed examples yet, so the evidence level stays at Supported rather than Strong. This is not a score of the person.`,4)}</div></div>`;
+}
+function completenessRing(){
+  const parts=[['Experience',90,'--c-you'],['Skills',75,'--c5'],['Projects',40,'--c6'],['Education',60,'--c3']];
+  const avg=Math.round(parts.reduce((a,p)=>a+p[1],0)/parts.length);
+  const arcs=parts.map(([,v,c],i)=>{const r=84-i*14,len=+(2*Math.PI*r).toFixed(1);return `<circle class="ring-bg" cx="100" cy="100" r="${r}" stroke-width="9"/><circle class="ring-arc" cx="100" cy="100" r="${r}" stroke-width="9" stroke="var(${c})" stroke-dasharray="${len}" stroke-dashoffset="${(len*(1-v/100)).toFixed(1)}" style="--len:${len}"/>`;}).join('');
+  return `<div class="ring-wrap"><svg viewBox="0 0 200 200" role="img" aria-label="Profile ${avg}% complete. ${parts.map(p=>`${p[0]} ${p[1]}%`).join(', ')}.">${arcs}<text class="ring-center" x="100" y="104" text-anchor="middle">${avg}%</text><text class="ring-caption" x="100" y="121" text-anchor="middle">COMPLETE</text></svg><ul class="chart-legend">${parts.map(([n,v,c])=>`<li><span class="dot" style="--dot:var(${c})"></span>${n} <b>${v}%</b></li>`).join('')}</ul></div>`;
+}
+function skillsRadar(){
+  const axes=['Process improvement','Coordination','Reporting','Budget ownership','People leadership','Vendor management'];
+  const asks=[4,4,3,4,4,3], you=[5,4,4,2,2,3];
+  const pt=(i,v,r=70)=>{const a=-Math.PI/2+i*2*Math.PI/axes.length;return [100+Math.cos(a)*r*v/5,100+Math.sin(a)*r*v/5];};
+  const poly=vals=>vals.map((v,i)=>pt(i,v).map(n=>n.toFixed(1)).join(',')).join(' ');
+  const rings=[1,2,3,4,5].map(l=>`<polygon class="radar-grid" points="${poly(axes.map(()=>l))}"/>`).join('');
+  const spokes=axes.map((_,i)=>{const [x,y]=pt(i,5);return `<line class="radar-axis" x1="100" y1="100" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`;}).join('');
+  const labels=axes.map((n,i)=>{const [x,y]=pt(i,5,88);const anchor=Math.abs(x-100)<6?'middle':x>100?'start':'end';return `<text class="radar-label" x="${x.toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="${anchor}">${n}</text>`;}).join('');
+  return `<div class="radar-wrap"><svg viewBox="-58 -10 316 220" aria-hidden="true">${rings}${spokes}<polygon class="radar-asks" points="${poly(asks)}"/><polygon class="radar-you" points="${poly(you)}"/>${labels}</svg><ul class="chart-legend"><li><span class="dot" style="--dot:var(--c2)"></span>What the role usually asks</li><li><span class="dot" style="--dot:var(--c-you)"></span>Your confirmed evidence</li></ul><div class="visually-hidden"><table><caption>Skills compared with the target role, 0 to 5</caption><thead><tr><th scope="col">Skill</th><th scope="col">Role asks</th><th scope="col">You, confirmed</th></tr></thead><tbody>${axes.map((n,i)=>`<tr><th scope="row">${n}</th><td>${asks[i]}</td><td>${you[i]}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function actionMatrix(){
+  const items=[
+    ['doc','Portfolio','--c1','Write up the three-department process redesign',2,'~2 weeks','A short case study with the before and after turns your strongest confirmed work into evidence an employer can read. Use only outcomes you can verify.'],
+    ['work','Work experience','--c-you','Take ownership of a budget line in your current role',4,'1–2 quarters','Budget ownership is the largest gap between this profile and typical Operations Manager postings. Even a small, clearly owned budget changes the evidence level.'],
+    ['people','People leadership','--c4','Lead a cross-team project with named owners',4,'~3 months','Leading people you do not manage directly is a credible first step toward the people-management requirement. Record scope, team size and result.'],
+    ['cert','Certification','--c2','Lean Six Sigma Green Belt',3,'~8 weeks','Gives a recognized name to process-improvement work you already do. Check whether postings in your target market actually mention it before paying for a course.'],
+    ['edu','Education','--c3','Short course in operations finance',3,'~6 weeks','Helps you speak to cost and budget questions in interviews while you build real budget experience.']
+  ];
+  return `<div class="matrix" role="region" aria-label="Actions you could take, scroll sideways for more" tabindex="0">${items.map(([ic,cat,c,title,effort,time,why])=>`<article class="matrix-card"><span class="chip" style="--chip:var(${c})">${svgIcon(ic)}${cat}</span><h3>${title}</h3><dl class="matrix-facts"><div><dt>Time to show evidence</dt><dd><span class="time-pill">${time}</span></dd></div><div><dt>Effort</dt><dd><span class="effort" role="img" aria-label="Effort ${effort} of 5">${[1,2,3,4,5].map(n=>`<i class="${n<=effort?'on':''}"></i>`).join('')}</span></dd></div></dl>${more(why,2)}</article>`).join('')}</div>`;
+}
+function industryBars(){
+  const rows=[['Logistics',78,'--c1'],['Healthcare',64,'--c-you'],['Manufacturing',55,'--c2'],['Government',41,'--c4'],['Retail',33,'--c5'],['Education',18,'--c3']];
+  return `<div class="bars-wrap"><dl class="bars">${rows.map(([n,v,c])=>`<dt>${n}</dt><dd><span class="bar" style="--w:${v}%;--bar:var(${c})"></span></dd><dd class="bar-value">${v}</dd>`).join('')}</dl><div class="bars" aria-hidden="true"><span></span><div class="bars-grid"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div><span></span></div></div>`;
+}
+function insights(){
+  const cols=[
+    ['Strengths','strength','--c5',[['Confirmed strength','Cross-team process redesign','Led a redesign across three departments and documented who owns each handoff. This is the clearest match to Operations Manager duties in the fictional profile.'],['Confirmed strength','Reporting others rely on','Introduced shared reporting used across teams. Reporting is a common requirement and is already backed by a confirmed example.']]],
+    ['Path to success','path','--c2',[['Next move','Turn the redesign into a measured outcome','Add one number you can verify, such as time saved per handoff. A measured outcome strengthens both the resume and interview answers.'],['Next move','Show budget responsibility','Ask to own a small budget line. It closes the largest evidence gap without changing jobs.']]],
+    ['Hurdles','hurdle','--c6',[['Evidence gap','People management is unconfirmed','The profile shows coordination but no direct reports. Some postings require formal people management; others accept leading cross-team work. Check each posting.'],['Evidence gap','Title reads as a lead, not a manager','“Operations lead” can be read as an individual contributor title. Describe scope and decisions owned so the level is clear.']]]
+  ];
+  return `<div class="insight-columns">${cols.map(([h,ic,tone,items])=>`<div class="insight-col" style="--tone:var(${tone})"><h3>${svgIcon(ic)}${h}</h3>${items.map(([chip,t,txt])=>`<article class="insight"><span class="chip">${chip}</span><h4>${t}</h4>${more(txt,3)}</article>`).join('')}</div>`).join('')}</div>`;
+}
 function renderAnalytics(){
- const old=state.runState==='stale'?'<span class="status warn">Based on an earlier profile version</span>':'';
- return head('Understand the market, and your fit','Illustrative role analysis. Every number below is fictional and demonstrates how evidence will be labeled.',action('explain-range','Explain this range'))+
- section('Compensation, with definitions',`${intervalPlot([marketRows[0]])}<div class="comparison"><div><h3>Occupational wage benchmark</h3><div class="metric">$94k–$141k <small>annual wages</small></div><p>Example 25th–75th percentile for Operations Managers in the Denver metro. Illustrative BLS-style measure, not live BLS data.</p></div><div><h3>Personalized comparable pay</h3><div class="metric" style="font-size:21px;color:#60716d">Not available yet</div><p>A real range needs a qualified cohort of current employer-disclosed pay for comparable duties, level, location and work arrangement. We will not rename the benchmark as personal pay.</p>${action('explain-range','Why unavailable?','subtle')}</div></div><p class="small">Illustrative sample · no source data connected · annual wage and advertised pay are separate measures. Desired pay is a preference, not evidence. ${old}</p>`)+
- section('What supports this direction',`<div class="paper plain"><ul class="evidence-list"><li><strong>Confirmed</strong><span>Cross-team operations work · fictional profile</span></li><li><strong>Confirmed</strong><span>Workflow redesign and reporting · fictional profile</span></li><li><strong>Needs evidence</strong><span>Budget ownership and scope of people management</span></li><li><strong>Unknown</strong><span>Employer-disclosed comparable pay in the chosen market</span></li></ul></div>`)+
- section('Role directions to compare',`<div class="role-list"><div class="artifact-row"><div><h3>Operations Manager</h3><p>Closest match to the confirmed responsibilities.</p></div><span class="status">Current target</span></div><div class="artifact-row"><div><h3>Program Manager</h3><p>Potential stretch; clarify program ownership first.</p></div>${action('choose-role','Explore role')}</div></div>`)+
- section('Evidence notes',`<div class="note"><strong>What a real report must disclose</strong><p>Dataset and release date, wage definition, occupation code, geography, suppressed cells, comparable cohort, exclusions, and limits. The example figure above is deliberately synthetic.</p></div>`)+
- section('Next decision',`<div class="button-row">${link('heatmap','Compare markets','primary')}${link('roadmaps','Plan toward this role')}</div>`);
+ const old=state.runState==='stale'?' <span class="status warn">Based on an earlier profile version</span>':'';
+ const tiles=`<div class="stat-tiles" role="list" aria-label="Occupation wage benchmark, fictional"><div class="stat-tile" role="listitem"><span class="stat-value">$94k</span><span class="stat-label">25th percentile · Operations managers, Denver</span></div><div class="stat-tile mid" role="listitem"><span class="stat-value">$116k</span><span class="stat-label">Median · same occupation and area</span></div><div class="stat-tile" role="listitem"><span class="stat-value">$141k</span><span class="stat-label">75th percentile · annual wages</span></div><div class="stat-tile unavailable" role="listitem"><span class="stat-value">Not available yet</span><span class="stat-label">Personalized comparable pay</span>${action('explain-range','Why unavailable?')}</div></div>`;
+ return head('Career analytics','Your profile, the occupation benchmark and what to work on next. Every number on this page is a fictional example, not a prediction of your pay.',action('explain-range','Explain this range'))+
+ `<div class="dash">${tiles}<p class="small">Occupation-wide benchmark for the whole occupation in one area, not a personal salary or offer. Illustrative BLS-style figures, not live data.${old}</p>`+
+ `<div class="dash-row-3">${panel('Evidence strength','How well confirmed facts cover this role',evidenceGauge())}${panel('Profile completeness','What the agent can already use',completenessRing())}${panel('Skills diagram','Confirmed evidence against typical role requirements',skillsRadar())}</div>`+
+ `<div class="dash-row-2">${panel('Compensation, with definitions','Annual wage interval for the occupation',intervalPlot([marketRows[0]])+`<p class="panel-foot">Advertised pay and annual wages are different measures. Desired pay is your preference, not evidence. A personalized range needs a qualified cohort of current employer-disclosed pay for comparable duties, level, location and work arrangement.</p>`)}${panel('What supports this direction','',`<ul class="evidence-list"><li><strong>Confirmed</strong><span>Cross-team operations work</span></li><li><strong>Confirmed</strong><span>Workflow redesign and reporting</span></li><li><strong>Needs evidence</strong><span>Budget ownership and people management</span></li><li><strong>Unknown</strong><span>Employer-disclosed comparable pay in the chosen market</span></li></ul>`)}</div>`+
+ panel('Action priority matrix','Ordered by how much each action strengthens your evidence. Time and effort are planning estimates.',actionMatrix())+
+ panel('Industries related to your experience','How closely operations roles in each industry match your confirmed duties, 0–100',industryBars())+
+ insights()+
+ panel('Role directions to compare','',`<div class="role-list"><div class="artifact-row"><div><h3>Operations Manager</h3><p>Closest match to the confirmed responsibilities.</p></div><span class="status">Current target</span></div><div class="artifact-row"><div><h3>Program Manager</h3><p>Potential stretch; clarify program ownership first.</p></div>${action('choose-role','Explore role')}</div></div><div class="note"><strong>What a real report must disclose</strong><p>Dataset and release date, wage definition, occupation code, geography, suppressed cells, comparable cohort, exclusions and limits.</p></div><div class="button-row section-actions">${link('heatmap','Compare markets','primary')}${link('roadmaps','Plan toward this role')}</div>`,' ')+
+ `</div>`;
 }
 const MARKET_STEPS=['Where you live','Places to consider','Side by side','Pick your target'];
 const findMarket=city=>marketRows.find(m=>m.city===city)||{city,pay:'Unavailable'};
@@ -182,7 +260,8 @@ function setHome(city){
 }
 function goToMarketStep(step){
   state.marketStep=Math.min(4,Math.max(1,step));
-  render();
+  syncThemeControls();
+render();
   const heading=$('#market-step-heading');
   heading?.focus({preventScroll:true});
   heading?.closest('.market-wizard')?.scrollIntoView({block:'start',behavior:'instant'});
@@ -259,6 +338,8 @@ document.addEventListener('click',event=>{
   if(a==='download-material'){const content=$('#material-editor').value;const blob=new Blob([content],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const download=document.createElement('a');download.href=url;download.download=state.materialTab==='resume'?'sample-resume.txt':'sample-summary.txt';download.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notify('Plain-text sample downloaded.');}
   if(a==='photo-demo'){notify('Photo handoff previewed. The real workflow will show your authenticated allowance before generation.');}
   if(a==='photo-jump'){state.materialTab='photos';save();}
+  if(a==='toggle-theme'){setTheme(currentTheme()==='dark'?'light':'dark');notify(`${currentTheme()==='dark'?'Dark':'Light'} theme on. Saved for this browser.`);}
+  if(a==='toggle-more'){const box=trigger.closest('.more');const open=box.classList.toggle('expanded');trigger.setAttribute('aria-expanded',String(open));trigger.textContent=open?'Show less':'Show more';}
   if(a==='show-help'){notify('Choose any page. Use the state selector on Career agent to preview incomplete and error states. All data is fictional.');}
   if(a==='prompt'){openAssistant();sendPrompt(trigger.dataset.prompt);}
 });
@@ -285,7 +366,7 @@ function openAssistant(){state.assistantOpen=true;$('#assistant').classList.add(
 function closeAssistant(){state.assistantOpen=false;$('#assistant').classList.remove('open');$('#mobile-agent').setAttribute('aria-expanded','false');$('#mobile-agent').focus();save();}
 function sendPrompt(prompt){
  const q=(prompt||$('#assistant-input').value).trim();if(!q)return;
- const answer=q.toLowerCase().includes('range')||q.toLowerCase().includes('pay')?'The benchmark is a fictional occupation-wide wage example. A personalized range is unavailable until current, licensed and comparable employer pay observations are qualified. It is not a prediction of your offer.':q.toLowerCase().includes('remote')?'Remote eligibility depends on each posting’s actual state or country restrictions. No live listings are connected to this prototype.':q.toLowerCase().includes('photo')?'Photos are optional. The career resume omits a headshot by default, and any paid photo action stays under your control.':'For this example, review the source facts on this page and choose the next action in the workspace. This is a scripted prototype response, not AI research.';
+ const answer=q.toLowerCase().includes('evidence')?'Evidence strength shows how many common requirements for the target role are backed by facts you confirmed. It is not a grade of you or your worth. Here, budget ownership and people management have no confirmed examples, so it reads Supported rather than Strong.':q.toLowerCase().includes('range')||q.toLowerCase().includes('pay')?'The benchmark is a fictional occupation-wide wage example. A personalized range is unavailable until current, licensed and comparable employer pay observations are qualified. It is not a prediction of your offer.':q.toLowerCase().includes('remote')?'Remote eligibility depends on each posting’s actual state or country restrictions. No live listings are connected to this prototype.':q.toLowerCase().includes('photo')?'Photos are optional. The career resume omits a headshot by default, and any paid photo action stays under your control.':'For this example, review the source facts on this page and choose the next action in the workspace. This is a scripted prototype response, not AI research.';
  state.messageHistory.push({page:state.page,mine:true,text:q},{page:state.page,mine:false,text:answer});$('#assistant-input').value='';renderAssistant();$('#assistant-messages').scrollTop=$('#assistant-messages').scrollHeight;save();
 }
 $('#assistant-send').addEventListener('click',()=>sendPrompt());
@@ -294,4 +375,5 @@ $('#mobile-agent').addEventListener('click',openAssistant);
 $('#assistant-close').addEventListener('click',closeAssistant);
 $('#mobile-menu').addEventListener('click',()=>{const nav=$('#mobile-nav');nav.hidden=!nav.hidden;$('#mobile-menu').setAttribute('aria-expanded',String(!nav.hidden));});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){if(state.assistantOpen)closeAssistant();else if(!$('#mobile-nav').hidden){$('#mobile-nav').hidden=true;$('#mobile-menu').setAttribute('aria-expanded','false');$('#mobile-menu').focus();}}});
+syncThemeControls();
 render();

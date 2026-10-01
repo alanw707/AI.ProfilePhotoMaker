@@ -115,3 +115,13 @@ The active rail marker travels to the destination as navigation continuity, whil
 - **Don't** show an overall career grade or precise personal dollar value without a defensible source.
 - **Don't** hide actions inside a map polygon or make photos a prerequisite for career work.
 - **Don't** treat the photo editor's portrait-first composition as the career layout.
+
+## Night and day editions (2026-10-01)
+
+Owner direction after reviewing a dark analytics dashboard reference: adopt a dashboard layout with light **and** dark themes, keep our own name, logo and accent (no copied brand colour or mascot), and keep the honesty rules of spec #376.
+
+- **Tokens.** All colour lives in `styles.css` under `:root[data-theme="light"|"dark"]`: `--bg`, `--rail`, `--surface`, `--surface-2`, `--ink`, `--muted`, `--line`, `--accent`, `--highlight`, state pairs (`--warn-*`, `--error-*`), and a six-hue chart set `--c1…--c6` plus `--c-you` (the person's own evidence). Components never hard-code a hue.
+- **Theme choice.** System preference on first visit; the rail/topbar toggle saves the choice in `localStorage` (`career-theme`). An inline script applies it before first paint.
+- **Shell.** Icon rail with labels, artifact column, assistant panel with greeting and pill prompts.
+- **Analytics dashboard, honest by construction.** Stat tiles show the *occupation* benchmark (25th / median / 75th, fictional) and a highlighted "Personalized comparable pay: Not available yet" tile. The gauge measures *evidence strength for the target role*, never a grade of the person. The ring is profile completeness; the radar compares confirmed evidence with typical role requirements (with a screen-reader table). The action matrix ranks by effort and time, not dollar value. Every panel carries a source tag. No "your number", grade, or opportunity-cost figure.
+- **Checks.** Smoke samples text contrast in both themes (≥ 4.5:1), plus 320px/2× reflow, focus and reduced motion.

@@ -18,8 +18,22 @@ const fs = require('node:fs');
   await page.locator('#primary-nav a[href="#analytics"]').click();
   await page.waitForTimeout(400);
   assert.equal(await page.locator('#primary-nav').evaluate(el=>el.style.getPropertyValue('--active-index')),'2');
-  assert.equal(await page.locator('#primary-nav .nav-active-indicator').evaluate(el=>Math.round(new DOMMatrix(getComputedStyle(el).transform).m42)),100);
+  assert.equal(await page.locator('#primary-nav .nav-active-indicator').evaluate(el=>Math.round(new DOMMatrix(getComputedStyle(el).transform).m42)),128);
   assert.equal(await page.locator('#view .interval-band').count(),1);
+  // Analytics dashboard: tiles, gauge, ring, radar, matrix, bars, insights — no grade or personal dollar figure.
+  assert.equal(await page.locator('.stat-tile').count(),4);
+  assert.match(await page.locator('.stat-tile.unavailable').textContent(),/Not available yet/);
+  assert.equal(await page.locator('.gauge-badge strong').textContent(),'Supported');
+  assert.match(await page.locator('.ring-wrap svg').getAttribute('aria-label'),/Profile 66% complete/);
+  assert.equal(await page.locator('.radar-wrap table tbody tr').count(),6);
+  assert.equal(await page.locator('.matrix-card').count(),5);
+  assert.equal(await page.locator('.bars .bar').count(),6);
+  assert.equal(await page.locator('.insight-col').count(),3);
+  assert.doesNotMatch(await page.locator('#view').textContent(),/Your Number|grade|Opportunity cost/i);
+  const firstMore=page.locator('.more-toggle').first();
+  await firstMore.click();
+  assert.equal(await firstMore.getAttribute('aria-expanded'),'true');
+  assert.equal(await firstMore.textContent(),'Show less');
   assert.match(await page.locator('#view').textContent(),/\$94k–\$141k/);
   await page.screenshot({path:path.join(review,'desktop-analytics.png'),fullPage:true});
   // Task 3: step-by-step market comparison wizard.
@@ -108,7 +122,7 @@ const fs = require('node:fs');
   await page.goto(base+'#roadmaps');
   assert.equal(await page.locator('.milestone-rail .task-row').count(),4);
   await page.screenshot({path:path.join(review,'desktop-roadmaps.png'),fullPage:true});
-  for(const [hash,title] of [['profile','A profile you can trust'],['analytics','Understand the market'],['heatmap','Find a market'],['roadmaps','Turn a direction'],['materials','Materials for your next move']]){
+  for(const [hash,title] of [['profile','A profile you can trust'],['analytics','Career analytics'],['heatmap','Find a market'],['roadmaps','Turn a direction'],['materials','Materials for your next move']]){
     await page.goto(base+'#'+hash);
     assert.match(await page.locator('h1').textContent(),new RegExp(title));
   }
@@ -188,9 +202,12 @@ const fs = require('node:fs');
   assert.equal(await reducedPage.locator('.interval-band').first().evaluate(el=>getComputedStyle(el).animationName),'none');
   assert.ok(await reducedPage.locator('.nav-active-indicator').evaluate(el=>parseFloat(getComputedStyle(el).transitionDuration)<0.001));
   const contrast=[];
+  for(const theme of ['light','dark']){
   for(const route of ['agent','profile','analytics','heatmap','roadmaps','materials']){
     await page.goto(base+'#'+route);
-    contrast.push(...await page.evaluate(()=>{
+    await page.evaluate(t=>{document.documentElement.dataset.theme=t;},theme);
+    await page.waitForTimeout(260);
+    contrast.push(...(await page.evaluate(()=>{
       const luminance=css=>{
         const channels=css.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>v/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4);
         return channels[0]*0.2126+channels[1]*0.7152+channels[2]*0.0722;
@@ -202,13 +219,14 @@ const fs = require('node:fs');
         }
         return 'rgb(255,255,255)';
       };
-      return ['.nav-label','.sidebar-help','.sidebar-help-link','.page-head p','.section-lead','.label','.artifact-row p','.paper p','.note','.status','.assistant-compose small','.interval-chart figcaption span','.interval-footnote','.interval-axis','.interval-place','.interval-value','.interval-unavailable'].flatMap(selector=>{
+      return ['.stat-label','.panel-sub','.source-tag','.chart-legend','.matrix-facts dt','.bars dt','.bar-value','.insight .more-text','.more-toggle','.time-pill','.chip','.gauge-levels .on','.gauge-badge small','.assistant-head h2','.assist-prompt','.nav-link','.rail-button','.nav-label','.sidebar-help','.sidebar-help-link','.page-head p','.section-lead','.label','.artifact-row p','.paper p','.note','.status','.assistant-compose small','.interval-chart figcaption span','.interval-footnote','.interval-axis','.interval-place','.interval-value','.interval-unavailable'].flatMap(selector=>{
         const element=[...document.querySelectorAll(selector)].find(e=>e.getClientRects().length&&e.textContent.trim());
         if(!element)return [];
         const fg=luminance(getComputedStyle(element).color),bg=luminance(background(element));
-        return [{route:location.hash.slice(1),selector,ratio:Math.round((Math.max(fg,bg)+0.05)/(Math.min(fg,bg)+0.05)*100)/100}];
+        return [{theme:document.documentElement.dataset.theme,route:location.hash.slice(1),selector,ratio:Math.round((Math.max(fg,bg)+0.05)/(Math.min(fg,bg)+0.05)*100)/100}];
       });
-    }));
+    })));
+  }
   }
   assert.ok(contrast.every(({ratio})=>ratio>=4.5),'sampled text contrast below 4.5: '+JSON.stringify(contrast.filter(({ratio})=>ratio<4.5)));
   assert.deepEqual(errors,[]);
