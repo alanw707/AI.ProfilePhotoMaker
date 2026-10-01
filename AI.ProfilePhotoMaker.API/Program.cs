@@ -182,9 +182,12 @@ builder.Services.AddPaymentServices(builder.Configuration);
 // Database services
 if (builder.Environment.IsEnvironment("Testing") || builder.Environment.IsEnvironment("LocalDev"))
 {
+    // One name per process: the options callback runs for every DbContext, so a
+    // name generated inside it gave each request its own empty database.
+    var inMemoryDatabaseName = $"LocalDb_{Guid.NewGuid()}";
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
     {
-        options.UseInMemoryDatabase($"LocalDb_{Guid.NewGuid()}");
+        options.UseInMemoryDatabase(inMemoryDatabaseName);
     });
     builder.Services.AddHealthChecks();
 }
