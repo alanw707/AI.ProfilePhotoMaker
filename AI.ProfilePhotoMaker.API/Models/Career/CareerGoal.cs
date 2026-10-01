@@ -42,6 +42,10 @@ public class CareerGoalVersion
 
     public string Source { get; set; } = CareerFactSource.Manual;
     public DateTime ConfirmedAt { get; set; }
+
+    /// <summary>Set when this version was created by restoring an older one.</summary>
+    public int? RestoredFromVersion { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public CareerGoal? CareerGoal { get; set; }

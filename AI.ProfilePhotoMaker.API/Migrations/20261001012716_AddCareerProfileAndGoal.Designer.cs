@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AI.ProfilePhotoMaker.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261001010651_AddCareerProfileAndGoal")]
+    [Migration("20261001012716_AddCareerProfileAndGoal")]
     partial class AddCareerProfileAndGoal
     {
         /// <inheritdoc />
@@ -232,6 +232,9 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("RestoredFromVersion")
+                        .HasColumnType("int");
 
                     b.Property<string>("Source")
                         .IsRequired()

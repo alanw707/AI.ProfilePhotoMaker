@@ -70,6 +70,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     BasedOnProfileVersion = table.Column<int>(type: "int", nullable: true),
                     Source = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
                     ConfirmedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    RestoredFromVersion = table.Column<int>(type: "int", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>

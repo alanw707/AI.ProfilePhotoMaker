@@ -230,6 +230,9 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int?>("RestoredFromVersion")
+                        .HasColumnType("int");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(32)

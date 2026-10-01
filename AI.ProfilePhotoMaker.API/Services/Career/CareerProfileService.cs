@@ -1,5 +1,6 @@
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models.Career;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Services.Career;
@@ -27,6 +28,8 @@ public interface ICareerProfileService
     Task<CareerOutcome<CareerGoalDto>> CreateGoalAsync(string ownerId, CareerGoalRequest request, CancellationToken ct = default);
     Task<CareerOutcome<CareerGoalDto>> UpdateGoalAsync(string ownerId, Guid goalId, CareerGoalRequest request, VersionPrecondition precondition, CancellationToken ct = default);
     Task<CareerOutcome<IReadOnlyList<CareerGoalVersionSummaryDto>>> ListGoalVersionsAsync(string ownerId, Guid goalId, CancellationToken ct = default);
+    Task<CareerOutcome<CareerGoalVersionDto>> GetGoalVersionAsync(string ownerId, Guid goalId, int version, CancellationToken ct = default);
+    Task<CareerOutcome<CareerGoalDto>> RestoreGoalVersionAsync(string ownerId, Guid goalId, int version, VersionPrecondition precondition, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -137,7 +140,7 @@ public sealed class CareerProfileService : ICareerProfileService
         }
 
         return CareerOutcome<CareerProfileVersionDto>.Ok(new CareerProfileVersionDto(
-            row.VersionNumber, ToFacts(row), ToProvenance(row.Source, row.ConfirmedAt), row.CreatedAt,
+            row.VersionNumber, ToFacts(row), ToProvenance(row.Source, row.ConfirmedAt, row.RestoredFromVersion), row.CreatedAt,
             row.VersionNumber == profile.ActiveVersionNumber));
     }
 
@@ -166,8 +169,8 @@ public sealed class CareerProfileService : ICareerProfileService
         var facts = new ValidProfileFacts(
             source.CurrentTitle, source.Industry, source.YearsExperience, source.Location, source.Summary,
             source.Skills.ToList(), source.Highlights.ToList(), source.WorkArrangement);
+        // Restoring is an explicit acceptance, so the new version is confirmed now.
         var next = NewProfileVersion(profile, profile.ActiveVersionNumber + 1, facts, Now(), restoredFrom: source.VersionNumber);
-        next.ConfirmedAt = source.ConfirmedAt;
         return await AppendProfileVersionAsync(ownerId, profile, next, ct);
     }
 
@@ -188,7 +191,7 @@ public sealed class CareerProfileService : ICareerProfileService
             await _db.SaveChangesAsync(ct);
             return CareerOutcome<CareerProfileDto>.Ok(ToDto(profile, active));
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (IsLostRace(ex))
         {
             // Lost a race: another write moved the active version (concurrency
             // token) or created the profile first (unique owner index).
@@ -243,7 +246,7 @@ public sealed class CareerProfileService : ICareerProfileService
         {
             await _db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (IsLostRace(ex))
         {
             // Another request created this owner's goal first (unique owner index).
             _db.ChangeTracker.Clear();
@@ -276,21 +279,73 @@ public sealed class CareerProfileService : ICareerProfileService
             return blocked;
         }
 
-        var now = Now();
         var profileVersion = await ProfileVersionNumberAsync(ownerId, ct);
-        var next = NewGoalVersion(goal, goal.ActiveVersionNumber + 1, facts, profileVersion, now);
+        var next = NewGoalVersion(goal, goal.ActiveVersionNumber + 1, facts, profileVersion, Now());
+        return await AppendGoalVersionAsync(goal, next, profileVersion, ct);
+    }
+
+    public async Task<CareerOutcome<CareerGoalVersionDto>> GetGoalVersionAsync(
+        string ownerId, Guid goalId, int version, CancellationToken ct = default)
+    {
+        var goal = await _db.CareerGoals.AsNoTracking().FirstOrDefaultAsync(g => g.Id == goalId && g.OwnerId == ownerId, ct);
+        var row = goal == null ? null : await FindGoalVersionAsync(ownerId, goal.Id, version, ct);
+        if (goal == null || row == null)
+        {
+            return CareerOutcome<CareerGoalVersionDto>.NotFound(CareerErrorCodes.VersionNotFound, "That goal version was not found.");
+        }
+
+        return CareerOutcome<CareerGoalVersionDto>.Ok(new CareerGoalVersionDto(
+            row.VersionNumber, ToGoalFacts(row), row.BasedOnProfileVersion,
+            ToProvenance(row.Source, row.ConfirmedAt, row.RestoredFromVersion), row.CreatedAt,
+            row.VersionNumber == goal.ActiveVersionNumber));
+    }
+
+    public async Task<CareerOutcome<CareerGoalDto>> RestoreGoalVersionAsync(
+        string ownerId, Guid goalId, int version, VersionPrecondition precondition, CancellationToken ct = default)
+    {
+        var goal = await _db.CareerGoals.FirstOrDefaultAsync(g => g.Id == goalId && g.OwnerId == ownerId, ct);
+        if (goal == null)
+        {
+            return GoalNotFound();
+        }
+
+        var source = await FindGoalVersionAsync(ownerId, goal.Id, version, ct);
+        if (source == null)
+        {
+            return CareerOutcome<CareerGoalDto>.NotFound(CareerErrorCodes.VersionNotFound, "That goal version was not found.");
+        }
+
+        var blocked = CheckPrecondition<CareerGoalDto>(precondition, goal.ActiveVersionNumber);
+        if (blocked != null)
+        {
+            return blocked;
+        }
+
+        // Restoring re-confirms the old goal against today's profile, so it is not stale.
+        var facts = new ValidGoalFacts(source.TargetRole, source.TargetLocation, source.WorkArrangement,
+            source.DesiredPayMin, source.DesiredPayMax, source.WeeklyEffortHours);
+        var profileVersion = await ProfileVersionNumberAsync(ownerId, ct);
+        var next = NewGoalVersion(goal, goal.ActiveVersionNumber + 1, facts, profileVersion, Now());
+        next.RestoredFromVersion = source.VersionNumber;
+        return await AppendGoalVersionAsync(goal, next, profileVersion, ct);
+    }
+
+    private async Task<CareerOutcome<CareerGoalDto>> AppendGoalVersionAsync(
+        CareerGoal goal, CareerGoalVersion next, int? profileVersion, CancellationToken ct)
+    {
         goal.ActiveVersionNumber = next.VersionNumber;
-        goal.UpdatedAt = now;
+        goal.UpdatedAt = next.CreatedAt;
         _db.CareerGoalVersions.Add(next);
 
         try
         {
             await _db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (IsLostRace(ex))
         {
             _db.ChangeTracker.Clear();
-            var current = await _db.CareerGoals.AsNoTracking().FirstOrDefaultAsync(g => g.Id == goalId && g.OwnerId == ownerId, ct);
+            var current = await _db.CareerGoals.AsNoTracking()
+                .FirstOrDefaultAsync(g => g.Id == goal.Id && g.OwnerId == goal.OwnerId, ct);
             return CareerOutcome<CareerGoalDto>.Conflict(current?.ActiveVersionNumber ?? 0);
         }
 
@@ -321,6 +376,14 @@ public sealed class CareerProfileService : ICareerProfileService
 
     private DateTime Now() => _clock.GetUtcNow().UtcDateTime;
 
+    /// <summary>
+    /// Only a concurrency-token mismatch or a unique-index violation means another
+    /// write won; any other database failure propagates as a real error.
+    /// </summary>
+    internal static bool IsLostRace(DbUpdateException exception) =>
+        exception is DbUpdateConcurrencyException
+        || exception.InnerException is SqlException { Number: 2601 or 2627 };
+
     private static CareerOutcome<T>? CheckPrecondition<T>(VersionPrecondition precondition, int activeVersion)
     {
         if (!precondition.IsPresent)
@@ -336,6 +399,10 @@ public sealed class CareerProfileService : ICareerProfileService
     private Task<CareerProfileVersion?> FindProfileVersionAsync(string ownerId, Guid profileId, int version, CancellationToken ct) =>
         _db.CareerProfileVersions.AsNoTracking()
             .FirstOrDefaultAsync(v => v.OwnerId == ownerId && v.CareerProfileId == profileId && v.VersionNumber == version, ct);
+
+    private Task<CareerGoalVersion?> FindGoalVersionAsync(string ownerId, Guid goalId, int version, CancellationToken ct) =>
+        _db.CareerGoalVersions.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.OwnerId == ownerId && v.CareerGoalId == goalId && v.VersionNumber == version, ct);
 
     private async Task<CareerProfileVersion> ActiveProfileVersionAsync(CareerProfile profile, CancellationToken ct) =>
         await FindProfileVersionAsync(profile.OwnerId, profile.Id, profile.ActiveVersionNumber, ct)
@@ -401,20 +468,22 @@ public sealed class CareerProfileService : ICareerProfileService
     private static CareerProfileFactsDto ToFacts(CareerProfileVersion v) => new(
         v.CurrentTitle, v.Industry, v.YearsExperience, v.Location, v.Summary, v.Skills, v.Highlights, v.WorkArrangement);
 
-    private static CareerProvenanceDto ToProvenance(string source, DateTime confirmedAt) =>
-        new(source, DateTime.SpecifyKind(confirmedAt, DateTimeKind.Utc));
+    private static CareerProvenanceDto ToProvenance(string source, DateTime confirmedAt, int? restoredFrom) =>
+        new(source, DateTime.SpecifyKind(confirmedAt, DateTimeKind.Utc), restoredFrom);
+
+    private static CareerGoalFactsDto ToGoalFacts(CareerGoalVersion v) => new(
+        v.TargetRole, v.TargetLocation, v.WorkArrangement, v.DesiredPayMin, v.DesiredPayMax, v.WeeklyEffortHours);
 
     private static CareerProfileDto ToDto(CareerProfile profile, CareerProfileVersion active) => new(
         profile.Id, active.VersionNumber, ProfileEtag(active.VersionNumber), ToFacts(active),
-        ToProvenance(active.Source, active.ConfirmedAt), profile.CreatedAt, profile.UpdatedAt);
+        ToProvenance(active.Source, active.ConfirmedAt, active.RestoredFromVersion), profile.CreatedAt, profile.UpdatedAt);
 
     private static CareerGoalDto ToDto(CareerGoal goal, CareerGoalVersion active, int? currentProfileVersion) => new(
         goal.Id, active.VersionNumber, GoalEtag(active.VersionNumber),
-        new CareerGoalFactsDto(active.TargetRole, active.TargetLocation, active.WorkArrangement,
-            active.DesiredPayMin, active.DesiredPayMax, active.WeeklyEffortHours),
+        ToGoalFacts(active),
         active.BasedOnProfileVersion,
         IsGoalStale(active.BasedOnProfileVersion, currentProfileVersion),
-        ToProvenance(active.Source, active.ConfirmedAt), goal.CreatedAt, goal.UpdatedAt);
+        ToProvenance(active.Source, active.ConfirmedAt, active.RestoredFromVersion), goal.CreatedAt, goal.UpdatedAt);
 
     private static CareerOutcome<T> ProfileNotFound<T>() =>
         CareerOutcome<T>.NotFound(CareerErrorCodes.ProfileNotFound, "No career profile has been saved yet.");

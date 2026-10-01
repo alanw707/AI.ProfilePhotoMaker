@@ -13,7 +13,7 @@ All endpoints require authentication and `Features:CareerWorkspace=true`. Respon
 | 403 | `CareerWorkspaceDisabled` | flag off |
 | 404 | `CareerProfileNotFound` / `CareerGoalNotFound` / `CareerVersionNotFound` | none yet, or not yours |
 
-`GET /api/career/profile/versions` returns an empty list (200) when no profile exists. An `If-Match` that is not exactly the current `"profile-vN"` / `"goal-vN"` tag (including `*`) is treated as stale (412).
+`GET /api/career/profile/versions` returns an empty list (200) when no profile exists. An `If-Match` that is not exactly the current `"profile-vN"` / `"goal-vN"` tag (including `*` and weak `W/` tags) is treated as stale (412).
 | 400 | `ValidationError` (+ `fieldErrors`) | invalid input or `confirmed` not true |
 | 409 | `CareerGoalAlreadyExists` | POST goal when one exists |
 | 412 | `CareerVersionConflict` | `If-Match` is stale (body includes `currentVersion`) |
@@ -47,7 +47,7 @@ Writes return the new `ETag` header (`"profile-v3"`, `"goal-v2"`) and the same v
 {
   "id": "guid", "version": 3, "etag": "\"profile-v3\"",
   "facts": { ...same fields as the body except confirmed... },
-  "provenance": { "source": "manual", "confirmedAt": "2026-09-30T12:00:00Z" },
+  "provenance": { "source": "manual", "confirmedAt": "2026-09-30T12:00:00Z", "restoredFromVersion": null },
   "createdAt": "...", "updatedAt": "..."
 }
 ```
@@ -56,7 +56,7 @@ Writes return the new `ETag` header (`"profile-v3"`, `"goal-v2"`) and the same v
 
 `GET /api/career/profile/versions/{version}` → `{ "version": 2, "facts": {...}, "provenance": {...}, "createdAt": "...", "isActive": false }`.
 
-`POST /api/career/profile/versions/{version}/restore` (`If-Match` required) → new active `CareerProfileDto` copying that version.
+`POST /api/career/profile/versions/{version}/restore` (`If-Match` required) → new active `CareerProfileDto` copying that version. Restoring is an explicit acceptance: `confirmedAt` is the restore time and `provenance.restoredFromVersion` names the source.
 
 ## Goal
 
@@ -91,6 +91,10 @@ Writes return the new `ETag` header (`"profile-v3"`, `"goal-v2"`) and the same v
 `isStale` is true when a profile exists that the goal was not confirmed against: its active version is newer than `basedOnProfileVersion`, or a profile was saved after a goal created without one (`basedOnProfileVersion: null`). Re-saving the goal clears it. A goal created with no profile is not stale until a profile is saved.
 
 `GET /api/career/goals/{id}/versions` → `[{ "version": 2, "createdAt": "...", "targetRole": "...", "isActive": true }]`.
+
+`GET /api/career/goals/{id}/versions/{version}` → `{ "version": 1, "goal": {...}, "basedOnProfileVersion": 1, "provenance": {...}, "createdAt": "...", "isActive": false }`.
+
+`POST /api/career/goals/{id}/versions/{version}/restore` (`If-Match` required) → new active `CareerGoalDto` copying that version, re-based on the current profile version (so not stale).
 
 Another owner's goal ID always returns 404.
 

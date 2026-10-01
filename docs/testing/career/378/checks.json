@@ -231,7 +231,8 @@
       "H1:Your professional profile",
       "H2:Professional facts",
       "H2:Your goal",
-      "H2:Profile history"
+      "H2:Profile history",
+      "H2:Goal history"
     ],
     "h1Count": 1,
     "title": "Career Profile - AI Profile Photo Maker",
@@ -246,7 +247,8 @@
       "H1:Your professional profile",
       "H2:Professional facts",
       "H2:Your goal",
-      "H2:Profile history"
+      "H2:Profile history",
+      "H2:Goal history"
     ],
     "h1Count": 1,
     "title": "Career Profile - AI Profile Photo Maker",
@@ -261,7 +263,8 @@
       "H1:Your professional profile",
       "H2:Professional facts",
       "H2:Your goal",
-      "H2:Profile history"
+      "H2:Profile history",
+      "H2:Goal history"
     ],
     "h1Count": 1,
     "title": "Career Profile - AI Profile Photo Maker",
@@ -294,7 +297,8 @@
       "H2:Professional facts",
       "H2:Your goal",
       "H2:Profile history",
-      "H3:Version 1"
+      "H3:Version 1",
+      "H2:Goal history"
     ],
     "h1Count": 1,
     "title": "Career Profile - AI Profile Photo Maker",
@@ -310,7 +314,8 @@
       "H2:Professional facts",
       "H2:Your goal",
       "H2:Profile history",
-      "H3:Version 1"
+      "H3:Version 1",
+      "H2:Goal history"
     ],
     "h1Count": 1,
     "title": "Career Profile - AI Profile Photo Maker",
@@ -326,10 +331,69 @@
       "H2:Professional facts",
       "H2:Your goal",
       "H2:Profile history",
-      "H3:Version 1"
+      "H3:Version 1",
+      "H2:Goal history"
     ],
     "h1Count": 1,
     "title": "Career Profile - AI Profile Photo Maker",
     "axe": []
+  },
+  {
+    "label": "08-goal-history @desktop",
+    "url": "http://localhost:4200/app/career/profile",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Your professional profile",
+      "H2:Professional facts",
+      "H2:Your goal",
+      "H2:Profile history",
+      "H3:Version 1",
+      "H2:Goal history",
+      "H3:Goal version 1"
+    ],
+    "h1Count": 1,
+    "title": "Career Profile - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "08-goal-history @mobile-390",
+    "url": "http://localhost:4200/app/career/profile",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Your professional profile",
+      "H2:Professional facts",
+      "H2:Your goal",
+      "H2:Profile history",
+      "H3:Version 1",
+      "H2:Goal history",
+      "H3:Goal version 1"
+    ],
+    "h1Count": 1,
+    "title": "Career Profile - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "08-goal-history @mobile-320",
+    "url": "http://localhost:4200/app/career/profile",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Your professional profile",
+      "H2:Professional facts",
+      "H2:Your goal",
+      "H2:Profile history",
+      "H3:Version 1",
+      "H2:Goal history",
+      "H3:Goal version 1"
+    ],
+    "h1Count": 1,
+    "title": "Career Profile - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "goal restore status",
+    "text": "Goal version restored."
   }
 ]

@@ -78,7 +78,8 @@ public sealed class CareerClient
         }
         if (ifMatch != null)
         {
-            request.Headers.IfMatch.Add(EntityTagHeaderValue.Parse(ifMatch));
+            // Raw, so tests can send values such as * or weak tags as clients would.
+            request.Headers.TryAddWithoutValidation("If-Match", ifMatch);
         }
         return _http.SendAsync(request);
     }

@@ -26,7 +26,7 @@ public sealed class CareerGoalRequest
     public bool Confirmed { get; set; }
 }
 
-public sealed record CareerProvenanceDto(string Source, DateTime ConfirmedAt);
+public sealed record CareerProvenanceDto(string Source, DateTime ConfirmedAt, int? RestoredFromVersion = null);
 
 public sealed record CareerProfileFactsDto(
     string CurrentTitle,
@@ -71,6 +71,8 @@ public sealed record CareerGoalDto(
     DateTime UpdatedAt);
 
 public sealed record CareerGoalVersionSummaryDto(int Version, DateTime CreatedAt, string TargetRole, bool IsActive);
+
+public sealed record CareerGoalVersionDto(int Version, CareerGoalFactsDto Goal, int? BasedOnProfileVersion, CareerProvenanceDto Provenance, DateTime CreatedAt, bool IsActive);
 
 /// <summary>Outcome kinds the controller translates to the spec #376 status codes.</summary>
 public enum CareerOutcomeKind

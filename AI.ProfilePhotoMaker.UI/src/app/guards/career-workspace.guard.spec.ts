@@ -8,8 +8,12 @@ describe('careerWorkspaceGuard', () => {
     const config = { isCareerWorkspaceEnabled: false };
     TestBed.configureTestingModule({ providers: [{ provide: ConfigService, useValue: config }] });
     const router = TestBed.inject(Router);
-    expect(TestBed.runInInjectionContext(() => careerWorkspaceGuard({} as never, {} as never))).toEqual(router.createUrlTree(['/app']));
+    expect(
+      TestBed.runInInjectionContext(() => careerWorkspaceGuard({} as never, {} as never))
+    ).toEqual(router.createUrlTree(['/app']));
     config.isCareerWorkspaceEnabled = true;
-    expect(TestBed.runInInjectionContext(() => careerWorkspaceGuard({} as never, {} as never))).toBeTrue();
+    expect(
+      TestBed.runInInjectionContext(() => careerWorkspaceGuard({} as never, {} as never))
+    ).toBeTrue();
   });
 });

@@ -13,7 +13,7 @@
 
 | # | Dimension | Score | Key finding |
 |---|---|---|---|
-| 1 | Accessibility | 3 | Final run: 0 axe violations on 21 page/viewport captures; labels, `aria-invalid`, `aria-describedby`, focused `role=alert` summary, `aria-live` status |
+| 1 | Accessibility | 3 | Final run: 0 axe violations on 24 page/viewport captures; labels, `aria-invalid`, `aria-describedby`, focused `role=alert` summary, `aria-live` status |
 | 2 | Performance | 4 | Lazy-loaded standalone routes; no animation; no images |
 | 3 | Responsive | 4 | 0 px horizontal overflow at 320 px; all targets ≥ 44 px in the final run |
 | 4 | Theming | 2 | Hard-coded hex values in `career.scss` instead of DESIGN.md tokens (P2) |
@@ -32,7 +32,9 @@
 | P2 | Error-summary links 32 px tall | touch-target check | **Fixed**: 44 px |
 | P2 | Version detail `h3` larger than section `h2` | screenshot `07-…-desktop` | **Fixed**: h3 19 px |
 | P2 | Colours hard-coded rather than DESIGN.md tokens | `career.scss` | Logged: move to tokens when the career shell is styled (#393) |
-| P2 | "Needs review" stale notice doesn't say how to clear it (re-confirm and save the goal) | screenshot `06` | Logged for #387/#393 copy pass |
+| P2 | "Needs review" stale notice didn't say how to clear it | screenshot `06` | **Fixed**: "Check it, confirm, and save to clear this." |
+| P2 | Goal history was not viewable/restorable (code review) | — | **Fixed**: goal history section with view/restore; screenshot `08-goal-history` |
+| P3 | Goal confirmation checkbox stays checked after a successful save | screenshot `08` | Logged |
 | P3 | Setup has no visible step progress beyond the heading ("Step 1 · …") | screenshots `02`, `04` | Logged |
 
 No open P0/P1 findings.
@@ -42,4 +44,5 @@ No open P0/P1 findings.
 - Empty submit focuses the alert summary (`validation focus: alert`) and marks the title `aria-invalid`.
 - Reload after setup restores the saved title, industry, goal and provenance line from the API.
 - Editing the profile marks the goal "Needs review".
+- Restoring goal version 1 announces "Goal version restored." in the status region.
 - Tab order follows visual order and every focused control shows a visible ring.

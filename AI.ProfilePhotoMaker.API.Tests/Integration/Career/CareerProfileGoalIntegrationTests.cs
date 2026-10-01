@@ -271,6 +271,58 @@ public class CareerProfileGoalIntegrationTests : IClassFixture<CareerWorkspaceEn
         goal.GetProperty("isStale").GetBoolean().Should().BeTrue();
     }
 
+    [Fact]
+    public async Task WeakOrWildcardIfMatchNeverMatches()
+    {
+        var user = NewUser();
+        await user.CreateProfileAsync();
+
+        await CareerClient.ReadErrorAsync(await user.PutProfileAsync(CareerClient.ValidProfile("Weak"), "W/\"profile-v1\""), 412);
+        await CareerClient.ReadErrorAsync(await user.PutProfileAsync(CareerClient.ValidProfile("Star"), "*"), 412);
+        await CareerClient.ReadErrorAsync(await user.PutProfileAsync(CareerClient.ValidProfile("Goal tag"), "\"goal-v1\""), 412);
+    }
+
+    [Fact]
+    public async Task Profile_RestoredVersionIsConfirmedNowAndRecordsItsSource()
+    {
+        var user = NewUser();
+        await user.CreateProfileAsync("Analyst I");
+        await CareerClient.ReadDataAsync(await user.PutProfileAsync(CareerClient.ValidProfile("Analyst II"), "\"profile-v1\""), 200);
+        var before = DateTime.UtcNow.AddSeconds(-1);
+
+        var restored = await CareerClient.ReadDataAsync(
+            await user.SendAsync(HttpMethod.Post, "/api/career/profile/versions/1/restore", ifMatch: "\"profile-v2\""), 200);
+
+        var provenance = restored.GetProperty("provenance");
+        provenance.GetProperty("confirmedAt").GetDateTime().Should().BeOnOrAfter(before);
+        provenance.GetProperty("restoredFromVersion").GetInt32().Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Goal_OldVersionsAreReadableAndRestorable()
+    {
+        var user = NewUser();
+        var goal = await user.CreateGoalAsync("Analyst goal");
+        var id = goal.GetProperty("id").GetString()!;
+        await CareerClient.ReadDataAsync(await user.PatchGoalAsync(id, CareerClient.ValidGoal("Manager goal"), "\"goal-v1\""), 200);
+
+        var v1 = await CareerClient.ReadDataAsync(await user.GetAsync($"/api/career/goals/{id}/versions/1"), 200);
+        v1.GetProperty("goal").GetProperty("targetRole").GetString().Should().Be("Analyst goal");
+        v1.GetProperty("goal").GetProperty("desiredPayMin").GetInt32().Should().Be(95000);
+        v1.GetProperty("isActive").GetBoolean().Should().BeFalse();
+        await CareerClient.ReadErrorAsync(await user.GetAsync($"/api/career/goals/{id}/versions/9"), 404);
+
+        await CareerClient.ReadErrorAsync(await user.SendAsync(HttpMethod.Post, $"/api/career/goals/{id}/versions/1/restore"), 428);
+        await CareerClient.ReadErrorAsync(await user.SendAsync(HttpMethod.Post, $"/api/career/goals/{id}/versions/1/restore", ifMatch: "\"goal-v1\""), 412);
+
+        var response = await user.SendAsync(HttpMethod.Post, $"/api/career/goals/{id}/versions/1/restore", ifMatch: "\"goal-v2\"");
+        var restored = await CareerClient.ReadDataAsync(response, 200);
+        restored.GetProperty("version").GetInt32().Should().Be(3);
+        restored.GetProperty("goal").GetProperty("targetRole").GetString().Should().Be("Analyst goal");
+        restored.GetProperty("provenance").GetProperty("restoredFromVersion").GetInt32().Should().Be(1);
+        response.Headers.ETag!.ToString().Should().Be("\"goal-v3\"");
+    }
+
     // ---- Ownership -------------------------------------------------------
 
     [Fact]
@@ -286,6 +338,8 @@ public class CareerProfileGoalIntegrationTests : IClassFixture<CareerWorkspaceEn
         await CareerClient.ReadErrorAsync(await bob.GetAsync("/api/career/profile/versions/1"), 404);
         await CareerClient.ReadErrorAsync(await bob.GetAsync("/api/career/goals"), 404);
         await CareerClient.ReadErrorAsync(await bob.GetAsync($"/api/career/goals/{aliceGoalId}/versions"), 404);
+        await CareerClient.ReadErrorAsync(await bob.GetAsync($"/api/career/goals/{aliceGoalId}/versions/1"), 404);
+        await CareerClient.ReadErrorAsync(await bob.SendAsync(HttpMethod.Post, $"/api/career/goals/{aliceGoalId}/versions/1/restore", ifMatch: "\"goal-v1\""), 404);
         var patch = await CareerClient.ReadErrorAsync(await bob.PatchGoalAsync(aliceGoalId, CareerClient.ValidGoal("Hijack"), "\"goal-v1\""), 404);
         patch.GetProperty("code").GetString().Should().Be("CareerGoalNotFound");
 

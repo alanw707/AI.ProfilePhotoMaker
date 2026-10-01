@@ -60,9 +60,18 @@ public sealed class CareerProfileController : BaseController
     public async Task<IActionResult> ListGoalVersions(Guid id, CancellationToken ct) =>
         await Respond(owner => _career.ListGoalVersionsAsync(owner, id, ct));
 
+    [HttpGet("goals/{id:guid}/versions/{version:int}")]
+    public async Task<IActionResult> GetGoalVersion(Guid id, int version, CancellationToken ct) =>
+        await Respond(owner => _career.GetGoalVersionAsync(owner, id, version, ct));
+
+    [HttpPost("goals/{id:guid}/versions/{version:int}/restore")]
+    public async Task<IActionResult> RestoreGoalVersion(Guid id, int version, CancellationToken ct) =>
+        await Respond(owner => _career.RestoreGoalVersionAsync(owner, id, version, ReadIfMatch("goal"), ct), g => g.Etag);
+
     /// <summary>
     /// Parses If-Match as <c>"{kind}-v{n}"</c>. Any other tag (including <c>*</c>)
-    /// can never match, so it produces a 412 rather than an unconditional write.
+    /// and weak tags (<c>W/"…"</c>) can never match, so they produce a 412 rather
+    /// than an unconditional write.
     /// </summary>
     private VersionPrecondition ReadIfMatch(string kind)
     {
@@ -74,7 +83,7 @@ public sealed class CareerProfileController : BaseController
 
         var prefix = $"{kind}-v";
         var tag = tags[0].Tag.ToString().Trim('"');
-        if (tags.Count == 1 && tag.StartsWith(prefix, StringComparison.Ordinal)
+        if (tags.Count == 1 && !tags[0].IsWeak && tag.StartsWith(prefix, StringComparison.Ordinal)
             && int.TryParse(tag.AsSpan(prefix.Length), out var version))
         {
             return VersionPrecondition.Expect(version);
