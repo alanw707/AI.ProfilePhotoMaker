@@ -32,4 +32,9 @@ Please report misunderstandings even if you eventually found the right control. 
 
 **Change:** market comparison rebuilt as a four-step wizard (where you live → places to consider → side by side → pick your target) with a before/after confirmation. Charts kept: step 2 highlights chosen places, step 3 charts only home and chosen places. Retest pending in a fresh browser window.
 
+### Task 3 retest (2026-10-01, after commit 819ba725, four-step wizard): completed
+
+- Owner: "much better". Home, chosen places, side-by-side comparison and saved target were understood without help.
+- Coached owner retest only; not independent target-user evidence.
+
 Tasks 1, 2, 4 and 5: not yet recorded.
