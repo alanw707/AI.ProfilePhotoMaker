@@ -8,6 +8,7 @@ export const environment = {
     ga4MeasurementId: 'G-FYQMYY2PJD',
   },
   features: {
+    careerWorkspace: false,
     debugMode: false,
     useProxy: false,
     cors: true, // Enable CORS for cross-origin requests to Azure API

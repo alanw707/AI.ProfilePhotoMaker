@@ -525,6 +525,10 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               value: 'true'
             }
             {
+              name: 'Features__CareerWorkspace'
+              value: 'false'
+            }
+            {
               name: 'CORS_ALLOWED_ORIGINS'
               value: 'https://aiprofilephotomaker.com,https://aiprofilephotomaker.com'
             }

@@ -102,7 +102,9 @@ public class ConfigController : ControllerBase
                     profilePhotoScoreVisible = _configuration.GetValue<bool?>("Features:ProfilePhotoScoreVisible") ?? (_configuration.GetValue<bool?>("Features:ProfilePhotoWorkflowOverhaul") ?? (_configuration.GetValue<bool?>("Features:OpenAIHeadshotMvp") ?? !_environment.IsProduction())),
                     creativeStylePackVisible = _configuration.GetValue<bool?>("Features:CreativeStylePackVisible") ?? true,
                     premiumAugmentationsVisible = _configuration.GetValue<bool?>("Features:PremiumAugmentationsVisible") ?? (_configuration.GetValue<bool?>("Features:ProfilePhotoWorkflowOverhaul") ?? (_configuration.GetValue<bool?>("Features:OpenAIHeadshotMvp") ?? !_environment.IsProduction())),
-                    replicateTrainingFlowVisible = _configuration.GetValue<bool?>("Features:ReplicateTrainingFlowVisible") ?? true
+                    replicateTrainingFlowVisible = _configuration.GetValue<bool?>("Features:ReplicateTrainingFlowVisible") ?? true,
+                    // Server-enforced; off unless explicitly enabled (spec #376).
+                    careerWorkspace = _configuration.GetValue<bool?>("Features:CareerWorkspace") ?? false
                 },
                 oauth = new
                 {

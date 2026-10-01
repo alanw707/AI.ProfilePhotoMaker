@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
 
 interface RuntimeClientFeatures {
+  careerWorkspace?: boolean;
   openAIHeadshotMvp?: boolean;
   profilePhotoWorkflowOverhaul?: boolean;
   outcomePackagesVisible?: boolean;
@@ -315,6 +316,10 @@ export class ConfigService {
    */
   get isImageValidationEnabled(): boolean {
     return environment.features?.enableImageValidation ?? true;
+  }
+
+  get isCareerWorkspaceEnabled(): boolean {
+    return this.getFeatureFlag('careerWorkspace', false);
   }
 
   get isOpenAIHeadshotMvpEnabled(): boolean {

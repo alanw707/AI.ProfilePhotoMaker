@@ -172,6 +172,203 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Career.CareerGoal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ActiveVersionNumber")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId")
+                        .IsUnique();
+
+                    b.ToTable("CareerGoals", (string)null);
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Career.CareerGoalVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("BasedOnProfileVersion")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("CareerGoalId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ConfirmedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DesiredPayMax")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DesiredPayMin")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("RestoredFromVersion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("TargetLocation")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("TargetRole")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("WeeklyEffortHours")
+                        .HasColumnType("int");
+
+                    b.Property<string>("WorkArrangement")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("CareerGoalId", "VersionNumber")
+                        .IsUnique();
+
+                    b.ToTable("CareerGoalVersions", (string)null);
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Career.CareerProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ActiveVersionNumber")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId")
+                        .IsUnique();
+
+                    b.ToTable("CareerProfiles", (string)null);
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Career.CareerProfileVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CareerProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ConfirmedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CurrentTitle")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.PrimitiveCollection<string>("Highlights")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Industry")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("RestoredFromVersion")
+                        .HasColumnType("int");
+
+                    b.PrimitiveCollection<string>("Skills")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("WorkArrangement")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("YearsExperience")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("CareerProfileId", "VersionNumber")
+                        .IsUnique();
+
+                    b.ToTable("CareerProfileVersions", (string)null);
+                });
+
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Coupon", b =>
                 {
                     b.Property<int>("Id")
@@ -1931,6 +2128,46 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Career.CareerGoal", b =>
+                {
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Career.CareerGoalVersion", b =>
+                {
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.Career.CareerGoal", "CareerGoal")
+                        .WithMany("Versions")
+                        .HasForeignKey("CareerGoalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CareerGoal");
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Career.CareerProfile", b =>
+                {
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Career.CareerProfileVersion", b =>
+                {
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.Career.CareerProfile", "CareerProfile")
+                        .WithMany("Versions")
+                        .HasForeignKey("CareerProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CareerProfile");
+                });
+
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.CouponRedemption", b =>
                 {
                     b.HasOne("AI.ProfilePhotoMaker.API.Models.Coupon", "Coupon")
@@ -2189,6 +2426,16 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Career.CareerGoal", b =>
+                {
+                    b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Career.CareerProfile", b =>
+                {
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Coupon", b =>

@@ -52,6 +52,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<MarketingCampaign> MarketingCampaigns { get; set; }
     public virtual DbSet<MarketingEmailLog> MarketingEmailLogs { get; set; }
 
+    // Career workspace (spec #376, ADR 0006). Private, owner-scoped data.
+    public virtual DbSet<Models.Career.CareerProfile> CareerProfiles { get; set; }
+    public virtual DbSet<Models.Career.CareerProfileVersion> CareerProfileVersions { get; set; }
+    public virtual DbSet<Models.Career.CareerGoal> CareerGoals { get; set; }
+    public virtual DbSet<Models.Career.CareerGoalVersion> CareerGoalVersions { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -75,6 +81,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         ConfigureAbandonedUploadNudgeLogRelationships(builder);
         ConfigurePredictionRelationships(builder);
         ConfigureMarketingRelationships(builder);
+        ConfigureCareerWorkspace(builder);
 
         // Configure indexes for performance - ENHANCED FOR OPTIMIZATION
         ConfigurePerformanceIndexes(builder);
@@ -152,6 +159,50 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<ProcessedImage>()
             .Property(i => i.GenerationOperationToken)
             .HasMaxLength(64);
+    }
+
+    private static void ConfigureCareerWorkspace(ModelBuilder builder)
+    {
+        // Owner rows cascade from the Identity user so account removal cannot leave
+        // career data behind. Versions cascade from their aggregate. The active
+        // version is a number, not a foreign key, to avoid a cycle.
+        var profile = builder.Entity<Models.Career.CareerProfile>();
+        profile.ToTable("CareerProfiles");
+        profile.Property(p => p.OwnerId).HasMaxLength(450).IsRequired();
+        profile.HasIndex(p => p.OwnerId).IsUnique();
+        profile.Property(p => p.ActiveVersionNumber).IsConcurrencyToken();
+        profile.HasOne<ApplicationUser>().WithMany().HasForeignKey(p => p.OwnerId).OnDelete(DeleteBehavior.Cascade);
+        profile.HasMany(p => p.Versions).WithOne(v => v.CareerProfile!).HasForeignKey(v => v.CareerProfileId).OnDelete(DeleteBehavior.Cascade);
+
+        var profileVersion = builder.Entity<Models.Career.CareerProfileVersion>();
+        profileVersion.ToTable("CareerProfileVersions");
+        profileVersion.Property(v => v.OwnerId).HasMaxLength(450).IsRequired();
+        profileVersion.HasIndex(v => new { v.CareerProfileId, v.VersionNumber }).IsUnique();
+        profileVersion.HasIndex(v => v.OwnerId);
+        profileVersion.Property(v => v.CurrentTitle).HasMaxLength(120).IsRequired();
+        profileVersion.Property(v => v.Industry).HasMaxLength(120);
+        profileVersion.Property(v => v.Location).HasMaxLength(120);
+        profileVersion.Property(v => v.Summary).HasMaxLength(2000);
+        profileVersion.Property(v => v.WorkArrangement).HasMaxLength(20);
+        profileVersion.Property(v => v.Source).HasMaxLength(32).IsRequired();
+
+        var goal = builder.Entity<Models.Career.CareerGoal>();
+        goal.ToTable("CareerGoals");
+        goal.Property(g => g.OwnerId).HasMaxLength(450).IsRequired();
+        goal.HasIndex(g => g.OwnerId).IsUnique();
+        goal.Property(g => g.ActiveVersionNumber).IsConcurrencyToken();
+        goal.HasOne<ApplicationUser>().WithMany().HasForeignKey(g => g.OwnerId).OnDelete(DeleteBehavior.Cascade);
+        goal.HasMany(g => g.Versions).WithOne(v => v.CareerGoal!).HasForeignKey(v => v.CareerGoalId).OnDelete(DeleteBehavior.Cascade);
+
+        var goalVersion = builder.Entity<Models.Career.CareerGoalVersion>();
+        goalVersion.ToTable("CareerGoalVersions");
+        goalVersion.Property(v => v.OwnerId).HasMaxLength(450).IsRequired();
+        goalVersion.HasIndex(v => new { v.CareerGoalId, v.VersionNumber }).IsUnique();
+        goalVersion.HasIndex(v => v.OwnerId);
+        goalVersion.Property(v => v.TargetRole).HasMaxLength(120).IsRequired();
+        goalVersion.Property(v => v.TargetLocation).HasMaxLength(120);
+        goalVersion.Property(v => v.WorkArrangement).HasMaxLength(20);
+        goalVersion.Property(v => v.Source).HasMaxLength(32).IsRequired();
     }
 
     private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)

@@ -8,6 +8,7 @@ export const environment = {
     ga4MeasurementId: '',
   },
   features: {
+    careerWorkspace: false,
     debugMode: true,
     useProxy: true,
     cors: true,
