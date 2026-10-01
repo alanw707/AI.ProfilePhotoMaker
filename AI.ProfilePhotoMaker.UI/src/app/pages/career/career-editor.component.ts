@@ -4,6 +4,18 @@ import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl, Validati
 import { Router, RouterLink } from '@angular/router';
 import { CareerApiError, CareerGoalDto, CareerProfileDto, CareerProfileService, ProfileVersion, ProfileVersionDetail } from '../../services/career-profile.service';
 
+const FIELD_LABELS: Record<string, string> = {
+  currentTitle: 'Current title', industry: 'Industry', yearsExperience: 'Years of experience', location: 'Location',
+  summary: 'Summary', workArrangement: 'Work arrangement', skills: 'Skills', highlights: 'Highlights',
+  confirmed: 'Confirmation', targetRole: 'Target role', targetLocation: 'Target location',
+  desiredPayMin: 'Desired annual pay minimum', desiredPayMax: 'Desired annual pay maximum', weeklyEffortHours: 'Weekly effort',
+};
+
+/** Form values for a select: the API's null means "Not specified" (''). */
+function forForm<T extends { workArrangement?: string | null }>(value: T): T {
+  return { ...value, workArrangement: value.workArrangement ?? '' };
+}
+
 function payRange(control: AbstractControl): ValidationErrors | null {
   const { desiredPayMin: min, desiredPayMax: max } = control.value;
   return min !== null && max !== null && max < min ? { payRange: true } : null;
@@ -44,16 +56,16 @@ export class CareerEditorComponent implements OnInit {
   load() {
     this.api.getProfile().subscribe({ next: p => {
       this.profile.set(p);
-      this.profileForm.patchValue({ ...p.facts, confirmed: false });
+      this.profileForm.patchValue({ ...forForm(p.facts), confirmed: false });
       this.loadVersions();
     }, error: (e: CareerApiError) => this.handle(e, true) });
-    this.api.getGoal().subscribe({ next: g => { this.goal.set(g); this.goalForm.patchValue({ ...g.goal, confirmed: false }); }, error: (e: CareerApiError) => this.handle(e, true) });
+    this.api.getGoal().subscribe({ next: g => { this.goal.set(g); this.goalForm.patchValue({ ...forForm(g.goal), confirmed: false }); }, error: (e: CareerApiError) => this.handle(e, true) });
   }
   reloadLatest() { this.conflict.set(false); this.error.set(''); this.load(); }
   private loadVersions() { this.api.profileVersions().subscribe({ next: v => this.versions.set(v), error: e => this.handle(e) }); }
   viewVersion(n: number) { this.api.profileVersion(n).subscribe({ next: v => this.selectedVersion.set(v), error: e => this.handle(e) }); }
   restoreVersion(n: number) {
-    this.api.restoreProfile(n).subscribe({ next: p => { this.profile.set(p); this.selectedVersion.set(null); this.profileForm.patchValue({ ...p.facts, confirmed: false }); this.loadVersions(); this.status.set('Profile version restored.'); }, error: e => this.handle(e) });
+    this.api.restoreProfile(n).subscribe({ next: p => { this.profile.set(p); this.selectedVersion.set(null); this.profileForm.patchValue({ ...forForm(p.facts), confirmed: false }); this.loadVersions(); this.status.set('Profile version restored.'); }, error: e => this.handle(e) });
   }
   addItem(field: 'skills' | 'highlights', input: HTMLInputElement) {
     const value = input.value.trim(); const items = this.profileForm.controls[field].value ?? [];
@@ -66,6 +78,7 @@ export class CareerEditorComponent implements OnInit {
   removeItem(field: 'skills' | 'highlights', index: number) {
     this.profileForm.controls[field].setValue((this.profileForm.controls[field].value ?? []).filter((_, i) => i !== index));
   }
+  label(name: string): string { return FIELD_LABELS[name] ?? name; }
   hasError(name: string, goal = false): boolean {
     const form = goal ? this.goalForm : this.profileForm;
     const control: AbstractControl | null = goal ? this.goalForm.get(name) : this.profileForm.get(name);

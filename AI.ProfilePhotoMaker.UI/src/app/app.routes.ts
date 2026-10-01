@@ -132,19 +132,19 @@ export const routes: Routes = [
         path: 'career',
         canActivate: [careerWorkspaceGuard],
         loadComponent: () => import('./pages/career/career-home.component').then(m => m.CareerHomeComponent),
-        title: 'Career workspace',
+        title: 'Career Workspace - AI Profile Photo Maker',
       },
       {
         path: 'career/setup',
         canActivate: [careerWorkspaceGuard],
         loadComponent: () => import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
-        title: 'Set up your career workspace',
+        title: 'Set Up Your Career Workspace - AI Profile Photo Maker',
       },
       {
         path: 'career/profile',
         canActivate: [careerWorkspaceGuard],
         loadComponent: () => import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
-        title: 'Your career profile',
+        title: 'Career Profile - AI Profile Photo Maker',
       },
       {
         path: 'settings',

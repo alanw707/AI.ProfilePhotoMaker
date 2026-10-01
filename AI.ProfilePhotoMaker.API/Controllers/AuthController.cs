@@ -413,14 +413,15 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             return Redirect($"{baseRedirect}?result=success");
         }
 
-        // Development-only helper: confirms the current user's email without a token.
-        // This is used for local testing when email delivery is disabled.
+        // Local-only helper: confirms the current user's email without a token.
+        // Used for local testing when email delivery is disabled (Development, and
+        // LocalDev, which runs on an in-memory database with stubbed services).
         [HttpPost("dev/confirm-email")]
         [Authorize]
         [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> DevConfirmEmail()
         {
-            if (!_environment.IsDevelopment())
+            if (!_environment.IsDevelopment() && !_environment.IsEnvironment("LocalDev"))
             {
                 return NotFound();
             }

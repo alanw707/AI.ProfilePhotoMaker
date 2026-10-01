@@ -2,9 +2,9 @@
 <a routerLink="/app/career">Back to career workspace</a>
 <h1>{{ setup ? 'Set up your career workspace' : 'Your professional profile' }}</h1>
 <p>Only facts you enter and confirm are saved. No resume or automated analysis is used here.</p>
-@if (error()) { <div #errorSummary tabindex="-1" role="alert" class="error-summary"><strong>{{ error() }}</strong>
+@if (error()) { <div #errorSummary tabindex="-1" role="alert" class="career-error-summary"><strong>{{ error() }}</strong>
   @if (!conflict()) { <ul>@for (entry of (errorForm() === 'goal' ? ['targetRole','targetLocation','workArrangement','desiredPayMin','desiredPayMax','weeklyEffortHours','confirmed'] : ['currentTitle','industry','yearsExperience','location','summary','workArrangement','skills','highlights','confirmed']); track entry) {
-    @if (hasError(entry, errorForm() === 'goal')) { <li><a [href]="'#' + (errorForm() === 'goal' ? 'goal-' : 'profile-') + entry">{{ entry }}: {{ message(entry, errorForm() === 'goal') }}</a></li> }
+    @if (hasError(entry, errorForm() === 'goal')) { <li><a [href]="'#' + (errorForm() === 'goal' ? 'goal-' : 'profile-') + entry">{{ label(entry) }}: {{ message(entry, errorForm() === 'goal') }}</a></li> }
   }</ul> }
   @if (conflict()) { <button type="button" (click)="reloadLatest()">Reload the latest version</button> }
 </div> }

@@ -108,7 +108,8 @@ test('empty title has summary and invalid control', async ({ page }) => {
   const cookies = page.getByRole('button', { name: 'Reject Non-Essential' });
   if (await cookies.isVisible()) await cookies.click();
   await page.getByRole('button', { name: 'Save facts and continue' }).click();
-  await expect(page.locator('[role=alert]')).toContainText('currentTitle');
+  await expect(page.locator('[role=alert]')).toContainText('Current title: Required.');
+  await expect(page.locator('[role=alert]')).not.toContainText('currentTitle');
   await expect(page.getByLabel('Current title')).toHaveAttribute('aria-invalid', 'true');
 });
 test('disabled career redirects but photo routes remain available', async ({ page }) => {
