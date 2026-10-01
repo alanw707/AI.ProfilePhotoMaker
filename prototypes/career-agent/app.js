@@ -1,11 +1,12 @@
 /* Connected, local-only prototype. All seeded people, places and numbers are illustrative. */
+// Nav glyphs share one 24x24 grid, each centred on (12,12) so the rail reads evenly.
 const pages = [
-  ['agent','Career agent','M3 10.5 10.5 3 18 10.5 10.5 18 3 10.5Z M10.5 6.5v8 M6.5 10.5h8'],
-  ['profile','Career profile','M5 18v-2a5 5 0 0 1 10 0v2 M10 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z'],
-  ['analytics','Career analytics','M3 18V9h3v9 M9 18V5h3v13 M15 18v-7h3v7'],
-  ['heatmap','Market comparison','M3 17h15 M4 14l4-4 4 2 5-7 M15 5h2v2'],
-  ['roadmaps','Career roadmaps','M4 17h5v-5h5V7h5 M16 7h3v3 M4 17l3-3'],
-  ['materials','Career materials','M5 3h9l4 4v14H5z M14 3v5h4 M8 12h7 M8 16h7']
+  ['agent','Career agent','M12 4l2.2 5.8L20 12l-5.8 2.2L12 20l-2.2-5.8L4 12l5.8-2.2Z'],
+  ['profile','Career profile','M12 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z M5.5 19a6.5 6.5 0 0 1 13 0'],
+  ['analytics','Career analytics','M4.5 19.5v-8 M9.5 19.5v-15 M14.5 19.5v-11 M19.5 19.5v-7'],
+  ['heatmap','Market comparison','M4 17.5l5-6 4 3 7-8 M15 6.5h5v5'],
+  ['roadmaps','Career roadmaps','M4 18h5v-4.5h5V9h6 M17 6l3 3-3 3'],
+  ['materials','Career materials','M6 3.5h8l4 4v13H6Z M14 3.5v4h4 M9 12.5h6 M9 16h6']
 ];
 const seeded = {
   page:'agent', name:'Maya Rivera', title:'Operations lead', city:'Denver, CO', targetMarket:'', marketToSave:'', marketStep:1, marketSaved:false, previousTarget:'',
@@ -59,7 +60,7 @@ function intervalPlot(rows,compact=false,showSelection=false){
   return `<figure class="interval-chart ${compact?'compact':''}" aria-label="Illustrative annual occupational wage intervals, not live BLS data"><figcaption><strong>${compact?'Market glimpse':'Compare wage intervals'}</strong><span>Fictional 25th–75th percentile examples · annual wages</span></figcaption><div class="interval-axis" aria-hidden="true"><span>$80k</span><span>$110k</span><span>$140k</span><span>$170k</span></div><div class="interval-rows">${rows.map(m=>`<div class="interval-row ${showSelection&&state.selectedMarkets.includes(m.city)?'selected':''} ${showSelection&&m.city===state.city?'home':''}" data-market="${clean(m.city)}"><span class="interval-place">${clean(m.city)}${showSelection&&m.city===state.city?' <span class="interval-tag">Home</span>':''}</span><span class="interval-track" aria-hidden="true">${interval(m)}</span><span class="interval-value">${clean(m.pay)}</span></div>`).join('')}</div><p class="interval-footnote">Synthetic illustration, not a personal salary estimate or current job offer.</p></figure>`;
 }
 function renderNav(){
-  const markup=pages.map(([id,label,path])=>`<a href="#${id}" class="nav-link" ${state.page===id?'aria-current="page"':''}><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 21 21"><path d="${path}"/></svg></span>${label}</a>`).join('');
+  const markup=pages.map(([id,label,path])=>`<a href="#${id}" class="nav-link" ${state.page===id?'aria-current="page"':''}><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="${path}"/></svg></span>${label}</a>`).join('');
   const primary=$('#primary-nav');
   if(!primary.querySelector('.nav-active-indicator')){
     primary.innerHTML=`<span class="nav-active-indicator" aria-hidden="true"></span>${markup}`;
@@ -68,9 +69,19 @@ function renderNav(){
     if(pages[index][0]===state.page)item.setAttribute('aria-current','page');
     else item.removeAttribute('aria-current');
   });
-  primary.style.setProperty('--active-index',pages.findIndex(p=>p[0]===state.page));
+  placeNavIndicator();
   $('#mobile-nav').innerHTML=markup;
 }
+/** Size and place the active plate from the real link box; labels wrap, so heights vary. */
+function placeNavIndicator(){
+  const primary=$('#primary-nav');
+  const active=primary?.querySelector('.nav-link[aria-current="page"]');
+  if(!active||!active.offsetHeight)return;
+  primary.style.setProperty('--indicator-y',`${active.offsetTop}px`);
+  primary.style.setProperty('--indicator-h',`${active.offsetHeight}px`);
+}
+window.addEventListener('resize',()=>requestAnimationFrame(placeNavIndicator));
+document.fonts?.ready.then(placeNavIndicator);
 function renderAssistant(){
   const prompts={
     agent:['What should I do next?','What is still uncertain?'],
@@ -157,7 +168,7 @@ function actionMatrix(){
     ['cert','Certification','--c2','Lean Six Sigma Green Belt',3,'~8 weeks','Gives a recognized name to process-improvement work you already do. Check whether postings in your target market actually mention it before paying for a course.'],
     ['edu','Education','--c3','Short course in operations finance',3,'~6 weeks','Helps you speak to cost and budget questions in interviews while you build real budget experience.']
   ];
-  return `<div class="matrix" role="region" aria-label="Actions you could take, scroll sideways for more" tabindex="0">${items.map(([ic,cat,c,title,effort,time,why])=>`<article class="matrix-card"><span class="chip" style="--chip:var(${c})">${svgIcon(ic)}${cat}</span><h3>${title}</h3><dl class="matrix-facts"><div><dt>Time to show evidence</dt><dd><span class="time-pill">${time}</span></dd></div><div><dt>Effort</dt><dd><span class="effort" role="img" aria-label="Effort ${effort} of 5">${[1,2,3,4,5].map(n=>`<i class="${n<=effort?'on':''}"></i>`).join('')}</span></dd></div></dl>${more(why,2)}</article>`).join('')}</div>`;
+  return `<div class="matrix" id="action-matrix" role="region" aria-label="Five actions you could take" tabindex="0">${items.map(([ic,cat,c,title,effort,time,why])=>`<article class="matrix-card"><span class="chip" style="--chip:var(${c})">${svgIcon(ic)}${cat}</span><h3>${title}</h3><dl class="matrix-facts"><div><dt>Time to show evidence</dt><dd><span class="time-pill">${time}</span></dd></div><div><dt>Effort</dt><dd><span class="effort" role="img" aria-label="Effort ${effort} of 5">${[1,2,3,4,5].map(n=>`<i class="${n<=effort?'on':''}"></i>`).join('')}</span></dd></div></dl>${more(why,2)}</article>`).join('')}</div><button type="button" class="button matrix-more" data-action="matrix-all" aria-controls="action-matrix" aria-expanded="false">Show all 5 actions</button>`;
 }
 function industryBars(){
   const rows=[['Logistics',78,'--c1'],['Healthcare',64,'--c-you'],['Manufacturing',55,'--c2'],['Government',41,'--c4'],['Retail',33,'--c5'],['Education',18,'--c3']];
@@ -176,6 +187,7 @@ function renderAnalytics(){
  const tiles=`<div class="stat-tiles" role="list" aria-label="Occupation wage benchmark, fictional"><div class="stat-tile" role="listitem"><span class="stat-value">$94k</span><span class="stat-label">25th percentile · Operations managers, Denver</span></div><div class="stat-tile mid" role="listitem"><span class="stat-value">$116k</span><span class="stat-label">Median · same occupation and area</span></div><div class="stat-tile" role="listitem"><span class="stat-value">$141k</span><span class="stat-label">75th percentile · annual wages</span></div><div class="stat-tile unavailable" role="listitem"><span class="stat-value">Not available yet</span><span class="stat-label">Personalized comparable pay</span>${action('explain-range','Why unavailable?')}</div></div>`;
  return head('Career analytics','Your profile, the occupation benchmark and what to work on next. Every number on this page is a fictional example, not a prediction of your pay.',action('explain-range','Explain this range'))+
  `<div class="dash">${tiles}<p class="small">Occupation-wide benchmark for the whole occupation in one area, not a personal salary or offer. Illustrative BLS-style figures, not live data.${old}</p>`+
+ `<section class="next-move" aria-labelledby="next-move-heading"><div><span class="status">Recommended next move</span><h2 id="next-move-heading">Write up the three-department process redesign</h2><p>Your strongest confirmed work, turned into evidence an employer can read. About two weeks of light effort. The charts below show why.</p></div>${link('roadmaps','Add to my roadmap','primary')}</section>`+
  `<div class="dash-row-3">${panel('Evidence strength','How well confirmed facts cover this role',evidenceGauge())}${panel('Profile completeness','What the agent can already use',completenessRing())}${panel('Skills diagram','Confirmed evidence against typical role requirements',skillsRadar())}</div>`+
  `<div class="dash-row-2">${panel('Compensation, with definitions','Annual wage interval for the occupation',intervalPlot([marketRows[0]])+`<p class="panel-foot">Advertised pay and annual wages are different measures. Desired pay is your preference, not evidence. A personalized range needs a qualified cohort of current employer-disclosed pay for comparable duties, level, location and work arrangement.</p>`)}${panel('What supports this direction','',`<ul class="evidence-list"><li><strong>Confirmed</strong><span>Cross-team operations work</span></li><li><strong>Confirmed</strong><span>Workflow redesign and reporting</span></li><li><strong>Needs evidence</strong><span>Budget ownership and people management</span></li><li><strong>Unknown</strong><span>Employer-disclosed comparable pay in the chosen market</span></li></ul>`)}</div>`+
  panel('Action priority matrix','Ordered by how much each action strengthens your evidence. Time and effort are planning estimates.',actionMatrix())+
@@ -340,6 +352,7 @@ document.addEventListener('click',event=>{
   if(a==='photo-jump'){state.materialTab='photos';save();}
   if(a==='toggle-theme'){setTheme(currentTheme()==='dark'?'light':'dark');notify(`${currentTheme()==='dark'?'Dark':'Light'} theme on. Saved for this browser.`);}
   if(a==='toggle-more'){const box=trigger.closest('.more');const open=box.classList.toggle('expanded');trigger.setAttribute('aria-expanded',String(open));trigger.textContent=open?'Show less':'Show more';}
+  if(a==='matrix-all'){const m=$('#action-matrix');const open=m.classList.toggle('expanded');trigger.setAttribute('aria-expanded',String(open));trigger.textContent=open?'Show fewer actions':'Show all 5 actions';}
   if(a==='show-help'){notify('Choose any page. Use the state selector on Career agent to preview incomplete and error states. All data is fictional.');}
   if(a==='prompt'){openAssistant();sendPrompt(trigger.dataset.prompt);}
 });

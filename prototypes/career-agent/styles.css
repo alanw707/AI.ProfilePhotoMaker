@@ -109,7 +109,7 @@ input, textarea, select { caret-color: var(--accent); }
 .skip-link:focus { top: 8px; }
 
 /* Banner */
-.prototype-banner { height: 36px; background: var(--banner); color: var(--on-banner); display: flex; align-items: center; gap: 10px; padding: 0 20px; font-size: 12px; letter-spacing: .01em; }
+.prototype-banner { min-height: 36px; background: var(--banner); color: var(--on-banner); display: flex; align-items: center; gap: 10px; padding: 0 20px; font-size: 12px; letter-spacing: .01em; }
 .banner-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--highlight); }
 .banner-separator { opacity: .5; }
 .banner-tail { margin-left: auto; opacity: .85; }
@@ -247,7 +247,7 @@ tr:last-child td { border-bottom: 0; }
 /* Assistant */
 .assistant { background: var(--rail); border-left: 1px solid var(--line); position: sticky; top: 0; height: calc(100vh - 36px); min-height: 640px; display: flex; flex-direction: column; }
 .assistant-head { padding: 26px 22px 14px; display: flex; justify-content: space-between; align-items: start; }
-.assistant-head small { font-size: 11px; font-weight: 700; letter-spacing: .07em; color: var(--muted); }
+.assistant-head small { font-size: 11px; font-weight: 700; letter-spacing: .05em; color: var(--muted); }
 .assistant-head h2 { font-family: Manrope, sans-serif; font-size: 24px; letter-spacing: -.025em; margin: 6px 0 0; color: var(--highlight-ink); }
 .assistant-context { margin: 0 18px 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); border-radius: var(--radius-card); font-size: 12px; line-height: 1.45; }
 .assistant-context strong { color: var(--ink); }

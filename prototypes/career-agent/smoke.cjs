@@ -17,8 +17,9 @@ const fs = require('node:fs');
   assert.match(await page.locator('.goal-overview .interval-chart').textContent(),/Fictional 25th–75th percentile examples/);
   await page.locator('#primary-nav a[href="#analytics"]').click();
   await page.waitForTimeout(400);
-  assert.equal(await page.locator('#primary-nav').evaluate(el=>el.style.getPropertyValue('--active-index')),'2');
-  assert.equal(await page.locator('#primary-nav .nav-active-indicator').evaluate(el=>Math.round(new DOMMatrix(getComputedStyle(el).transform).m42)),128);
+  // The active plate must cover the current link exactly (links wrap, so no fixed step).
+  const plate=await page.evaluate(()=>{const i=document.querySelector('.nav-active-indicator').getBoundingClientRect(),l=document.querySelector('#primary-nav .nav-link[aria-current="page"]').getBoundingClientRect();return [Math.round(i.top-l.top)+0,Math.round(i.height-l.height)+0,document.querySelector('#primary-nav .nav-link[aria-current="page"]').textContent];});
+  assert.deepEqual(plate,[0,0,'Career analytics'],'nav indicator aligned with active link');
   assert.equal(await page.locator('#view .interval-band').count(),1);
   // Analytics dashboard: tiles, gauge, ring, radar, matrix, bars, insights — no grade or personal dollar figure.
   assert.equal(await page.locator('.stat-tile').count(),4);

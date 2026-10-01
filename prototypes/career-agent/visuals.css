@@ -2,8 +2,8 @@
    All colours come from theme tokens in styles.css. */
 
 /* Rail navigation with a sliding active plate */
-.primary-nav { position: relative; isolation: isolate; --active-index: 0; --nav-step: 64px; }
-.nav-active-indicator { position: absolute; inset: 0 0 auto; height: 60px; border-radius: 12px; background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); transform: translateY(calc(var(--active-index) * var(--nav-step))); pointer-events: none; z-index: 0; }
+.primary-nav { position: relative; isolation: isolate; }
+.nav-active-indicator { position: absolute; inset: 0 0 auto; height: var(--indicator-h, 64px); border-radius: 12px; background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); transform: translateY(var(--indicator-y, 0px)); pointer-events: none; z-index: 0; }
 .primary-nav.nav-ready .nav-active-indicator { transition: transform 340ms var(--ease-out); }
 .primary-nav .nav-link { position: relative; z-index: 1; transition: color 150ms ease; }
 .primary-nav .nav-link[aria-current="page"] { background: transparent; color: var(--accent-ink); }
@@ -68,10 +68,10 @@
 .stat-value { font-family: Manrope, sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1.15; }
 .stat-tile.mid .stat-value { color: var(--ok-ink); }
 .stat-label { font-size: 12px; color: var(--muted); line-height: 1.35; }
-.stat-tile.unavailable { background: var(--highlight); border-color: var(--highlight); color: var(--on-highlight); }
+.stat-tile.unavailable { background: var(--surface-2); border: 1px dashed var(--line-strong); color: var(--ink); }
 .stat-tile.unavailable .stat-value { font-size: 20px; }
-.stat-tile.unavailable .stat-label { color: var(--on-highlight); opacity: .85; }
-.stat-tile.unavailable .button { justify-self: start; min-height: 36px; padding: 6px 12px; margin-top: 6px; background: var(--on-highlight); color: var(--highlight); border-color: var(--on-highlight); }
+.stat-tile.unavailable .stat-label { color: var(--muted); }
+.stat-tile.unavailable .button { justify-self: start; min-height: 44px; padding: 8px 14px; margin-top: 6px; }
 
 /* Evidence strength gauge */
 .gauge { display: grid; grid-template-columns: auto 14px minmax(0, 1fr); gap: 12px 14px; align-items: stretch; }
@@ -89,7 +89,7 @@
 /* Clamp + show more */
 .more-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--lines, 3); overflow: hidden; }
 .more.expanded .more-text { -webkit-line-clamp: unset; display: block; }
-.more-toggle { border: 0; background: none; padding: 6px 0; min-height: 32px; color: var(--highlight-ink); font-size: 12px; font-weight: 700; }
+.more-toggle { border: 0; background: none; padding: 6px 0; min-height: 44px; color: var(--highlight-ink); font-size: 12px; font-weight: 700; }
 .more-toggle:hover { text-decoration: underline; }
 
 /* Ring + radar */
@@ -157,7 +157,7 @@
 @keyframes ring-draw { from { stroke-dashoffset: var(--len); } }
 @keyframes nav-unfold { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
 
-@media (max-width: 1360px) {
+@media (max-width: 1500px) {
   .dash-row-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash-row-3 > :first-child { grid-column: 1 / -1; }
   .stat-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -257,4 +257,16 @@
 @media (max-width: 650px) {
   .stat-tiles { grid-template-columns: 1fr; }
   .stat-tile:not(.unavailable) { grid-template-columns: 92px minmax(0, 1fr); align-items: center; column-gap: 12px; }
+}
+
+/* Critique pass: one recommended move up front; mobile action list without hidden scroll */
+.next-move { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; background: var(--accent-soft); border-radius: var(--radius-panel); padding: 20px 22px; }
+.next-move h2 { font-family: Manrope, sans-serif; font-size: 19px; margin: 6px 0 6px; }
+.next-move p { margin: 0; color: var(--ink); font-size: 14px; line-height: 1.5; max-width: 62ch; }
+.matrix-more { display: none; }
+@media (max-width: 650px) {
+  .next-move { grid-template-columns: 1fr; }
+  .matrix { grid-auto-flow: row; grid-auto-columns: auto; overflow: visible; }
+  .matrix:not(.expanded) .matrix-card:nth-child(n+3) { display: none; }
+  .matrix-more { display: inline-flex; margin-top: 4px; }
 }
