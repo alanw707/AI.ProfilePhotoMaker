@@ -125,3 +125,8 @@ Owner direction after reviewing a dark analytics dashboard reference: adopt a da
 - **Shell.** Icon rail with labels, artifact column, assistant panel with greeting and pill prompts.
 - **Analytics dashboard, honest by construction.** Stat tiles show the *occupation* benchmark (25th / median / 75th, fictional) and a highlighted "Personalized comparable pay: Not available yet" tile. The gauge measures *evidence strength for the target role*, never a grade of the person. The ring is profile completeness; the radar compares confirmed evidence with typical role requirements (with a screen-reader table). The action matrix ranks by effort and time, not dollar value. Every panel carries a source tag. No "your number", grade, or opportunity-cost figure.
 - **Checks.** Smoke samples text contrast in both themes (≥ 4.5:1), plus 320px/2× reflow, focus and reduced motion.
+
+### Owner decisions (2026-10-02)
+
+- Analytics keeps every chart visible; nothing is hidden behind an "Explore the evidence" control.
+- The desktop assistant is open by default and can be collapsed. A floating "Ask your career agent" button reopens it, and the choice is saved in `localStorage` (`career-assistant`). On mobile it stays a sheet opened from "Ask agent".

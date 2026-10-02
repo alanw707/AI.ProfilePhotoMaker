@@ -375,7 +375,7 @@ document.addEventListener('submit',event=>{
 document.addEventListener('input',event=>{
  if(event.target.id==='market-search'){state.marketQuery=event.target.value;applyMarketSearch();save();}
 });
-function openAssistant(){state.assistantOpen=true;$('#assistant').classList.add('open');$('#mobile-agent').setAttribute('aria-expanded','true');$('#assistant-input').focus();save();}
+function openAssistant(){if(desktop()&&document.documentElement.classList.contains('assistant-collapsed'))setAssistantCollapsed(false,false);state.assistantOpen=true;$('#assistant').classList.add('open');$('#mobile-agent').setAttribute('aria-expanded','true');$('#assistant-input').focus();save();}
 function closeAssistant(){state.assistantOpen=false;$('#assistant').classList.remove('open');$('#mobile-agent').setAttribute('aria-expanded','false');$('#mobile-agent').focus();save();}
 function sendPrompt(prompt){
  const q=(prompt||$('#assistant-input').value).trim();if(!q)return;
@@ -385,7 +385,24 @@ function sendPrompt(prompt){
 $('#assistant-send').addEventListener('click',()=>sendPrompt());
 $('#assistant-input').addEventListener('keydown',event=>{if(event.key==='Enter')sendPrompt();});
 $('#mobile-agent').addEventListener('click',openAssistant);
-$('#assistant-close').addEventListener('click',closeAssistant);
+const desktop=()=>!matchMedia('(max-width: 980px)').matches;
+/** Desktop: the assistant is open by default and can be collapsed; the choice is remembered. */
+function setAssistantCollapsed(collapsed,focus=true){
+  document.documentElement.classList.toggle('assistant-collapsed',collapsed);
+  try{localStorage.setItem('career-assistant',collapsed?'collapsed':'open');}catch{}
+  syncAssistantControls();
+  if(focus)(collapsed?$('#assistant-reopen'):$('#assistant-input')).focus();
+}
+function syncAssistantControls(){
+  const collapsed=document.documentElement.classList.contains('assistant-collapsed');
+  $('#assistant-reopen').hidden=!collapsed;
+  $('#assistant-reopen').setAttribute('aria-expanded',String(!collapsed));
+  $('#assistant-close').setAttribute('aria-label',desktop()?'Collapse assistant':'Close assistant');
+}
+$('#assistant-close').addEventListener('click',()=>desktop()?setAssistantCollapsed(true):closeAssistant());
+$('#assistant-reopen').addEventListener('click',()=>setAssistantCollapsed(false));
+window.addEventListener('resize',syncAssistantControls);
+syncAssistantControls();
 $('#mobile-menu').addEventListener('click',()=>{const nav=$('#mobile-nav');nav.hidden=!nav.hidden;$('#mobile-menu').setAttribute('aria-expanded',String(!nav.hidden));});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){if(state.assistantOpen)closeAssistant();else if(!$('#mobile-nav').hidden){$('#mobile-nav').hidden=true;$('#mobile-menu').setAttribute('aria-expanded','false');$('#mobile-menu').focus();}}});
 syncThemeControls();

@@ -63,7 +63,7 @@
 .dash-row-2 { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; }
 
 /* Stat tiles */
-.stat-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .stat-tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 16px 18px; display: grid; gap: 4px; align-content: start; min-width: 0; }
 .stat-value { font-family: Manrope, sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1.15; }
 .stat-tile.mid .stat-value { color: var(--ok-ink); }
@@ -160,7 +160,6 @@
 @media (max-width: 1500px) {
   .dash-row-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash-row-3 > :first-child { grid-column: 1 / -1; }
-  .stat-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 1230px) {
   .goal-overview { grid-template-columns: 1fr; }

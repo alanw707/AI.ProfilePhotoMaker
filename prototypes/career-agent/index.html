@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#eef1ef">
   <meta name="color-scheme" content="light dark">
   <script>
+    // Restore a collapsed desktop assistant before first paint.
+    try{if(localStorage.getItem('career-assistant')==='collapsed')document.documentElement.classList.add('assistant-collapsed');}catch(e){}
     // Apply the saved or system theme before first paint so there is no flash.
     (function(){var t;try{t=localStorage.getItem('career-theme');}catch(e){}
       if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
@@ -47,7 +49,7 @@
       <div id="view"></div>
     </main>
     <aside id="assistant" class="assistant" aria-label="Career assistant">
-      <div class="assistant-head"><div><small>YOUR CAREER AGENT · PROTOTYPE</small><h2>Hi, I’m your career agent.</h2></div><button id="assistant-close" type="button" class="icon-button" aria-label="Close assistant">×</button></div>
+      <div class="assistant-head"><div><small>YOUR CAREER AGENT · PROTOTYPE</small><h2>Hi, I’m your career agent.</h2></div><button id="assistant-close" type="button" class="icon-button" aria-label="Collapse assistant">×</button></div>
       <div id="assistant-context" class="assistant-context"></div>
       <div id="assistant-messages" class="assistant-messages" aria-live="polite"></div>
       <div class="assistant-compose">
@@ -57,6 +59,7 @@
       </div>
     </aside>
   </div>
+  <button type="button" id="assistant-reopen" class="assistant-reopen" aria-controls="assistant" aria-expanded="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v10H10l-5 4Z"/></svg>Ask your career agent</button>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>
