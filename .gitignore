@@ -109,7 +109,6 @@ package-lock.json
 .claude/
 .opencode/
 CLAUDE.md
-AGENTS.md
 
 # AI IDE tooling configs (keep local only)
 .cursor/
