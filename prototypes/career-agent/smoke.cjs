@@ -155,8 +155,23 @@ const fs = require('node:fs');
   await page.goto(base+'#profile');
   await page.getByRole('button',{name:'Review a proposed edit'}).click();
   assert.equal(await page.locator('.review-change').count(),1);
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'review-heading','focus moves to the proposed edit');
+  assert.match(await page.locator('.source-quote').textContent(),/Senior Operations Lead/);
   await page.getByRole('button',{name:'Accept change'}).click();
   assert.match(await page.locator('.paper').first().textContent(),/Senior Operations Lead/);
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'profile-result','focus lands on the result, not the page body');
+  assert.match(await page.locator('#profile-result').textContent(),/Title updated: Operations lead → Senior Operations Lead/);
+  // Task 2: "Why unavailable?" gets its own plain answer.
+  await page.goto(base+'#analytics');
+  await page.getByRole('button',{name:'Why unavailable?'}).click();
+  assert.match(await page.locator('#assistant-messages .message').last().textContent(),/not approved a source/);
+  // Task 4: weekly time is chosen directly and visibly changes the timeline.
+  await page.goto(base+'#roadmaps');
+  const before=await page.locator('#plan-timeline').textContent();
+  await page.getByRole('button',{name:/^2 h/}).click();
+  assert.equal(await page.getByRole('button',{name:/^2 h/}).getAttribute('aria-pressed'),'true');
+  assert.notEqual(await page.locator('#plan-timeline').textContent(),before,'timeline changes with weekly time');
+  await page.getByRole('button',{name:/^4 h/}).click();
   await page.goto(base+'#heatmap');
   await page.getByRole('button',{name:'Next: choose places'}).click();
   assert.match(await page.locator('#market-count').textContent(),/3 of 3 chosen/,'choices persist across pages');

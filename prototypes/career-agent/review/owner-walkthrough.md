@@ -38,3 +38,14 @@ Please report misunderstandings even if you eventually found the right control. 
 - Coached owner retest only; not independent target-user evidence.
 
 Tasks 1, 2, 4 and 5: not yet recorded.
+
+### Simulated walkthrough of tasks 1, 2, 4 and 5 (2026-10-02, agent in a real browser)
+
+Agent-driven review only; not owner or target-user evidence. All four tasks could be completed with no page errors. Friction found and fixed:
+
+- **Task 1:** the source line only said "needs confirmation" with no excerpt; focus stayed on the top button, so the proposal appeared off-screen; after Accept, focus dropped to the page body and the only confirmation was a toast. Now: a quoted resume excerpt with the extracted text highlighted, focus moves to the proposal, and an in-place result ("Title updated: Operations lead → Senior Operations Lead") receives focus.
+- **Task 2:** "Why unavailable?" gave the same answer as "Explain this range". Now each has its own plain-language answer.
+- **Task 4:** "Adjust time" silently cycled 4 → 2 → 8 hours and nothing visibly depended on it. Now 2 h / 4 h / 8 h are direct choices and the plan shows the estimated weeks, which update.
+- **Task 5:** "Review required" read like a blocking gate; renamed "Check before using". Status messages from one page no longer carry over to the next.
+
+Owner results for tasks 1, 2, 4 and 5: still to be recorded.
