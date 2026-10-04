@@ -49,3 +49,11 @@ Agent-driven review only; not owner or target-user evidence. All four tasks coul
 - **Task 5:** "Review required" read like a blocking gate; renamed "Check before using". Status messages from one page no longer carry over to the next.
 
 Owner results for tasks 1, 2, 4 and 5: still to be recorded.
+
+### Fresh-session agent rerun of tasks 1, 2, 4 and 5 (2026-10-04, desktop 1440 and mobile 390)
+
+Cleared storage, navigated with the real menus. All four tasks completed on both sizes with no page errors or horizontal overflow: proposal and result receive focus and are in view; "Explain this range" and "Why unavailable?" give distinct answers; route and weekly time change the estimate (12 → 6 weeks); the edited resume saves, downloads with the edit and survives reload; photos are clearly optional.
+
+One mobile defect found and fixed: after choosing a weekly time, the updated estimate could sit under the sticky top bar. On phones the estimate now appears directly under the 2 h / 4 h / 8 h buttons.
+
+Still agent evidence only; owner and independent-user results are not recorded here.

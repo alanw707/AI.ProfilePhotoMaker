@@ -281,6 +281,8 @@ render();
 }
 /** Fictional route workload in hours, divided by the weekly time the person can give. */
 const ROUTE_HOURS={closest:24,stretch:48,steady:16};
+/** After a time change, make sure the updated estimate is not hidden under the sticky top bar. */
+function keepPlanEstimateVisible(){const t=$('#plan-timeline');if(!t)return;const top=t.getBoundingClientRect().top,bar=matchMedia('(max-width: 980px)').matches?72:16;if(top<bar||top>innerHeight-40)window.scrollBy({top:top-bar-60,behavior:'instant'});}
 function planWeeks(){return Math.ceil((ROUTE_HOURS[state.selectedRoute]||24)/parseInt(state.weeklyHours,10));}
 function renderRoadmaps(){
  const routes=[['closest','Closest fit','Build on existing operations leadership.','Clarify scope and prepare targeted examples.'],['stretch','Higher ambition','Explore program leadership after documenting cross-team ownership.','More evidence and interview preparation needed.'],['steady','Steadier transition','Keep the current role while testing adjacent opportunities.','Lower weekly effort; a longer timeline.']];
@@ -350,7 +352,7 @@ document.addEventListener('click',event=>{
     notify(`Saved target: ${target}. Home remains ${state.city}. Earlier brief needs refresh; no new analysis ran.`);
   }
   if(a==='select-route'){state.selectedRoute=trigger.dataset.route;render();notify('Roadmap route selected.');}
-  if(a==='set-effort'){const h=trigger.dataset.hours;if(h!==state.weeklyHours){state.weeklyHours=h;render();$(`[data-hours="${h}"]`)?.focus();notify(`Now planning for ${h} a week. Timeline updated; route and completed steps unchanged.`);}}
+  if(a==='set-effort'){const h=trigger.dataset.hours;if(h!==state.weeklyHours){state.weeklyHours=h;render();$(`[data-hours="${h}"]`)?.focus({preventScroll:true});requestAnimationFrame(()=>requestAnimationFrame(keepPlanEstimateVisible));notify(`Now planning for ${h} a week. Timeline updated; route and completed steps unchanged.`);}}
   if(a==='adjust-effort'){state.weeklyHours=state.weeklyHours==='4 hours'?'2 hours':state.weeklyHours==='2 hours'?'8 hours':'4 hours';render();notify('Weekly effort assumption updated.');}
   if(a==='material-tab'){state.materialTab=trigger.dataset.tab;render();const next=document.querySelector(`[data-tab="${state.materialTab}"]`);next?.focus();}
   if(a==='save-material'){state[state.materialTab==='resume'?'resume':'summary']=$('#material-editor').value;state.editedResume=true;save();notify('Example draft saved in this browser session.');}

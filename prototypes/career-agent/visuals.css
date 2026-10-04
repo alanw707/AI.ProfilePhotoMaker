@@ -278,3 +278,15 @@
 .effort-choice { display: flex; gap: 6px; flex: none; }
 .effort-choice .button { min-width: 56px; }
 @media (max-width: 650px) { .effort-choice { margin-top: 14px; } }
+
+/* Keep the plan estimate clear of the sticky mobile top bar after a time change */
+.plan-banner { scroll-margin-top: 16px; }
+@media (max-width: 980px) { .plan-banner { scroll-margin-top: 72px; } }
+/* Phones: show the estimate right under the hour buttons, where the tap happens */
+@media (max-width: 650px) {
+  .plan-banner { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+  .plan-banner > div:first-child { display: contents; }
+  .plan-banner h2 { order: 0; }
+  .plan-banner .effort-choice { order: 1; margin-top: 10px; }
+  .plan-banner #plan-timeline { order: 2; margin-top: 12px; }
+}
