@@ -40,7 +40,7 @@ The existing product name is **AI Profile Photo Maker**. Current product truth f
 
 ## Evidence on Hand
 
-- `CONTEXT.md` defines the current domain model, package semantics, terminology, and product funnel.
+- `GLOSSARY.md` defines the current domain model, package semantics, terminology, and product funnel.
 - Existing professional portrait and before/after assets live under `AI.ProfilePhotoMaker.UI/src/assets/marketing/`.
 - Existing brand assets include `AI.ProfilePhotoMaker.UI/src/assets/Logo.PNG`, `og-image.png`, and social-card assets.
 - Existing implementation and package-state behavior live in `AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/`.

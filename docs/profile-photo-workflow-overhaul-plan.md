@@ -17,7 +17,7 @@ Supporting promise:
 
 ## Canonical terms
 
-Use the glossary in `CONTEXT.md`.
+Use the glossary in `GLOSSARY.md`.
 
 Key terms:
 
