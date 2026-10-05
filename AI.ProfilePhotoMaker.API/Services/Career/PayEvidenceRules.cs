@@ -66,8 +66,10 @@ public static class PayEvidenceRules
 
     public static PayEvidenceResult Evaluate(
         IEnumerable<PayObservation> records, PayEvidenceQuery query, DateTime now,
-        PayBenchmarkFallback? benchmarkFallback = null, bool providerQualified = false)
+        PayBenchmarkFallback? benchmarkFallback = null, PayGateDecision? qualification = null)
     {
+        // No qualification means no authorization: a caller cannot opt in with a flag.
+        var decision = qualification ?? PayEvidenceGates.Current();
         var included = new List<NormalizedPayObservation>();
         var excluded = 0;
         var exclusionReasons = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -125,6 +127,7 @@ public static class PayEvidenceRules
             concentration, excluded, exclusionReasons, interval,
             supported ? "observed interval" : "occupational benchmark fallback",
             supported ? "Employer-disclosed advertised pay, not an offer prediction." : "Insufficient independent current observations or employers.",
-            benchmarkFallback, providerQualified, providerQualified ? Array.Empty<string>() : new[] { PayEvidenceGates.RightsBlock });
+            // Authorization comes from the verified gate rows; an absent decision blocks.
+            benchmarkFallback, decision.PersonalizedAllowed, decision.BlockedReasons);
     }
 }

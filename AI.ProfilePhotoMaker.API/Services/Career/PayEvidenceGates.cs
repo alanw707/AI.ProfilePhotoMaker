@@ -4,14 +4,25 @@ public enum PayGateStatus { Passed, Failed, Unverified }
 
 public sealed record PayGateRow(string GateId, string Requirement, PayGateStatus Status, string Evidence);
 
-public sealed record PayGateDecision(bool PersonalizedAllowed, IReadOnlyList<string> BlockedReasons, IReadOnlyList<PayGateRow> Rows);
+/// <summary>
+/// A qualification decision. Authorization is derived from the gate rows and nothing else, so
+/// no caller can assert it: personalized pay needs every gate Passed (ADR 0012).
+/// </summary>
+public sealed record PayGateDecision(IReadOnlyList<PayGateRow> Rows)
+{
+    public bool PersonalizedAllowed => Rows.Count > 0 && Rows.All(r => r.Status == PayGateStatus.Passed);
+
+    public IReadOnlyList<string> BlockedReasons => PersonalizedAllowed ? Array.Empty<string>() : new[] { PayEvidenceGates.RightsBlock };
+
+    public static PayGateDecision FromRows(IReadOnlyList<PayGateRow> rows) => new(rows);
+}
 
 /// <summary>Current provider qualification, not an authorization to display personalized pay (ADR 0012).</summary>
 public static class PayEvidenceGates
 {
     public const string RightsBlock = "provider_rights_unverified";
 
-    public static PayGateDecision Current() => new(false, new[] { RightsBlock }, new PayGateRow[]
+    public static PayGateDecision Current() => new(new PayGateRow[]
     {
         new("G1", "Authorized ongoing aggregation, display, retention and attribution", PayGateStatus.Unverified,
             "Adzuna is preferred; written commercial rights and retention terms have not been obtained."),

@@ -182,6 +182,38 @@ public class PayEvidenceRulesTests
     }
 
     [Fact]
+    public void AQualificationIsAuthorizedOnlyWhenEveryGatePasses()
+    {
+        var rows = PayEvidenceGates.Current().Rows;
+        Assert.False(PayGateDecision.FromRows(rows).PersonalizedAllowed);
+        Assert.True(PayGateDecision.FromRows(rows.Select(r => r with { Status = PayGateStatus.Passed }).ToList()).PersonalizedAllowed);
+        Assert.False(PayGateDecision.FromRows(Array.Empty<PayGateRow>()).PersonalizedAllowed);
+        Assert.False(PayGateDecision.FromRows(rows.Select(r => r with { Status = PayGateStatus.Unverified }).ToList()).PersonalizedAllowed);
+    }
+
+    [Fact]
+    public void AQualifiedCohortIsStillBlockedWhileTheProviderRightsAreUnverified()
+    {
+        using var fixture = Fixture();
+        var root = fixture.RootElement;
+        var asOf = root.GetProperty("asOf").GetDateTime();
+        var rows = Rows(root.GetProperty("covered"));
+
+        // A covered cohort on its own never authorizes personalized pay.
+        var result = PayEvidenceRules.Evaluate(rows, Query("software", "Denver, CO"), asOf);
+        Assert.NotNull(result.Interval);
+        Assert.False(result.PersonalizedAllowed);
+        Assert.Contains("provider_rights_unverified", result.BlockedReasons);
+
+        // Only an all-passed gate set does, and the decision carries no flag a caller can set.
+        var qualified = PayGateDecision.FromRows(
+            PayEvidenceGates.Current().Rows.Select(r => r with { Status = PayGateStatus.Passed }).ToList());
+        var authorized = PayEvidenceRules.Evaluate(rows, Query("software", "Denver, CO"), asOf, null, qualified);
+        Assert.True(authorized.PersonalizedAllowed);
+        Assert.Empty(authorized.BlockedReasons);
+    }
+
+    [Fact]
     public void CurrentProviderQualificationBlocksPersonalizedPay()
     {
         var gates = PayEvidenceGates.Current();

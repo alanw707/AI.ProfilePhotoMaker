@@ -40,5 +40,7 @@ Employer-disclosed USD pay only, annual or hourly **with explicit annual hours**
 |---|---|---|---|
 | 1 | — | No provider clears the rights gate, so personalized pay cannot ship. | Accepted and recorded: this is the ticket's expected negative outcome, and the release gate blocks rather than mislabels. |
 | 2 | P3 | The research rule was JavaScript-only, so production code could have drifted from the validated rule. | Addressed by porting it to `PayEvidenceRules` with the same reason strings, arithmetic and fixture numbers, cross-checked against the Node tests. |
+| 3 | P1 | (review) `Evaluate` took a caller-supplied `providerQualified` boolean, so a caller could report authorization while the gate rows said no provider passes. | Fixed: the decision is derived from the gate rows only (`PayGateDecision.PersonalizedAllowed` = every row Passed), the boolean is gone, and tests prove a covered cohort stays blocked under the current rows while an all-passed row set authorizes it. |
+| 4 | P3 | The old qualification test did not exercise that bypass. | Fixed: `AQualifiedCohortIsStillBlockedWhileTheProviderRightsAreUnverified` covers the covered-cohort case. |
 
 Open P0/P1: **none**.
