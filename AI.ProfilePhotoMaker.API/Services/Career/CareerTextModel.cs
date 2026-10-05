@@ -22,8 +22,33 @@ public sealed record CareerModelResult(string? FinalText, string? ToolCall, int 
 }
 
 /// <summary>
-/// The only way agent runs reach a text model (ADR 0009). Production registers no
-/// implementation until an owner picks a provider, so runs fail closed with 503.
+/// A model call that did not produce a result. <see cref="Retryable"/> says whether trying
+/// again later can help (timeouts, rate limits, server errors, malformed output) or not
+/// (bad key, empty account, invalid request, refusal). <see cref="Code"/> is a stable,
+/// prompt-free code safe to log.
+/// </summary>
+public sealed class CareerModelException : Exception
+{
+    public CareerModelException(string code, bool retryable, int? statusCode = null, int costCents = 0)
+        : base($"Career model call failed: {code}")
+    {
+        Code = code;
+        Retryable = retryable;
+        StatusCode = statusCode;
+        CostCents = costCents;
+    }
+
+    public string Code { get; }
+    public bool Retryable { get; }
+    public int? StatusCode { get; }
+
+    /// <summary>What the provider charged for an answer that could not be used.</summary>
+    public int CostCents { get; }
+}
+
+/// <summary>
+/// The only way agent runs reach a text model (ADR 0009). See
+/// <see cref="CareerTextModelRegistration"/> for which implementation each environment gets.
 /// </summary>
 public interface ICareerTextModel
 {

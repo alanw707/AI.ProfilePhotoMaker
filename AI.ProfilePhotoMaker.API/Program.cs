@@ -236,12 +236,9 @@ if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Lo
     builder.Services.AddSingleton<AI.ProfilePhotoMaker.API.Services.Career.IMalwareScanner, AI.ProfilePhotoMaker.API.Services.Career.NoThreatsScanner>();
 }
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.Career.CareerResumePurgeBackgroundService>();
-// Same rule for the agent's text model: the deterministic fake never reaches production, and
-// until an owner registers a real adapter, starting a run answers 503 CareerModelUnavailable.
-if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("LocalDev") || builder.Environment.IsEnvironment("Testing"))
-{
-    builder.Services.AddSingleton<AI.ProfilePhotoMaker.API.Services.Career.ICareerTextModel, AI.ProfilePhotoMaker.API.Services.Career.FakeCareerTextModel>();
-}
+// The agent's text model: a configured OpenAI model in any environment; otherwise the offline
+// fake outside production, and nothing in production (starting a run answers 503).
+AI.ProfilePhotoMaker.API.Services.Career.CareerTextModelRegistration.AddCareerTextModel(builder.Services, builder.Configuration, builder.Environment);
 // Tests drive the runner directly, so the polling worker is off in Testing.
 if (builder.Environment.IsEnvironment("Testing"))
 {
