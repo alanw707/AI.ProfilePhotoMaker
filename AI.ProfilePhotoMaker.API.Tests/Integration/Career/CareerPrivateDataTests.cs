@@ -156,6 +156,17 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
             .Contain(i => i.Table == "CareerPayAnalyses" && i.IsUnique && i.Columns.SequenceEqual(new[] { "RunId" }));
     }
 
+    [Fact]
+    public void ThePaySourceMigrationOnlyAddsOneNullableColumn()
+    {
+        var operations = new AddCareerPayAnalysisPaySource().UpOperations;
+        AssertAdditive(operations, allowAddColumn: true);
+        var added = operations.OfType<AddColumnOperation>().Should().ContainSingle().Subject;
+        (added.Table, added.Name, added.IsNullable).Should().Be(("CareerPayAnalyses", "RequestedPaySource", true));
+        operations.OfType<DropTableOperation>().Should().BeEmpty();
+        operations.OfType<DropColumnOperation>().Should().BeEmpty();
+    }
+
     private static void AssertAdditive(IReadOnlyList<MigrationOperation> operations, bool allowAddColumn)
     {
         operations.Should().NotBeEmpty();

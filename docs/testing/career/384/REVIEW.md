@@ -16,7 +16,8 @@ No provider qualifies, so the analysis ships **benchmark-first**: the BLS benchm
 | Blocked banner | plain words; the raw code is no longer shown to the user |
 | Scenario | requested 150,000 vs the **local** Denver benchmark median 137,610 → gap 12,390 and 9.0 %, matching the arithmetic and the area the card names; the note says a target is a preference, not evidence |
 | Scenario without a requested salary | `unavailable` (no invented target) |
-| Reproducibility | `POST …/recompute` → `matches: true`, identical `inputHash`; the page reads "Reproduced exactly (input hash 8685312b7c03)" |
+| Scenario provenance | the page names the area it compared against (Denver-Aurora-Centennial, CO) and, when the goal supplies one, which end of the desired pay was used (`desiredPayMin`/`desiredPayMax`); both are recorded in `checks.json` |
+| Reproducibility | `POST …/recompute` → `matches: true`, identical `inputHash`; the page reads "Reproduced exactly (input hash …)"; the current hash is recorded in `checks.json` rather than quoted here, because it pins the as-of instant of that run |
 | Stale after a profile change | `stale: true` (`profile_changed`), sections byte-identical, banner shown |
 | Another owner's analysis | GET 404, recompute 404 |
 | Allowance | not spent (used 0, reserved 0); no text model needed |

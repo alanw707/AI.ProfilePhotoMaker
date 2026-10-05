@@ -167,6 +167,18 @@ public class PayAnalysisBuilderTests
     }
 
     [Fact]
+    public void ThePaySourceIsRecordedSoThePageCanSayWhereTheTargetCameFrom()
+    {
+        // The runner records which end of the goal's desired pay it compared against; the builder
+        // reports it verbatim, and recompute reproduces it because the row stores it.
+        var scenario = PayAnalysisBuilder.Build(
+            Input(Fixture(12)) with { RequestedPaySource = "desiredPayMax" }, Reference).Sections.Scenario;
+
+        Assert.Equal("desiredPayMax", scenario.RequestedPaySource);
+        Assert.Null(PayAnalysisBuilder.Build(Input(Fixture(12)), Reference).Sections.Scenario.RequestedPaySource);
+    }
+
+    [Fact]
     public void TheScenarioNamesTheAreaItComparesAgainstAndWhereTheTargetCameFrom()
     {
         var scenario = PayAnalysisBuilder.Build(
