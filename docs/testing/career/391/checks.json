@@ -1,0 +1,223 @@
+{
+  "results": [
+    {
+      "label": "goal created",
+      "status": 201,
+      "goalId": "c53335a5-6589-4325-89cf-5cbdd902f43e"
+    },
+    {
+      "label": "real api",
+      "list": 200,
+      "listBody": "{\"success\":true,\"data\":{\"photos\":[],\"selectedPhotoId\":null,\"selectedPhotoAvailable\":false,\"entitlements\":[]},\"message\":null,\"error\":null}",
+      "privatePathLeak": false,
+      "selectMissing": [
+        404,
+        "CareerPhotoNotFound"
+      ],
+      "selectZero": 400,
+      "creditsUnchanged": true
+    },
+    {
+      "label": "01-materials-empty-real @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-materials-empty-real @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-materials-empty-real @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "preview radio disabled",
+      "disabled": true
+    },
+    {
+      "label": "02-materials-populated-mocked @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-materials-populated-mocked @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-materials-populated-mocked @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-photo-chosen-mocked @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-photo-chosen-mocked @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-photo-chosen-mocked @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "handoff url",
+      "url": "/app/enhance?refineImageId=42&careerReturn=materials&careerGoal=c53335a5-6589-4325-89cf-5cbdd902f43e"
+    },
+    {
+      "label": "workspace banner",
+      "text": "You came from your career materials. Back to career materials"
+    },
+    {
+      "label": "04-workspace-back-banner @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Photo Workspace - AI Profile Photo Maker",
+      "axe": [
+        "label: input"
+      ]
+    },
+    {
+      "label": "04-workspace-back-banner @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Photo Workspace - AI Profile Photo Maker",
+      "axe": [
+        "label: input"
+      ]
+    },
+    {
+      "label": "04-workspace-back-banner @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Photo Workspace - AI Profile Photo Maker",
+      "axe": [
+        "label: input"
+      ]
+    },
+    {
+      "label": "returned",
+      "url": "/app/career/materials?careerGoal=c53335a5-6589-4325-89cf-5cbdd902f43e",
+      "goalChangedNote": 0
+    },
+    {
+      "label": "open-redirect https://evil.com",
+      "banner": 0,
+      "url": "/app/enhance?careerReturn=https:%2F%2Fevil.com&careerGoal=c53335a5-6589-4325-89cf-5cbdd902f43e"
+    },
+    {
+      "label": "open-redirect //evil.com",
+      "banner": 0,
+      "url": "/app/enhance?careerReturn=%2F%2Fevil.com&careerGoal=c53335a5-6589-4325-89cf-5cbdd902f43e"
+    },
+    {
+      "label": "open-redirect javascript:alert(1)",
+      "banner": 0,
+      "url": "/app/enhance?careerReturn=javascript:alert(1)&careerGoal=c53335a5-6589-4325-89cf-5cbdd902f43e"
+    },
+    {
+      "label": "open-redirect /app/career/materials",
+      "banner": 0,
+      "url": "/app/enhance?careerReturn=%2Fapp%2Fcareer%2Fmaterials&careerGoal=c53335a5-6589-4325-89cf-5cbdd902f43e"
+    },
+    {
+      "label": "05-goal-changed @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05-goal-changed @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05-goal-changed @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "expired session",
+      "url": "/auth/login?message=Please log in to access this feature&returnUrl=/app/career/materials"
+    },
+    {
+      "label": "06-expired-session @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Login - AI Profile Photo Maker",
+      "axe": [
+        "color-contrast: a[routerlink=\"/legal/children-privacy\"] | .btn-link | .text-lg"
+      ]
+    },
+    {
+      "label": "06-expired-session @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Login - AI Profile Photo Maker",
+      "axe": [
+        "color-contrast: a[routerlink=\"/legal/children-privacy\"] | .btn-link | .text-lg"
+      ]
+    },
+    {
+      "label": "06-expired-session @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Login - AI Profile Photo Maker",
+      "axe": [
+        "color-contrast: a[routerlink=\"/legal/children-privacy\"] | .btn-link | .text-lg"
+      ]
+    },
+    {
+      "label": "off-origin navigations",
+      "urls": []
+    }
+  ],
+  "errors": []
+}

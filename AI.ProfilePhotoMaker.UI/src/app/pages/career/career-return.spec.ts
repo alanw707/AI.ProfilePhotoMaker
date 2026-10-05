@@ -3,16 +3,22 @@ import { careerHandoffQuery, resolveCareerReturn } from './career-return';
 describe('resolveCareerReturn', () => {
   const goal = '3f2b8c1e-6a4d-4e0b-9d57-1c2a3b4c5d6e';
 
-  it('maps the three allowed keys to fixed in-app paths', () => {
+  it('maps the three allowed keys to fixed in-app paths and labels', () => {
     expect(resolveCareerReturn('materials', goal)).toEqual({
       path: '/app/career/materials',
+      label: 'career materials',
       goalId: goal,
     });
     expect(resolveCareerReturn('profile', goal)).toEqual({
       path: '/app/career/profile',
+      label: 'career profile',
       goalId: goal,
     });
-    expect(resolveCareerReturn('home', goal)).toEqual({ path: '/app/career', goalId: goal });
+    expect(resolveCareerReturn('home', goal)).toEqual({
+      path: '/app/career',
+      label: 'career workspace',
+      goalId: goal,
+    });
   });
 
   it('accepts an upper-case GUID', () => {

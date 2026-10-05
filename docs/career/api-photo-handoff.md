@@ -13,7 +13,7 @@ Same envelope, auth, flag (403 `CareerWorkspaceDisabled`) and error shape as `ap
       "isWatermarkedPreview": false }        // true: free preview, raw withheld; cannot be chosen
   ],                                         // owner's succeeded generated images, newest first, max 24
   "selectedPhotoId": 42,                     // null when none chosen
-  "selectedPhotoAvailable": true,            // false when the chosen photo no longer exists or is no longer eligible
+  "selectedPhotoAvailable": true,            // false when nothing is chosen, or the chosen photo no longer exists / is no longer eligible
   "entitlements": [                          // read-only copy of active photo packages
     { "packageCode": "starter_package", "packageName": "Starter Package",
       "remainingCandidates": 2, "remainingRefinements": 3, "remainingPremiumAugmentations": 0,

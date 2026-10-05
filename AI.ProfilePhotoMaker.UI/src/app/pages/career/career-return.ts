@@ -4,16 +4,18 @@
  * The workspace URL carries a short key (never a URL) and a goal id. Only the keys below
  * are accepted, so a crafted link cannot send the user to another site.
  */
-const CAREER_RETURN_PATHS: Readonly<Record<string, string>> = {
-  materials: '/app/career/materials',
-  profile: '/app/career/profile',
-  home: '/app/career',
+const CAREER_RETURN_TARGETS: Readonly<Record<string, { path: string; label: string }>> = {
+  materials: { path: '/app/career/materials', label: 'career materials' },
+  profile: { path: '/app/career/profile', label: 'career profile' },
+  home: { path: '/app/career', label: 'career workspace' },
 };
 
 const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface CareerReturn {
   path: string;
+  /** Destination name for "Back to <label>" copy. */
+  label: string;
   goalId: string;
 }
 
@@ -22,10 +24,10 @@ export function resolveCareerReturn(key: string | null, goal: string | null): Ca
     return null;
   }
   // hasOwn keeps keys such as "constructor" or "__proto__" from resolving.
-  if (!Object.prototype.hasOwnProperty.call(CAREER_RETURN_PATHS, key)) {
+  if (!Object.prototype.hasOwnProperty.call(CAREER_RETURN_TARGETS, key)) {
     return null;
   }
-  return { path: CAREER_RETURN_PATHS[key], goalId: goal };
+  return { ...CAREER_RETURN_TARGETS[key], goalId: goal };
 }
 
 /** Query params for a link from career into the photo workspace. */

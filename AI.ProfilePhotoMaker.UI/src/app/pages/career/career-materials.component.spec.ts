@@ -69,6 +69,33 @@ describe('CareerMaterialsComponent', () => {
     expect(router.navigateByUrl).toHaveBeenCalledWith('/app');
   });
 
+  it('keeps the saved photo checked and marked in use', () => {
+    const photo = {
+      id: 42,
+      imageUrl: 'https://img/42.png',
+      createdAt: '2026-09-28T10:00:00Z',
+      style: 'linkedin',
+      isWatermarkedPreview: false,
+    };
+    const other = { ...photo, id: 43 };
+    api.listPhotos.and.returnValue(of({ ...list, photos: [photo, other], selectedPhotoId: 42 }));
+    api.selectPhoto.and.returnValue(
+      of({ selectedPhotoId: 43, careerGoalId: null, selectedAt: '2026-10-04T00:00:00Z' })
+    );
+    const component = create();
+    expect(component.pendingPhotoId()).toBe(42);
+    expect(component.isInUse(photo)).toBeTrue();
+    expect(component.canSave()).toBeFalse();
+
+    component.choose(other);
+    expect(component.canSave()).toBeTrue();
+    component.useSelected();
+    expect(component.pendingPhotoId()).toBe(43);
+    expect(component.isInUse(other)).toBeTrue();
+    expect(component.isInUse(photo)).toBeFalse();
+    expect(component.canSave()).toBeFalse();
+  });
+
   it('flags a changed goal only when the arriving goal differs', () => {
     api.listPhotos.and.returnValue(of(list));
     api.getGoal.and.returnValue(of({ id: goalId } as CareerGoalDto));

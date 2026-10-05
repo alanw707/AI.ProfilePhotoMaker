@@ -38,7 +38,7 @@
         <fieldset class="photo-grid" aria-labelledby="owned-heading">
           <legend class="visually-hidden">Your photos</legend>
           @for (photo of photos(); track photo.id) {
-            <div class="photo-card">
+            <div class="photo-card" [class.in-use]="isInUse(photo)">
               <label class="photo-choice" [attr.for]="'photo-' + photo.id">
                 <input
                   type="radio"
@@ -50,6 +50,9 @@
                   (change)="choose(photo)" />
                 <img class="photo-thumb" [src]="photo.imageUrl" [alt]="photoLabel(photo)" />
                 <span class="muted">{{ photo.createdAt | date: 'mediumDate' }}</span>
+                @if (isInUse(photo)) {
+                  <strong class="photo-in-use">In use</strong>
+                }
               </label>
               @if (photo.isWatermarkedPreview) {
                 <p class="muted">Watermarked preview - improve it in the photo workspace first</p>
@@ -58,11 +61,7 @@
             </div>
           }
         </fieldset>
-        <button
-          type="button"
-          class="primary"
-          [disabled]="pendingPhotoId() === null || saving()"
-          (click)="useSelected()">
+        <button type="button" class="primary photo-save" [disabled]="!canSave()" (click)="useSelected()">
           Use this photo
         </button>
       }

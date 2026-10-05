@@ -45,6 +45,13 @@ export class CareerMaterialsComponent implements OnInit {
     () => this.selectedPhotoId() !== null && !this.selectedPhotoAvailable()
   );
   hasSelection = computed(() => this.selectedPhotoId() !== null && this.selectedPhotoAvailable());
+  /** Saving is only offered for a new choice, not for the photo already in use. */
+  canSave = computed(
+    () =>
+      this.pendingPhotoId() !== null &&
+      !this.saving() &&
+      !(this.hasSelection() && this.pendingPhotoId() === this.selectedPhotoId())
+  );
 
   ngOnInit() {
     this.api.listPhotos().subscribe({
@@ -53,6 +60,8 @@ export class CareerMaterialsComponent implements OnInit {
         this.entitlements.set(list.entitlements);
         this.selectedPhotoId.set(list.selectedPhotoId);
         this.selectedPhotoAvailable.set(list.selectedPhotoAvailable);
+        // Start the grid on the photo already in use, so it reads as checked.
+        this.pendingPhotoId.set(list.selectedPhotoAvailable ? list.selectedPhotoId : null);
         this.loading.set(false);
       },
       error: (e: CareerApiError) => {
@@ -89,6 +98,10 @@ export class CareerMaterialsComponent implements OnInit {
     return photo.style ? `Your photo from ${date}, ${photo.style}` : `Your photo from ${date}`;
   }
 
+  isInUse(photo: CareerPhotoDto): boolean {
+    return this.hasSelection() && this.selectedPhotoId() === photo.id;
+  }
+
   choose(photo: CareerPhotoDto) {
     if (!photo.isWatermarkedPreview) {
       this.pendingPhotoId.set(photo.id);
@@ -97,7 +110,7 @@ export class CareerMaterialsComponent implements OnInit {
 
   useSelected() {
     const id = this.pendingPhotoId();
-    if (id === null || this.saving()) {
+    if (id === null || !this.canSave()) {
       return;
     }
     this.saving.set(true);
@@ -108,7 +121,7 @@ export class CareerMaterialsComponent implements OnInit {
         this.saving.set(false);
         this.selectedPhotoId.set(result.selectedPhotoId);
         this.selectedPhotoAvailable.set(true);
-        this.pendingPhotoId.set(null);
+        this.pendingPhotoId.set(result.selectedPhotoId);
         this.status.set('Photo saved to your career profile.');
       },
       error: (e: CareerApiError) => {
@@ -125,6 +138,7 @@ export class CareerMaterialsComponent implements OnInit {
       next: () => {
         this.selectedPhotoId.set(null);
         this.selectedPhotoAvailable.set(true);
+        this.pendingPhotoId.set(null);
         this.status.set('Photo removed from your career profile.');
       },
       error: (e: CareerApiError) => this.handle(e),
