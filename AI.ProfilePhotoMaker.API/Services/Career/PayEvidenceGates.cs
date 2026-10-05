@@ -8,16 +8,21 @@ public sealed record PayGateRow(string GateId, string Requirement, PayGateStatus
 /// A qualification decision. Authorization is derived from the gate rows and nothing else, so
 /// no caller can assert it: personalized pay needs every gate Passed (ADR 0012).
 /// </summary>
-public sealed record PayGateDecision(IReadOnlyList<PayGateRow> Rows)
+public sealed record PayGateDecision
 {
+    /// <summary>
+    /// Internal on purpose: only a qualification (and tests, through InternalsVisibleTo) can build a
+    /// decision, so no caller can fabricate authorization with its own rows. Outside this assembly
+    /// the only way to obtain one is <see cref="PayEvidenceGates.Current"/>.
+    /// </summary>
+    internal PayGateDecision(IReadOnlyList<PayGateRow> rows) => Rows = rows;
+
+    public IReadOnlyList<PayGateRow> Rows { get; }
+
     public bool PersonalizedAllowed => Rows.Count > 0 && Rows.All(r => r.Status == PayGateStatus.Passed);
 
     public IReadOnlyList<string> BlockedReasons => PersonalizedAllowed ? Array.Empty<string>() : new[] { PayEvidenceGates.RightsBlock };
 
-    /// <summary>
-    /// Builds a decision from gate rows. Internal on purpose: only the qualification itself (and
-    /// tests) may construct authorization, so no production caller can fabricate one.
-    /// </summary>
     internal static PayGateDecision FromRows(IReadOnlyList<PayGateRow> rows) => new(rows);
 }
 
@@ -26,7 +31,7 @@ public static class PayEvidenceGates
 {
     public const string RightsBlock = "provider_rights_unverified";
 
-    public static PayGateDecision Current() => new(new PayGateRow[]
+    public static PayGateDecision Current() => PayGateDecision.FromRows(new PayGateRow[]
     {
         new("G1", "Authorized ongoing aggregation, display, retention and attribution", PayGateStatus.Unverified,
             "Adzuna is preferred; written commercial rights and retention terms have not been obtained."),
