@@ -70,6 +70,9 @@ import {
         <a routerLink="/app/career/market">Analytics: market brief</a>
       </p>
       <p>
+        <a routerLink="/app/career/markets">Compare markets</a>
+      </p>
+      <p>
         <a routerLink="/app/career/pay">Pay analysis</a>
       </p>
       <p>

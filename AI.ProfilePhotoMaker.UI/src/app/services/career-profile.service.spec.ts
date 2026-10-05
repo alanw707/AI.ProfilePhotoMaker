@@ -453,4 +453,62 @@ describe('CareerProfileService', () => {
       expect(kinds).toEqual(['notFound', 'unavailable']);
     });
   });
+
+  describe('market comparison', () => {
+    it('reads metrics and compares with a bounded query string', () => {
+      service.getMarketMetrics().subscribe(r => expect(r.metrics.length).toBe(1));
+      http
+        .expectOne('/api/career/markets/metrics')
+        .flush({ success: true, data: { metrics: [{}] } });
+      service
+        .compareMarkets({ metric: 'median_wage', level: 'state', areas: ['08', '06'], q: 'co l' })
+        .subscribe(r => expect(r.level).toBe('state'));
+      http
+        .expectOne(
+          '/api/career/markets/compare?metric=median_wage&level=state&areas=08%2C06&q=co+l'
+        )
+        .flush({ success: true, data: { level: 'state', areas: [] } });
+      service.compareMarkets({ metric: 'employment', level: 'metro' }).subscribe();
+      http
+        .expectOne('/api/career/markets/compare?metric=employment&level=metro')
+        .flush({ success: true, data: {} });
+    });
+    it('saves a preference with the explicit ETag and confirmation', () => {
+      service.saveMarketPreference({ areaCode: '19740', level: 'metro' }, '"goal-v2"').subscribe();
+      const req = http.expectOne('/api/career/markets/preference');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.headers.get('If-Match')).toBe('"goal-v2"');
+      expect(req.request.body).toEqual({ areaCode: '19740', level: 'metro', confirmed: true });
+      req.flush({ success: true, data: { etag: '"goal-v3"' } });
+    });
+    it('maps comparison and preference errors', () => {
+      const kinds: string[] = [];
+      const fail = (status: number, code: string) => {
+        service
+          .compareMarkets({ metric: 'm', level: 'state' })
+          .subscribe({ error: (e: CareerApiError) => kinds.push(e.kind) });
+        http
+          .expectOne(r => r.url.startsWith('/api/career/markets/compare'))
+          .flush({ success: false, error: { code, message: 'm' } }, { status, statusText: 'x' });
+      };
+      fail(409, 'CareerMetricUnsupported');
+      fail(409, 'CareerOccupationRequired');
+      fail(404, 'CareerAreaNotFound');
+      for (const status of [412, 428]) {
+        service
+          .saveMarketPreference({ areaCode: '08', level: 'state' }, '"e"')
+          .subscribe({ error: (e: CareerApiError) => kinds.push(e.kind) });
+        http
+          .expectOne('/api/career/markets/preference')
+          .flush({ success: false, error: { message: 'm' } }, { status, statusText: 'x' });
+      }
+      expect(kinds).toEqual([
+        'metricUnsupported',
+        'occupationRequired',
+        'areaNotFound',
+        'conflict',
+        'precondition',
+      ]);
+    });
+  });
 });
