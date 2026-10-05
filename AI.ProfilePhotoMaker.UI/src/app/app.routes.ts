@@ -227,6 +227,13 @@ export const routes: Routes = [
         title: 'Career Materials - AI Profile Photo Maker',
       },
       {
+        path: 'career/privacy',
+        canActivate: [careerWorkspaceGuard],
+        loadComponent: () =>
+          import('./pages/career/career-privacy.component').then(m => m.CareerPrivacyComponent),
+        title: 'Career Privacy - AI Profile Photo Maker',
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./pages/settings/settings.component').then(m => m.SettingsComponent),
