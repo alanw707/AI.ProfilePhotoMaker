@@ -99,7 +99,9 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         typeof(CareerOccupationMatch),
         typeof(CareerMarketBrief),
         typeof(CareerPayAnalysis),
-        typeof(CareerRoadmap)
+        typeof(CareerRoadmap),
+        typeof(CareerRoadmapTaskProgress),
+        typeof(CareerRoadmapReplan)
     };
 
     private readonly ApplicationDbContext _db;
@@ -123,6 +125,8 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         _db.CareerOccupationMatches.RemoveRange(await _db.CareerOccupationMatches.Where(m => m.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerMarketBriefs.RemoveRange(await _db.CareerMarketBriefs.Where(b => b.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerPayAnalyses.RemoveRange(await _db.CareerPayAnalyses.Where(b => b.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerRoadmapTaskProgress.RemoveRange(await _db.CareerRoadmapTaskProgress.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerRoadmapReplans.RemoveRange(await _db.CareerRoadmapReplans.Where(r => r.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerRoadmaps.RemoveRange(await _db.CareerRoadmaps.Where(r => r.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerProfileProposalItems.RemoveRange(await _db.CareerProfileProposalItems.Where(i => i.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerProfileProposals.RemoveRange(await _db.CareerProfileProposals.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
@@ -197,6 +201,11 @@ public static class CareerWorkspaceServiceCollectionExtensions
         services.TryAddSingleton<IPayObservationSource, NoQualifiedPayObservationSource>();
         services.AddScoped<ICareerPayService, CareerPayService>();
         services.AddScoped<ICareerRoadmapService, CareerRoadmapService>();
+        services.AddScoped<ICareerRoadmapTrackingService>(sp => new CareerRoadmapTrackingService(
+            sp.GetRequiredService<ApplicationDbContext>(),
+            sp.GetRequiredService<ICareerRoadmapService>(),
+            sp.GetRequiredService<TimeProvider>(),
+            sp.GetService<IMarketReference>()));
 
         // Job observations (#386, ADR 0015). Nothing is persisted. With no USAJobs key the default source
         // reports an honest unavailable state; tests replace IJobObservationSource with a fake.

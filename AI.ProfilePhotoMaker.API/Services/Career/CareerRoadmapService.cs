@@ -235,6 +235,11 @@ public sealed class CareerRoadmapService : ICareerRoadmapService
             CreatedAt = _clock.GetUtcNow().UtcDateTime
         };
         _db.CareerRoadmaps.Add(next);
+        // Progress and the tasks the user added belong to the roadmap, so they move to the new version unchanged.
+        foreach (var progress in await _db.CareerRoadmapTaskProgress.AsNoTracking().Where(p => p.RoadmapId == row.Id && p.OwnerId == ownerId).ToListAsync(ct))
+        {
+            _db.CareerRoadmapTaskProgress.Add(CareerRoadmapTrackingService.CopyOf(progress, next.Id, progress.DependsOnJson));
+        }
         await _db.SaveChangesAsync(ct);
         return CareerOutcome<CareerRoadmapDto>.Ok(await ToDtoAsync(next, ct));
     }

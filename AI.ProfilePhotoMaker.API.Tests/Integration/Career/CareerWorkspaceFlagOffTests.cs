@@ -70,6 +70,13 @@ public class CareerWorkspaceFlagOffTests : IClassFixture<CustomWebApplicationFac
         { "POST", $"/api/career/roadmaps/{Guid.Empty}/accept" },
         { "POST", $"/api/career/roadmaps/{Guid.Empty}/dismiss" },
         { "PUT", $"/api/career/roadmaps/{Guid.Empty}/tasks/t1" },
+        { "GET", $"/api/career/roadmaps/{Guid.Empty}/progress" },
+        { "PUT", $"/api/career/roadmaps/{Guid.Empty}/progress/t1" },
+        { "POST", $"/api/career/roadmaps/{Guid.Empty}/tasks" },
+        { "POST", $"/api/career/roadmaps/{Guid.Empty}/replan" },
+        { "GET", $"/api/career/replans/{Guid.Empty}" },
+        { "POST", $"/api/career/replans/{Guid.Empty}/apply" },
+        { "POST", $"/api/career/replans/{Guid.Empty}/reject" },
     };
 
     [Theory]
