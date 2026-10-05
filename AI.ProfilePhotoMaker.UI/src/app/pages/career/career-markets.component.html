@@ -5,7 +5,7 @@
     @if (comparison(); as c) {
       <p data-intro>
         Source: {{ c.metric.measure }}, {{ releaseText(c.reference.release) }} release (published
-        {{ c.reference.publishedOn }}) for {{ c.occupation.title }}. Coverage: {{ c.reference.coverage }}
+        {{ publishedText(c.reference.publishedOn) }}) for {{ c.occupation.title }}. Coverage: {{ c.reference.coverage }}
         These are occupational benchmarks, not job openings.
         <button type="button" class="secondary source-link" (click)="showSource()">Source details</button>
       </p>
@@ -98,7 +98,7 @@
         <h2 id="legend-heading">{{ c.metric.label }} by {{ levelNoun(c.level) }}</h2>
         <p>
           Unit: {{ unitLabel(c.metric.unit) }}. Measure: {{ c.metric.measure }}. Reference period:
-          {{ releaseText(c.reference.release) }}, published {{ c.reference.publishedOn }}.
+          {{ releaseText(c.reference.release) }}, published {{ publishedText(c.reference.publishedOn) }}.
         </p>
         <p data-national>
           {{ c.national.areaTitle }} (national):
@@ -193,7 +193,7 @@
         <section aria-labelledby="save-heading" class="market-save" data-save>
           <h2 id="save-heading">Your selection</h2>
           @if (selected().length) {
-            <p data-selected>Selected: {{ selectedTitles().join(', ') }}</p>
+            <p data-selected>Selected: {{ selectionText() }}</p>
           } @else {
             <p class="muted">Select up to {{ limit() }} areas to compare. Nothing is saved until you confirm.</p>
           }
@@ -267,7 +267,7 @@
     <h2 id="confirm-heading">Save this location?</h2>
     <p>
       Set
-      <strong>{{ saveTarget()?.title }}</strong>
+      <strong>{{ targetText() }}</strong>
       as the location on your career goal?
       @if (goal()?.goal?.targetLocation; as current) {
         This replaces "{{ current }}".
@@ -286,7 +286,7 @@
       <h2 id="source-heading">Source</h2>
       <p>
         {{ c.metric.measure }} · Release {{ releaseText(c.reference.release) }} · Published
-        {{ c.reference.publishedOn }}
+        {{ publishedText(c.reference.publishedOn) }}
       </p>
       <p>
         <strong>Coverage.</strong>

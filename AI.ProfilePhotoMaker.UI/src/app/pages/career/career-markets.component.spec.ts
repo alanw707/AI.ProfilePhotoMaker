@@ -167,7 +167,24 @@ describe('CareerMarketsComponent', () => {
       throwError(() => ({ kind: 'conflict', message: 'x' }))
     );
     component.confirmSave();
-    expect(component.error()).toBe('Your goal changed in another tab. Reload and try again.');
+    expect(component.error()).toBe('Your goal changed in another tab. Try again.');
+  });
+
+  it('refetches the goal after a conflict so the next save carries the fresh ETag', () => {
+    create({ areas: '08' });
+    api.saveMarketPreference.and.returnValue(
+      throwError(() => ({ kind: 'precondition', message: 'x' }))
+    );
+    api.getGoal.and.returnValue(of({ ...goal, etag: '"goal-v9"' } as CareerGoalDto));
+    component.confirmSave();
+    expect(component.goal()?.etag).toBe('"goal-v9"');
+  });
+
+  it('never exposes a code for a selected area missing from the response', () => {
+    create({ areas: '99' });
+    expect(component.selectedTitles()).toEqual([]);
+    expect(component.selectionText()).toBe('1 selected area is not shown by the current filter');
+    expect(component.targetText()).toBe('1 area not shown by the current filter');
   });
 
   it('asks for an occupation and keeps the page usable on a 409', () => {

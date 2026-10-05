@@ -237,10 +237,10 @@ public class CareerMarketComparisonApiTests : IClassFixture<CareerMarketFactory>
         var (user, goalId) = await UserAsync();
         (await Save(user, Denver())).EnsureSuccessStatusCode();
 
-        var patched = await CareerClient.ReadDataAsync(await user.PatchGoalAsync(goalId, Goal(), "\"goal-v2\""), 200);
+        var patched = await CareerClient.ReadDataAsync(await user.PatchGoalAsync(goalId, GoalAt("Denver-Aurora-Centennial, CO"), "\"goal-v2\""), 200);
         patched.GetProperty("version").GetInt32().Should().Be(3);
         patched.GetProperty("preferredArea").GetProperty("code").GetString().Should().Be("19740");
-        patched.GetProperty("goal").GetProperty("targetLocation").GetString().Should().Be("Austin, TX");
+        patched.GetProperty("goal").GetProperty("targetLocation").GetString().Should().Be("Denver-Aurora-Centennial, CO");
 
         var restored = await CareerClient.ReadDataAsync(
             await user.SendAsync(HttpMethod.Post, $"/api/career/goals/{goalId}/versions/2/restore", null, "\"goal-v3\""), 200);
@@ -250,6 +250,42 @@ public class CareerMarketComparisonApiTests : IClassFixture<CareerMarketFactory>
         var back = await CareerClient.ReadDataAsync(
             await user.SendAsync(HttpMethod.Post, $"/api/career/goals/{goalId}/versions/1/restore", null, "\"goal-v4\""), 200);
         back.GetProperty("preferredArea").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    private static object GoalAt(string? location) => new
+    {
+        targetRole = "Senior software developer",
+        targetLocation = location,
+        workArrangement = "hybrid",
+        desiredPayMin = 120000,
+        desiredPayMax = 160000,
+        weeklyEffortHours = 5,
+        confirmed = true
+    };
+
+    [Fact]
+    public async Task EditingTheLocationByHandClearsThePreferredArea()
+    {
+        var (user, goalId) = await UserAsync();
+        (await Save(user, Denver())).EnsureSuccessStatusCode();
+
+        var patched = await CareerClient.ReadDataAsync(await user.PatchGoalAsync(goalId, GoalAt("Seattle, WA"), "\"goal-v2\""), 200);
+
+        patched.GetProperty("preferredArea").ValueKind.Should().Be(JsonValueKind.Null);
+        patched.GetProperty("goal").GetProperty("targetLocation").GetString().Should().Be("Seattle, WA");
+    }
+
+    [Fact]
+    public async Task ResavingTheSameLocationIgnoringCaseAndPaddingKeepsThePreferredArea()
+    {
+        var (user, goalId) = await UserAsync();
+        var saved = await CareerClient.ReadDataAsync(await Save(user, Denver()), 200);
+        var title = saved.GetProperty("preferredArea").GetProperty("title").GetString()!;
+
+        var patched = await CareerClient.ReadDataAsync(
+            await user.PatchGoalAsync(goalId, GoalAt("  " + title.ToUpperInvariant() + " "), "\"goal-v2\""), 200);
+
+        patched.GetProperty("preferredArea").GetProperty("code").GetString().Should().Be("19740");
     }
 
     [Fact]

@@ -134,6 +134,20 @@ public class MarketComparisonServiceTests
     }
 
     [Fact]
+    public void ShareRanksOnTheUnroundedValueAndOnlyTheDisplayIsRounded()
+    {
+        var ranked = Compare("share_of_national_employment", "metro").Areas.Where(a => a.Rank != null).ToList();
+        var national = Raw("99", "15-1252", "TOT_EMP");
+        var emp = ranked.ToDictionary(a => a.AreaCode, a => Raw(a.AreaCode, "15-1252", "TOT_EMP"));
+
+        // The fixture only means something if rounding actually creates ties between different areas.
+        ranked.GroupBy(a => a.Value).Any(g => g.Select(a => emp[a.AreaCode]).Distinct().Count() > 1).Should().BeTrue();
+        ranked.Select(a => a.AreaCode).Should().Equal(
+            ranked.OrderByDescending(a => emp[a.AreaCode]).ThenBy(a => a.AreaCode, StringComparer.Ordinal).Select(a => a.AreaCode));
+        ranked.Should().OnlyContain(a => a.Value == Math.Round(emp[a.AreaCode] / national * 100, 1, MidpointRounding.AwayFromZero));
+    }
+
+    [Fact]
     public void ShareOfNationalEmploymentIsAreaOverNationalRoundedToOneDecimal()
     {
         var colorado = Compare("share_of_national_employment").Areas.Single(a => a.AreaCode == "08");

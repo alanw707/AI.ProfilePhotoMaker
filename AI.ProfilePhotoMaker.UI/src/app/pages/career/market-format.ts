@@ -109,3 +109,31 @@ const UNIT_LABELS: Record<string, string> = {
 export function unitLabel(unit: string): string {
   return UNIT_LABELS[unit] ?? unit;
 }
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+/** "2026-05-15" reads "15 May 2026"; anything that is not a valid ISO date stays as published. */
+export function dateText(iso: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!match) {
+    return iso;
+  }
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const real = new Date(Date.UTC(year, month - 1, day));
+  const valid =
+    real.getUTCFullYear() === year && real.getUTCMonth() === month - 1 && real.getUTCDate() === day;
+  return valid ? `${day} ${MONTH_NAMES[month - 1]} ${year}` : iso;
+}

@@ -335,7 +335,16 @@ public sealed class CareerProfileService : ICareerProfileService
         var profileVersion = await ProfileVersionNumberAsync(ownerId, ct);
         var next = NewGoalVersion(goal, goal.ActiveVersionNumber + 1, facts, profileVersion, Now());
         // A manual edit keeps the occupation the user confirmed (ADR 0010).
-        CarryOccupation(await ActiveGoalVersionAsync(goal, ct), next);
+        var active = await ActiveGoalVersionAsync(goal, ct);
+        CarryOccupation(active, next);
+        // A hand-edited location that no longer names the saved place must not leave that place behind as a stale preference.
+        if (active.PreferredAreaTitle != null
+            && !string.Equals(next.TargetLocation?.Trim(), active.PreferredAreaTitle.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            next.PreferredAreaCode = null;
+            next.PreferredAreaTitle = null;
+            next.PreferredAreaLevel = null;
+        }
         return await AppendGoalVersionAsync(goal, next, profileVersion, ct);
     }
 

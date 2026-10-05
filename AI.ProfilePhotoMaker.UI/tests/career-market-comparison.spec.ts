@@ -208,6 +208,8 @@ interface Options {
 }
 async function mock(page: Page, options: Options = {}) {
   const posts: unknown[] = [];
+  const ifMatch: string[] = [];
+  let etag = goalDto.etag;
   await page.addInitScript(() => localStorage.setItem('e2eAuthBypass', 'true'));
   await page.route('**/api/**', route => {
     const url = new URL(route.request().url());
@@ -219,7 +221,11 @@ async function mock(page: Page, options: Options = {}) {
     if (url.pathname === '/api/career/goals') {
       return options.noGoal
         ? fail(404, 'CareerGoalNotFound', 'No goal')
-        : send({ ...goalDto, occupation: options.noOccupation ? null : goalDto.occupation });
+        : send({
+            ...goalDto,
+            etag,
+            occupation: options.noOccupation ? null : goalDto.occupation,
+          });
     }
     if (url.pathname === '/api/career/markets/metrics') return send({ metrics });
     if (url.pathname === '/api/career/markets/compare') {
@@ -240,13 +246,16 @@ async function mock(page: Page, options: Options = {}) {
     }
     if (url.pathname === '/api/career/markets/preference') {
       posts.push(route.request().postDataJSON());
-      return options.saveStatus === 412
-        ? fail(412, 'CareerVersionConflict', 'stale')
-        : send({ ...goalDto, etag: '"goal-v3"', version: 3 });
+      ifMatch.push(route.request().headers()['if-match'] ?? '');
+      if (options.saveStatus === 412 && ifMatch.length === 1) {
+        etag = '"goal-v3"'; // another tab saved: the freshly fetched goal carries the new ETag
+        return fail(412, 'CareerVersionConflict', 'stale');
+      }
+      return send({ ...goalDto, etag: '"goal-v4"', version: 4 });
     }
     return send([]);
   });
-  return posts;
+  return Object.assign(posts, { ifMatch });
 }
 async function open(page: Page, query = '') {
   await page.goto(`/app/career/markets?e2eAuthBypass=1${query}`);
@@ -268,9 +277,10 @@ test.describe('desktop', () => {
     const intro = page.locator('[data-intro]');
     await expect(intro).toContainText('BLS OEWS median annual wage');
     await expect(intro).toContainText('May 2025');
-    await expect(intro).toContainText('2026-05-15');
+    await expect(intro).toContainText('15 May 2026');
     await expect(intro).toContainText('Nonfarm establishments in all 50 states and DC.');
     await expect(intro).toContainText('not job openings');
+    expect(await page.locator('body').innerText()).not.toMatch(/\d{4}-\d{2}-\d{2}/);
     const legend = page.locator('[data-legend]');
     await expect(legend).toContainText('U.S. dollars per year');
     await expect(legend).toContainText('Hatched: no figure to rank');
@@ -283,6 +293,16 @@ test.describe('desktop', () => {
       'aria-label',
       /^California, .*\$191,000, rank 1 of 49$/
     );
+  });
+
+  test('dates read for people in the legend and the source dialog', async ({ page }) => {
+    await mock(page);
+    await open(page);
+    await expect(page.locator('[data-legend]')).toContainText('published 15 May 2026');
+    await page.getByRole('button', { name: 'Source details' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('Release May 2025 · Published 15 May 2026');
+    expect(await dialog.innerText()).not.toMatch(/\d{4}-\d{2}/);
   });
 
   test('every table row equals its heatmap cell', async ({ page }) => {
@@ -439,18 +459,49 @@ test.describe('desktop', () => {
     const request = page.waitForRequest('**/api/career/markets/preference');
     await dialog.getByRole('button', { name: 'Yes, save this location' }).click();
     expect((await request).headers()['if-match']).toBe('"goal-v2"');
-    expect(posts).toEqual([{ areaCode: '08', level: 'state', confirmed: true }]);
+    expect([...posts]).toEqual([{ areaCode: '08', level: 'state', confirmed: true }]);
     await expect(page.locator('[data-live]')).toHaveText('Saved to your career goal.');
   });
 
-  test('a stale goal shows the reload message', async ({ page }) => {
-    await mock(page, { saveStatus: 412 });
+  test('a stale goal refetches the ETag, says try again, and the retry uses the fresh ETag', async ({
+    page,
+  }) => {
+    const posts = await mock(page, { saveStatus: 412 });
     await open(page);
     await tile(page, '08').click();
     await page.getByRole('button', { name: 'Save this location to my goal' }).click();
     await page.getByRole('button', { name: 'Yes, save this location' }).click();
     await expect(page.locator('[data-error]')).toHaveText(
-      'Your goal changed in another tab. Reload and try again.'
+      'Your goal changed in another tab. Try again.'
+    );
+    const save = page.getByRole('button', { name: 'Save this location to my goal' });
+    await expect(save).toBeEnabled();
+    await save.click();
+    await page.getByRole('button', { name: 'Yes, save this location' }).click();
+    await expect(page.locator('[data-live]')).toHaveText('Saved to your career goal.');
+    expect(posts.ifMatch).toEqual(['"goal-v2"', '"goal-v3"']);
+    expect(posts.ifMatch[1]).not.toBe(posts.ifMatch[0]);
+  });
+
+  test('a selected area hidden by the filter never shows its code', async ({ page }) => {
+    await mock(page);
+    await open(page, '&areas=06&q=colo');
+    const neutral = '1 selected area is not shown by the current filter';
+    await expect(page.locator('[data-selected]')).toContainText(neutral);
+    await expect(page.locator('tr[data-area]')).toHaveCount(1);
+    expect(await page.locator('body').innerText()).not.toContain('06');
+    await page.getByRole('button', { name: 'Save this location to my goal' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('1 area not shown by the current filter');
+    expect(await dialog.innerText()).not.toContain('06');
+    await expect(dialog).toContainText('This replaces "Austin, TX".');
+  });
+
+  test('known and hidden selections are named without codes', async ({ page }) => {
+    await mock(page);
+    await open(page, '&areas=08,06&q=colo');
+    await expect(page.locator('[data-selected]')).toHaveText(
+      'Selected: Colorado and 1 selected area is not shown by the current filter'
     );
   });
 

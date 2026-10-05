@@ -3,7 +3,7 @@ import {
   MarketFigureStatus,
   MarketFigureUnit,
 } from '../../services/career-profile.service';
-import { comparisonRows, formatFigure, unitLabel } from './market-format';
+import { comparisonRows, dateText, formatFigure, unitLabel } from './market-format';
 
 function fig(
   unit: MarketFigureUnit,
@@ -102,5 +102,18 @@ describe('unitLabel', () => {
     expect(unitLabel('usd_per_year')).toBe('U.S. dollars per year');
     expect(unitLabel('jobs')).toBe('number of jobs');
     expect(unitLabel('widgets')).toBe('widgets');
+  });
+});
+
+describe('dateText', () => {
+  it('reads an ISO date as day, month name and year', () => {
+    expect(dateText('2026-05-15')).toBe('15 May 2026');
+    expect(dateText('2026-12-01')).toBe('1 December 2026');
+  });
+
+  it('leaves anything that is not a plain ISO date as published', () => {
+    expect(dateText('2025-05')).toBe('2025-05');
+    expect(dateText('2026-13-40')).toBe('2026-13-40');
+    expect(dateText('soon')).toBe('soon');
   });
 });

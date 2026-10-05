@@ -30,7 +30,7 @@ import {
   MarketFigure,
   MarketMetric,
 } from '../../services/career-profile.service';
-import { formatFigure, unitLabel } from './market-format';
+import { dateText, formatFigure, unitLabel } from './market-format';
 import { periodText } from './career-market.component';
 
 export const MARKETS_PATH = '/app/career/markets';
@@ -121,7 +121,8 @@ export class CareerMarketsComponent implements OnInit {
   private confirmDialog = viewChild<ElementRef<HTMLDialogElement>>('confirm');
   private sourceDialog = viewChild<ElementRef<HTMLDialogElement>>('source');
   private searchInput = new Subject<string>();
-  private titles = new Map<string, string>();
+  /** Titles of every area seen in any response, so a selection survives a filter that hides it. */
+  private titles = signal<ReadonlyMap<string, string>>(new Map());
 
   metrics = signal<MarketMetric[]>([]);
   comparison = signal<MarketComparison | null>(null);
@@ -163,13 +164,31 @@ export class CareerMarketsComponent implements OnInit {
       return sign * ((a.value ?? 0) - (b.value ?? 0));
     });
   });
-  selectedTitles = computed(() => this.selected().map(code => this.titles.get(code) ?? code));
+  /** Selected areas whose title is known; a raw area code is never shown to people. */
+  selectedTitles = computed(() =>
+    this.selected()
+      .map(code => this.titles().get(code))
+      .filter((title): title is string => !!title)
+  );
+  hiddenSelected = computed(() => this.selected().filter(code => !this.titles().has(code)).length);
+  hiddenText = computed(() => {
+    const n = this.hiddenSelected();
+    return n === 1
+      ? '1 selected area is not shown by the current filter'
+      : `${n} selected areas are not shown by the current filter`;
+  });
+  selectionText = computed(() => {
+    const known = this.selectedTitles().join(', ');
+    return this.hiddenSelected() ? [known, this.hiddenText()].filter(Boolean).join(' and ') : known;
+  });
   saveTarget = computed(() => {
     const [code] = this.selected();
     return this.selected().length === 1 && code
-      ? { code, title: this.titles.get(code) ?? code }
+      ? { code, title: this.titles().get(code) ?? null }
       : null;
   });
+  /** What the confirmation dialog names: the known place, or a neutral phrase with no code. */
+  targetText = computed(() => this.saveTarget()?.title ?? '1 area not shown by the current filter');
   nationalText = computed(() => {
     const c = this.comparison();
     return c ? formatFigure(this.figure(c.national)) : '';
@@ -226,7 +245,9 @@ export class CareerMarketsComponent implements OnInit {
         this.loading.set(false);
         if (comparison) {
           this.comparison.set(comparison);
-          comparison.areas.forEach(a => this.titles.set(a.areaCode, a.areaTitle));
+          const seen = new Map(this.titles());
+          comparison.areas.forEach(a => seen.set(a.areaCode, a.areaTitle));
+          this.titles.set(seen);
         }
       });
   }
@@ -385,6 +406,9 @@ export class CareerMarketsComponent implements OnInit {
   releaseText(release: string) {
     return periodText(release);
   }
+  publishedText(iso: string) {
+    return dateText(iso);
+  }
   reasonText(metric: Pick<MarketMetric, 'reason'>) {
     const reason = metric.reason ?? '';
     return REASON_COPY[reason] ?? 'This metric is not available per market.';
@@ -438,7 +462,9 @@ export class CareerMarketsComponent implements OnInit {
     switch (e.kind) {
       case 'conflict':
       case 'precondition':
-        this.error.set('Your goal changed in another tab. Reload and try again.');
+        // Pick up the current goal and ETag so the next attempt is not stale again.
+        this.error.set('Your goal changed in another tab. Try again.');
+        this.api.getGoal().subscribe({ next: goal => this.goal.set(goal), error: () => undefined });
         return;
       case 'goalRequired':
         this.goalMissing.set(true);

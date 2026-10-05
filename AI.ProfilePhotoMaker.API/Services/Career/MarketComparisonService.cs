@@ -111,12 +111,12 @@ public sealed class MarketComparisonService : ICareerMarketComparisonService
         {
             var row = oews.Wage(a.Code, crosswalk.Code);
             var (value, status) = Read(metric!, row, nationalRow);
-            return (Area: a, Value: value, Status: status, Share: Read(ShareOfNationalEmployment, row, nationalRow) is { Status: MarketValueStatus.Available } s ? s.Number : null);
+            return (Area: a, Value: value, Status: status, Sort: ReadUnrounded(metric!, row, nationalRow), Share: Read(ShareOfNationalEmployment, row, nationalRow) is { Status: MarketValueStatus.Available } s ? s.Number : null);
         }).ToList();
 
-        // Rank only what BLS published, best (highest) first; ties fall to the area code so the order is stable.
+        // Rank only what BLS published, best (highest) first, on the unrounded figure (rounding is for display only); ties fall to the area code so the order is stable.
         var ranked = values.Where(v => v.Status == MarketValueStatus.Available)
-            .OrderByDescending(v => v.Value).ThenBy(v => v.Area.Code, StringComparer.Ordinal).ToList();
+            .OrderByDescending(v => v.Sort).ThenBy(v => v.Area.Code, StringComparer.Ordinal).ToList();
         var ranks = ranked.Select((v, i) => (v.Area.Code, Rank: i + 1)).ToDictionary(r => r.Code, r => r.Rank, StringComparer.Ordinal);
 
         var selected = (areas ?? string.Empty).Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
@@ -175,6 +175,17 @@ public sealed class MarketComparisonService : ICareerMarketComparisonService
             return CareerOutcome<T>.Invalid(errors);
         }
         return null;
+    }
+
+    /// <summary>The figure used to order areas: the same as <see cref="Read"/> but the share is not rounded.</summary>
+    private static double? ReadUnrounded(string metric, MarketWageRow? row, MarketWageRow? nationalRow)
+    {
+        if (metric == ShareOfNationalEmployment && row?.Employment is { Status: MarketValueStatus.Available, Number: { } emp }
+            && nationalRow?.Employment is { Status: MarketValueStatus.Available, Number: > 0 } n)
+        {
+            return emp / n.Number!.Value * 100;
+        }
+        return Read(metric, row, nationalRow).Number;
     }
 
     /// <summary>The metric's value in one area. Suppressed and missing cells carry no number; a top-coded one carries its ceiling.</summary>
