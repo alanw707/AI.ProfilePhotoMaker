@@ -298,7 +298,7 @@ test('stale banner, keyboard selection and no machine codes', async ({ page }) =
   await mock(page, { stale: true });
   await open(page, '&roadmap=rm-1');
   await expect(page.locator('[data-stale]')).toContainText(
-    'Your profile or goal changed after this roadmap.'
+    'Your profile, goal or market evidence changed after this roadmap.'
   );
   await page.getByRole('radio', { name: /Software Developers/ }).focus();
   await page.keyboard.press('Space');
