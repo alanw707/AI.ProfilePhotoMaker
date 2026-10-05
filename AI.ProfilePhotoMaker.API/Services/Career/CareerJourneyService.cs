@@ -25,6 +25,7 @@ public interface ICareerJourneyService
 /// </summary>
 public sealed class CareerJourneyService : ICareerJourneyService
 {
+    private const int MaxPerKind = 200;
     private static readonly TimeSpan FailedWindow = TimeSpan.FromHours(24);
 
     private readonly ApplicationDbContext _db;
@@ -50,11 +51,21 @@ public sealed class CareerJourneyService : ICareerJourneyService
         var stale = new List<JourneyStaleDto>();
         var results = new List<JourneyLatestResultDto>();
 
-        var briefs = await _db.CareerMarketBriefs.AsNoTracking().Where(b => b.OwnerId == ownerId).OrderByDescending(b => b.CreatedAt).ToListAsync(ct);
-        var analyses = await _db.CareerPayAnalyses.AsNoTracking().Where(a => a.OwnerId == ownerId).OrderByDescending(a => a.CreatedAt).ToListAsync(ct);
-        var roadmaps = await _db.CareerRoadmaps.AsNoTracking().Where(r => r.OwnerId == ownerId).OrderByDescending(r => r.CreatedAt).ToListAsync(ct);
-        var materials = await _db.CareerMaterials.AsNoTracking().Where(m => m.OwnerId == ownerId).OrderByDescending(m => m.UpdatedAt).ToListAsync(ct);
-        var exported = await _db.CareerExports.AsNoTracking().Where(e => e.OwnerId == ownerId).Select(e => e.MaterialId).Distinct().ToListAsync(ct);
+        // Projections only (no payload blobs), newest first, bounded per kind.
+        var briefs = await _db.CareerMarketBriefs.AsNoTracking().Where(b => b.OwnerId == ownerId).OrderByDescending(b => b.CreatedAt).Take(MaxPerKind)
+            .Select(b => new { b.Id, b.CreatedAt, b.PinnedProfileVersion, b.PinnedGoalVersion, b.OccupationCode }).ToListAsync(ct);
+        var analyses = await _db.CareerPayAnalyses.AsNoTracking().Where(a => a.OwnerId == ownerId).OrderByDescending(a => a.CreatedAt).Take(MaxPerKind)
+            .Select(a => new { a.Id, a.CreatedAt, a.PinnedProfileVersion, a.PinnedGoalVersion, a.OccupationCode, a.AreaResolution, a.AreaCode }).ToListAsync(ct);
+        var roadmaps = await _db.CareerRoadmaps.AsNoTracking().Where(r => r.OwnerId == ownerId).OrderByDescending(r => r.CreatedAt).Take(MaxPerKind)
+            .Select(r => new { r.Id, r.CreatedAt, r.Version, r.Status, r.PinnedProfileVersion, r.PinnedGoalVersion }).ToListAsync(ct);
+        var materials = await _db.CareerMaterials.AsNoTracking().Where(m => m.OwnerId == ownerId).OrderByDescending(m => m.UpdatedAt).Take(MaxPerKind)
+            .Select(m => new { m.Id, m.Kind, m.CreatedAt, m.CurrentVersion, m.PinnedProfileVersion, m.PinnedGoalVersion }).ToListAsync(ct);
+        var now = _clock.GetUtcNow().UtcDateTime;
+        var resumeIds = materials.Where(m => m.Kind == CareerMaterialKinds.Resume).Select(m => m.Id).ToList();
+        var exportRows = await _db.CareerExports.AsNoTracking()
+            .Where(e => e.OwnerId == ownerId && resumeIds.Contains(e.MaterialId) && e.ExpiresAt > now)
+            .Select(e => new { e.MaterialId, e.Version }).Distinct().ToListAsync(ct);
+        var exported = exportRows.Select(e => (e.MaterialId, e.Version)).ToHashSet();
 
         var briefReasons = briefs.ToDictionary(b => b.Id, b => Reasons(b.PinnedProfileVersion, b.PinnedGoalVersion, b.OccupationCode, profileVersion, goalVersion, goal));
         var location = MarketBriefBuilder.ResolveLocation(goal?.TargetLocation, _reference);
@@ -92,7 +103,7 @@ public sealed class CareerJourneyService : ICareerJourneyService
             roadmaps.Any(r => r.Status != CareerRoadmapStatuses.Dismissed && roadmapReasons[r.Id].Count == 0),
             roadmaps.Any(r => r.Status == CareerRoadmapStatuses.Accepted && roadmapReasons[r.Id].Count == 0),
             materials.Any(m => m.Kind == CareerMaterialKinds.Resume && materialReasons[m.Id].Count == 0),
-            materials.Any(m => m.Kind == CareerMaterialKinds.Resume && materialReasons[m.Id].Count == 0 && !exported.Contains(m.Id)));
+            materials.Any(m => m.Kind == CareerMaterialKinds.Resume && materialReasons[m.Id].Count == 0 && !exported.Contains((m.Id, m.CurrentVersion))));
 
         var cutoff = _clock.GetUtcNow().UtcDateTime - FailedWindow;
         var runs = await _db.CareerAgentRuns.AsNoTracking()

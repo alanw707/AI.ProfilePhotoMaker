@@ -83,6 +83,61 @@ public class CareerJourneyApiTests
         (await NextAsync(user)).Should().Be("none");
     }
 
+    private static async Task<(CareerClient User, string MaterialId)> ExportedResumeAsync(CareerPayFactory host)
+    {
+        var user = new CareerClient(host);
+        (await user.PutProfileAsync(R.Profile())).EnsureSuccessStatusCode();
+        await CareerClient.ReadDataAsync(await user.PostGoalAsync(R.Goal()), 201);
+        var match = await R.RunAsync(user, host, "occupation_match");
+        (await user.SendAsync(HttpMethod.Post, $"/api/career/occupation-matches/{match.GetProperty("occupationMatchId").GetString()}/confirm",
+            new { occupationCode = "15-1252.00" }, "\"goal-v1\"")).EnsureSuccessStatusCode();
+        await R.RunAsync(user, host, "market_brief");
+        await R.RunAsync(user, host, "pay_analysis");
+        var roadmap = await R.RoadmapAsync(user, host);
+        (await user.SendAsync(HttpMethod.Post, $"/api/career/roadmaps/{roadmap.GetProperty("id").GetString()}/accept",
+            new { optionKey = "closest_fit" }, "\"goal-v2\"")).EnsureSuccessStatusCode();
+        var id = (await R.RunAsync(user, host, "targeted_resume")).GetProperty("materialId").GetString()!;
+        (await user.SendAsync(HttpMethod.Post, $"/api/career/materials/{id}/exports", new { format = "pdf", includePhoto = false })).EnsureSuccessStatusCode();
+        return (user, id);
+    }
+
+    [Fact]
+    public async Task FreshExportOfTheCurrentVersionSatisfiesExport()
+    {
+        using var host = new CareerPayFactory();
+        var (user, _) = await ExportedResumeAsync(host);
+        (await NextAsync(user)).Should().Be("none");
+    }
+
+    [Fact]
+    public async Task ExpiredExportDoesNotSatisfyExport()
+    {
+        using var host = new CareerPayFactory();
+        var (user, _) = await ExportedResumeAsync(host);
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            foreach (var e in db.CareerExports) e.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+            await db.SaveChangesAsync();
+        }
+        (await NextAsync(user)).Should().Be("export_material");
+    }
+
+    [Fact]
+    public async Task ExportOfAnOlderVersionDoesNotSatisfyExport()
+    {
+        using var host = new CareerPayFactory();
+        var (user, id) = await ExportedResumeAsync(host);
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var m = await db.CareerMaterials.SingleAsync(x => x.Id == Guid.Parse(id));
+            m.CurrentVersion += 1;
+            await db.SaveChangesAsync();
+        }
+        (await NextAsync(user)).Should().Be("export_material");
+    }
+
     [Fact]
     public async Task ReadingChangesNothing()
     {
