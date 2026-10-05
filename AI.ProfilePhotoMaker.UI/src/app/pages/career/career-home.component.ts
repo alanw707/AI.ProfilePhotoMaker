@@ -123,7 +123,7 @@ const PAGES: { label: string; path: string }[] = [
           <p class="caution" data-stale>
             Needs review · Your {{ s.label }} may be out of date because your profile or goal
             changed.
-            <a [routerLink]="s.link">Open</a>
+            <a data-stale-link [routerLink]="s.link" [queryParams]="s.params">Open</a>
           </p>
         }
       } @else if (!loading()) {
@@ -206,7 +206,7 @@ export class CareerHomeComponent implements OnInit {
           id: r.id,
           label: t.label,
           link: BASE + t.path,
-          params: failed ? {} : { run: r.id },
+          params: { run: r.id },
           failed,
         });
       }
@@ -214,11 +214,16 @@ export class CareerHomeComponent implements OnInit {
     return out;
   }
   stale() {
-    const out: { id: string; label: string; link: string }[] = [];
+    const out: { id: string; label: string; link: string; params: object }[] = [];
     for (const s of this.journey()?.stale ?? []) {
       const t = RESULTS[s.kind];
       if (t) {
-        out.push({ id: s.id, label: t.label.toLowerCase(), link: BASE + t.path });
+        out.push({
+          id: s.id,
+          label: t.label.toLowerCase(),
+          link: BASE + t.path,
+          params: t.param ? { [t.param]: s.id } : {},
+        });
       }
     }
     return out;

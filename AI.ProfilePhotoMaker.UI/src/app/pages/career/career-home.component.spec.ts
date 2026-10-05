@@ -56,5 +56,8 @@ describe('CareerHomeComponent', () => {
     });
     const links = Array.from(el.querySelectorAll('[data-run]')).map(a => a.textContent?.trim());
     expect(links).toEqual(['Still working', 'Try again']);
+    expect(el.querySelectorAll('[data-run]')[1].getAttribute('href')).toBe(
+      '/app/career/roadmap?run=b'
+    );
   });
 });

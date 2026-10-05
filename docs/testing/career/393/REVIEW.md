@@ -32,5 +32,12 @@ Other checks: photo section renders without purchase (Continue without a photo +
 | F2 | P3 | nextAction stays `export_material` after files were downloaded (journey has no export signal); harmless, Next step still valid | open, reported |
 | F3 | P3 | Sparse pay scenario says unavailable when the goal has no requested pay; wording does not say why | open, reported |
 | F4 | info | Probe errors fixed in script only (profile needs real duties for a match; roadmap opened by id) - not app bugs | closed |
+| SPEC-1 | P1 | export_material was satisfied by any export, even expired or of an older version | fixed: needs an unexpired export of the material's CurrentVersion; 3 API tests |
+| SPEC-2 | P1 | Failed-run "Try again" on home dropped the run id | fixed: link carries `?run=<id>`; page shows the failed run and its existing retry; home issues no POST; Playwright + unit |
+| STD-1 | P2 | Journey loaded every artifact in full | fixed: AsNoTracking projections, bounded to 200 per kind, export check limited to resume ids |
+| SPEC-3 | P2 | Stale notices linked to the bare page | fixed: link carries the artifact's query param; Playwright + spec |
+| TEST-1 | P2 | Review script exited 0 on failed checks | fixed: exits 1 on step failures, failed checks, page errors, dialogs, axe violations |
+| TEST-2 | P2 | Sparse setup failure was silently skipped | fixed: recorded as a failure |
+| TEST-3 | P2 | Test coverage for the fixes above | fixed: API, unit and Playwright assertions added |
 
 Open P0/P1: **none**

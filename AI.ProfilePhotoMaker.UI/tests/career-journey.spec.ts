@@ -183,9 +183,48 @@ test('active work: still working and try again; stale notice', async ({ page }) 
   const runs = page.locator('[data-run]');
   await expect(runs).toHaveText(['Still working', 'Try again']);
   await expect(runs.first()).toHaveAttribute('href', '/app/career/market?run=a');
-  await expect(runs.last()).toHaveAttribute('href', '/app/career/roadmap');
+  await expect(runs.last()).toHaveAttribute('href', '/app/career/roadmap?run=b');
+  await expect(page.locator('[data-stale-link]')).toHaveAttribute(
+    'href',
+    '/app/career/roadmap?roadmap=r1'
+  );
   await expect(page.locator('[data-stale]')).toContainText('may be out of date');
   await expect(page.locator('body')).not.toContainText('profile_changed');
+});
+
+test('Try again carries the run id; page shows the failed run; home posts nothing', async ({
+  page,
+}) => {
+  const calls = await mock(page, [
+    J({ activeRuns: [{ id: 'b', task: 'roadmap', status: 'failed', startedAt: at }] }),
+  ]);
+  await page.route('**/api/career/runs/b', route =>
+    route.fulfill({
+      json: {
+        success: true,
+        isAuthenticated: true,
+        data: {
+          id: 'b',
+          task: 'roadmap',
+          status: 'failed',
+          createdAt: at,
+          updatedAt: at,
+          completedAt: at,
+          steps: [],
+          question: null,
+          errorCode: 'x',
+          profileChanged: false,
+        },
+      },
+    })
+  );
+  await open(page);
+  expect(calls.writes).toEqual([]);
+  await page.locator('[data-run]').click();
+  await expect(page).toHaveURL(/roadmap\?run=b/);
+  await expect(page.getByText('We could not build your roadmap.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+  expect(calls.writes).toEqual([]);
 });
 
 test('malicious context is text; no dialog, no writes', async ({ page }) => {
