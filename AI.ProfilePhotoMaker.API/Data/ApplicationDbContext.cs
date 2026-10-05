@@ -60,6 +60,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Models.Career.ResumeDocument> CareerResumeDocuments { get; set; }
     public virtual DbSet<Models.Career.CareerProfileProposal> CareerProfileProposals { get; set; }
     public virtual DbSet<Models.Career.CareerProfileProposalItem> CareerProfileProposalItems { get; set; }
+    public virtual DbSet<Models.Career.CareerPhotoSelection> CareerPhotoSelections { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -241,6 +242,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         proposalItem.Property(i => i.Value).HasMaxLength(2000).IsRequired();
         proposalItem.Property(i => i.Section).HasMaxLength(60);
         proposalItem.Property(i => i.Excerpt).HasMaxLength(300).IsRequired();
+
+        // ProcessedImageId is intentionally not a foreign key (ADR 0008): photo
+        // retention must never be blocked by, or cascade into, career data.
+        var photoSelection = builder.Entity<Models.Career.CareerPhotoSelection>();
+        photoSelection.ToTable("CareerPhotoSelections");
+        photoSelection.Property(s => s.OwnerId).HasMaxLength(450).IsRequired();
+        photoSelection.HasIndex(s => s.OwnerId).IsUnique();
+        photoSelection.HasOne<ApplicationUser>().WithMany().HasForeignKey(s => s.OwnerId).OnDelete(DeleteBehavior.Cascade);
     }
 
     private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)

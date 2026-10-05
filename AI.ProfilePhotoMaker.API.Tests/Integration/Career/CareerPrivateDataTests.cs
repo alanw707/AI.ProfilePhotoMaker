@@ -76,7 +76,7 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
     private static readonly string[] CareerTables =
     {
         "CareerProfiles", "CareerProfileVersions", "CareerGoals", "CareerGoalVersions",
-        "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems"
+        "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems", "CareerPhotoSelections"
     };
 
     [Fact]
@@ -93,6 +93,16 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         AssertAdditive(operations, allowAddColumn: true);
         operations.OfType<CreateTableOperation>().Select(o => o.Name).Should()
             .Contain(new[] { "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems" });
+    }
+
+    [Fact]
+    public void PhotoSelectionMigrationIsAdditiveOnly()
+    {
+        var operations = new AddCareerPhotoSelection().UpOperations;
+
+        AssertAdditive(operations, allowAddColumn: false);
+        operations.OfType<CreateTableOperation>().Select(o => o.Name).Should().Equal("CareerPhotoSelections");
+        operations.OfType<CreateIndexOperation>().Should().OnlyContain(i => i.Table == "CareerPhotoSelections");
     }
 
     private static void AssertAdditive(IReadOnlyList<MigrationOperation> operations, bool allowAddColumn)
