@@ -188,7 +188,8 @@ export type CareerRunTask =
   | 'occupation_match'
   | 'market_brief'
   | 'pay_analysis'
-  | 'roadmap';
+  | 'roadmap'
+  | 'targeted_resume';
 export interface CareerRunAllowance {
   used: number;
   reserved: number;
@@ -211,6 +212,7 @@ export interface CareerRunDto {
   marketBriefId?: string | null;
   payAnalysisId?: string | null;
   roadmapId?: string | null;
+  materialId?: string | null;
   profileChanged: boolean;
   errorCode: string | null;
   allowance: CareerRunAllowance;
@@ -696,6 +698,62 @@ export interface PayRecomputeResult {
   differences: string[];
   sections: PaySection[];
 }
+export type ResumeSectionKey = 'headline' | 'summary' | 'experience_highlights' | 'skills';
+export interface ResumeLine {
+  id: string;
+  text: string;
+  factIds: string[];
+  origin: 'generated' | 'human';
+}
+export interface ResumeSection {
+  key: ResumeSectionKey;
+  lines: ResumeLine[];
+}
+export interface ResumeContact {
+  name: boolean;
+  email: boolean;
+  phone: boolean;
+  location: boolean;
+  links: boolean;
+}
+export interface ResumeMaterialSummary {
+  id: string;
+  title: string;
+  stale: boolean;
+  currentVersion: number;
+  updatedAt: string;
+}
+export interface ResumeMaterialDto {
+  id: string;
+  title: string;
+  etag: string;
+  currentVersion: number;
+  pinned: { profileVersion: number; goalVersion: number; occupationCode: string };
+  stale: boolean;
+  staleReasons: string[];
+  contact: ResumeContact;
+  sections: ResumeSection[];
+  questions: { id: string; factId: string; text: string }[];
+  facts: { id: string; text: string }[];
+}
+export interface ResumeVersionInfo {
+  number: number;
+  author: string;
+  createdAt: string;
+}
+export interface ResumeChange {
+  id: string;
+  kind: 'added' | 'removed' | 'changed';
+  section: ResumeSectionKey;
+  before: string | null;
+  after: string | null;
+  factIds: string[];
+}
+export interface ResumeProposalDto {
+  id: string;
+  baseVersion: number;
+  changes: ResumeChange[];
+}
 export interface CareerApiError {
   /** Server error code (for example CareerRunNotWaiting), when one was sent. */
   code?: string;
@@ -721,6 +779,7 @@ export interface CareerApiError {
     | 'notConfirmable'
     | 'goalRequired'
     | 'occupationRequired'
+    | 'unsupportedClaim'
     | 'roadmapCycle'
     | 'roadmapNotProposed'
     | 'roadmapNotAccepted'
@@ -827,6 +886,7 @@ export class CareerProfileService {
       CareerMatchNotConfirmable: 'notConfirmable',
       CareerGoalRequired: 'goalRequired',
       CareerOccupationRequired: 'occupationRequired',
+      CareerResumeUnsupportedClaim: 'unsupportedClaim',
       CareerRoadmapCycle: 'roadmapCycle',
       CareerRoadmapNotProposed: 'roadmapNotProposed',
       CareerRoadmapNotAccepted: 'roadmapNotAccepted',
@@ -962,8 +1022,9 @@ export class CareerProfileService {
       .pipe(catchError(error => throwError(() => this.mapError(error))));
   }
 
-  createRun(idempotencyKey: string, task: CareerRunTask = 'profile_summary') {
-    return this.request<CareerRunDto>('POST', 'runs', { task }, undefined, false, {
+  createRun(idempotencyKey: string, task: CareerRunTask = 'profile_summary', materialId?: string) {
+    const body = materialId ? { task, materialId } : { task };
+    return this.request<CareerRunDto>('POST', 'runs', body, undefined, false, {
       'Idempotency-Key': idempotencyKey,
     });
   }
@@ -1080,6 +1141,71 @@ export class CareerProfileService {
   }
   rejectReplan(replanId: string) {
     return this.request<unknown>('POST', `replans/${encodeURIComponent(replanId)}/reject`);
+  }
+
+  listResumeMaterials() {
+    return this.request<{ materials: ResumeMaterialSummary[] }>('GET', 'materials?kind=resume');
+  }
+  getResumeMaterial(id: string) {
+    return this.request<ResumeMaterialDto>('GET', `materials/${encodeURIComponent(id)}`);
+  }
+  saveResume(
+    id: string,
+    body: { sections: ResumeSection[]; contact: ResumeContact },
+    etag: string
+  ) {
+    return this.request<ResumeMaterialDto>(
+      'PUT',
+      `materials/${encodeURIComponent(id)}`,
+      body,
+      undefined,
+      false,
+      { 'If-Match': etag }
+    );
+  }
+  listResumeVersions(id: string, page = 1) {
+    return this.request<{ versions: ResumeVersionInfo[]; total: number }>(
+      'GET',
+      `materials/${encodeURIComponent(id)}/versions?page=${page}`
+    );
+  }
+  getResumeVersion(id: string, n: number) {
+    return this.request<ResumeMaterialDto>(
+      'GET',
+      `materials/${encodeURIComponent(id)}/versions/${n}`
+    );
+  }
+  restoreResumeVersion(id: string, n: number, etag: string) {
+    return this.request<ResumeMaterialDto>(
+      'POST',
+      `materials/${encodeURIComponent(id)}/versions/${n}/restore`,
+      undefined,
+      undefined,
+      false,
+      { 'If-Match': etag }
+    );
+  }
+  getResumeProposal(id: string, proposalId: string) {
+    return this.request<ResumeProposalDto>(
+      'GET',
+      `materials/${encodeURIComponent(id)}/proposals/${encodeURIComponent(proposalId)}`
+    );
+  }
+  applyResumeProposal(id: string, proposalId: string, acceptedChangeIds: string[], etag: string) {
+    return this.request<ResumeMaterialDto>(
+      'POST',
+      `materials/${encodeURIComponent(id)}/proposals/${encodeURIComponent(proposalId)}/apply`,
+      { acceptedChangeIds },
+      undefined,
+      false,
+      { 'If-Match': etag }
+    );
+  }
+  rejectResumeProposal(id: string, proposalId: string) {
+    return this.request<unknown>(
+      'POST',
+      `materials/${encodeURIComponent(id)}/proposals/${encodeURIComponent(proposalId)}/reject`
+    );
   }
 
   listMarketBriefs() {
