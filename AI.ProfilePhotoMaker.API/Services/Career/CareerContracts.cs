@@ -161,6 +161,8 @@ public static class CareerErrorCodes
     public const string ResumeUnsupported = "CareerResumeUnsupported";
     public const string ResumeRejected = "CareerResumeRejected";
     public const string ScannerUnavailable = "CareerScannerUnavailable";
+    public const string PhotoNotFound = "CareerPhotoNotFound";
+    public const string PhotoIsPreview = "CareerPhotoIsPreview";
 }
 
 // ---- Resume import and proposals (docs/career/api-resume-import.md) ----------
@@ -210,3 +212,30 @@ public sealed class AcceptProposalRequest
 
 /// <summary>The original bytes for the owner-only download endpoint.</summary>
 public sealed record ResumeFileResult(Stream Content, string ContentType, string FileName);
+
+// ---- Photo handoff (docs/career/api-photo-handoff.md) ------------------------
+
+public sealed record CareerPhotoDto(int Id, string ImageUrl, DateTime CreatedAt, string Style, bool IsWatermarkedPreview);
+
+/// <summary>Read-only copy of an active photo package; the photo workspace stays the authority.</summary>
+public sealed record CareerPhotoEntitlementDto(
+    string PackageCode,
+    string PackageName,
+    int RemainingCandidates,
+    int RemainingRefinements,
+    int RemainingPremiumAugmentations,
+    bool PlatformExportKitAvailable,
+    DateTime? ExpiresAt);
+
+public sealed record CareerPhotoListDto(
+    IReadOnlyList<CareerPhotoDto> Photos,
+    int? SelectedPhotoId,
+    bool SelectedPhotoAvailable,
+    IReadOnlyList<CareerPhotoEntitlementDto> Entitlements);
+
+public sealed class CareerPhotoSelectionRequest
+{
+    public int? ProcessedImageId { get; set; }
+}
+
+public sealed record CareerPhotoSelectionDto(int SelectedPhotoId, Guid? CareerGoalId, DateTime SelectedAt);

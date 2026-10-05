@@ -90,7 +90,8 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         typeof(CareerGoalVersion),
         typeof(ResumeDocument),
         typeof(CareerProfileProposal),
-        typeof(CareerProfileProposalItem)
+        typeof(CareerProfileProposalItem),
+        typeof(CareerPhotoSelection)
     };
 
     private readonly ApplicationDbContext _db;
@@ -119,6 +120,9 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         }
         _db.CareerResumeDocuments.RemoveRange(resumes);
 
+        // Only the choice is removed; the photo itself belongs to the photo workspace.
+        _db.CareerPhotoSelections.RemoveRange(await _db.CareerPhotoSelections.Where(s => s.OwnerId == ownerId).ToListAsync(ct));
+
         _db.CareerProfiles.RemoveRange(await _db.CareerProfiles.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerGoals.RemoveRange(await _db.CareerGoals.Where(g => g.OwnerId == ownerId).ToListAsync(ct));
         await _db.SaveChangesAsync(ct);
@@ -135,6 +139,7 @@ public static class CareerWorkspaceServiceCollectionExtensions
         services.AddScoped<RequireCareerWorkspaceFilter>();
         services.AddScoped<ICareerProfileService, CareerProfileService>();
         services.AddScoped<ICareerPrivateDataService, CareerPrivateDataService>();
+        services.AddScoped<ICareerPhotoService, CareerPhotoService>();
 
         // Resume import (#379). The scanner is deliberately NOT registered here: only
         // Program.cs adds the placeholder, and only outside production, so uploads

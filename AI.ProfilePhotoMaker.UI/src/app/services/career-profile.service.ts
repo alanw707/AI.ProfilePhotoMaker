@@ -116,6 +116,33 @@ export interface CareerProfileProposalDto {
   items: ProposalItem[];
   createdAt: string;
 }
+export interface CareerPhotoDto {
+  id: number;
+  imageUrl: string;
+  createdAt: string;
+  style: string | null;
+  isWatermarkedPreview: boolean;
+}
+export interface CareerPhotoEntitlement {
+  packageCode: string;
+  packageName: string;
+  remainingCandidates: number;
+  remainingRefinements: number;
+  remainingPremiumAugmentations: number;
+  platformExportKitAvailable: boolean;
+  expiresAt: string | null;
+}
+export interface CareerPhotoList {
+  photos: CareerPhotoDto[];
+  selectedPhotoId: number | null;
+  selectedPhotoAvailable: boolean;
+  entitlements: CareerPhotoEntitlement[];
+}
+export interface CareerPhotoSelection {
+  selectedPhotoId: number;
+  careerGoalId: string | null;
+  selectedAt: string;
+}
 export interface CareerApiError {
   kind:
     | 'tooLarge'
@@ -129,6 +156,7 @@ export interface CareerApiError {
     | 'precondition'
     | 'unauthorized'
     | 'alreadyExists'
+    | 'preview'
     | 'unknown';
   message: string;
   fieldErrors?: Record<string, string>;
@@ -214,8 +242,10 @@ export class CareerProfileService {
       503: 'scannerUnavailable',
     };
     const retryHeader = Number(error.headers?.get('Retry-After'));
+    const kind =
+      payload?.code === 'CareerPhotoIsPreview' ? 'preview' : (kinds[error.status] ?? 'unknown');
     return {
-      kind: kinds[error.status] ?? 'unknown',
+      kind,
       message: payload?.message ?? 'Unable to complete the request.',
       fieldErrors: payload?.fieldErrors,
       currentVersion: payload?.currentVersion,
@@ -324,5 +354,17 @@ export class CareerProfileService {
       'POST',
       `profile/proposals/${encodeURIComponent(id)}/dismiss`
     );
+  }
+
+  listPhotos() {
+    return this.request<CareerPhotoList>('GET', 'photos');
+  }
+  selectPhoto(processedImageId: number) {
+    return this.request<CareerPhotoSelection>('PUT', 'photos/selection', { processedImageId });
+  }
+  clearPhoto() {
+    return this.http
+      .delete(this.url('photos/selection'))
+      .pipe(catchError(error => throwError(() => this.mapError(error))));
   }
 }

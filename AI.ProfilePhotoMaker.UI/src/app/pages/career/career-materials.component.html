@@ -1,0 +1,97 @@
+<main class="career-page career-materials">
+  <div class="career-sheet">
+    <p><a routerLink="/app/career">Back to career workspace</a></p>
+    <h1>Career materials</h1>
+    <p>Resume drafts and exports arrive in a later release.</p>
+
+    @if (goalChanged()) {
+      <p class="caution" role="status">Your career goal changed while you were in the photo workspace.</p>
+    }
+
+    <section aria-labelledby="photo-heading">
+      <h2 id="photo-heading">Profile photo (optional)</h2>
+
+      <div class="photo-current">
+        @if (selectedUnavailable()) {
+          <p class="caution">The photo you chose is no longer available.</p>
+          <button type="button" class="secondary" (click)="stopUsing()">Stop using this photo</button>
+        } @else if (hasSelection()) {
+          @if (selectedPhoto(); as current) {
+            <img class="photo-thumb" [src]="current.imageUrl" [alt]="photoLabel(current)" />
+          }
+          <p>Your chosen photo</p>
+          <button type="button" class="secondary" (click)="stopUsing()">Stop using this photo</button>
+        } @else if (!loading()) {
+          <p>No photo chosen. A photo is optional for your career profile.</p>
+        }
+      </div>
+
+      <p class="photo-status" role="status" aria-live="polite">{{ status() }}</p>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+
+      <h3 id="owned-heading">Use a photo you already have</h3>
+      @if (photos().length === 0 && !loading()) {
+        <p>You have no finished photos yet. Create one in the photo workspace.</p>
+      } @else {
+        <fieldset class="photo-grid" aria-labelledby="owned-heading">
+          <legend class="visually-hidden">Your photos</legend>
+          @for (photo of photos(); track photo.id) {
+            <div class="photo-card" [class.in-use]="isInUse(photo)">
+              <label class="photo-choice" [attr.for]="'photo-' + photo.id">
+                <input
+                  type="radio"
+                  name="career-photo"
+                  [id]="'photo-' + photo.id"
+                  [value]="photo.id"
+                  [disabled]="photo.isWatermarkedPreview"
+                  [checked]="pendingPhotoId() === photo.id"
+                  (change)="choose(photo)" />
+                <img class="photo-thumb" [src]="photo.imageUrl" [alt]="photoLabel(photo)" />
+                <span class="muted">{{ photo.createdAt | date: 'mediumDate' }}</span>
+                @if (isInUse(photo)) {
+                  <strong class="photo-in-use">In use</strong>
+                }
+              </label>
+              @if (photo.isWatermarkedPreview) {
+                <p class="muted">Watermarked preview - improve it in the photo workspace first</p>
+              }
+              <a routerLink="/app/enhance" [queryParams]="workspaceQuery(photo)">Improve in photo workspace</a>
+            </div>
+          }
+        </fieldset>
+        <button type="button" class="primary photo-save" [disabled]="!canSave()" (click)="useSelected()">
+          Use this photo
+        </button>
+      }
+
+      <h3>Create a new photo</h3>
+      <p>
+        <a routerLink="/app/enhance" [queryParams]="workspaceQuery()">Create a new photo</a>
+      </p>
+      @if (!goalId()) {
+        <p class="muted">Save a goal first if you want a link back here.</p>
+      }
+
+      <div class="photo-disclosure">
+        <h3>Photo packages</h3>
+        @if (entitlements().length > 0) {
+          <ul>
+            @for (entitlement of entitlements(); track entitlement.packageCode) {
+              <li>{{ entitlementLine(entitlement) }}</li>
+            }
+          </ul>
+        } @else {
+          <p>You have no photo package.</p>
+        }
+        <p>
+          Opening the photo workspace is free. Any purchase or generation happens there, only after you choose a package
+          and confirm. Career features never use your photo allowances.
+        </p>
+      </div>
+
+      <p><a routerLink="/app/career">Continue without a photo</a></p>
+    </section>
+  </div>
+</main>

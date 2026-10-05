@@ -322,3 +322,78 @@ button:disabled {
     background-position: 0 0;
   }
 }
+
+.career-page {
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  button.secondary {
+    background: #fffefa;
+    color: #155e62;
+    border: 2px solid #155e62;
+  }
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+    border: 0;
+    padding: 0;
+    margin: 0 0 16px;
+    min-width: 0;
+  }
+  .photo-card {
+    min-width: 0;
+    border: 1px solid #d1d8d4;
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .photo-choice {
+    display: block;
+    font-weight: 400;
+    cursor: pointer;
+  }
+  .photo-choice input[type="radio"] {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    margin: 0 0 6px;
+  }
+  .photo-thumb {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  .photo-card.in-use {
+    border-color: #155e62;
+    box-shadow: 0 0 0 1px #155e62;
+  }
+  .photo-in-use {
+    display: block;
+    margin-top: 4px;
+    color: #155e62;
+  }
+  .photo-save {
+    margin-bottom: 24px;
+  }
+  .photo-current .photo-thumb {
+    width: 120px;
+    margin-bottom: 8px;
+  }
+  .photo-status:empty {
+    display: none;
+  }
+  .photo-disclosure {
+    background: #eef3f0;
+    border-radius: 9px;
+    padding: 14px;
+    margin: 20px 0;
+  }
+}
