@@ -59,6 +59,8 @@ public class CareerWorkspaceFlagOffTests : IClassFixture<CustomWebApplicationFac
         { "GET", "/api/career/markets/metrics" },
         { "GET", "/api/career/markets/compare?metric=median_wage&level=state" },
         { "POST", "/api/career/markets/preference" },
+        { "GET", "/api/career/jobs/observations" },
+        { "GET", "/api/career/jobs/source" },
         { "GET", "/api/career/pay-analyses" },
         { "GET", $"/api/career/pay-analyses/{Guid.Empty}" },
         { "POST", $"/api/career/pay-analyses/{Guid.Empty}/recompute" },

@@ -16,12 +16,14 @@ public sealed class CareerMarketController : CareerControllerBase
 {
     private readonly ICareerMarketService _market;
     private readonly ICareerMarketComparisonService _comparison;
+    private readonly IJobObservationService _jobs;
 
     public CareerMarketController(
-        ICareerMarketService market, ICareerMarketComparisonService comparison, ILogger<CareerMarketController> logger) : base(logger)
+        ICareerMarketService market, ICareerMarketComparisonService comparison, IJobObservationService jobs, ILogger<CareerMarketController> logger) : base(logger)
     {
         _market = market;
         _comparison = comparison;
+        _jobs = jobs;
     }
 
     /// <summary>Market comparison (ticket #385). Contract: docs/career/api-market-comparison.md; design: ADR 0014.</summary>
@@ -37,6 +39,17 @@ public sealed class CareerMarketController : CareerControllerBase
     [HttpPost("markets/preference")]
     public async Task<IActionResult> SavePreference([FromBody] MarketPreferenceRequest? request, CancellationToken ct) =>
         await Respond(owner => _comparison.SavePreferenceAsync(owner, request ?? new MarketPreferenceRequest(), ReadIfMatch("goal"), ct), g => g.Etag);
+
+    /// <summary>Job observations (ticket #386). Contract: docs/career/api-job-observations.md; design: ADR 0015.</summary>
+    [HttpGet("jobs/observations")]
+    public async Task<IActionResult> JobObservations(
+        [FromQuery] string? area, [FromQuery] bool eligibleOnly, [FromQuery] string? remote, [FromQuery] string? q,
+        [FromQuery] string? occupation, CancellationToken ct) =>
+        await Respond(owner => _jobs.GetObservationsAsync(owner, area, eligibleOnly, remote, q, occupation, ct));
+
+    [HttpGet("jobs/source")]
+    public async Task<IActionResult> JobSource() =>
+        await Respond(owner => Task.FromResult(_jobs.GetSource()));
 
     [HttpGet("market-briefs")]
     public async Task<IActionResult> List(CancellationToken ct) =>

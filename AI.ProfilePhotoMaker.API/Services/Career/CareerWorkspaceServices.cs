@@ -194,6 +194,17 @@ public static class CareerWorkspaceServiceCollectionExtensions
         services.AddScoped<ICareerMarketComparisonService, MarketComparisonService>();
         services.TryAddSingleton<IPayObservationSource, NoQualifiedPayObservationSource>();
         services.AddScoped<ICareerPayService, CareerPayService>();
+
+        // Job observations (#386, ADR 0015). Nothing is persisted. With no USAJobs key the default source
+        // reports an honest unavailable state; tests replace IJobObservationSource with a fake.
+        services.AddOptions<UsaJobsOptions>().BindConfiguration(UsaJobsOptions.SectionName);
+        services.AddHttpClient<UsaJobsObservationSource>();
+        services.AddScoped<IJobObservationSource>(sp =>
+        {
+            var usaJobs = sp.GetRequiredService<UsaJobsObservationSource>();
+            return usaJobs.IsConfigured ? usaJobs : new NoJobObservationSource();
+        });
+        services.AddScoped<IJobObservationService, JobObservationService>();
         return services;
     }
 }
