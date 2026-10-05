@@ -6,6 +6,10 @@
   <!-- Main Enhancement Content -->
   <main class="gallery-main">
     <div class="gallery-content">
+      <p class="career-return-banner" *ngIf="careerReturn as back" role="note">
+        You came from your career materials.
+        <a [routerLink]="back.path" [queryParams]="{ careerGoal: back.goalId }">Back to career materials</a>
+      </p>
       <!-- Page Header -->
       <section class="page-header proof-masthead">
         <div>

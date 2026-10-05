@@ -1,7 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { RESUME_CONSENT_VERSION, CareerProfileService, CareerApiError } from './career-profile.service';
+import {
+  RESUME_CONSENT_VERSION,
+  CareerProfileService,
+  CareerApiError,
+} from './career-profile.service';
 
 describe('CareerProfileService', () => {
   let service: CareerProfileService;
@@ -186,6 +190,76 @@ describe('CareerProfileService', () => {
         .expectOne('/api/career/profile/proposals/p1/accept')
         .flush({ success: false, error: {} }, { status: 412, statusText: 'Precondition Failed' });
       expect(kind).toBe('conflict');
+    });
+  });
+
+  describe('photos', () => {
+    const failWith = (status: number, code: string) => ({
+      status,
+      statusText: code,
+      body: { success: false, error: { code, message: code } },
+    });
+
+    it('lists photos without sending a body', () => {
+      service.listPhotos().subscribe(list => expect(list.selectedPhotoId).toBe(42));
+      const req = http.expectOne('/api/career/photos');
+      expect(req.request.method).toBe('GET');
+      req.flush({
+        success: true,
+        data: { photos: [], selectedPhotoId: 42, selectedPhotoAvailable: true, entitlements: [] },
+      });
+    });
+
+    it('selects a photo with the processed image id', () => {
+      service.selectPhoto(42).subscribe(result => expect(result.selectedPhotoId).toBe(42));
+      const req = http.expectOne('/api/career/photos/selection');
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual({ processedImageId: 42 });
+      req.flush({
+        success: true,
+        data: { selectedPhotoId: 42, careerGoalId: null, selectedAt: '2026-10-04T00:00:00Z' },
+      });
+    });
+
+    it('clears the selection with DELETE', () => {
+      let done = false;
+      service.clearPhoto().subscribe(() => (done = true));
+      const req = http.expectOne('/api/career/photos/selection');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null, { status: 204, statusText: 'No Content' });
+      expect(done).toBeTrue();
+    });
+
+    const cases: [number, string, CareerApiError['kind']][] = [
+      [404, 'CareerPhotoNotFound', 'notFound'],
+      [409, 'CareerPhotoIsPreview', 'preview'],
+      [401, 'Unauthorized', 'unauthorized'],
+      [403, 'CareerWorkspaceDisabled', 'disabled'],
+      [400, 'ValidationError', 'validation'],
+    ];
+    for (const [status, code, kind] of cases) {
+      it(`maps ${status} ${code} to ${kind} when selecting`, () => {
+        let seen: CareerApiError | undefined;
+        service.selectPhoto(7).subscribe({ error: (e: CareerApiError) => (seen = e) });
+        const failure = failWith(status, code);
+        http
+          .expectOne('/api/career/photos/selection')
+          .flush(failure.body, { status, statusText: failure.statusText });
+        expect(seen?.kind).toBe(kind);
+      });
+    }
+
+    it('maps 401 when listing and when clearing', () => {
+      const kinds: string[] = [];
+      service.listPhotos().subscribe({ error: (e: CareerApiError) => kinds.push(e.kind) });
+      http
+        .expectOne('/api/career/photos')
+        .flush({ success: false }, { status: 401, statusText: 'Unauthorized' });
+      service.clearPhoto().subscribe({ error: (e: CareerApiError) => kinds.push(e.kind) });
+      http
+        .expectOne('/api/career/photos/selection')
+        .flush({ success: false }, { status: 401, statusText: 'Unauthorized' });
+      expect(kinds).toEqual(['unauthorized', 'unauthorized']);
     });
   });
 });

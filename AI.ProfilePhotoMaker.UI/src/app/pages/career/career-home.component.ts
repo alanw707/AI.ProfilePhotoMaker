@@ -57,6 +57,9 @@ import {
       <p>
         <a routerLink="/app/career/import">Import from a resume</a>
       </p>
+      <p>
+        <a routerLink="/app/career/materials">Materials and photo</a>
+      </p>
       @if (error()) {
         <p role="alert">{{ error() }}</p>
       }
