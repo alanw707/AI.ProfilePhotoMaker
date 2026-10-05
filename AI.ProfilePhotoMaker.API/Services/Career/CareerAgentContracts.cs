@@ -44,7 +44,8 @@ public sealed record CareerAgentRunDto(
     bool ProfileChanged,
     string? ErrorCode,
     CareerAllowanceDto Allowance,
-    Guid? PayAnalysisId = null);
+    Guid? PayAnalysisId = null,
+    Guid? RoadmapId = null);
 
 public sealed record CareerRunListDto(IReadOnlyList<CareerAgentRunDto> Runs, CareerAllowanceDto Allowance);
 

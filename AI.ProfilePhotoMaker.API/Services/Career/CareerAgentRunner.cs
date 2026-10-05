@@ -77,6 +77,10 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         {
             await ExecutePayAnalysisAsync(run, ct);
         }
+        else if (run.Task == CareerAgentTasks.Roadmap)
+        {
+            await ExecuteRoadmapAsync(run, ct);
+        }
         else
         {
             await ExecuteAsync(run, _model!, ct);
@@ -96,7 +100,7 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             var run = await _db.CareerAgentRuns
                 .Where(r => (r.Status == CareerRunStatus.Queued || r.Status == CareerRunStatus.Working)
                     && (r.LeaseExpiresAt == null || r.LeaseExpiresAt < now)
-                    && (modelAvailable || r.Task == CareerAgentTasks.OccupationMatch || r.Task == CareerAgentTasks.MarketBrief || r.Task == CareerAgentTasks.PayAnalysis))
+                    && (modelAvailable || r.Task == CareerAgentTasks.OccupationMatch || r.Task == CareerAgentTasks.MarketBrief || r.Task == CareerAgentTasks.PayAnalysis || r.Task == CareerAgentTasks.Roadmap))
                 .OrderBy(r => r.CreatedAt)
                 .FirstOrDefaultAsync(ct);
             if (run == null)
@@ -349,6 +353,134 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         if (await FinishAsync(run, CareerRunStatus.Completed, null, ct))
         {
             _logger.LogInformation("Career run {RunId} completed with occupation match {MatchId}", run.Id, match.Id);
+        }
+    }
+
+    // ---- Roadmap (ADR 0016) ------------------------------------------------------
+
+    private sealed record EvidenceStepOutput(Guid? MarketBriefId, Guid? PayAnalysisId);
+
+    /// <summary>
+    /// Plan: read the pinned goal, read the market and pay evidence (pinning the latest ids), build the options,
+    /// plan tasks around the weekly hours, save. Everything is a deterministic read of saved data and the BLS
+    /// snapshot; no model is called, so the allowance unit is released.
+    /// </summary>
+    private async Task ExecuteRoadmapAsync(CareerAgentRun run, CancellationToken ct)
+    {
+        var steps = await LoadStepsAsync(run, ct);
+        var goal = await _db.CareerGoalVersions.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.OwnerId == run.OwnerId && v.VersionNumber == run.PinnedGoalVersion, ct);
+        if (goal?.OccupationCode == null || goal.OccupationTitle == null)
+        {
+            await FinishAsync(run, CareerRunStatus.Failed, CareerOccupationErrorCodes.OccupationRequired, ct);
+            return;
+        }
+
+        if (!steps.Any(s => s.Name == CareerStepNames.ReadGoal))
+        {
+            if (!await CanStartStepAsync(run, steps, ct)
+                || !await SaveStepAsync(run, steps, CareerStepKinds.Tool, CareerStepNames.ReadGoal,
+                    JsonSerializer.Serialize(new { version = run.PinnedGoalVersion, occupationCode = goal.OccupationCode }), ct))
+            {
+                return;
+            }
+        }
+
+        var evidenceStep = steps.FirstOrDefault(s => s.Name == CareerStepNames.ReadEvidence);
+        EvidenceStepOutput evidence;
+        if (evidenceStep != null)
+        {
+            evidence = JsonSerializer.Deserialize<EvidenceStepOutput>(evidenceStep.OutputJson!, RoadmapJson.Options)!;
+        }
+        else
+        {
+            if (!await CanStartStepAsync(run, steps, ct))
+            {
+                return;
+            }
+            var briefId = await _db.CareerMarketBriefs.AsNoTracking()
+                .Where(b => b.OwnerId == run.OwnerId && b.OccupationCode == goal.OccupationCode)
+                .OrderByDescending(b => b.CreatedAt).Select(b => (Guid?)b.Id).FirstOrDefaultAsync(ct);
+            var payId = await _db.CareerPayAnalyses.AsNoTracking()
+                .Where(p => p.OwnerId == run.OwnerId && p.OccupationCode == goal.OccupationCode)
+                .OrderByDescending(p => p.CreatedAt).Select(p => (Guid?)p.Id).FirstOrDefaultAsync(ct);
+            evidence = new EvidenceStepOutput(briefId, payId);
+            if (!await SaveStepAsync(run, steps, CareerStepKinds.Tool, CareerStepNames.ReadEvidence,
+                    JsonSerializer.Serialize(evidence, RoadmapJson.Options), ct))
+            {
+                return;
+            }
+        }
+
+        var builtStep = steps.FirstOrDefault(s => s.Name == CareerStepNames.BuildOptions);
+        RoadmapContent content;
+        if (builtStep != null)
+        {
+            content = JsonSerializer.Deserialize<RoadmapContent>(builtStep.OutputJson!, RoadmapJson.Options)!;
+        }
+        else
+        {
+            if (!await CanStartStepAsync(run, steps, ct))
+            {
+                return;
+            }
+            OccupationReleaseAndResult? match = null;
+            if (goal.OccupationMatchId != null)
+            {
+                var row = await _db.CareerOccupationMatches.AsNoTracking()
+                    .FirstOrDefaultAsync(m => m.Id == goal.OccupationMatchId && m.OwnerId == run.OwnerId, ct);
+                var stored = row == null ? null : JsonSerializer.Deserialize<StoredOccupationResult>(row.ResultJson, OccupationMatchJson.Options);
+                match = row == null || stored == null ? null : new OccupationReleaseAndResult(stored.Candidates, row.ReferenceRelease);
+            }
+            content = RoadmapBuilder.Build(RoadmapEvidence.Build(goal, match, _market, evidence.MarketBriefId != null, evidence.PayAnalysisId != null));
+            if (!await SaveStepAsync(run, steps, CareerStepKinds.Tool, CareerStepNames.BuildOptions,
+                    JsonSerializer.Serialize(content, RoadmapJson.Options), ct))
+            {
+                return;
+            }
+        }
+
+        if (!steps.Any(s => s.Name == CareerStepNames.PlanTasks))
+        {
+            if (!await CanStartStepAsync(run, steps, ct)
+                || !await SaveStepAsync(run, steps, CareerStepKinds.Tool, CareerStepNames.PlanTasks,
+                    JsonSerializer.Serialize(new { weeklyEffortHours = content.WeeklyEffortHours }), ct))
+            {
+                return;
+            }
+        }
+        if (!await CanStartStepAsync(run, steps, ct))
+        {
+            return;
+        }
+
+        var nextVersion = (await _db.CareerRoadmaps.AsNoTracking().Where(r => r.OwnerId == run.OwnerId)
+            .Select(r => (int?)r.Version).MaxAsync(ct) ?? 0) + 1;
+        var roadmap = new CareerRoadmap
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = run.OwnerId,
+            RunId = run.Id,
+            Version = nextVersion,
+            Status = CareerRoadmapStatuses.Proposed,
+            PinnedProfileVersion = run.PinnedProfileVersion!.Value,
+            PinnedGoalVersion = run.PinnedGoalVersion!.Value,
+            OccupationCode = goal.OccupationCode,
+            OccupationTitle = goal.OccupationTitle,
+            MarketBriefId = evidence.MarketBriefId,
+            PayAnalysisId = evidence.PayAnalysisId,
+            WeeklyEffortHours = content.WeeklyEffortHours,
+            LowTimeNote = content.LowTimeNote,
+            OptionsJson = JsonSerializer.Serialize(content.Options, RoadmapJson.Options),
+            OmittedJson = JsonSerializer.Serialize(content.Omitted, RoadmapJson.Options),
+            CreatedAt = Now()
+        };
+        // Saved in the same fenced write that completes the run, so a lost lease leaves no roadmap behind.
+        _db.CareerRoadmaps.Add(roadmap);
+        AddStep(run, steps, CareerStepKinds.Save, CareerStepNames.SaveRoadmap, JsonSerializer.Serialize(new { roadmapId = roadmap.Id }));
+        if (await FinishAsync(run, CareerRunStatus.Completed, null, ct))
+        {
+            _logger.LogInformation("Career run {RunId} completed with roadmap {RoadmapId}", run.Id, roadmap.Id);
         }
     }
 

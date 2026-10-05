@@ -67,6 +67,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Models.Career.CareerOccupationMatch> CareerOccupationMatches { get; set; }
     public virtual DbSet<Models.Career.CareerMarketBrief> CareerMarketBriefs { get; set; }
     public virtual DbSet<Models.Career.CareerPayAnalysis> CareerPayAnalyses { get; set; }
+    public virtual DbSet<Models.Career.CareerRoadmap> CareerRoadmaps { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -347,6 +348,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         pay.HasIndex(p => p.RunId).IsUnique();
         pay.HasIndex(p => new { p.OwnerId, p.CreatedAt });
         pay.HasOne<ApplicationUser>().WithMany().HasForeignKey(p => p.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        // Roadmaps (#387, ADR 0016). Owner cascade; edits write new versions, so RunId is null on those.
+        var roadmap = builder.Entity<Models.Career.CareerRoadmap>();
+        roadmap.ToTable("CareerRoadmaps");
+        roadmap.Property(r => r.OwnerId).HasMaxLength(450).IsRequired();
+        roadmap.Property(r => r.Status).HasMaxLength(16).IsRequired().IsConcurrencyToken();
+        roadmap.Property(r => r.SelectedOption).HasMaxLength(32);
+        roadmap.Property(r => r.OccupationCode).HasMaxLength(10).IsRequired();
+        roadmap.Property(r => r.OccupationTitle).HasMaxLength(200).IsRequired();
+        roadmap.Property(r => r.LowTimeNote).HasMaxLength(400);
+        roadmap.HasIndex(r => r.RunId).IsUnique();
+        roadmap.HasIndex(r => new { r.OwnerId, r.Version });
+        roadmap.HasOne<ApplicationUser>().WithMany().HasForeignKey(r => r.OwnerId).OnDelete(DeleteBehavior.Cascade);
     }
 
     private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)
