@@ -3,7 +3,7 @@ import {
   MarketFigureStatus,
   MarketFigureUnit,
 } from '../../services/career-profile.service';
-import { comparisonRows, formatFigure } from './market-format';
+import { comparisonRows, formatFigure, unitLabel } from './market-format';
 
 function fig(
   unit: MarketFigureUnit,
@@ -26,6 +26,8 @@ function fig(
 describe('formatFigure', () => {
   const cases: [string, MarketFigure, string][] = [
     ['usd_per_year', fig('usd_per_year', 135980), '$135,980'],
+    ['percent', fig('percent', 2.6), '2.6%'],
+    ['top coded', fig('usd_per_year', 239200, 'top_coded'), '$239,200 or more'],
     ['usd_per_year small', fig('usd_per_year', 980), '$980'],
     ['usd_per_hour', fig('usd_per_hour', 65.38), '$65.38'],
     ['usd_per_hour whole', fig('usd_per_hour', 65), '$65.00'],
@@ -92,5 +94,13 @@ describe('comparisonRows', () => {
   });
   it('has no local title without local figures', () => {
     expect(comparisonRows([at('median', '99', 1)]).localTitle).toBeNull();
+  });
+});
+
+describe('unitLabel', () => {
+  it('names the units and passes unknown ones through', () => {
+    expect(unitLabel('usd_per_year')).toBe('U.S. dollars per year');
+    expect(unitLabel('jobs')).toBe('number of jobs');
+    expect(unitLabel('widgets')).toBe('widgets');
   });
 });

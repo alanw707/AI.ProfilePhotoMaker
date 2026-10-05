@@ -178,6 +178,13 @@ export const routes: Routes = [
         title: 'Career Market Brief - AI Profile Photo Maker',
       },
       {
+        path: 'career/markets',
+        canActivate: [careerWorkspaceGuard],
+        loadComponent: () =>
+          import('./pages/career/career-markets.component').then(m => m.CareerMarketsComponent),
+        title: 'Compare U.S. Markets - AI Profile Photo Maker',
+      },
+      {
         path: 'career/pay',
         canActivate: [careerWorkspaceGuard],
         loadComponent: () =>

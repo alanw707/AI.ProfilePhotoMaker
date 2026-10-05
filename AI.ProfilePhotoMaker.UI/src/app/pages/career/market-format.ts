@@ -23,6 +23,8 @@ function amount(figure: MarketFigure, value: number): string {
       return `${NUMBER.format(value)} thousand`;
     case 'per_1000_jobs':
       return `${NUMBER.format(value)} per 1,000 jobs`;
+    case 'ratio':
+      return CENTS.format(value);
     case 'percent':
       return `${NUMBER.format(value)}%`;
     case 'percent_rse':
@@ -93,4 +95,17 @@ export function comparisonRows(figures: MarketFigure[]): ComparisonTable {
     rows.set(figure.key, row);
   }
   return { nationalTitle, localTitle, rows: [...rows.values()] };
+}
+
+const UNIT_LABELS: Record<string, string> = {
+  usd_per_year: 'U.S. dollars per year',
+  usd_per_hour: 'U.S. dollars per hour',
+  jobs: 'number of jobs',
+  ratio: 'ratio to the national level (1.00 means the same as the nation)',
+  percent: 'percent',
+};
+
+/** Plain-language unit for a legend or table caption. */
+export function unitLabel(unit: string): string {
+  return UNIT_LABELS[unit] ?? unit;
 }
