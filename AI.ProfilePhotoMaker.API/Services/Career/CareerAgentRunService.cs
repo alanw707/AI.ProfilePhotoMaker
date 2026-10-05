@@ -185,7 +185,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             }
             if (allowance == null)
             {
-                allowance = new CareerAllowance { Id = Guid.NewGuid(), OwnerId = ownerId, PeriodStart = period };
+                allowance = new CareerAllowance { Id = Guid.NewGuid(), OwnerId = ownerId, PeriodStart = period, CreatedAt = now };
                 _db.CareerAllowances.Add(allowance);
             }
             CareerAllowanceStore.Reserve(allowance);

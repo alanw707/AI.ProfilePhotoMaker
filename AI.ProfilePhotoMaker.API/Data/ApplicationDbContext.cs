@@ -74,6 +74,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Models.Career.CareerMaterialVersion> CareerMaterialVersions { get; set; }
     public virtual DbSet<Models.Career.CareerMaterialProposal> CareerMaterialProposals { get; set; }
     public virtual DbSet<Models.Career.CareerExport> CareerExports { get; set; }
+    // Privacy audit records (#392, ADR 0020). Deliberately not covered entities: they must outlive the purge they record.
+    public virtual DbSet<Models.Career.CareerDeletionRequest> CareerDeletionRequests { get; set; }
+    public virtual DbSet<Models.Career.CareerTombstone> CareerTombstones { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -432,6 +435,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         export.HasIndex(e => new { e.OwnerId, e.MaterialId, e.CreatedAt });
         export.HasIndex(e => e.ExpiresAt);
         export.HasOne<ApplicationUser>().WithMany().HasForeignKey(e => e.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        // Privacy (#392, ADR 0020). No foreign key to the user: a tombstone and its request must survive account deletion.
+        var deletion = builder.Entity<Models.Career.CareerDeletionRequest>();
+        deletion.ToTable("CareerDeletionRequests");
+        deletion.Property(d => d.OwnerId).HasMaxLength(450).IsRequired();
+        deletion.Property(d => d.Scope).HasMaxLength(24).IsRequired();
+        deletion.Property(d => d.Status).HasMaxLength(16).IsRequired();
+        deletion.Property(d => d.LastError).HasMaxLength(200);
+        deletion.HasIndex(d => new { d.OwnerId, d.CreatedAt });
+
+        var tombstone = builder.Entity<Models.Career.CareerTombstone>();
+        tombstone.ToTable("CareerTombstones");
+        tombstone.Property(t => t.OwnerId).HasMaxLength(450).IsRequired();
+        tombstone.Property(t => t.Scope).HasMaxLength(24).IsRequired();
+        tombstone.HasIndex(t => new { t.OwnerId, t.CreatedAt });
     }
 
     private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)

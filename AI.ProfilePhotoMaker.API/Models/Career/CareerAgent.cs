@@ -151,6 +151,9 @@ public class CareerAllowance
     /// <summary>First instant of the UTC month this row covers.</summary>
     public DateTime PeriodStart { get; set; }
 
+    /// <summary>When the row was created. Tombstone cutoffs use this, not <see cref="PeriodStart"/> (the month's first instant).</summary>
+    public DateTime CreatedAt { get; set; }
+
     public int Reserved { get; set; }
     public int Used { get; set; }
 

@@ -32,6 +32,7 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         var careerEntities = db.Model.GetEntityTypes()
             .Select(t => t.ClrType)
             .Where(t => t.Namespace == typeof(CareerProfile).Namespace)
+            .Where(t => !CareerPrivacyCoverageTests.AuditRecordTypes.Contains(t))
             .ToHashSet();
 
         careerEntities.Should().NotBeEmpty();
@@ -78,7 +79,8 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         "CareerProfiles", "CareerProfileVersions", "CareerGoals", "CareerGoalVersions",
         "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems", "CareerPhotoSelections",
         "CareerAgentRuns", "CareerAgentSteps", "CareerAllowances", "CareerOccupationMatches", "CareerMarketBriefs", "CareerPayAnalyses", "CareerRoadmaps",
-        "CareerRoadmapTaskProgress", "CareerRoadmapReplans", "CareerMaterials", "CareerMaterialVersions", "CareerMaterialProposals", "CareerExports"
+        "CareerRoadmapTaskProgress", "CareerRoadmapReplans", "CareerMaterials", "CareerMaterialVersions", "CareerMaterialProposals", "CareerExports",
+        "CareerDeletionRequests", "CareerTombstones"
     };
 
     [Fact]
@@ -206,6 +208,20 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         operations.OfType<CreateIndexOperation>().Should().OnlyContain(i => i.Table == "CareerExports");
         operations.OfType<DropTableOperation>().Should().BeEmpty();
         operations.OfType<DropColumnOperation>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void PrivacyMigrationOnlyAddsTwoTablesAndTheirIndexes()
+    {
+        var operations = new AddCareerPrivacy().UpOperations;
+
+        AssertAdditive(operations, allowAddColumn: false);
+        operations.OfType<CreateTableOperation>().Select(o => o.Name).Should()
+            .BeEquivalentTo("CareerDeletionRequests", "CareerTombstones");
+        operations.OfType<CreateIndexOperation>().Should().OnlyContain(i => i.Table == "CareerDeletionRequests" || i.Table == "CareerTombstones");
+        operations.OfType<DropTableOperation>().Should().BeEmpty();
+        operations.OfType<DropColumnOperation>().Should().BeEmpty();
+        operations.OfType<AlterColumnOperation>().Should().BeEmpty();
     }
 
     [Fact]

@@ -236,6 +236,8 @@ if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Lo
     builder.Services.AddSingleton<AI.ProfilePhotoMaker.API.Services.Career.IMalwareScanner, AI.ProfilePhotoMaker.API.Services.Career.NoThreatsScanner>();
 }
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.Career.CareerResumePurgeBackgroundService>();
+// Re-applies career deletion tombstones at startup so a restored backup cannot resurrect deleted data (ADR 0020).
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.Career.CareerTombstoneReplayHostedService>();
 // The agent's text model: a configured OpenAI model in any environment; otherwise the offline
 // fake outside production, and nothing in production (starting a run answers 503).
 AI.ProfilePhotoMaker.API.Services.Career.CareerTextModelRegistration.AddCareerTextModel(builder.Services, builder.Configuration, builder.Environment);

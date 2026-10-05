@@ -90,6 +90,11 @@ public class CareerWorkspaceFlagOffTests : IClassFixture<CustomWebApplicationFac
         { "POST", $"/api/career/materials/{Guid.Empty}/exports" },
         { "GET", $"/api/career/materials/{Guid.Empty}/exports" },
         { "GET", $"/api/career/exports/{Guid.Empty}" },
+        { "GET", "/api/career/privacy/retention" },
+        { "GET", "/api/career/privacy/export" },
+        { "POST", "/api/career/privacy/deletions" },
+        { "GET", $"/api/career/privacy/deletions/{Guid.Empty}" },
+        { "POST", $"/api/career/privacy/deletions/{Guid.Empty}/retry" },
     };
 
     [Theory]

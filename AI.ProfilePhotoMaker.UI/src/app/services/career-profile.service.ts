@@ -799,6 +799,7 @@ export interface CareerApiError {
     | 'validation'
     | 'precondition'
     | 'unauthorized'
+    | 'reauth'
     | 'alreadyExists'
     | 'preview'
     | 'allowance'
@@ -845,6 +846,28 @@ interface Envelope<T> {
  * Version of the resume consent notice shown on the import page. The server rejects
  * uploads that agreed to a different version, so change both together.
  */
+export interface CareerRetentionItem {
+  key: string;
+  label: string;
+  retention: string;
+  notes: string;
+}
+export interface CareerRetentionDto {
+  items: CareerRetentionItem[];
+  processors: { name: string; purpose: string }[];
+}
+export type DeletionScope = 'raw_documents' | 'career_profile';
+export type DeletionStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
+export interface CareerDeletionDto {
+  id: string;
+  scope: DeletionScope;
+  status: DeletionStatus;
+  attempts: number;
+  lastError: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
 export const RESUME_CONSENT_VERSION = 'resume-notice-2026-10-04';
 
 @Injectable({ providedIn: 'root' })
@@ -931,6 +954,7 @@ export class CareerProfileService {
       CareerReferenceUnavailable: 'unavailable',
       CareerExportPhotoUnavailable: 'exportPhotoUnavailable',
       CareerExportExpired: 'exportExpired',
+      CareerReauthRequired: 'reauth',
     };
     const kind = codeKinds[payload?.code ?? ''] ?? kinds[error.status] ?? 'unknown';
     return {
@@ -1209,6 +1233,27 @@ export class CareerProfileService {
     return this.http
       .get(this.url(`exports/${encodeURIComponent(id)}`), { responseType: 'blob' })
       .pipe(catchError(error => throwError(() => this.mapError(error))));
+  }
+  getRetention() {
+    return this.request<CareerRetentionDto>('GET', 'privacy/retention');
+  }
+  /** The JSON export bytes; the caller turns them into an object URL and clicks a link. */
+  downloadPrivacyExport() {
+    return this.http
+      .get(this.url('privacy/export'), { responseType: 'blob' })
+      .pipe(catchError(error => throwError(() => this.mapError(error))));
+  }
+  requestDeletion(scope: DeletionScope) {
+    return this.request<CareerDeletionDto>('POST', 'privacy/deletions', { scope });
+  }
+  getDeletion(id: string) {
+    return this.request<CareerDeletionDto>('GET', `privacy/deletions/${encodeURIComponent(id)}`);
+  }
+  retryDeletion(id: string) {
+    return this.request<CareerDeletionDto>(
+      'POST',
+      `privacy/deletions/${encodeURIComponent(id)}/retry`
+    );
   }
   getResumeMaterial(id: string) {
     return this.request<ResumeMaterialDto>('GET', `materials/${encodeURIComponent(id)}`);

@@ -766,4 +766,36 @@ describe('CareerProfileService', () => {
     http.expectOne('/api/career/exports/e1').flush(new Blob(), { status: 410, statusText: 'Gone' });
     expect(expired).toBe('exportExpired');
   });
+  it('calls the privacy endpoints and maps reauth', () => {
+    service.getRetention().subscribe();
+    const r = http.expectOne('/api/career/privacy/retention');
+    expect(r.request.method).toBe('GET');
+    r.flush({ success: true, data: { items: [], processors: [] } });
+    let size = 0;
+    service.downloadPrivacyExport().subscribe(b => (size = b.size));
+    const file = http.expectOne('/api/career/privacy/export');
+    expect(file.request.responseType).toBe('blob');
+    file.flush(new Blob(['{}']));
+    expect(size).toBe(2);
+    service.requestDeletion('career_profile').subscribe();
+    const d = http.expectOne('/api/career/privacy/deletions');
+    expect(d.request.method).toBe('POST');
+    expect(d.request.body).toEqual({ scope: 'career_profile' });
+    d.flush({ success: true, data: { id: 'd1' } });
+    service.getDeletion('d1').subscribe();
+    http.expectOne('/api/career/privacy/deletions/d1').flush({ success: true, data: { id: 'd1' } });
+    service.retryDeletion('d1').subscribe();
+    const retry = http.expectOne('/api/career/privacy/deletions/d1/retry');
+    expect(retry.request.method).toBe('POST');
+    retry.flush({ success: true, data: { id: 'd1' } });
+    let kind = '';
+    service.requestDeletion('raw_documents').subscribe({ error: e => (kind = e.kind) });
+    http
+      .expectOne('/api/career/privacy/deletions')
+      .flush(
+        { success: false, error: { code: 'CareerReauthRequired', message: 'x' } },
+        { status: 401, statusText: 'Unauthorized' }
+      );
+    expect(kind).toBe('reauth');
+  });
 });

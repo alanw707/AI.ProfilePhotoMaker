@@ -37,11 +37,15 @@ public sealed class CareerClient
     private readonly HttpClient _http;
     public string UserId { get; }
 
-    public CareerClient(CustomWebApplicationFactory factory, string? userId = null)
+    public CareerClient(CustomWebApplicationFactory factory, string? userId = null, IReadOnlyDictionary<string, string>? headers = null)
     {
         UserId = userId ?? $"career-user-{Guid.NewGuid():N}";
         _http = factory.CreateAuthenticatedClient();
         _http.DefaultRequestHeaders.Add("X-Test-UserId", UserId);
+        foreach (var (name, value) in headers ?? new Dictionary<string, string>())
+        {
+            _http.DefaultRequestHeaders.Add(name, value);
+        }
     }
 
     public static object ValidProfile(string title = "Data analyst") => new
