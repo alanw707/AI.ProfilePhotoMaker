@@ -191,6 +191,7 @@ public static class CareerWorkspaceServiceCollectionExtensions
             new EmbeddedMarketReference(EmbeddedMarketReference.OpenEmbeddedSnapshot, EmbeddedMarketReference.ExpectedSha256,
                 sp.GetRequiredService<ILoggerFactory>().CreateLogger<EmbeddedMarketReference>()));
         services.AddScoped<ICareerMarketService, CareerMarketService>();
+        services.AddScoped<ICareerMarketComparisonService, MarketComparisonService>();
         services.TryAddSingleton<IPayObservationSource, NoQualifiedPayObservationSource>();
         services.AddScoped<ICareerPayService, CareerPayService>();
         return services;

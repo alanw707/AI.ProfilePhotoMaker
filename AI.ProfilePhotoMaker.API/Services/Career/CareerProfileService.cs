@@ -503,6 +503,14 @@ public sealed class CareerProfileService : ICareerProfileService
         to.OccupationTitle = from.OccupationTitle;
         to.OccupationReferenceRelease = from.OccupationReferenceRelease;
         to.OccupationMatchId = from.OccupationMatchId;
+        CarryPreferredArea(from, to);
+    }
+
+    internal static void CarryPreferredArea(CareerGoalVersion from, CareerGoalVersion to)
+    {
+        to.PreferredAreaCode = from.PreferredAreaCode;
+        to.PreferredAreaTitle = from.PreferredAreaTitle;
+        to.PreferredAreaLevel = from.PreferredAreaLevel;
     }
 
     private static CareerGoalVersion NewGoalVersion(CareerGoal goal, int number, ValidGoalFacts facts, int? profileVersion, DateTime now) => new()
@@ -549,7 +557,13 @@ public sealed class CareerProfileService : ICareerProfileService
         active.BasedOnProfileVersion,
         IsGoalStale(active.BasedOnProfileVersion, currentProfileVersion),
         ToProvenance(active.Source, active.ConfirmedAt, active.RestoredFromVersion), goal.CreatedAt, goal.UpdatedAt,
-        ToOccupation(active));
+        ToOccupation(active),
+        ToPreferredArea(active));
+
+    private static CareerGoalPreferredAreaDto? ToPreferredArea(CareerGoalVersion v) =>
+        v.PreferredAreaCode == null
+            ? null
+            : new CareerGoalPreferredAreaDto(v.PreferredAreaCode, v.PreferredAreaTitle ?? string.Empty, v.PreferredAreaLevel ?? string.Empty);
 
     private static CareerGoalOccupationDto? ToOccupation(CareerGoalVersion v) =>
         v.OccupationCode == null

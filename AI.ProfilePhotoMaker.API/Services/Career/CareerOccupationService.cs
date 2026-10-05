@@ -157,6 +157,8 @@ public sealed class CareerOccupationService : ICareerOccupationService
             OccupationReferenceRelease = match.ReferenceRelease,
             OccupationMatchId = match.Id
         };
+        // Confirming an occupation keeps a location the user already saved.
+        CareerProfileService.CarryPreferredArea(active, next);
 
         goal.ActiveVersionNumber = next.VersionNumber;
         goal.UpdatedAt = now;

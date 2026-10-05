@@ -217,6 +217,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         goalVersion.Property(v => v.OccupationCode).HasMaxLength(10);
         goalVersion.Property(v => v.OccupationTitle).HasMaxLength(200);
         goalVersion.Property(v => v.OccupationReferenceRelease).HasMaxLength(20);
+        goalVersion.Property(v => v.PreferredAreaCode).HasMaxLength(10);
+        goalVersion.Property(v => v.PreferredAreaTitle).HasMaxLength(200);
+        goalVersion.Property(v => v.PreferredAreaLevel).HasMaxLength(10);
 
         // Resume import (#379, ADR 0007). Documents and proposals reference each other
         // by plain id only, so deleting either never needs a cascade across the pair.
