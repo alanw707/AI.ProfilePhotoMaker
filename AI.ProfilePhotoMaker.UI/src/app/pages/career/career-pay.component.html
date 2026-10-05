@@ -1,0 +1,267 @@
+<main class="career-page career-pay">
+  <div class="career-sheet">
+    <p><a routerLink="/app/career">Back to career workspace</a></p>
+    <h1>Comparable pay analysis</h1>
+    <p>
+      Published occupational wages for your confirmed occupation, and - only when a qualified source is available -
+      advertised pay from a real cohort.
+    </p>
+    @if (occupationMissing()) {
+      <div class="caution" role="status" data-occupation-required>
+        <p>Confirm your occupation first.</p>
+        <a routerLink="/app/career/occupation">Confirm your occupation</a>
+      </div>
+    }
+    @if (error()) {
+      <p class="caution" role="alert">{{ error() }}</p>
+    }
+    @if (connectionLost()) {
+      <p class="caution" role="status">Connection lost. Retrying…</p>
+    }
+    @if (run(); as r) {
+      @if (!analysis()) {
+        <section class="run-area" aria-label="Analysis status">
+          <h2>Analysis status</h2>
+          <p class="status" role="status" data-run-status>
+            {{
+              r.status === 'completed'
+                ? 'Analysis ready'
+                : r.status === 'failed'
+                  ? 'Could not finish'
+                  : r.status === 'queued'
+                    ? 'Waiting to start'
+                    : 'Working'
+            }}
+          </p>
+          @if (r.steps.length) {
+            <ol class="run-steps" aria-label="Completed steps">
+              @for (step of r.steps; track step.ordinal) {
+                <li>{{ step.label }}</li>
+              }
+            </ol>
+          }
+          @if (r.status === 'failed') {
+            <p role="alert">We could not build your pay analysis.</p>
+            <button type="button" class="primary" (click)="start()">Try again</button>
+          }
+        </section>
+      }
+    } @else if (loading()) {
+      <p role="status">Loading your pay analysis…</p>
+    } @else if (!analysis() && !occupationMissing()) {
+      <div class="actions">
+        <button type="button" class="primary" (click)="start()" [disabled]="starting()">Build my pay analysis</button>
+      </div>
+    }
+
+    @if (analysis(); as a) {
+      <article class="market-brief" data-analysis>
+        <section>
+          <h2>
+            {{ a.occupation.title }}
+            <span class="muted">({{ a.occupation.code }})</span>
+          </h2>
+          <p class="muted">
+            {{ a.location.local?.title ?? 'National figures only' }} · Built {{ a.createdAt.slice(0, 10) }} · OEWS
+            {{ a.pinned.oewsRelease }}
+          </p>
+          <p class="muted" data-input-hash>Input hash {{ a.inputHash.slice(0, 12) }}</p>
+          <div class="actions">
+            <button type="button" class="secondary" (click)="showAllSources()">Sources</button>
+            <button type="button" class="secondary" (click)="recompute()" [disabled]="recomputing()">Recompute</button>
+          </div>
+          @if (recomputeMessage()) {
+            <p role="status" data-recompute>{{ recomputeMessage() }}</p>
+          }
+        </section>
+        @if (a.stale) {
+          <div class="caution" role="status" data-stale>
+            <p>
+              Your profile or goal changed after this analysis. It is kept as it was; build a new one for current
+              inputs.
+            </p>
+            <button type="button" class="primary" (click)="start()">Build a new analysis</button>
+          </div>
+        }
+        @if (a.blockedReasons.length) {
+          <p class="caution" role="status" data-blocked>Advertised pay blocked: {{ a.blockedReasons.join(', ') }}</p>
+        }
+        <section data-section="benchmark" aria-labelledby="pay-benchmark">
+          <h2 id="pay-benchmark">Occupational benchmark</h2>
+          @if (benchmark(); as b) {
+            <p>{{ b.label }}. {{ b.note }}</p>
+            @if (b.status !== 'complete') {
+              <p data-section-reason>Benchmark unavailable: {{ b.reason ?? 'source unavailable' }}</p>
+            }
+            @if (b.figures.length) {
+              <p class="muted" data-as-of>{{ asOfText(b) }}</p>
+              @let t = table(b);
+              <div class="market-table-wrap">
+                <table class="market-table">
+                  <caption>
+                    Occupational benchmark: {{ t.nationalTitle }}{{ t.localTitle ? ' and ' + t.localTitle : '' }}
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Measure</th>
+                      <th scope="col">National ({{ t.nationalTitle }})</th>
+                      @if (t.localTitle) {
+                        <th scope="col">Local ({{ t.localTitle }})</th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of t.rows; track row.key) {
+                      <tr>
+                        <th scope="row">{{ row.label }}</th>
+                        <td>
+                          @if (row.national; as f) {
+                            <span [attr.data-figure]="'benchmark:' + f.key + ':' + f.areaCode">
+                              {{ figureText(f) }}
+                            </span>
+                            <button type="button" class="source-link" (click)="showSource(f.sourceId)">Source</button>
+                          }
+                        </td>
+                        @if (t.localTitle) {
+                          <td>
+                            @if (row.local; as f) {
+                              <span [attr.data-figure]="'benchmark:' + f.key + ':' + f.areaCode">
+                                {{ figureText(f) }}
+                              </span>
+                              <button type="button" class="source-link" (click)="showSource(f.sourceId)">Source</button>
+                            }
+                          </td>
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          } @else {
+            <p>Benchmark unavailable.</p>
+          }
+        </section>
+        <section data-section="personalized" aria-labelledby="pay-personalized">
+          <h2 id="pay-personalized">Advertised pay from a qualified cohort</h2>
+          @if (personalized(); as p) {
+            @if (p.status === 'complete' && p.interval; as interval) {
+              <p>
+                Observed advertised-pay interval: {{ dollars(interval.low) }}–{{ dollars(interval.high) }}
+                {{ interval.unit }}. {{ interval.definition }}
+              </p>
+            } @else if (p.status === 'insufficient_evidence') {
+              <p>
+                Insufficient evidence: at least 10 independent observations from 5 employers are required. No interval
+                is shown.
+              </p>
+            } @else {
+              <p>
+                No qualified source: no provider has granted written rights for ongoing commercial use. Nothing here is
+                advertised pay.
+              </p>
+            }
+            @if (p.status !== 'unavailable') {
+              <p>
+                Included {{ p.cohort.included }}; excluded {{ p.cohort.excluded }}; employers {{ p.cohort.employers }}.
+              </p>
+              <p>
+                Largest employer share: {{ p.cohort.largestEmployerShare }}; concentrated:
+                {{ p.cohort.concentrated ? 'yes' : 'no' }}; sensitive: {{ p.cohort.sensitive ? 'yes' : 'no' }}.
+              </p>
+              <ul>
+                @for (reason of exclusions(p); track reason[0]) {
+                  <li>{{ reason[0] }}: {{ reason[1] }}</li>
+                }
+              </ul>
+            }
+          }
+          @if (qualification(); as q) {
+            <h3>Qualification gates</h3>
+            <ul data-gates>
+              @for (gate of q.gates; track gate.gateId) {
+                <li>{{ gate.gateId }} · {{ gate.requirement }} · {{ gate.status }}</li>
+              }
+            </ul>
+          }
+        </section>
+        <section data-section="scenario" aria-labelledby="pay-scenario">
+          <h2 id="pay-scenario">Your requested pay</h2>
+          @if (scenario(); as s) {
+            @if (
+              s.status === 'complete' &&
+              s.requestedAnnual !== null &&
+              s.benchmarkMedianAnnual !== null &&
+              s.gapAnnual !== null &&
+              s.gapPercent !== null
+            ) {
+              <dl class="market-list">
+                <dt>Requested pay</dt>
+                <dd>{{ dollars(s.requestedAnnual) }}</dd>
+                <dt>Benchmark median</dt>
+                <dd>{{ dollars(s.benchmarkMedianAnnual) }}</dd>
+                <dt>Gap</dt>
+                <dd>{{ dollars(s.gapAnnual) }} ({{ s.gapPercent }}%)</dd>
+              </dl>
+              <p>{{ s.note || 'Your target is a preference, not evidence about what employers pay.' }}</p>
+            } @else {
+              <p>Scenario unavailable: requested pay or benchmark median is not available.</p>
+            }
+          } @else {
+            <p>Scenario unavailable.</p>
+          }
+        </section>
+        <p class="muted" data-retention>Analyses are kept with your career data while your account exists.</p>
+      </article>
+    }
+    @if (recent().length) {
+      <section aria-labelledby="recent-pay">
+        <h2 id="recent-pay">Recent analyses</h2>
+        <ul class="history">
+          @for (item of recent(); track item.id) {
+            <li>
+              <button type="button" class="secondary" (click)="open(item.id)">
+                {{ item.occupationTitle }}{{ item.areaTitle ? ' · ' + item.areaTitle : '' }} ·
+                {{ item.createdAt.slice(0, 10) }}
+              </button>
+              @if (item.stale) {
+                <span class="muted">Out of date</span>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+  <dialog #drawer class="source-drawer" aria-labelledby="pay-drawer-heading">
+    <h2 id="pay-drawer-heading">Sources</h2>
+    @for (s of drawerSources(); track s.id) {
+      <section [attr.data-source]="s.id">
+        <h3>{{ s.name }}</h3>
+        <p>{{ s.publisher }} · Reference period {{ s.referencePeriod }} · Published {{ s.publishedOn }}</p>
+        <p>
+          <strong>Definition.</strong>
+          {{ s.definition }}
+        </p>
+        <p>
+          <strong>Coverage.</strong>
+          {{ s.coverage }}
+        </p>
+        <p>
+          <strong>License.</strong>
+          {{ s.license }}
+        </p>
+        <p>
+          <strong>Citation.</strong>
+          {{ s.citation }}
+        </p>
+        <p>
+          <a [href]="s.url" target="_blank" rel="noopener noreferrer">Data source</a>
+          ·
+          <a [href]="s.definitionsUrl" target="_blank" rel="noopener noreferrer">Definitions</a>
+        </p>
+      </section>
+    }
+    <button type="button" class="secondary" (click)="closeDrawer()">Close</button>
+  </dialog>
+</main>
