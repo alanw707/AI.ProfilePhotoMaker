@@ -77,7 +77,7 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
     {
         "CareerProfiles", "CareerProfileVersions", "CareerGoals", "CareerGoalVersions",
         "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems", "CareerPhotoSelections",
-        "CareerAgentRuns", "CareerAgentSteps", "CareerAllowances"
+        "CareerAgentRuns", "CareerAgentSteps", "CareerAllowances", "CareerOccupationMatches"
     };
 
     [Fact]
@@ -118,6 +118,21 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
             .Contain(i => i.Table == "CareerAgentRuns" && i.IsUnique && i.Columns.SequenceEqual(new[] { "OwnerId", "IdempotencyKey" }));
         operations.OfType<CreateIndexOperation>().Should()
             .Contain(i => i.Table == "CareerAllowances" && i.IsUnique && i.Columns.SequenceEqual(new[] { "OwnerId", "PeriodStart" }));
+    }
+
+    [Fact]
+    public void OccupationMatchMigrationOnlyAddsATableAndNullableGoalVersionColumns()
+    {
+        var operations = new AddCareerOccupationMatches().UpOperations;
+
+        AssertAdditive(operations, allowAddColumn: true);
+        operations.OfType<CreateTableOperation>().Select(o => o.Name).Should().Equal("CareerOccupationMatches");
+        var added = operations.OfType<AddColumnOperation>().ToList();
+        added.Should().OnlyContain(c => c.Table == "CareerGoalVersions" && c.IsNullable);
+        added.Select(c => c.Name).Should().BeEquivalentTo(
+            "OccupationCode", "OccupationTitle", "OccupationReferenceRelease", "OccupationMatchId");
+        operations.OfType<CreateIndexOperation>().Should()
+            .Contain(i => i.Table == "CareerOccupationMatches" && i.IsUnique && i.Columns.SequenceEqual(new[] { "RunId" }));
     }
 
     private static void AssertAdditive(IReadOnlyList<MigrationOperation> operations, bool allowAddColumn)

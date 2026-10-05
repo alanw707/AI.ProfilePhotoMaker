@@ -46,6 +46,15 @@ public class CareerGoalVersion
     /// <summary>Set when this version was created by restoring an older one.</summary>
     public int? RestoredFromVersion { get; set; }
 
+    /// <summary>
+    /// The confirmed O*NET occupation (ADR 0010), carried forward by later edits and restores.
+    /// All four are set together, or all null.
+    /// </summary>
+    public string? OccupationCode { get; set; }
+    public string? OccupationTitle { get; set; }
+    public string? OccupationReferenceRelease { get; set; }
+    public Guid? OccupationMatchId { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public CareerGoal? CareerGoal { get; set; }

@@ -15,7 +15,15 @@ public sealed class AnswerCareerRunRequest
 
 public sealed record CareerRunStepDto(int Ordinal, string Kind, string Name, string Label, string Status, DateTime? CompletedAt);
 
-public sealed record CareerRunQuestionDto(string Id, string Text, int MaxLength);
+public sealed record CareerRunChoiceDto(string Value, string Label);
+
+/// <summary>A question the run waits on. <see cref="Choices"/> is omitted for free-text questions.</summary>
+public sealed record CareerRunQuestionDto(
+    string Id,
+    string Text,
+    int MaxLength,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    IReadOnlyList<CareerRunChoiceDto>? Choices = null);
 
 public sealed record CareerAllowanceDto(int Used, int Reserved, int Limit, DateTime PeriodStart);
 
@@ -31,6 +39,7 @@ public sealed record CareerAgentRunDto(
     IReadOnlyList<CareerRunStepDto> Steps,
     CareerRunQuestionDto? Question,
     Guid? ProposalId,
+    Guid? OccupationMatchId,
     bool ProfileChanged,
     string? ErrorCode,
     CareerAllowanceDto Allowance);
@@ -45,6 +54,7 @@ public static class CareerAgentErrorCodes
     public const string ProfileRequired = "CareerProfileRequired";
     public const string AllowanceExhausted = "CareerAllowanceExhausted";
     public const string ModelUnavailable = "CareerModelUnavailable";
+    public const string ReferenceUnavailable = "CareerReferenceUnavailable";
 
     // Failure codes stored on a failed run.
     public const string StepLimit = "CareerStepLimit";

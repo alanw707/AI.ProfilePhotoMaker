@@ -59,6 +59,9 @@ public sealed record CareerGoalFactsDto(
     int? DesiredPayMax,
     int? WeeklyEffortHours);
 
+/// <summary>The confirmed O*NET occupation on a goal (ADR 0010).</summary>
+public sealed record CareerGoalOccupationDto(string Code, string Title, string ReferenceRelease, Guid? MatchId);
+
 public sealed record CareerGoalDto(
     Guid Id,
     int Version,
@@ -68,7 +71,8 @@ public sealed record CareerGoalDto(
     bool IsStale,
     CareerProvenanceDto Provenance,
     DateTime CreatedAt,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    CareerGoalOccupationDto? Occupation = null);
 
 public sealed record CareerGoalVersionSummaryDto(int Version, DateTime CreatedAt, string TargetRole, bool IsActive);
 
@@ -143,6 +147,10 @@ public sealed record CareerOutcome<T>(
     public static CareerOutcome<T> ModelUnavailable() =>
         new(CareerOutcomeKind.Unavailable, ErrorCode: CareerAgentErrorCodes.ModelUnavailable,
             Message: "The career assistant is not available yet.");
+
+    public static CareerOutcome<T> ReferenceUnavailable() =>
+        new(CareerOutcomeKind.Unavailable, ErrorCode: CareerAgentErrorCodes.ReferenceUnavailable,
+            Message: "Occupation matching is temporarily unavailable.");
 
     public static CareerOutcome<T> Busy(string code, string message, int retryAfterSeconds) =>
         new(CareerOutcomeKind.Unavailable, ErrorCode: code, Message: message, RetryAfterSeconds: retryAfterSeconds);

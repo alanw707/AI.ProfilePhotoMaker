@@ -28,10 +28,14 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
     public const int MaxListed = 20;
     public const string AudienceQuestionId = "audience";
     public const string AudienceQuestionText = "Who should this summary speak to?";
+    public const string OccupationQuestionId = "occupation";
+    public const string OccupationQuestionText = "Which of these is closest to the work you want analysed?";
+    public const string NoOccupationChoice = "none";
+    public const int MaxOccupationAnswerLength = 20;
 
     // A lost race is retried a few times; more than that means heavy contention.
     private const int MaxCommitAttempts = 5;
-    private const string TaskError = "Choose a task the assistant can do: profile_summary.";
+    private const string TaskError = "Choose a task the assistant can do: profile_summary or occupation_match.";
 
     private static readonly IReadOnlyDictionary<string, string> StepLabels = new Dictionary<string, string>
     {
@@ -39,7 +43,10 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
         [CareerStepNames.ReadGoal] = "Read your career goal",
         [CareerStepNames.AskAudience] = "Asked who the summary is for",
         [CareerStepNames.DraftSummary] = "Drafted a summary",
-        [CareerStepNames.SaveProposal] = "Saved the draft for your review"
+        [CareerStepNames.SaveProposal] = "Saved the draft for your review",
+        [CareerStepNames.MatchOccupations] = "Compared your duties with occupation tasks",
+        [CareerStepNames.AskOccupation] = "Asked which occupation is closest",
+        [CareerStepNames.SaveMatch] = "Saved the matches for your review"
     };
 
     private readonly ApplicationDbContext _db;
@@ -47,17 +54,20 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
     private readonly TimeProvider _clock;
     private readonly ILogger<CareerAgentRunService> _logger;
     private readonly ICareerTextModel? _model;
+    private readonly IOccupationReference? _reference;
 
-    // The model is optional: with none registered, creating a run fails closed (503).
+    // The model is optional: with none registered, a profile summary fails closed (503).
+    // Occupation matching needs no model, only the verified O*NET snapshot.
     public CareerAgentRunService(
         ApplicationDbContext db, IOptions<CareerAgentOptions> options, TimeProvider clock,
-        ILogger<CareerAgentRunService> logger, ICareerTextModel? model = null)
+        ILogger<CareerAgentRunService> logger, ICareerTextModel? model = null, IOccupationReference? reference = null)
     {
         _db = db;
         _options = options.Value;
         _clock = clock;
         _logger = logger;
         _model = model;
+        _reference = reference;
     }
 
     public async Task<CareerOutcome<CareerAgentRunDto>> CreateAsync(
@@ -72,7 +82,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             {
                 ["idempotencyKey"] = $"Send an Idempotency-Key header of {MinKeyLength}-{MaxKeyLength} characters."
             };
-            if (task != CareerAgentTasks.ProfileSummary)
+            if (!IsKnownTask(task))
             {
                 errors["task"] = TaskError;
             }
@@ -95,14 +105,18 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
                         CareerAgentErrorCodes.IdempotencyMismatch, "That Idempotency-Key was already used for a different request.");
             }
 
-            if (task != CareerAgentTasks.ProfileSummary)
+            if (!IsKnownTask(task))
             {
                 return CareerOutcome<CareerAgentRunDto>.Invalid(new Dictionary<string, string> { ["task"] = TaskError });
             }
 
-            if (_model == null)
+            if (task == CareerAgentTasks.ProfileSummary && _model == null)
             {
                 return CareerOutcome<CareerAgentRunDto>.ModelUnavailable();
+            }
+            if (task == CareerAgentTasks.OccupationMatch && _reference?.Data == null)
+            {
+                return CareerOutcome<CareerAgentRunDto>.ReferenceUnavailable();
             }
 
             var profileVersion = await _db.CareerProfiles.AsNoTracking()
@@ -136,7 +150,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             {
                 Id = Guid.NewGuid(),
                 OwnerId = ownerId,
-                Task = CareerAgentTasks.ProfileSummary,
+                Task = task!,
                 Status = CareerRunStatus.Queued,
                 IdempotencyKey = key!,
                 RequestHash = hash,
@@ -187,7 +201,12 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
         var currentProfile = await CurrentProfileVersionAsync(ownerId, ct);
         var allowance = await AllowanceDtoAsync(ownerId, ct);
 
-        var dtos = runs.Select(run => ToDto(run, stepsByRun[run.Id], currentProfile, allowance)).ToList();
+        var matchIds = await _db.CareerOccupationMatches.AsNoTracking()
+            .Where(m => m.OwnerId == ownerId && runIds.Contains(m.RunId))
+            .ToDictionaryAsync(m => m.RunId, m => m.Id, ct);
+
+        var dtos = runs.Select(run => ToDto(
+            run, stepsByRun[run.Id], currentProfile, allowance, matchIds.TryGetValue(run.Id, out var matchId) ? matchId : null)).ToList();
         return CareerOutcome<CareerRunListDto>.Ok(new CareerRunListDto(dtos, allowance));
     }
 
@@ -203,15 +222,18 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
                 return NotFound();
             }
 
+            var occupation = run.Task == CareerAgentTasks.OccupationMatch;
+            var expectedQuestion = occupation ? OccupationQuestionId : AudienceQuestionId;
+            var maxAnswer = occupation ? MaxOccupationAnswerLength : MaxAnswerLength;
             var errors = new Dictionary<string, string>();
-            if (request.QuestionId != AudienceQuestionId)
+            if (request.QuestionId != expectedQuestion)
             {
                 errors["questionId"] = "That is not the question this run is asking.";
             }
             var answer = request.Answer?.Trim();
-            if (string.IsNullOrEmpty(answer) || answer.Length > MaxAnswerLength)
+            if (string.IsNullOrEmpty(answer) || answer.Length > maxAnswer)
             {
-                errors["answer"] = $"Answer in 1-{MaxAnswerLength} characters.";
+                errors["answer"] = $"Answer in 1-{maxAnswer} characters.";
             }
             if (errors.Count > 0)
             {
@@ -222,6 +244,19 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             {
                 return CareerOutcome<CareerAgentRunDto>.AlreadyExists(
                     CareerAgentErrorCodes.RunNotWaiting, "This run is not waiting for an answer.");
+            }
+
+            if (occupation)
+            {
+                // The answer picks one of the offered choices; it can never invent a candidate.
+                var steps = await _db.CareerAgentSteps.AsNoTracking().Where(s => s.RunId == run.Id && s.OwnerId == ownerId).ToListAsync(ct);
+                if (ChoicesFrom(steps)?.Any(c => c.Value == answer) != true)
+                {
+                    return CareerOutcome<CareerAgentRunDto>.Invalid(new Dictionary<string, string>
+                    {
+                        ["answer"] = "Choose one of the listed occupations, or none of these."
+                    });
+                }
             }
 
             var now = Now();
@@ -303,6 +338,22 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
 
     private DateTime Now() => _clock.GetUtcNow().UtcDateTime;
 
+    private static bool IsKnownTask(string? task) => task is CareerAgentTasks.ProfileSummary or CareerAgentTasks.OccupationMatch;
+
+    /// <summary>The offered choices, saved with the question step so the answer can be checked against them.</summary>
+    internal static IReadOnlyList<CareerRunChoiceDto>? ChoicesFrom(IEnumerable<CareerAgentStep> steps)
+    {
+        var step = steps.FirstOrDefault(s => s.Name == CareerStepNames.AskOccupation);
+        if (step?.OutputJson == null)
+        {
+            return null;
+        }
+        using var document = System.Text.Json.JsonDocument.Parse(step.OutputJson);
+        return document.RootElement.TryGetProperty("choices", out var choices)
+            ? System.Text.Json.JsonSerializer.Deserialize<List<CareerRunChoiceDto>>(choices.GetRawText(), OccupationMatchJson.Options)
+            : null;
+    }
+
     private static CareerOutcome<CareerAgentRunDto> NotFound() =>
         CareerOutcome<CareerAgentRunDto>.NotFound(CareerAgentErrorCodes.RunNotFound, "That run was not found.");
 
@@ -327,7 +378,9 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
     {
         var steps = await _db.CareerAgentSteps.AsNoTracking()
             .Where(s => s.RunId == run.Id && s.OwnerId == run.OwnerId).ToListAsync(ct);
-        return ToDto(run, steps, await CurrentProfileVersionAsync(run.OwnerId, ct), await AllowanceDtoAsync(run.OwnerId, ct));
+        var matchId = await _db.CareerOccupationMatches.AsNoTracking()
+            .Where(m => m.RunId == run.Id && m.OwnerId == run.OwnerId).Select(m => (Guid?)m.Id).FirstOrDefaultAsync(ct);
+        return ToDto(run, steps, await CurrentProfileVersionAsync(run.OwnerId, ct), await AllowanceDtoAsync(run.OwnerId, ct), matchId);
     }
 
     private async Task<int?> CurrentProfileVersionAsync(string ownerId, CancellationToken ct) =>
@@ -335,8 +388,9 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             .Where(p => p.OwnerId == ownerId).Select(p => (int?)p.ActiveVersionNumber).FirstOrDefaultAsync(ct);
 
     private static CareerAgentRunDto ToDto(
-        CareerAgentRun run, IEnumerable<CareerAgentStep> steps, int? currentProfile, CareerAllowanceDto allowance)
+        CareerAgentRun run, IEnumerable<CareerAgentStep> steps, int? currentProfile, CareerAllowanceDto allowance, Guid? occupationMatchId)
     {
+        var stepList = steps.ToList();
         return new CareerAgentRunDto(
             run.Id,
             run.Task,
@@ -346,13 +400,17 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             run.CompletedAt is { } completed ? Utc(completed) : null,
             run.PinnedProfileVersion,
             run.PinnedGoalVersion,
-            steps.OrderBy(s => s.Ordinal).Select(s => new CareerRunStepDto(
+            stepList.OrderBy(s => s.Ordinal).Select(s => new CareerRunStepDto(
                 s.Ordinal, s.Kind, s.Name, StepLabels.GetValueOrDefault(s.Name, s.Name), s.Status,
                 s.CompletedAt is { } done ? Utc(done) : null)).ToList(),
             run.Status == CareerRunStatus.NeedsInput && run.QuestionId != null
-                ? new CareerRunQuestionDto(run.QuestionId, run.QuestionText ?? AudienceQuestionText, MaxAnswerLength)
+                ? new CareerRunQuestionDto(
+                    run.QuestionId, run.QuestionText ?? AudienceQuestionText,
+                    run.Task == CareerAgentTasks.OccupationMatch ? MaxOccupationAnswerLength : MaxAnswerLength,
+                    run.Task == CareerAgentTasks.OccupationMatch ? ChoicesFrom(stepList) : null)
                 : null,
             run.ProposalId,
+            occupationMatchId,
             ProfileChanged: run.PinnedProfileVersion != null && currentProfile != run.PinnedProfileVersion,
             run.ErrorCode,
             allowance);
