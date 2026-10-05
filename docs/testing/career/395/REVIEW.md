@@ -12,3 +12,9 @@
 | S6 | P3 | `updatedBy` missing in UI controls DTO | **Fixed**: added and shown on the admin page |
 
 Open P0/P1: **none**
+
+## Gates (after fixes, verified by coordinator)
+API 1302 passed / 1 skipped; Release -warnaserror clean; EF no pending changes (migrations additive). UI lint 0; Karma 723; build:mvp-v1 ok; Playwright usage + journey 21 passed, 0 axe at 1280/390/320. Independent review: openai-codex/gpt-5.5.
+
+## Owner gate (not a code defect)
+Policy values (6 runs/min, 2 concurrent, 200 global queue, $50/month global cost cap; monthly allowance unchanged) are **provisional** until the owner approves the operating budget. Cost/latency distributions are reported by the admin page from real usage; representative journey measurement happens in beta.
