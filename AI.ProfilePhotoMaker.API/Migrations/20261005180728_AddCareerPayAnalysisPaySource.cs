@@ -13,7 +13,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "RequestedPaySource",
                 table: "CareerPayAnalyses",
-                type: "nvarchar(max)",
+                type: "nvarchar(20)",
+                maxLength: 20,
                 nullable: true);
         }
 

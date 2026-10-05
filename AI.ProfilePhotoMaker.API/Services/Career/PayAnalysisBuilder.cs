@@ -111,6 +111,7 @@ public static class PayAnalysisBuilder
             ["occupationCode"] = input.OccupationCode, ["occupationTitle"] = input.OccupationTitle,
             ["oewsRelease"] = input.OewsRelease, ["oewsSnapshotSha256"] = input.OewsSnapshotSha256,
             ["projectionsRelease"] = input.ProjectionsRelease, ["requestedPay"] = input.RequestedAnnual,
+            ["requestedPaySource"] = input.RequestedPaySource,
             ["ruleVersion"] = input.RuleVersion
         };
         return JsonSerializer.Serialize(fields);

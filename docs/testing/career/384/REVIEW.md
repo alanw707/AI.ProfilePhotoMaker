@@ -40,4 +40,6 @@ API fixtures (`PayAnalysisBuilderTests`, `CareerPayAnalysisApiTests`, `PayEviden
 | 7 | P3 | A timing assertion in an unrelated OpenAI adapter test failed once under full-suite load (passes in isolation). | Hardened with a loose bound and a comment explaining why. |
 | 8 | P3 | `.gitignore`'s `*-analysis.md` rule silently blocked the repo's own ADRs and contracts whose names end in `-analysis.md`. | Fixed: the rule keeps protecting stray reports, and `docs/**` is exempt. |
 
+| 9 | P3 | (review) The canonical document omitted the pay source even though it changes the scenario section; the new column was unbounded `nvarchar(max)`; ADR 0013's field list did not mention it. | Fixed: the pay source is part of the canonical document and the hash (test asserts a change moves the hash), the column is `nvarchar(20)` like its siblings (EF reports no pending model changes), and the ADR lists it. |
+
 Open P0/P1: **none**.

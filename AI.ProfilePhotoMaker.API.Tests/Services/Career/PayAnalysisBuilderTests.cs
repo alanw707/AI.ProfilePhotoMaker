@@ -149,6 +149,8 @@ public class PayAnalysisBuilderTests
         Assert.NotEqual(hash, PayAnalysisBuilder.Hash(input with { LocationText = "Boulder, CO" }));
         Assert.NotEqual(hash, PayAnalysisBuilder.Hash(input with { RequestedAnnual = 160000 }));
         Assert.NotEqual(hash, PayAnalysisBuilder.Hash(input with { ObservationSourceId = "other-source" }));
+        // The pay source changes the scenario section, so it is part of the canonical document too.
+        Assert.NotEqual(hash, PayAnalysisBuilder.Hash(input with { RequestedPaySource = "desiredPayMax" }));
         // Pinned versions do not change a figure, so they are metadata, not hash inputs.
         Assert.Equal(hash, PayAnalysisBuilder.Hash(input with { ProfileVersion = 9, GoalVersion = 8 }));
         // The digest covers content, not just the count.

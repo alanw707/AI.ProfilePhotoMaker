@@ -708,7 +708,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("RequestedPaySource")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("RuleVersion")
                         .IsRequired()

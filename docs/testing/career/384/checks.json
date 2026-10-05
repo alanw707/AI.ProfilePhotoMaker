@@ -71,7 +71,7 @@
         "limit": 20,
         "periodStart": "2026-10-01T00:00:00Z"
       },
-      "inputHash": "0b544fd3b9bc",
+      "inputHash": "a065d0c5fc72",
       "stale": false,
       "sources": [
         "oews 2025-05",
@@ -108,7 +108,7 @@
       "matches": true,
       "hashEqual": true,
       "differences": [],
-      "pageText": "Reproduced exactly (input hash 0b544fd3b9bc)"
+      "pageText": "Reproduced exactly (input hash a065d0c5fc72)"
     },
     {
       "label": "03-recompute @desktop",
