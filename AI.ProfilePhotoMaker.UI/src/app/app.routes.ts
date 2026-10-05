@@ -165,6 +165,12 @@ export const routes: Routes = [
         title: 'Confirm Your Occupation - AI Profile Photo Maker',
       },
       {
+        path: 'career/market',
+        canActivate: [careerWorkspaceGuard],
+        loadComponent: () => import('./pages/career/career-market.component').then(m => m.CareerMarketComponent),
+        title: 'Career Market Brief - AI Profile Photo Maker',
+      },
+      {
         path: 'career/materials',
         canActivate: [careerWorkspaceGuard],
         loadComponent: () => import('./pages/career/career-materials.component').then(m => m.CareerMaterialsComponent),

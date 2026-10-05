@@ -176,7 +176,7 @@ export interface CareerRunQuestion {
   /** Present when the answer must be one of a fixed list. */
   choices?: CareerRunChoice[];
 }
-export type CareerRunTask = 'profile_summary' | 'occupation_match';
+export type CareerRunTask = 'profile_summary' | 'occupation_match' | 'market_brief';
 export interface CareerRunAllowance {
   used: number;
   reserved: number;
@@ -196,6 +196,7 @@ export interface CareerRunDto {
   question: CareerRunQuestion | null;
   proposalId: string | null;
   occupationMatchId?: string | null;
+  marketBriefId?: string | null;
   profileChanged: boolean;
   errorCode: string | null;
   allowance: CareerRunAllowance;
@@ -256,6 +257,97 @@ export interface OccupationMatchDto {
   createdAt: string;
   decidedAt: string | null;
 }
+export type MarketFigureStatus = 'available' | 'not_available' | 'top_coded' | 'not_published';
+export type MarketFigureUnit =
+  | 'usd_per_year'
+  | 'usd_per_hour'
+  | 'jobs'
+  | 'jobs_thousands'
+  | 'per_1000_jobs'
+  | 'ratio'
+  | 'percent'
+  | 'percent_rse'
+  | 'text';
+export interface MarketFigure {
+  key: string;
+  label: string;
+  value: number | string | null;
+  status: MarketFigureStatus;
+  unit: MarketFigureUnit;
+  areaCode: string;
+  areaTitle: string;
+  sourceId: string;
+}
+export interface MarketAlternative {
+  code: string;
+  title: string;
+  figures: MarketFigure[];
+}
+export type MarketSectionKey = 'wages' | 'employment' | 'outlook' | 'alternatives';
+export interface MarketSection {
+  key: MarketSectionKey;
+  title: string;
+  status: 'complete' | 'unavailable' | 'failed';
+  reason: string | null;
+  note: string;
+  figures: MarketFigure[];
+  items: MarketAlternative[];
+}
+export interface MarketSource {
+  id: string;
+  name: string;
+  publisher: string;
+  referencePeriod: string;
+  publishedOn: string;
+  url: string;
+  definitionsUrl: string;
+  license: string;
+  citation: string;
+  definition: string;
+  coverage: string;
+}
+export interface MarketBriefSummary {
+  id: string;
+  occupationCode: string;
+  occupationTitle: string;
+  areaTitle: string | null;
+  status: 'complete' | 'partial';
+  stale: boolean;
+  createdAt: string;
+}
+export interface MarketBriefDto {
+  id: string;
+  runId: string;
+  status: 'complete' | 'partial';
+  occupation: {
+    code: string;
+    title: string;
+    published: Record<'oews' | 'projections', { code: string; match: string } | null>;
+  };
+  location: {
+    input: string | null;
+    resolution: 'metro' | 'state' | 'national_only' | 'unresolved';
+    local: { code: string; title: string; type: string } | null;
+  };
+  pinned: {
+    profileVersion: number;
+    goalVersion: number;
+    oewsRelease: string;
+    projectionsRelease: string;
+  };
+  stale: boolean;
+  staleReasons: ('goal_changed' | 'profile_changed' | 'occupation_changed')[];
+  dataStale: boolean;
+  sections: MarketSection[];
+  nextAction: { label: string; route: string } | null;
+  sources: MarketSource[];
+  createdAt: string;
+}
+export interface MarketReferenceInfo {
+  sources: MarketSource[];
+  areaCount: number;
+  occupationCount: number;
+}
 export interface CareerApiError {
   /** Server error code (for example CareerRunNotWaiting), when one was sent. */
   code?: string;
@@ -280,6 +372,7 @@ export interface CareerApiError {
     | 'matchStale'
     | 'notConfirmable'
     | 'goalRequired'
+    | 'occupationRequired'
     | 'unknown';
   message: string;
   fieldErrors?: Record<string, string>;
@@ -378,6 +471,7 @@ export class CareerProfileService {
       CareerMatchStale: 'matchStale',
       CareerMatchNotConfirmable: 'notConfirmable',
       CareerGoalRequired: 'goalRequired',
+      CareerOccupationRequired: 'occupationRequired',
       CareerReferenceUnavailable: 'unavailable',
     };
     const kind = codeKinds[payload?.code ?? ''] ?? kinds[error.status] ?? 'unknown';
@@ -549,5 +643,15 @@ export class CareerProfileService {
   }
   getOccupationReference() {
     return this.request<OccupationReferenceInfo>('GET', 'occupations/reference');
+  }
+
+  listMarketBriefs() {
+    return this.request<{ briefs: MarketBriefSummary[] }>('GET', 'market-briefs');
+  }
+  getMarketBrief(id: string) {
+    return this.request<MarketBriefDto>('GET', `market-briefs/${encodeURIComponent(id)}`);
+  }
+  getMarketReference() {
+    return this.request<MarketReferenceInfo>('GET', 'market/reference');
   }
 }
