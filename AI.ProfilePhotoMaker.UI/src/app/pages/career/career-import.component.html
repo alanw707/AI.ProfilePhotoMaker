@@ -1,0 +1,243 @@
+<main class="career-page">
+  <div class="career-sheet">
+    <a routerLink="/app/career">Back to career workspace</a>
+    <h1>Import from a resume</h1>
+    <p>Upload a PDF or DOCX and we will suggest profile facts for you to review. You choose what is added.</p>
+
+    @if (error()) {
+      <div data-error-summary tabindex="-1" role="alert" class="career-error-summary">
+        <strong>{{ error() }}</strong>
+        @if (errorKind() === 'validation') {
+          <ul>
+            @if (fieldErrors().consent) {
+              <li>
+                <a href="#import-consent">{{ fieldErrors().consent }}</a>
+              </li>
+            }
+            @if (fieldErrors().file) {
+              <li>
+                <a href="#import-file">{{ fieldErrors().file }}</a>
+              </li>
+            }
+            @if (pasteError()) {
+              <li>
+                <a href="#import-paste">{{ pasteError() }}</a>
+              </li>
+            }
+          </ul>
+        }
+        @if (stale()) {
+          <p>
+            <button type="button" (click)="startOver()">Start over</button>
+            <a routerLink="/app/career/profile">Open your profile</a>
+          </p>
+        } @else if (result()?.state === 'failed' && errorKind() !== 'validation') {
+          <p><button type="button" (click)="retry()">Try again</button></p>
+        } @else if (errorKind() === 'scannerUnavailable' && file()) {
+          <p><button type="button" (click)="retry()">Try again</button></p>
+        }
+      </div>
+    }
+
+    <p class="sr-only" aria-live="polite" role="status">{{ progress() }}</p>
+    @if (status()) {
+      <p class="status" role="status">{{ status() }}</p>
+    }
+
+    @if (!proposal()) {
+      <section aria-labelledby="upload-heading">
+        <h2 id="upload-heading">Upload your resume</h2>
+        <p class="notice" id="import-notice">
+          Your file is stored privately, used only to suggest profile facts, and deleted automatically after 30 days or
+          when you remove it. Nothing is added to your profile until you accept it.
+        </p>
+        <div class="check field">
+          <input
+            id="import-consent"
+            type="checkbox"
+            [checked]="consent()"
+            (change)="onConsent($any($event.target).checked)"
+            [attr.aria-invalid]="!!fieldErrors().consent"
+            aria-describedby="import-notice import-consent-error" />
+          <label for="import-consent">I understand and agree</label>
+          <span id="import-consent-error" class="field-error">{{ fieldErrors().consent }}</span>
+        </div>
+        <div class="field">
+          <label for="import-file">Resume file (PDF or DOCX)</label>
+          <input
+            #fileInput
+            id="import-file"
+            type="file"
+            accept=".pdf,.docx"
+            (change)="onFile(fileInput)"
+            [attr.aria-invalid]="!!fieldErrors().file"
+            aria-describedby="import-file-help import-file-error" />
+          <span id="import-file-help" class="muted">Up to 10 MB and 25 pages. Scanned pages are not read.</span>
+          <span id="import-file-error" class="field-error">{{ fieldErrors().file }}</span>
+        </div>
+        <button type="button" class="primary" [disabled]="phase() === 'uploading'" (click)="upload()">
+          {{ phase() === 'uploading' ? 'Working…' : 'Upload and read resume' }}
+        </button>
+        @if (phase() === 'uploading') {
+          <p class="progress" aria-hidden="true">
+            <span class="progress-bar"></span>
+            {{ progress() }}
+          </p>
+        }
+      </section>
+
+      @if (result(); as r) {
+        @if (r.state === 'unreadable') {
+          <section aria-labelledby="result-heading">
+            <h2 id="result-heading" data-result-heading tabindex="-1">We could not read this file</h2>
+            <p>We could not read text from this file (it may be a scan). Paste your resume text instead.</p>
+          </section>
+        } @else if (r.state === 'failed') {
+          <section aria-labelledby="result-heading">
+            <h2 id="result-heading" data-result-heading tabindex="-1">Reading the file did not finish</h2>
+            <p>
+              {{
+                r.failureCode === 'ExtractionTimeout'
+                  ? 'Reading this file took too long.'
+                  : 'Something went wrong while reading this file.'
+              }}
+              Try again, or paste your resume text instead.
+            </p>
+            <button type="button" (click)="retry()">Try again</button>
+          </section>
+        }
+      }
+
+      @if (showPaste()) {
+        <section aria-labelledby="paste-heading">
+          <h2 id="paste-heading">Paste instead</h2>
+          <div class="field">
+            <label for="import-paste">Resume text</label>
+            <textarea
+              id="import-paste"
+              maxlength="100000"
+              rows="10"
+              [value]="pasteText()"
+              (input)="pasteText.set($any($event.target).value)"
+              [attr.aria-invalid]="!!pasteError()"
+              aria-describedby="import-paste-help import-paste-error"></textarea>
+            <span id="import-paste-help" class="muted">Up to 100,000 characters.</span>
+            <span id="import-paste-error" class="field-error">{{ pasteError() }}</span>
+          </div>
+          <button type="button" class="primary" [disabled]="pasting()" (click)="submitPaste()">
+            Get suggestions from pasted text
+          </button>
+        </section>
+      }
+
+      <section aria-labelledby="files-heading">
+        <h2 id="files-heading">Your uploaded files</h2>
+        @if (resumes().length === 0) {
+          <p class="muted">No files uploaded.</p>
+        } @else {
+          <ul class="history">
+            @for (doc of resumes(); track doc.id) {
+              <li>
+                <div class="file-info">
+                  <strong>{{ doc.fileName }}</strong>
+                  <span class="muted">
+                    {{ size(doc.sizeBytes) }} · Deleted automatically on
+                    {{ doc.expiresAt | date: 'mediumDate' }}
+                  </span>
+                </div>
+                <div class="actions">
+                  @if (doc.state === 'ready' && doc.proposalId) {
+                    <button type="button" (click)="openProposal(doc.proposalId)">
+                      Review suggestions
+                      <span class="sr-only">for {{ doc.fileName }}</span>
+                    </button>
+                  }
+                  <button type="button" (click)="download(doc)">
+                    Download
+                    <span class="sr-only">{{ doc.fileName }}</span>
+                  </button>
+                  @if (confirmRemoveId() === doc.id) {
+                    <span role="group" [attr.aria-label]="'Confirm removing ' + doc.fileName">
+                      <button type="button" class="danger" (click)="remove(doc)">
+                        Confirm remove
+                        <span class="sr-only">{{ doc.fileName }}</span>
+                      </button>
+                      <button type="button" (click)="cancelRemove()">Cancel</button>
+                    </span>
+                  } @else {
+                    <button type="button" (click)="askRemove(doc.id)">
+                      Remove
+                      <span class="sr-only">{{ doc.fileName }}</span>
+                    </button>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    } @else {
+      <section aria-labelledby="result-heading">
+        <h2 id="result-heading" data-result-heading tabindex="-1">Review suggestions</h2>
+        <p>
+          {{
+            proposal()!.source === 'pasted'
+              ? 'These suggestions come from the text you pasted.'
+              : 'These suggestions come from your resume.'
+          }}
+          Check each one you want to add.
+        </p>
+        @if (stale()) {
+          <p class="caution">
+            Your profile changed since these suggestions were made. Reload your profile and review again.
+          </p>
+        }
+        @if (groups().length === 0) {
+          <p>We did not find any facts to suggest.</p>
+        }
+        @for (group of groups(); track group.field) {
+          <fieldset class="suggestion-group">
+            <legend>{{ group.label }}</legend>
+            <ul class="suggestions">
+              @for (item of group.items; track item.id) {
+                <li>
+                  <input
+                    type="checkbox"
+                    [id]="'item-' + item.id"
+                    [checked]="selected().has(item.id)"
+                    (change)="toggle(item, $any($event.target).checked)"
+                    [attr.aria-describedby]="'item-' + item.id + '-meta'" />
+                  <div>
+                    <label [for]="'item-' + item.id">{{ item.value }}</label>
+                    <div [id]="'item-' + item.id + '-meta'" class="muted">
+                      @if (item.currentValue) {
+                        <span class="current">Current: {{ item.currentValue }}</span>
+                      }
+                      @if (source(item)) {
+                        <span class="source">{{ source(item) }}</span>
+                      }
+                      @for (flag of item.flags; track flag) {
+                        <span class="badge">{{ flagLabel(flag) }}</span>
+                      }
+                    </div>
+                  </div>
+                </li>
+              }
+            </ul>
+          </fieldset>
+        }
+        <p>Only checked items are added. You can edit anything afterwards.</p>
+        <div class="actions">
+          <button
+            type="button"
+            class="primary"
+            [disabled]="selectedCount() === 0 || accepting() || stale()"
+            (click)="accept()">
+            Accept selected ({{ selectedCount() }})
+          </button>
+          <button type="button" (click)="dismiss()">Dismiss all</button>
+        </div>
+      </section>
+    }
+  </div>
+</main>

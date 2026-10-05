@@ -28,7 +28,8 @@ import {
             }
           </p>
           <p class="muted">
-            Entered manually · confirmed {{ p.provenance.confirmedAt | date: 'mediumDate' }}
+            {{ sourceLabel(p.provenance.source) }} · confirmed
+            {{ p.provenance.confirmedAt | date: 'mediumDate' }}
           </p>
           <a routerLink="/app/career/profile">View and edit profile</a>
         </section>
@@ -53,6 +54,9 @@ import {
           }}</a>
         </section>
       }
+      <p>
+        <a routerLink="/app/career/import">Import from a resume</a>
+      </p>
       @if (error()) {
         <p role="alert">{{ error() }}</p>
       }
@@ -79,6 +83,12 @@ export class CareerHomeComponent implements OnInit {
       },
     });
     this.api.getGoal().subscribe({ next: g => this.goal.set(g), error: e => this.handle(e) });
+  }
+  sourceLabel(source: string): string {
+    if (source === 'resume') {
+      return 'From your resume';
+    }
+    return source === 'pasted' ? 'From pasted text' : 'Entered manually';
   }
   private handle(e: CareerApiError) {
     if (e.kind === 'disabled') {
