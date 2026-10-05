@@ -47,8 +47,11 @@ public class CareerProfileVersion
     public List<string> Highlights { get; set; } = new();
     public string? WorkArrangement { get; set; }
 
-    /// <summary>Where these facts came from. Only "manual" exists in #378.</summary>
+    /// <summary>Where these facts came from: "manual", or "resume"/"pasted" (#379).</summary>
     public string Source { get; set; } = CareerFactSource.Manual;
+
+    /// <summary>The accepted proposal these facts came from; null for manual saves and restores.</summary>
+    public Guid? SourceProposalId { get; set; }
 
     /// <summary>When the user explicitly confirmed these facts.</summary>
     public DateTime ConfirmedAt { get; set; }
@@ -64,6 +67,8 @@ public class CareerProfileVersion
 public static class CareerFactSource
 {
     public const string Manual = "manual";
+    public const string Resume = "resume";
+    public const string Pasted = "pasted";
 }
 
 public static class CareerWorkArrangement

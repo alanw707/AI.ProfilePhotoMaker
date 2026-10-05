@@ -2,7 +2,7 @@
   <div class="career-sheet">
     <a routerLink="/app/career">Back to career workspace</a>
     <h1>{{ setup ? 'Set up your career workspace' : 'Your professional profile' }}</h1>
-    <p>Only facts you enter and confirm are saved. No resume or automated analysis is used here.</p>
+    <p>Only facts you enter and confirm are saved. Resume suggestions are added only when you accept them.</p>
     @if (error()) {
       <div #errorSummary tabindex="-1" role="alert" class="career-error-summary">
         <strong>{{ error() }}</strong>
@@ -47,13 +47,17 @@
         }
       </div>
     }
+    @if (!setup) {
+      <a routerLink="/app/career/import">Import from a resume</a>
+    }
     <p aria-live="polite" role="status">{{ status() }}</p>
     @if (!setup || step() === 1) {
       <section aria-labelledby="facts-heading">
         <h2 id="facts-heading">{{ setup ? 'Step 1 · Professional facts' : 'Professional facts' }}</h2>
         @if (profile(); as p) {
           <p class="muted">
-            Entered manually · confirmed {{ p.provenance.confirmedAt | date: 'mediumDate' }} · Version {{ p.version }}
+            {{ sourceLabel(p.provenance.source) }} · confirmed {{ p.provenance.confirmedAt | date: 'mediumDate' }} ·
+            Version {{ p.version }}
             @if (p.provenance.restoredFromVersion) {
               · restored from version {{ p.provenance.restoredFromVersion }}
             }
@@ -343,7 +347,9 @@
             <h3>Version {{ v.version }}</h3>
             <p>{{ v.facts.currentTitle }} · {{ v.facts.industry }}</p>
             <p>{{ v.facts.summary }}</p>
-            <p>Entered manually · confirmed {{ v.provenance.confirmedAt | date: 'mediumDate' }}</p>
+            <p>
+              {{ sourceLabel(v.provenance.source) }} · confirmed {{ v.provenance.confirmedAt | date: 'mediumDate' }}
+            </p>
             @if (!v.isActive) {
               <button type="button" (click)="restoreVersion(v.version)">Restore this version</button>
             }
@@ -382,7 +388,9 @@
                 entry)
               </p>
             }
-            <p>Entered manually · confirmed {{ v.provenance.confirmedAt | date: 'mediumDate' }}</p>
+            <p>
+              {{ sourceLabel(v.provenance.source) }} · confirmed {{ v.provenance.confirmedAt | date: 'mediumDate' }}
+            </p>
             @if (!v.isActive) {
               <button type="button" (click)="restoreGoalVersion(v.version)">
                 Restore goal version {{ v.version }}

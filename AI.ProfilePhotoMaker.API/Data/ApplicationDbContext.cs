@@ -57,6 +57,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Models.Career.CareerProfileVersion> CareerProfileVersions { get; set; }
     public virtual DbSet<Models.Career.CareerGoal> CareerGoals { get; set; }
     public virtual DbSet<Models.Career.CareerGoalVersion> CareerGoalVersions { get; set; }
+    public virtual DbSet<Models.Career.ResumeDocument> CareerResumeDocuments { get; set; }
+    public virtual DbSet<Models.Career.CareerProfileProposal> CareerProfileProposals { get; set; }
+    public virtual DbSet<Models.Career.CareerProfileProposalItem> CareerProfileProposalItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -185,6 +188,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         profileVersion.Property(v => v.Summary).HasMaxLength(2000);
         profileVersion.Property(v => v.WorkArrangement).HasMaxLength(20);
         profileVersion.Property(v => v.Source).HasMaxLength(32).IsRequired();
+        profileVersion.HasIndex(v => v.SourceProposalId);
 
         var goal = builder.Entity<Models.Career.CareerGoal>();
         goal.ToTable("CareerGoals");
@@ -203,6 +207,40 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         goalVersion.Property(v => v.TargetLocation).HasMaxLength(120);
         goalVersion.Property(v => v.WorkArrangement).HasMaxLength(20);
         goalVersion.Property(v => v.Source).HasMaxLength(32).IsRequired();
+
+        // Resume import (#379, ADR 0007). Documents and proposals reference each other
+        // by plain id only, so deleting either never needs a cascade across the pair.
+        var resume = builder.Entity<Models.Career.ResumeDocument>();
+        resume.ToTable("CareerResumeDocuments");
+        resume.Property(d => d.OwnerId).HasMaxLength(450).IsRequired();
+        resume.HasIndex(d => d.OwnerId);
+        resume.HasIndex(d => d.ExpiresAt);
+        resume.Property(d => d.StorageKey).HasMaxLength(200).IsRequired();
+        resume.Property(d => d.FileName).HasMaxLength(200).IsRequired();
+        resume.Property(d => d.Format).HasMaxLength(10).IsRequired();
+        resume.Property(d => d.Sha256).HasMaxLength(64).IsRequired();
+        resume.Property(d => d.State).HasConversion<string>().HasMaxLength(20);
+        resume.Property(d => d.FailureCode).HasMaxLength(40);
+        resume.Property(d => d.ConsentVersion).HasMaxLength(64).IsRequired();
+        resume.HasOne<ApplicationUser>().WithMany().HasForeignKey(d => d.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        var proposal = builder.Entity<Models.Career.CareerProfileProposal>();
+        proposal.ToTable("CareerProfileProposals");
+        proposal.Property(p => p.OwnerId).HasMaxLength(450).IsRequired();
+        proposal.HasIndex(p => p.OwnerId);
+        proposal.Property(p => p.Source).HasMaxLength(16).IsRequired();
+        proposal.Property(p => p.Status).HasConversion<string>().HasMaxLength(16);
+        proposal.HasOne<ApplicationUser>().WithMany().HasForeignKey(p => p.OwnerId).OnDelete(DeleteBehavior.Cascade);
+        proposal.HasMany(p => p.Items).WithOne(i => i.Proposal!).HasForeignKey(i => i.ProposalId).OnDelete(DeleteBehavior.Cascade);
+
+        var proposalItem = builder.Entity<Models.Career.CareerProfileProposalItem>();
+        proposalItem.ToTable("CareerProfileProposalItems");
+        proposalItem.Property(i => i.OwnerId).HasMaxLength(450).IsRequired();
+        proposalItem.HasIndex(i => i.OwnerId);
+        proposalItem.Property(i => i.Field).HasMaxLength(32).IsRequired();
+        proposalItem.Property(i => i.Value).HasMaxLength(2000).IsRequired();
+        proposalItem.Property(i => i.Section).HasMaxLength(60);
+        proposalItem.Property(i => i.Excerpt).HasMaxLength(300).IsRequired();
     }
 
     private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)

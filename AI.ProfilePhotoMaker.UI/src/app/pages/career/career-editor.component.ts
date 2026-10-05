@@ -97,6 +97,12 @@ export class CareerEditorComponent implements OnInit {
     { validators: payRange }
   );
   ngOnInit() {
+    const state = (this.router.getCurrentNavigation()?.extras.state ?? history.state) as {
+      status?: string;
+    } | null;
+    if (state?.status) {
+      this.status.set(state.status);
+    }
     this.load();
   }
   load() {
@@ -196,6 +202,12 @@ export class CareerEditorComponent implements OnInit {
     this.profileForm.controls[field].setValue(
       (this.profileForm.controls[field].value ?? []).filter((_, i) => i !== index)
     );
+  }
+  sourceLabel(source: string): string {
+    if (source === 'resume') {
+      return 'From your resume';
+    }
+    return source === 'pasted' ? 'From pasted text' : 'Entered manually';
   }
   label(name: string): string {
     return FIELD_LABELS[name] ?? name;

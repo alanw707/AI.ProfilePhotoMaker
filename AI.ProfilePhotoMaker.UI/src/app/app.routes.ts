@@ -147,6 +147,12 @@ export const routes: Routes = [
         title: 'Career Profile - AI Profile Photo Maker',
       },
       {
+        path: 'career/import',
+        canActivate: [careerWorkspaceGuard],
+        loadComponent: () => import('./pages/career/career-import.component').then(m => m.CareerImportComponent),
+        title: 'Import Your Resume - AI Profile Photo Maker',
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./pages/settings/settings.component').then(m => m.SettingsComponent),

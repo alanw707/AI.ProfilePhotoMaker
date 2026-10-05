@@ -255,3 +255,6 @@ deployment-secrets.env
 /verified-modal-open.png
 /verified-pricing-after-modal-cta.png
 appsettings.Local.json
+
+# LocalDev career resume uploads (private, never commit)
+AI.ProfilePhotoMaker.API/career-private/

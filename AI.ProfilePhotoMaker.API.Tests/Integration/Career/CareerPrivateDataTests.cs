@@ -73,25 +73,46 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         await CareerClient.ReadDataAsync(await bob.GetAsync("/api/career/profile"), 200);
     }
 
+    private static readonly string[] CareerTables =
+    {
+        "CareerProfiles", "CareerProfileVersions", "CareerGoals", "CareerGoalVersions",
+        "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems"
+    };
+
     [Fact]
     public void CareerMigrationIsAdditiveOnly()
     {
-        var migration = new AddCareerProfileAndGoal();
-        var careerTables = new[] { "CareerProfiles", "CareerProfileVersions", "CareerGoals", "CareerGoalVersions" };
+        AssertAdditive(new AddCareerProfileAndGoal().UpOperations, allowAddColumn: false);
+    }
 
-        migration.UpOperations.Should().NotBeEmpty();
-        foreach (var operation in migration.UpOperations)
+    [Fact]
+    public void ResumeImportMigrationIsAdditiveOnly()
+    {
+        var operations = new AddCareerResumeImport().UpOperations;
+
+        AssertAdditive(operations, allowAddColumn: true);
+        operations.OfType<CreateTableOperation>().Select(o => o.Name).Should()
+            .Contain(new[] { "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems" });
+    }
+
+    private static void AssertAdditive(IReadOnlyList<MigrationOperation> operations, bool allowAddColumn)
+    {
+        operations.Should().NotBeEmpty();
+        foreach (var operation in operations)
         {
             switch (operation)
             {
                 case CreateTableOperation create:
-                    careerTables.Should().Contain(create.Name);
+                    CareerTables.Should().Contain(create.Name);
                     break;
                 case CreateIndexOperation index:
-                    careerTables.Should().Contain(index.Table);
+                    CareerTables.Should().Contain(index.Table);
+                    break;
+                case AddColumnOperation add when allowAddColumn:
+                    CareerTables.Should().Contain(add.Table);
                     break;
                 default:
-                    throw new Xunit.Sdk.XunitException($"Career migration must only create career tables and indexes, found {operation.GetType().Name}");
+                    throw new Xunit.Sdk.XunitException($"Career migration must only add career tables, indexes and columns, found {operation.GetType().Name}");
             }
         }
     }

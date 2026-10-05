@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { CareerProfileService, CareerApiError } from './career-profile.service';
+import { RESUME_CONSENT_VERSION, CareerProfileService, CareerApiError } from './career-profile.service';
 
 describe('CareerProfileService', () => {
   let service: CareerProfileService;
@@ -76,5 +76,116 @@ describe('CareerProfileService', () => {
         { success: false, error: { code: 'CareerWorkspaceDisabled' } },
         { status: 403, statusText: 'Forbidden' }
       );
+  });
+
+  describe('resume import', () => {
+    const fail = (status: number, body: object, headers: Record<string, string> = {}) =>
+      http
+        .expectOne('/api/career/resumes')
+        .flush({ success: false, error: body }, { status, statusText: 'Error', headers });
+    const upload = () => {
+      let result: CareerApiError | undefined;
+      service
+        .uploadResume(new File(['x'], 'r.pdf'), true)
+        .subscribe({ error: (e: CareerApiError) => (result = e) });
+      return () => result;
+    };
+    it('uploads multipart with file and consent fields', () => {
+      service.uploadResume(new File(['%PDF-'], 'resume.pdf'), true).subscribe();
+      const req = http.expectOne('/api/career/resumes');
+      expect(req.request.method).toBe('POST');
+      const form = req.request.body as FormData;
+      expect(form instanceof FormData).toBeTrue();
+      expect((form.get('file') as File).name).toBe('resume.pdf');
+      expect(form.get('consent')).toBe('true');
+      expect(form.get('consentVersion')).toBe(RESUME_CONSENT_VERSION);
+      req.flush({ success: true, data: { id: 'r1', state: 'ready' } });
+    });
+    it('maps 413 to tooLarge', () => {
+      const result = upload();
+      fail(413, { code: 'CareerResumeTooLarge', message: 'big' });
+      expect(result()?.kind).toBe('tooLarge');
+    });
+    it('maps 415 to unsupported with detail', () => {
+      const result = upload();
+      fail(415, { code: 'CareerResumeUnsupported', message: 'no', detail: 'encrypted PDF' });
+      expect(result()?.kind).toBe('unsupported');
+      expect(result()?.detail).toBe('encrypted PDF');
+    });
+    it('maps 422 to rejected', () => {
+      const result = upload();
+      fail(422, { code: 'CareerResumeRejected' });
+      expect(result()?.kind).toBe('rejected');
+    });
+    it('maps 503 to scannerUnavailable with retryAfterSeconds', () => {
+      const result = upload();
+      fail(503, { code: 'CareerScannerUnavailable', retryAfterSeconds: 60 });
+      expect(result()?.kind).toBe('scannerUnavailable');
+      expect(result()?.retryAfterSeconds).toBe(60);
+    });
+    it('falls back to the Retry-After header', () => {
+      const result = upload();
+      fail(503, { code: 'CareerScannerUnavailable' }, { 'Retry-After': '30' });
+      expect(result()?.retryAfterSeconds).toBe(30);
+    });
+    it('lists, gets and deletes resumes', () => {
+      service.listResumes().subscribe(list => expect(list.length).toBe(1));
+      http.expectOne('/api/career/resumes').flush({ success: true, data: [{ id: 'r1' }] });
+      service.getResume('r1').subscribe();
+      http.expectOne('/api/career/resumes/r1').flush({ success: true, data: { id: 'r1' } });
+      service.deleteResume('r1').subscribe();
+      const del = http.expectOne('/api/career/resumes/r1');
+      expect(del.request.method).toBe('DELETE');
+      del.flush(null, { status: 204, statusText: 'No Content' });
+    });
+    it('downloads the original file as a blob', () => {
+      service.downloadResume('r1').subscribe(blob => expect(blob.size).toBe(3));
+      const req = http.expectOne('/api/career/resumes/r1/file');
+      expect(req.request.responseType).toBe('blob');
+      req.flush(new Blob(['abc']));
+    });
+    it('posts pasted text and fetches/dismisses proposals', () => {
+      service.createPastedProposal('Jane Doe').subscribe();
+      const paste = http.expectOne('/api/career/profile/proposals');
+      expect(paste.request.body).toEqual({ text: 'Jane Doe' });
+      paste.flush({ success: true, data: { id: 'p1' } });
+      service.getProposal('p1').subscribe();
+      http.expectOne('/api/career/profile/proposals/p1').flush({ success: true, data: {} });
+      service.dismissProposal('p1').subscribe();
+      const dismiss = http.expectOne('/api/career/profile/proposals/p1/dismiss');
+      expect(dismiss.request.method).toBe('POST');
+      dismiss.flush({ success: true, data: {} });
+    });
+    it('accepts with the profile If-Match and stores the new ETag', () => {
+      service.getProfile().subscribe();
+      http
+        .expectOne('/api/career/profile')
+        .flush(
+          { success: true, data: { etag: '"profile-v1"' } },
+          { headers: { ETag: '"profile-v1"' } }
+        );
+      service.acceptProposal('p1', ['i1', 'i2']).subscribe();
+      const accept = http.expectOne('/api/career/profile/proposals/p1/accept');
+      expect(accept.request.headers.get('If-Match')).toBe('"profile-v1"');
+      expect(accept.request.body).toEqual({ itemIds: ['i1', 'i2'] });
+      accept.flush(
+        { success: true, data: { etag: '"profile-v2"' } },
+        { headers: { ETag: '"profile-v2"' } }
+      );
+      service.saveProfile(facts).subscribe();
+      const next = http.expectOne('/api/career/profile');
+      expect(next.request.headers.get('If-Match')).toBe('"profile-v2"');
+      next.flush({ success: true, data: { etag: '"profile-v3"' } });
+    });
+    it('maps stale accept to conflict', () => {
+      let kind = '';
+      service
+        .acceptProposal('p1', ['i1'])
+        .subscribe({ error: (e: CareerApiError) => (kind = e.kind) });
+      http
+        .expectOne('/api/career/profile/proposals/p1/accept')
+        .flush({ success: false, error: {} }, { status: 412, statusText: 'Precondition Failed' });
+      expect(kind).toBe('conflict');
+    });
   });
 });

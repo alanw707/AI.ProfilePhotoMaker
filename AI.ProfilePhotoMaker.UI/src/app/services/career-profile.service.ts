@@ -25,6 +25,7 @@ export interface Provenance {
   source: string;
   confirmedAt: string;
   restoredFromVersion?: number | null;
+  sourceProposalId?: string | null;
 }
 export interface CareerProfileDto {
   id: string;
@@ -74,8 +75,53 @@ export interface GoalVersionDetail {
   createdAt: string;
   isActive: boolean;
 }
+export type ResumeState = 'ready' | 'unreadable' | 'failed';
+export interface ResumeDocumentDto {
+  id: string;
+  fileName: string;
+  format: string;
+  sizeBytes: number;
+  pageCount: number | null;
+  state: ResumeState;
+  failureCode: string | null;
+  proposalId: string | null;
+  uploadedAt: string;
+  expiresAt: string;
+}
+export type ProposalField =
+  | 'currentTitle'
+  | 'industry'
+  | 'yearsExperience'
+  | 'location'
+  | 'summary'
+  | 'skills'
+  | 'highlights';
+export interface ProposalItem {
+  id: string;
+  field: ProposalField;
+  value: string;
+  currentValue: string | null;
+  page: number | null;
+  section: string | null;
+  excerpt: string | null;
+  flags: ('conflict' | 'ambiguous')[];
+}
+export interface CareerProfileProposalDto {
+  id: string;
+  source: 'resume' | 'pasted';
+  resumeId: string | null;
+  baseProfileVersion: number | null;
+  status: 'pending' | 'accepted' | 'dismissed';
+  isStale: boolean;
+  items: ProposalItem[];
+  createdAt: string;
+}
 export interface CareerApiError {
   kind:
+    | 'tooLarge'
+    | 'unsupported'
+    | 'rejected'
+    | 'scannerUnavailable'
     | 'conflict'
     | 'disabled'
     | 'notFound'
@@ -87,6 +133,9 @@ export interface CareerApiError {
   message: string;
   fieldErrors?: Record<string, string>;
   currentVersion?: number;
+  /** Extra explanation for 415 (for example "encrypted PDF"). */
+  detail?: string;
+  retryAfterSeconds?: number;
 }
 interface Envelope<T> {
   success: boolean;
@@ -96,8 +145,16 @@ interface Envelope<T> {
     message?: string;
     fieldErrors?: Record<string, string>;
     currentVersion?: number;
+    detail?: string;
+    retryAfterSeconds?: number;
   };
 }
+
+/**
+ * Version of the resume consent notice shown on the import page. The server rejects
+ * uploads that agreed to a different version, so change both together.
+ */
+export const RESUME_CONSENT_VERSION = 'resume-notice-2026-10-04';
 
 @Injectable({ providedIn: 'root' })
 export class CareerProfileService {
@@ -150,13 +207,20 @@ export class CareerProfileService {
       404: 'notFound',
       409: 'alreadyExists',
       412: 'conflict',
+      413: 'tooLarge',
+      415: 'unsupported',
+      422: 'rejected',
       428: 'precondition',
+      503: 'scannerUnavailable',
     };
+    const retryHeader = Number(error.headers?.get('Retry-After'));
     return {
       kind: kinds[error.status] ?? 'unknown',
       message: payload?.message ?? 'Unable to complete the request.',
       fieldErrors: payload?.fieldErrors,
       currentVersion: payload?.currentVersion,
+      detail: payload?.detail,
+      retryAfterSeconds: payload?.retryAfterSeconds ?? (retryHeader > 0 ? retryHeader : undefined),
     };
   }
   getProfile() {
@@ -211,6 +275,54 @@ export class CareerProfileService {
       undefined,
       'goal',
       true
+    );
+  }
+
+  uploadResume(file: File, consent: boolean) {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    form.append('consent', String(consent));
+    form.append('consentVersion', RESUME_CONSENT_VERSION);
+    return this.request<ResumeDocumentDto>('POST', 'resumes', form);
+  }
+  listResumes() {
+    return this.request<ResumeDocumentDto[]>('GET', 'resumes');
+  }
+  getResume(id: string) {
+    return this.request<ResumeDocumentDto>('GET', `resumes/${encodeURIComponent(id)}`);
+  }
+  deleteResume(id: string) {
+    return this.http
+      .delete(this.url(`resumes/${encodeURIComponent(id)}`))
+      .pipe(catchError(error => throwError(() => this.mapError(error))));
+  }
+  downloadResume(id: string) {
+    return this.http
+      .get(this.url(`resumes/${encodeURIComponent(id)}/file`), { responseType: 'blob' })
+      .pipe(catchError(error => throwError(() => this.mapError(error))));
+  }
+  createPastedProposal(text: string) {
+    return this.request<CareerProfileProposalDto>('POST', 'profile/proposals', { text });
+  }
+  getProposal(id: string) {
+    return this.request<CareerProfileProposalDto>(
+      'GET',
+      `profile/proposals/${encodeURIComponent(id)}`
+    );
+  }
+  acceptProposal(id: string, itemIds: string[]) {
+    return this.request<CareerProfileDto>(
+      'POST',
+      `profile/proposals/${encodeURIComponent(id)}/accept`,
+      { itemIds },
+      'profile',
+      true
+    );
+  }
+  dismissProposal(id: string) {
+    return this.request<CareerProfileProposalDto>(
+      'POST',
+      `profile/proposals/${encodeURIComponent(id)}/dismiss`
     );
   }
 }
