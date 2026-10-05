@@ -15,12 +15,13 @@ export const REASON_COPY: Record<string, string> = {
   source_not_configured: 'The posting source is not configured yet.',
   source_unavailable:
     'The posting source could not be reached. The benchmark pages are unaffected.',
+  occupation_required: 'Confirm your occupation first; no postings were searched.',
 };
 export const REASON_FALLBACK = 'Open postings are not available right now.';
 
 const REMOTE_COPY: Record<RemoteEligibility, string> = {
-  eligible: 'Remote work eligible',
-  ineligible: 'Not remote eligible',
+  eligible: 'Remote stated by the posting',
+  ineligible: 'Posting states no remote work',
   unknown: 'Remote not stated',
 };
 export function remoteText(status: RemoteEligibility): string {
@@ -58,7 +59,8 @@ export function locationLines(o: JobObservation): { text: string; yours: boolean
 export function exclusionLines(c: JobCoverageCounts): string[] {
   const lines: [number, string][] = [
     [c.otherLocationExcluded, 'not open where you are'],
-    [c.remoteUnknownExcluded, 'remote eligibility not stated'],
+    [c.remoteUnknownExcluded, 'remote not stated'],
+    [c.remoteIneligibleExcluded, 'posting states no remote work'],
     [c.expired, 'already closed'],
     [c.duplicateIds + c.duplicateReposts, 'duplicates of a posting already shown'],
   ];

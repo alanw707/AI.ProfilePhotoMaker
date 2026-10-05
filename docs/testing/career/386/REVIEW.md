@@ -41,5 +41,14 @@ Simulated review on the LocalDev stack (in-memory DB, career flag on, **no USAJO
 | 2 | P3 | USAJOBS documents a remote indicator but no reliable per-posting *ineligibility* field, so the adapter can only emit `eligible` or `unknown`; location mismatches are excluded as `otherLocationExcluded` instead. | Recorded in ADR 0015 and the contract rather than inventing a restriction; `ineligible` stays in the contract for a provider that states one. |
 | 3 | P3 | My first two probes reported the area filter as not restoring and a 20 px input as a tap-target failure; both were the script's selectors (the area field is `#job-area`, and a checkbox's real target is its label). | Fixed the probes; the recorded evidence now matches the page. |
 | 4 | P3 | Live verification of the populated list needs an operator key, so the observation-list evidence is fixture-level. | Stated here; the key request is the recorded operator gate, and no paid service is involved. |
+| R1 | P1 | `eligibleOnly=true` leaked `ineligible` postings (only unknown was dropped). | Fixed: requires `eligible`; `remoteIneligibleExcluded` counted; test asserts the ineligible row is gone. |
+| R2 | P2 | A repost key without close date, series or grade swallowed distinct openings. | Fixed: key includes them; distinct-close-date and series/grade tests, true repost still collapses. |
+| R3 | P2 | Counts did not reconcile and truncation ignored the provider total. | Fixed: `fetched`, `keywordExcluded`, `remoteFilterExcluded`, `cappedByLimit`; `truncated` also when the provider total exceeds the returned rows; sum test. |
+| R4 | P2 | `observedFrom/To` overstated coverage; no occupation looked "available". | Fixed: `postedFrom/postedTo`; `occupation_required` unavailable state. |
+| R5 | P2 | Adapter followed redirects, read an unbounded body, accepted non-default ports. | Fixed: no redirects, 1 MB bounded read, `IsDefaultPort`; tests for each. |
+| R6 | P3 | Mapping errors could 500; unbounded locations; inverted pay range. | Fixed: any error is `source_unavailable`; 10 locations; min>max is `not_available`. |
+| R7 | P2 | UI copy claimed user-specific eligibility. | Fixed: "Remote stated by the posting", "Only postings that state remote work"; no "eligible" beside a posting's status. |
+
+R1-R7: all fixed.
 
 Open P0/P1: **none**.

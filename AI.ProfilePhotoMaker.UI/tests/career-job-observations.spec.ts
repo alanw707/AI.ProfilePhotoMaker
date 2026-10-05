@@ -51,7 +51,7 @@ function payload(url: URL, options: Options): JobObservations {
     : all;
   list = list.filter(o => o.title.toLowerCase().includes(q));
   const unknown = list.filter(o => o.remoteEligibility === 'unknown').length;
-  if (eligibleOnly) list = list.filter(o => o.remoteEligibility !== 'unknown');
+  if (eligibleOnly) list = list.filter(o => o.remoteEligibility === 'eligible');
   const available = !options.reason;
   const shown = available ? list : [];
   return {
@@ -71,16 +71,21 @@ function payload(url: URL, options: Options): JobObservations {
       attribution: 'Job postings from USAJOBS (U.S. Office of Personnel Management).',
       sourceUrl: 'https://www.usajobs.gov/',
       retrievedAt: '2026-10-05T18:30:00Z',
-      observedFrom: available ? '2026-09-20' : null,
-      observedTo: available ? '2026-09-28' : null,
+      postedFrom: available ? '2026-09-20' : null,
+      postedTo: available ? '2026-09-28' : null,
       counts: {
-        matched: shown.length + (eligibleOnly ? unknown : 0) + 4,
+        fetched: shown.length + (eligibleOnly ? unknown : 0) + 4,
+        matched: shown.length,
         shown: shown.length,
         duplicateIds: 0,
         duplicateReposts: 0,
         expired: 0,
         remoteUnknownExcluded: eligibleOnly ? unknown : 0,
+        remoteIneligibleExcluded: 0,
         otherLocationExcluded: available ? 4 : 0,
+        keywordExcluded: 0,
+        remoteFilterExcluded: 0,
+        cappedByLimit: 0,
       },
     },
     preferences: { areaCode: '19740', stalePreference: !!options.stale, note: null },
@@ -159,6 +164,12 @@ test.describe('desktop', () => {
     );
     await expect(cards(page).nth(2)).toContainText('Pay not stated');
     await expect(cards(page).nth(2).locator('[data-remote]')).toHaveText('Remote not stated');
+    await expect(cards(page).nth(0).locator('[data-remote]')).toHaveText(
+      'Remote stated by the posting'
+    );
+    for (let i = 0; i < 3; i++) {
+      await expect(cards(page).nth(i).locator('[data-remote]')).not.toContainText(/eligib/i);
+    }
     const link = cards(page)
       .nth(0)
       .getByRole('link', { name: /View original posting/ });
@@ -171,12 +182,12 @@ test.describe('desktop', () => {
   }) => {
     await mock(page);
     await open(page);
-    await page.getByLabel('Only postings stated as remote eligible').check();
+    await page.getByLabel('Only postings that state remote work').check();
     await expect(page).toHaveURL(/eligibleOnly=true/);
     await expect(cards(page)).toHaveCount(2);
     await expect(page.getByText('Analyst with no remote statement')).toHaveCount(0);
     const counts = page.locator('[data-counts]');
-    await expect(counts).toContainText('1 hidden: remote eligibility not stated');
+    await expect(counts).toContainText('1 hidden: remote not stated');
     await expect(counts).toContainText('4 hidden: not open where you are');
     await expect(counts).not.toContainText(/vacancy rate/i);
   });
@@ -225,8 +236,8 @@ test.describe('desktop', () => {
     await open(page);
     await page.getByLabel('Area').fill('Boulder');
     await page.getByLabel('Search title or organization').fill('developer');
-    await page.getByLabel('Remote work').selectOption('eligible');
-    await page.getByLabel('Only postings stated as remote eligible').check();
+    await page.getByLabel('Remote work', { exact: true }).selectOption('eligible');
+    await page.getByLabel('Only postings that state remote work').check();
     await expect(page).toHaveURL(/area=Boulder/);
     await expect(page).toHaveURL(/q=developer/);
     await expect(page).toHaveURL(/remote=eligible/);
@@ -234,8 +245,8 @@ test.describe('desktop', () => {
     await page.reload();
     await expect(page.getByLabel('Area')).toHaveValue('Boulder');
     await expect(page.getByLabel('Search title or organization')).toHaveValue('developer');
-    await expect(page.getByLabel('Remote work')).toHaveValue('eligible');
-    await expect(page.getByLabel('Only postings stated as remote eligible')).toBeChecked();
+    await expect(page.getByLabel('Remote work', { exact: true })).toHaveValue('eligible');
+    await expect(page.getByLabel('Only postings that state remote work')).toBeChecked();
     expect(requests.at(-1)).toContain('area=Boulder');
     await page.getByRole('button', { name: 'Clear' }).click();
     await expect(page).not.toHaveURL(/area=|q=|remote=|eligibleOnly=/);
@@ -285,7 +296,7 @@ test.describe('accessibility', () => {
       await open(page);
       await expect(cards(page)).toHaveCount(3);
       expect(await run()).toEqual([]);
-      await page.getByLabel('Only postings stated as remote eligible').check();
+      await page.getByLabel('Only postings that state remote work').check();
       await expect(cards(page)).toHaveCount(2);
       expect(await run()).toEqual([]);
       await page.unroute('**/api/**');

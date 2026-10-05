@@ -198,7 +198,8 @@ public static class CareerWorkspaceServiceCollectionExtensions
         // Job observations (#386, ADR 0015). Nothing is persisted. With no USAJobs key the default source
         // reports an honest unavailable state; tests replace IJobObservationSource with a fake.
         services.AddOptions<UsaJobsOptions>().BindConfiguration(UsaJobsOptions.SectionName);
-        services.AddHttpClient<UsaJobsObservationSource>();
+        services.AddHttpClient<UsaJobsObservationSource>()
+            .ConfigurePrimaryHttpMessageHandler(UsaJobsObservationSource.CreateHandler);
         services.AddScoped<IJobObservationSource>(sp =>
         {
             var usaJobs = sp.GetRequiredService<UsaJobsObservationSource>();

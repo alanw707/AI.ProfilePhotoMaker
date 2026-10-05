@@ -17,15 +17,16 @@ public sealed class FakeJobObservationSource : IJobObservationSource
     public List<RawJobObservation> Raw { get; } = new();
     public Exception? Failure { get; set; }
     public JobObservationQuery? LastQuery { get; set; }
+    public int? ProviderTotal { get; set; }
 
-    public Task<IReadOnlyList<RawJobObservation>> FetchAsync(JobObservationQuery query, CancellationToken ct)
+    public Task<JobSourcePage> FetchAsync(JobObservationQuery query, CancellationToken ct)
     {
         LastQuery = query;
         if (Failure != null)
         {
             throw Failure;
         }
-        return Task.FromResult<IReadOnlyList<RawJobObservation>>(Raw.ToList());
+        return Task.FromResult(new JobSourcePage(Raw.ToList(), ProviderTotal));
     }
 }
 
@@ -45,17 +46,18 @@ public class JobObservationServiceTests
     private static RawJobObservation Raw(
         string id = "1", string title = "IT Specialist", string org = "Department of Veterans Affairs", RawJobLocation[]? locs = null,
         decimal? min = 98500, decimal? max = 128000, DateOnly? posted = null, DateOnly? closes = null,
-        JobRemoteStatus remote = JobRemoteStatus.Unknown, string? url = "https://www.usajobs.gov/job/1", string? note = null) =>
-        new(id, title, org, locs ?? new[] { DenverLoc }, min, max, "usd_per_year", "annual",
-            posted ?? Today.AddDays(-3), closes ?? Today.AddDays(10), remote, note, "2210", "GS-12", url);
+        JobRemoteStatus remote = JobRemoteStatus.Unknown, string? url = "https://www.usajobs.gov/job/1", string? note = null,
+        string series = "2210", string grade = "GS-12", string? payUnit = "usd_per_year") =>
+        new(id, title, org, locs ?? new[] { DenverLoc }, min, max, payUnit, "annual",
+            posted ?? Today.AddDays(-3), closes ?? Today.AddDays(10), remote, note, series, grade, url);
 
     private static JobObservationQuery Query(
         bool eligibleOnly = false, string remote = "all", string? q = null, string? area = "19740") =>
         new("15-1252.00", "Software Developers", area, area == null ? null : "Denver-Aurora-Centennial, CO",
             area == null ? "national_only" : "metro", "Denver, CO", eligibleOnly, remote, q);
 
-    private static NormalizedJobs Run(IEnumerable<RawJobObservation> raw, JobObservationQuery? query = null, MarketArea? area = null) =>
-        JobObservationNormalizer.Normalize(raw.ToList(), query ?? Query(), Info, Now, Areas, query?.AreaCode == null && query != null ? null : area ?? Denver);
+    private static NormalizedJobs Run(IEnumerable<RawJobObservation> raw, JobObservationQuery? query = null, MarketArea? area = null, int? providerTotal = null) =>
+        JobObservationNormalizer.Normalize(raw.ToList(), providerTotal, query ?? Query(), Info, Now, Areas, query?.AreaCode == null && query != null ? null : area ?? Denver);
 
     [Fact]
     public void MapsAPostingIntoTheContractShape()
@@ -73,8 +75,8 @@ public class JobObservationServiceTests
         (o.PostedOn, o.ClosesOn, o.Expired).Should().Be((Today.AddDays(-3), Today.AddDays(10), false));
         (o.RemoteEligibility, o.RemoteNote, o.Series, o.Grade, o.SourceId).Should().Be(("eligible", "Remote ok.", "2210", "GS-12", "usajobs"));
         o.SourceUrl.Should().Be("https://www.usajobs.gov/job/1");
-        result.Counts.Should().Be(new JobCountsDto(1, 1, 0, 0, 0, 0, 0));
-        (result.ObservedFrom, result.ObservedTo).Should().Be((Today.AddDays(-3), Today.AddDays(-3)));
+        result.Counts.Should().Be(JobCountsDto.Empty with { Fetched = 1, Matched = 1, Shown = 1 });
+        (result.PostedFrom, result.PostedTo).Should().Be((Today.AddDays(-3), Today.AddDays(-3)));
     }
 
     [Fact]
@@ -87,12 +89,32 @@ public class JobObservationServiceTests
     }
 
     [Fact]
-    public void RepostWithSameAgencyTitleLocationsAndPayIsDroppedAndCounted()
+    public void TrueRepostWithEverythingEqualIsDroppedAndCounted()
     {
         var result = Run(new[] { Raw("1"), Raw("2", posted: Today.AddDays(-1)), Raw("3", min: 99000) });
 
         result.Observations.Select(o => o.ObservationId).Should().Equal("usajobs:2", "usajobs:3");
         result.Counts.DuplicateReposts.Should().Be(1);
+    }
+
+    [Fact]
+    public void SameTitleAndPayClosingOnDifferentDatesAreBothKept()
+    {
+        var result = Run(new[] { Raw("1", closes: Today.AddDays(5)), Raw("2", closes: Today.AddDays(20)) });
+
+        result.Observations.Select(o => o.ObservationId).Should().BeEquivalentTo("usajobs:1", "usajobs:2");
+        result.Counts.DuplicateReposts.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData("2210", "GS-13")]
+    [InlineData("0335", "GS-12")]
+    public void SameTitleAndPayWithADifferentSeriesOrGradeAreBothKept(string series, string grade)
+    {
+        var result = Run(new[] { Raw("1"), Raw("2", series: series, grade: grade) });
+
+        result.Observations.Should().HaveCount(2);
+        result.Counts.DuplicateReposts.Should().Be(0);
     }
 
     [Fact]
@@ -107,7 +129,7 @@ public class JobObservationServiceTests
     }
 
     [Fact]
-    public void EligibleOnlyExcludesUnknownRemoteAndCountsIt()
+    public void EligibleOnlyReturnsOnlyPostingsThatStateRemoteAndCountsWhatItExcluded()
     {
         var raw = new[]
         {
@@ -116,8 +138,9 @@ public class JobObservationServiceTests
         };
 
         var strict = Run(raw, Query(eligibleOnly: true));
-        strict.Observations.Select(o => o.RemoteEligibility).Should().NotContain("unknown");
+        strict.Observations.Select(o => o.RemoteEligibility).Should().Equal("eligible");
         strict.Counts.RemoteUnknownExcluded.Should().Be(1);
+        strict.Counts.RemoteIneligibleExcluded.Should().Be(1);
 
         Run(raw, Query(remote: "unknown")).Observations.Should().ContainSingle().Which.RemoteEligibility.Should().Be("unknown");
         Run(raw, Query(remote: "eligible")).Observations.Should().ContainSingle().Which.RemoteEligibility.Should().Be("eligible");
@@ -191,8 +214,75 @@ public class JobObservationServiceTests
 
         result.Observations.Should().HaveCount(25);
         result.Truncated.Should().BeTrue();
-        result.Counts.Should().Match<JobCountsDto>(c => c.Matched == 40 && c.Shown == 25);
+        result.Counts.Should().Match<JobCountsDto>(c => c.Matched == 40 && c.Shown == 25 && c.CappedByLimit == 15);
         Run(raw.Take(25)).Truncated.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TruncatedWheneverTheProviderTotalExceedsWhatWasReturned()
+    {
+        var raw = new[] { Raw("1"), Raw("2", title: "B") };
+
+        Run(raw, providerTotal: 900).Truncated.Should().BeTrue();
+        Run(raw, providerTotal: 2).Truncated.Should().BeFalse();
+        Run(raw, providerTotal: null).Truncated.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CountsReconcileToTheFetchedRows()
+    {
+        var raw = new List<RawJobObservation>
+        {
+            Raw("1"), Raw("1", title: "same id"),                                   // duplicate id
+            Raw("2", title: "R", posted: Today.AddDays(-1)), Raw("3", title: "R"),   // repost
+            Raw("4", title: "Old", closes: Today.AddDays(-2)),                        // expired
+            Raw("5", title: "Far", locs: new[] { new RawJobLocation("Austin", "TX") }), // other location
+            Raw("6", title: "Needle zzz"),                                           // keyword (kept below by q)
+            Raw("7", title: "U"), Raw("8", title: "E", remote: JobRemoteStatus.Eligible),
+            Raw("9", title: "I", remote: JobRemoteStatus.Ineligible, locs: new[] { DenverLoc })
+        };
+        raw.AddRange(Enumerable.Range(10, 30).Select(i => Raw($"x{i}", title: $"Job {i}")));
+
+        foreach (var query in new[] { Query(), Query(eligibleOnly: true), Query(q: "job"), Query(remote: "unknown") })
+        {
+            var c = Run(raw, query, providerTotal: 500).Counts;
+            var sum = c.Shown + c.DuplicateIds + c.DuplicateReposts + c.Expired + c.OtherLocationExcluded + c.RemoteUnknownExcluded
+                + c.RemoteIneligibleExcluded + c.KeywordExcluded + c.RemoteFilterExcluded + c.CappedByLimit;
+            c.Fetched.Should().Be(raw.Count);
+            sum.Should().Be(c.Fetched, $"the block must reconcile for {query}");
+        }
+        var keyword = Run(raw, Query(q: "job")).Counts;
+        keyword.KeywordExcluded.Should().BeGreaterThan(0);
+        Run(raw, Query(remote: "unknown")).Counts.RemoteFilterExcluded.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public void PostedRangeIsTheDatesOfTheReturnedObservations()
+    {
+        var result = Run(new[] { Raw("1", posted: Today.AddDays(-9)), Raw("2", title: "B", posted: Today.AddDays(-2)) });
+
+        (result.PostedFrom, result.PostedTo).Should().Be((Today.AddDays(-9), Today.AddDays(-2)));
+        Run(Array.Empty<RawJobObservation>()).PostedFrom.Should().BeNull();
+    }
+
+    [Fact]
+    public void LocationsPerPostingAreCappedAtTenInProviderOrder()
+    {
+        var locs = Enumerable.Range(0, 15).Select(i => new RawJobLocation($"City{i}", "CO")).Prepend(DenverLoc).ToArray();
+
+        var o = Run(new[] { Raw("1", locs: locs) }).Observations.Single();
+
+        o.Locations.Should().HaveCount(10);
+        o.Locations[0].City.Should().Be("Denver");
+        o.Locations[9].City.Should().Be("City8");
+    }
+
+    [Fact]
+    public void PayWhoseMinimumExceedsItsMaximumIsNotAvailable()
+    {
+        var o = Run(new[] { Raw("1", min: 150000, max: 100000) }).Observations.Single();
+
+        o.Pay.Should().Be(new JobPayDto(null, null, null, null, "not_available"));
     }
 
     [Theory]
@@ -200,6 +290,7 @@ public class JobObservationServiceTests
     [InlineData("https://evil.example.com/job/1")]
     [InlineData("https://www.usajobs.gov.evil.example/job/1")]
     [InlineData("https://user:pw@www.usajobs.gov/job/1")]
+    [InlineData("https://www.usajobs.gov:8443/x")]
     [InlineData("javascript:alert(1)")]
     [InlineData("/job/1")]
     [InlineData(null)]
@@ -271,8 +362,10 @@ public class JobObservationServiceTests
         var handler = new StubHandler();
         handler.Responses.Enqueue(() => Json(Payload));
 
-        var jobs = await Adapter(handler).FetchAsync(Query(), CancellationToken.None);
+        var page = await Adapter(handler).FetchAsync(Query(), CancellationToken.None);
+        var jobs = page.Items;
 
+        page.ProviderTotal.Should().Be(900);
         jobs.Should().HaveCount(2);
         var a = jobs[0];
         (a.ProviderId, a.Title, a.Organization).Should().Be(("812345678", "IT Specialist (Applications Software)", "Department of Veterans Affairs"));
@@ -332,7 +425,7 @@ public class JobObservationServiceTests
         handler.Responses.Enqueue(() => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
         handler.Responses.Enqueue(() => Json(Payload));
 
-        var jobs = await Adapter(handler).FetchAsync(Query(), CancellationToken.None);
+        var jobs = (await Adapter(handler).FetchAsync(Query(), CancellationToken.None)).Items;
 
         jobs.Should().HaveCount(2);
         handler.Requests.Should().HaveCount(2);
@@ -381,6 +474,42 @@ public class JobObservationServiceTests
     }
 
     [Fact]
+    public void TheHttpHandlerNeverFollowsRedirects()
+    {
+        UsaJobsObservationSource.CreateHandler().AllowAutoRedirect.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ARedirectIsUnavailableAndNeverFollowed()
+    {
+        var handler = new StubHandler();
+        handler.Responses.Enqueue(() =>
+        {
+            var r = new HttpResponseMessage(HttpStatusCode.Found);
+            r.Headers.Location = new Uri("https://evil.example.com/steal");
+            return r;
+        });
+
+        var act = () => Adapter(handler).FetchAsync(Query(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<JobSourceUnavailableException>();
+        handler.Requests.Should().ContainSingle().Which.RequestUri!.Host.Should().Be("data.usajobs.gov");
+    }
+
+    [Fact]
+    public async Task AnOversizedBodyIsUnavailable()
+    {
+        var handler = new StubHandler();
+        var big = "{\"SearchResult\":{\"pad\":\"" + new string('x', UsaJobsObservationSource.MaxBodyBytes + 10) + "\"}}";
+        handler.Responses.Enqueue(() => Json(big));
+
+        var act = () => Adapter(handler).FetchAsync(Query(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<JobSourceUnavailableException>().WithMessage("*too large*");
+        handler.Requests.Should().ContainSingle();
+    }
+
+    [Fact]
     public async Task TimeoutIsUnavailable()
     {
         var handler = new HangingHandler();
@@ -413,7 +542,7 @@ public class JobObservationServiceTests
 
         none.IsConfigured.Should().BeFalse();
         none.SourceId.Should().Be("usajobs");
-        (await none.FetchAsync(Query(), CancellationToken.None)).Should().BeEmpty();
+        (await none.FetchAsync(Query(), CancellationToken.None)).Items.Should().BeEmpty();
     }
 
     // ---- Nothing is persisted ---------------------------------------------------

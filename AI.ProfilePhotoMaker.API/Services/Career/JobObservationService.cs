@@ -88,24 +88,30 @@ public sealed class JobObservationService : IJobObservationService
         {
             reason = JobSourceReasons.NotConfigured;
         }
-        else if (code != null)
+        else if (code == null)
+        {
+            reason = JobSourceReasons.OccupationRequired;
+        }
+        else
         {
             try
             {
-                var raw = await _source.FetchAsync(query, ct);
+                var page = await _source.FetchAsync(query, ct);
                 var userArea = resolved.Local == null ? null : areas.FirstOrDefault(a => a.Code == resolved.Local.Code);
-                normalized = JobObservationNormalizer.Normalize(raw, query, info, now, areas, userArea);
+                normalized = JobObservationNormalizer.Normalize(page.Items, page.ProviderTotal, query, info, now, areas, userArea);
             }
-            catch (JobSourceUnavailableException ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
             {
+                // Any mapping or provider failure is the honest unavailable state, never a 500.
                 _logger.LogWarning(ex, "Job source {Source} is unavailable", info.SourceId);
                 reason = JobSourceReasons.Unavailable;
+                normalized = JobObservationNormalizer.Empty;
             }
         }
 
         var coverage = new JobCoverageDto(
             reason == null, reason, info.SourceId, info.Name, info.Coverage, info.Attribution, info.SourceUrl, now,
-            normalized.ObservedFrom, normalized.ObservedTo, normalized.Counts);
+            normalized.PostedFrom, normalized.PostedTo, normalized.Counts);
         var areaDto = new JobAreaDto(resolved.Input, resolved.Resolution, resolved.Local?.Code, resolved.Local?.Title);
         return CareerOutcome<JobObservationResult>.Ok(new JobObservationResult(
             code == null ? null : new JobOccupationDto(code, title), areaDto, coverage,
@@ -124,7 +130,7 @@ public sealed class JobObservationService : IJobObservationService
 }
 
 public sealed record NormalizedJobs(
-    IReadOnlyList<JobObservationDto> Observations, JobCountsDto Counts, bool Truncated, DateOnly? ObservedFrom, DateOnly? ObservedTo);
+    IReadOnlyList<JobObservationDto> Observations, JobCountsDto Counts, bool Truncated, DateOnly? PostedFrom, DateOnly? PostedTo);
 
 /// <summary>Pure normalization and filtering of raw postings (ADR 0015). No I/O, no clock, no storage.</summary>
 public static class JobObservationNormalizer
@@ -133,11 +139,12 @@ public static class JobObservationNormalizer
     public const int MaxTitleLength = 200;
     public const int MaxNoteLength = 300;
     public const int MaxShortLength = 100;
+    public const int MaxLocations = 10;
 
     public static NormalizedJobs Empty { get; } = new(Array.Empty<JobObservationDto>(), JobCountsDto.Empty, false, null, null);
 
     public static NormalizedJobs Normalize(
-        IReadOnlyList<RawJobObservation> raw, JobObservationQuery query, JobSourceInfo info, DateTimeOffset now,
+        IReadOnlyList<RawJobObservation> raw, int? providerTotal, JobObservationQuery query, JobSourceInfo info, DateTimeOffset now,
         IReadOnlyList<MarketArea> areas, MarketArea? userArea)
     {
         var today = DateOnly.FromDateTime(now.UtcDateTime);
@@ -146,7 +153,7 @@ public static class JobObservationNormalizer
         var ordered = raw.Where(r => !string.IsNullOrWhiteSpace(r.ProviderId))
             .OrderByDescending(r => r.PostedOn ?? DateOnly.MinValue).ThenBy(r => r.ProviderId, StringComparer.Ordinal).ToList();
 
-        int dupIds = 0, dupReposts = 0, expired = 0, otherLocation = 0, unknownExcluded = 0;
+        int dupIds = 0, dupReposts = 0, expired = 0, otherLocation = 0, unknownExcluded = 0, ineligibleExcluded = 0, keyword = 0, remoteFilter = 0;
         var seenIds = new HashSet<string>(StringComparer.Ordinal);
         var seenReposts = new HashSet<string>(StringComparer.Ordinal);
         var kept = new List<JobObservationDto>();
@@ -171,7 +178,7 @@ public static class JobObservationNormalizer
                 continue;
             }
 
-            var locations = r.Locations.Select(l => Locate(l, areas, userArea)).ToList();
+            var locations = r.Locations.Take(MaxLocations).Select(l => Locate(l, areas, userArea)).ToList();
             if (applyArea && r.Remote != JobRemoteStatus.Eligible && !locations.Any(l => l.Match == "user_area"))
             {
                 otherLocation++;
@@ -183,15 +190,24 @@ public static class JobObservationNormalizer
                 && !dto.Title.Contains(needle, StringComparison.OrdinalIgnoreCase)
                 && !dto.Organization.Contains(needle, StringComparison.OrdinalIgnoreCase))
             {
+                keyword++;
                 continue;
             }
             if (query.Remote != JobRemoteFilters.All && dto.RemoteEligibility != query.Remote)
             {
+                remoteFilter++;
                 continue;
             }
-            if (query.EligibleOnly && r.Remote == JobRemoteStatus.Unknown)
+            if (query.EligibleOnly && r.Remote != JobRemoteStatus.Eligible)
             {
-                unknownExcluded++;
+                if (r.Remote == JobRemoteStatus.Unknown)
+                {
+                    unknownExcluded++;
+                }
+                else
+                {
+                    ineligibleExcluded++;
+                }
                 continue;
             }
             kept.Add(dto);
@@ -201,16 +217,18 @@ public static class JobObservationNormalizer
         var dates = shown.Where(o => o.PostedOn != null).Select(o => o.PostedOn!.Value).ToList();
         return new NormalizedJobs(
             shown,
-            new JobCountsDto(kept.Count, shown.Count, dupIds, dupReposts, expired, unknownExcluded, otherLocation),
-            kept.Count > MaxObservations,
+            new JobCountsDto(
+                raw.Count, kept.Count, shown.Count, dupIds, dupReposts, expired, unknownExcluded, ineligibleExcluded, otherLocation,
+                keyword, remoteFilter, kept.Count - shown.Count),
+            kept.Count > MaxObservations || providerTotal > raw.Count,
             dates.Count > 0 ? dates.Min() : null,
             dates.Count > 0 ? dates.Max() : null);
     }
 
     private static string RepostKey(RawJobObservation r) => string.Join('|',
         Norm(r.Organization), Norm(r.Title),
-        string.Join(';', r.Locations.Select(l => $"{Norm(l.City)},{Norm(l.State)}").OrderBy(x => x, StringComparer.Ordinal)),
-        r.PayMin, r.PayMax, r.PayUnit);
+        string.Join(';', r.Locations.Take(MaxLocations).Select(l => $"{Norm(l.City)},{Norm(l.State)}").OrderBy(x => x, StringComparer.Ordinal)),
+        r.PayMin, r.PayMax, r.PayUnit, r.ClosesOn?.ToString("O"), Norm(r.Series), Norm(r.Grade));
 
     private static string Norm(string? s) => (s ?? string.Empty).Trim().ToLowerInvariant();
 
@@ -238,7 +256,8 @@ public static class JobObservationNormalizer
     private static JobObservationDto Map(RawJobObservation r, List<JobLocationDto> locations, JobSourceInfo info, DateOnly today)
     {
         var expired = r.ClosesOn is { } c && c < today;
-        var hasPay = !expired && r.PayUnit != null && (r.PayMin != null || r.PayMax != null);
+        var hasPay = !expired && r.PayUnit != null && (r.PayMin != null || r.PayMax != null)
+            && !(r.PayMin != null && r.PayMax != null && r.PayMin > r.PayMax);
         var pay = hasPay
             ? new JobPayDto(r.PayMin, r.PayMax, r.PayUnit, r.PayBasis, "available")
             : new JobPayDto(null, null, null, null, "not_available");
@@ -259,7 +278,7 @@ public static class JobObservationNormalizer
 
     /// <summary>The provider's own posting link: https and an allowlisted host, else no link at all.</summary>
     internal static string? ValidLink(string? url, JobSourceInfo info) =>
-        Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && string.IsNullOrEmpty(uri.UserInfo)
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort && string.IsNullOrEmpty(uri.UserInfo)
             && info.AllowedHosts.Contains(uri.Host, StringComparer.OrdinalIgnoreCase) && uri.AbsoluteUri.Length <= 500
             ? uri.AbsoluteUri
             : null;

@@ -26,6 +26,7 @@ public static class JobSourceReasons
 {
     public const string NotConfigured = "source_not_configured";
     public const string Unavailable = "source_unavailable";
+    public const string OccupationRequired = "occupation_required";
 }
 
 public sealed record JobPayDto(decimal? Min, decimal? Max, string? Unit, string? Basis, string Status);
@@ -49,10 +50,15 @@ public sealed record JobObservationDto(
     string? SourceUrl,
     string SourceId);
 
+/// <summary>
+/// Reconciles: Fetched = Shown + DuplicateIds + DuplicateReposts + Expired + OtherLocationExcluded + RemoteUnknownExcluded
+/// + RemoteIneligibleExcluded + KeywordExcluded + RemoteFilterExcluded + CappedByLimit. Matched = Shown + CappedByLimit.
+/// </summary>
 public sealed record JobCountsDto(
-    int Matched, int Shown, int DuplicateIds, int DuplicateReposts, int Expired, int RemoteUnknownExcluded, int OtherLocationExcluded)
+    int Fetched, int Matched, int Shown, int DuplicateIds, int DuplicateReposts, int Expired, int RemoteUnknownExcluded,
+    int RemoteIneligibleExcluded, int OtherLocationExcluded, int KeywordExcluded, int RemoteFilterExcluded, int CappedByLimit)
 {
-    public static JobCountsDto Empty { get; } = new(0, 0, 0, 0, 0, 0, 0);
+    public static JobCountsDto Empty { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 public sealed record JobCoverageDto(
@@ -64,8 +70,8 @@ public sealed record JobCoverageDto(
     string Attribution,
     string SourceUrl,
     DateTimeOffset RetrievedAt,
-    DateOnly? ObservedFrom,
-    DateOnly? ObservedTo,
+    DateOnly? PostedFrom,
+    DateOnly? PostedTo,
     JobCountsDto Counts);
 
 public sealed record JobOccupationDto(string Code, string? Title);

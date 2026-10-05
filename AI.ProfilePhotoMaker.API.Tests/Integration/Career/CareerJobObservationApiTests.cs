@@ -37,6 +37,7 @@ public class CareerJobObservationApiTests : IClassFixture<CareerJobFactory>
         factory.Source.Raw.Clear();
         factory.Source.Failure = null;
         factory.Source.LastQuery = null;
+        factory.Source.ProviderTotal = null;
         factory.Source.IsConfigured = true;
     }
 
@@ -132,6 +133,8 @@ public class CareerJobObservationApiTests : IClassFixture<CareerJobFactory>
         var data = await Get(await UserAsync(occupation: false));
 
         data.GetProperty("coverage").GetProperty("sourceId").GetString().Should().Be("usajobs");
+        data.GetProperty("coverage").GetProperty("available").GetBoolean().Should().BeFalse();
+        data.GetProperty("coverage").GetProperty("reason").GetString().Should().Be("occupation_required");
         data.GetProperty("observations").GetArrayLength().Should().Be(0);
         data.GetProperty("occupation").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
         _factory.Source.LastQuery.Should().BeNull();
@@ -142,17 +145,48 @@ public class CareerJobObservationApiTests : IClassFixture<CareerJobFactory>
     {
         _factory.Source.Raw.AddRange(new[]
         {
-            Job("1", remote: JobRemoteStatus.Eligible), Job("2"), Job("3", city: "Austin", state: "TX")
+            Job("1", remote: JobRemoteStatus.Eligible), Job("2"), Job("3", city: "Austin", state: "TX"),
+            Job("4", remote: JobRemoteStatus.Ineligible)
         });
         var user = await UserAsync();
 
-        (await Get(user)).GetProperty("observations").GetArrayLength().Should().Be(2);
+        (await Get(user)).GetProperty("observations").GetArrayLength().Should().Be(3);
         var eligible = await Get(user, "?eligibleOnly=true");
         eligible.GetProperty("observations").GetArrayLength().Should().Be(1);
         eligible.GetProperty("coverage").GetProperty("counts").GetProperty("remoteUnknownExcluded").GetInt32().Should().Be(1);
+        eligible.GetProperty("coverage").GetProperty("counts").GetProperty("remoteIneligibleExcluded").GetInt32().Should().Be(1);
+        eligible.GetProperty("observations").EnumerateArray().Select(o => o.GetProperty("remoteEligibility").GetString())
+            .Should().Equal("eligible");
         (await Get(user, "?remote=unknown")).GetProperty("observations").GetArrayLength().Should().Be(1);
         (await Get(user, "?q=zzz")).GetProperty("observations").GetArrayLength().Should().Be(0);
         (await Get(user, "?area=" + "&q=IT%20Specialist%203")).GetProperty("observations").GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task PostedRangeAndTruncationFollowTheReturnedSetAndTheProviderTotal()
+    {
+        _factory.Source.Raw.AddRange(new[] { Job("1"), Job("2") });
+        _factory.Source.ProviderTotal = 900;
+
+        var data = await Get(await UserAsync());
+
+        var coverage = data.GetProperty("coverage");
+        coverage.GetProperty("postedFrom").GetString().Should().Be(Today.AddDays(-2).ToString("yyyy-MM-dd"));
+        coverage.GetProperty("postedTo").GetString().Should().Be(Today.AddDays(-2).ToString("yyyy-MM-dd"));
+        coverage.TryGetProperty("observedFrom", out _).Should().BeFalse();
+        coverage.GetProperty("counts").GetProperty("fetched").GetInt32().Should().Be(2);
+        data.GetProperty("truncated").GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task AnUnexpectedExceptionFromTheSourceIsTheUnavailableStateNotA500()
+    {
+        _factory.Source.Failure = new NullReferenceException("bad row");
+
+        var data = await Get(await UserAsync());
+
+        data.GetProperty("coverage").GetProperty("available").GetBoolean().Should().BeFalse();
+        data.GetProperty("coverage").GetProperty("reason").GetString().Should().Be("source_unavailable");
     }
 
     [Fact]

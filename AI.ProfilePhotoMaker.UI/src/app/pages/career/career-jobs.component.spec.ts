@@ -43,16 +43,21 @@ const result = (over: Partial<JobObservations> = {}): JobObservations => ({
     attribution: 'Job postings from USAJOBS.',
     sourceUrl: 'https://www.usajobs.gov/',
     retrievedAt: null,
-    observedFrom: null,
-    observedTo: null,
+    postedFrom: null,
+    postedTo: null,
     counts: {
-      matched: 5,
+      fetched: 5,
+      matched: 1,
       shown: 1,
       duplicateIds: 0,
       duplicateReposts: 0,
       expired: 0,
       remoteUnknownExcluded: 0,
+      remoteIneligibleExcluded: 0,
       otherLocationExcluded: 4,
+      keywordExcluded: 0,
+      remoteFilterExcluded: 0,
+      cappedByLimit: 0,
     },
   },
   preferences: { areaCode: '19740', stalePreference: false, note: null },
@@ -181,7 +186,7 @@ describe('CareerJobsComponent', () => {
     const t = text(create({ q: 'cobol', eligibleOnly: 'true' }));
     expect(t).toContain('No open postings matched');
     expect(t).toContain('search: "cobol"');
-    expect(t).toContain('remote-eligible only');
+    expect(t).toContain('only postings that state remote work');
     expect(t).toContain('widen');
   });
 

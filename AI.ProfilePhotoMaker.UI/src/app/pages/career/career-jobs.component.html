@@ -44,15 +44,15 @@
           <label for="job-remote">Remote work</label>
           <select id="job-remote" [value]="remote()" (change)="setRemote($any($event.target).value)">
             <option value="all" [selected]="remote() === 'all'">All postings</option>
-            <option value="eligible" [selected]="remote() === 'eligible'">Remote eligible</option>
-            <option value="ineligible" [selected]="remote() === 'ineligible'">Not remote eligible</option>
+            <option value="eligible" [selected]="remote() === 'eligible'">Remote stated by the posting</option>
+            <option value="ineligible" [selected]="remote() === 'ineligible'">Posting states no remote work</option>
             <option value="unknown" [selected]="remote() === 'unknown'">Remote not stated</option>
           </select>
         </div>
         <div class="choice">
           <label>
             <input type="checkbox" [checked]="eligibleOnly()" (change)="setEligibleOnly($any($event.target).checked)" />
-            Only postings stated as remote eligible
+            Only postings that state remote work
           </label>
         </div>
         <button type="button" class="secondary" [disabled]="!hasFilters()" (click)="clear()">Clear</button>
@@ -90,10 +90,10 @@
             <p>
               {{ r.coverage.counts.matched }} matched, {{ r.coverage.counts.shown }} shown.
               @if (r.truncated) {
-                Showing the first {{ r.coverage.counts.shown }} only.
+                Showing the first {{ r.coverage.counts.shown }} only; the source reports more.
               }
-              @if (r.coverage.observedFrom && r.coverage.observedTo) {
-                Posted {{ dateText(r.coverage.observedFrom) }} to {{ dateText(r.coverage.observedTo) }}.
+              @if (r.coverage.postedFrom && r.coverage.postedTo) {
+                Posted {{ dateText(r.coverage.postedFrom) }} to {{ dateText(r.coverage.postedTo) }}.
               }
             </p>
             @if (exclusions().length) {
@@ -152,7 +152,7 @@
             <section aria-labelledby="empty-heading" data-empty>
               <h2 id="empty-heading">No open postings matched</h2>
               <p>Nothing matched these filters: {{ filterText() }}.</p>
-              <p>Try widening the area, or clear the remote-eligible filter.</p>
+              <p>Try widening the area, or clear the remote filter.</p>
             </section>
           }
         }

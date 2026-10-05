@@ -31,6 +31,12 @@ public sealed record RawJobObservation(
 public sealed record JobSourceInfo(
     string SourceId, string Name, string Coverage, string Attribution, string SourceUrl, IReadOnlyList<string> AllowedHosts);
 
+/// <summary>One page from a source, with the provider's own total (null when it does not say).</summary>
+public sealed record JobSourcePage(IReadOnlyList<RawJobObservation> Items, int? ProviderTotal)
+{
+    public static JobSourcePage Empty { get; } = new(Array.Empty<RawJobObservation>(), null);
+}
+
 /// <summary>Raised by an adapter for any provider outage: non-success status, timeout or malformed payload.</summary>
 public sealed class JobSourceUnavailableException : Exception
 {
@@ -47,7 +53,7 @@ public interface IJobObservationSource
     JobSourceInfo Info { get; }
 
     /// <summary>One bounded page of postings. Throws <see cref="JobSourceUnavailableException"/> on a provider failure.</summary>
-    Task<IReadOnlyList<RawJobObservation>> FetchAsync(JobObservationQuery query, CancellationToken ct);
+    Task<JobSourcePage> FetchAsync(JobObservationQuery query, CancellationToken ct);
 }
 
 public static class UsaJobsInfo
@@ -70,8 +76,7 @@ public sealed class NoJobObservationSource : IJobObservationSource
     public bool IsConfigured => false;
     public JobSourceInfo Info => UsaJobsInfo.Info;
 
-    public Task<IReadOnlyList<RawJobObservation>> FetchAsync(JobObservationQuery query, CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<RawJobObservation>>(Array.Empty<RawJobObservation>());
+    public Task<JobSourcePage> FetchAsync(JobObservationQuery query, CancellationToken ct) => Task.FromResult(JobSourcePage.Empty);
 }
 
 public sealed class UsaJobsOptions
@@ -94,6 +99,7 @@ public sealed class UsaJobsObservationSource : IJobObservationSource
 {
     public const int MaxResultsPerPage = 25;
     public static readonly Uri SearchUri = new("https://data.usajobs.gov/api/search");
+    public const int MaxBodyBytes = 1024 * 1024;
     public static readonly TimeSpan DefaultAttemptTimeout = TimeSpan.FromSeconds(5);
 
     private readonly HttpClient _http;
@@ -111,7 +117,10 @@ public sealed class UsaJobsObservationSource : IJobObservationSource
     public bool IsConfigured => _options.IsConfigured;
     public JobSourceInfo Info => UsaJobsInfo.Info;
 
-    public async Task<IReadOnlyList<RawJobObservation>> FetchAsync(JobObservationQuery query, CancellationToken ct)
+    /// <summary>The Authorization-Key header must never follow a redirect to another host.</summary>
+    public static SocketsHttpHandler CreateHandler() => new() { AllowAutoRedirect = false };
+
+    public async Task<JobSourcePage> FetchAsync(JobObservationQuery query, CancellationToken ct)
     {
         if (!IsConfigured)
         {
@@ -159,7 +168,7 @@ public sealed class UsaJobsObservationSource : IJobObservationSource
             using var response = await _http.SendAsync(request, timeout.Token);
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadAsStringAsync(timeout.Token);
+                return await ReadBoundedAsync(response.Content, timeout.Token);
             }
             if (response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500)
             {
@@ -175,6 +184,28 @@ public sealed class UsaJobsObservationSource : IJobObservationSource
         {
             throw new TransientFailure("USAJOBS timed out.", ex);
         }
+    }
+
+    private static async Task<string> ReadBoundedAsync(HttpContent content, CancellationToken ct)
+    {
+        const string tooLarge = "USAJOBS answered with a body that is too large.";
+        if (content.Headers.ContentLength > MaxBodyBytes)
+        {
+            throw new JobSourceUnavailableException(tooLarge);
+        }
+        await using var stream = await content.ReadAsStreamAsync(ct);
+        using var buffer = new MemoryStream();
+        var chunk = new byte[16 * 1024];
+        int read;
+        while ((read = await stream.ReadAsync(chunk, ct)) > 0)
+        {
+            if (buffer.Length + read > MaxBodyBytes)
+            {
+                throw new JobSourceUnavailableException(tooLarge);
+            }
+            buffer.Write(chunk, 0, read);
+        }
+        return System.Text.Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length);
     }
 
     private static string BuildQueryString(JobObservationQuery query)
@@ -197,20 +228,22 @@ public sealed class UsaJobsObservationSource : IJobObservationSource
     }
 
     /// <summary>Maps the documented search payload; anything unexpected is an outage, not a partial list.</summary>
-    internal static IReadOnlyList<RawJobObservation> Parse(string body)
+    internal static JobSourcePage Parse(string body)
     {
         try
         {
             using var doc = JsonDocument.Parse(body);
-            var items = doc.RootElement.GetProperty("SearchResult").GetProperty("SearchResultItems");
+            var searchResult = doc.RootElement.GetProperty("SearchResult");
+            var items = searchResult.GetProperty("SearchResultItems");
+            int? total = int.TryParse(Str(searchResult, "SearchResultCountAll"), NumberStyles.None, CultureInfo.InvariantCulture, out var all) ? all : null;
             var result = new List<RawJobObservation>();
             foreach (var item in items.EnumerateArray().Take(MaxResultsPerPage))
             {
                 result.Add(MapItem(item));
             }
-            return result;
+            return new JobSourcePage(result, total);
         }
-        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
+        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException or FormatException or ArgumentException or OverflowException)
         {
             throw new JobSourceUnavailableException("USAJOBS returned a payload this app does not understand.", ex);
         }

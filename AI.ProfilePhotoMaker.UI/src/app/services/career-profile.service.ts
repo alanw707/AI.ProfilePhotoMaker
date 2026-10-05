@@ -158,12 +158,7 @@ export interface CareerPhotoSelection {
   selectedAt: string;
 }
 export type CareerRunStatus =
-  | 'queued'
-  | 'working'
-  | 'needs_input'
-  | 'completed'
-  | 'failed'
-  | 'cancelled';
+  'queued' | 'working' | 'needs_input' | 'completed' | 'failed' | 'cancelled';
 export interface CareerRunStep {
   ordinal: number;
   kind: string;
@@ -184,10 +179,7 @@ export interface CareerRunQuestion {
   choices?: CareerRunChoice[];
 }
 export type CareerRunTask =
-  | 'profile_summary'
-  | 'occupation_match'
-  | 'market_brief'
-  | 'pay_analysis';
+  'profile_summary' | 'occupation_match' | 'market_brief' | 'pay_analysis';
 export interface CareerRunAllowance {
   used: number;
   reserved: number;
@@ -414,25 +406,30 @@ export interface JobObservationsQuery {
   q?: string;
 }
 export interface JobCoverageCounts {
+  fetched: number;
   matched: number;
   shown: number;
   duplicateIds: number;
   duplicateReposts: number;
   expired: number;
   remoteUnknownExcluded: number;
+  remoteIneligibleExcluded: number;
   otherLocationExcluded: number;
+  keywordExcluded: number;
+  remoteFilterExcluded: number;
+  cappedByLimit: number;
 }
 export interface JobCoverage {
   available: boolean;
-  reason: 'source_not_configured' | 'source_unavailable' | null;
+  reason: 'source_not_configured' | 'source_unavailable' | 'occupation_required' | null;
   sourceId: string;
   sourceName: string;
   coverage: string;
   attribution: string;
   sourceUrl: string;
   retrievedAt: string | null;
-  observedFrom: string | null;
-  observedTo: string | null;
+  postedFrom: string | null;
+  postedTo: string | null;
   counts: JobCoverageCounts;
 }
 export interface JobLocation {

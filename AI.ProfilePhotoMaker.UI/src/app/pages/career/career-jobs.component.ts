@@ -96,7 +96,7 @@ export class CareerJobsComponent implements OnInit {
       parts.push(`search: "${this.q()}"`);
     }
     if (this.eligibleOnly()) {
-      parts.push('remote-eligible only');
+      parts.push('only postings that state remote work');
     }
     if (this.remote() !== 'all') {
       parts.push(`remote: ${remoteText(this.remote() as 'eligible')}`);
