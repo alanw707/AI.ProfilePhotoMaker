@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import {
   CareerApiError,
+  CareerGoalDto,
   CareerPhotoList,
   CareerProfileService,
 } from '../../services/career-profile.service';
@@ -70,7 +71,7 @@ describe('CareerMaterialsComponent', () => {
 
   it('flags a changed goal only when the arriving goal differs', () => {
     api.listPhotos.and.returnValue(of(list));
-    api.getGoal.and.returnValue(of({ id: goalId } as never));
+    api.getGoal.and.returnValue(of({ id: goalId } as CareerGoalDto));
     expect(create('9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d').goalChanged()).toBeTrue();
     TestBed.resetTestingModule();
     expect(create(goalId).goalChanged()).toBeFalse();
