@@ -1,0 +1,256 @@
+<main class="career-page career-market">
+  <div class="career-sheet">
+    <p><a routerLink="/app/career">Back to career workspace</a></p>
+    <h1>Career market brief</h1>
+    <p>
+      Official U.S. statistics for your confirmed occupation, nationally and near your goal location. These are
+      occupational benchmarks, not open jobs or a personal salary prediction.
+    </p>
+
+    @if (occupationMissing()) {
+      <div class="caution" role="status" data-occupation-required>
+        <p>Confirm your occupation first.</p>
+        <a routerLink="/app/career/occupation">Confirm your occupation</a>
+      </div>
+    }
+
+    @if (error()) {
+      <p role="alert" class="caution" data-error>{{ error() }}</p>
+    }
+
+    @if (connectionLost()) {
+      <p class="caution" role="status" aria-live="polite" data-connection>Connection lost. Retrying…</p>
+    }
+
+    @if (run(); as r) {
+      @if (!brief()) {
+        <section aria-labelledby="run-heading" class="run-area">
+          <h2 id="run-heading">Brief status</h2>
+          <p class="status" role="status" aria-live="polite" data-run-status>{{ statusText() }}</p>
+          @if (r.steps.length) {
+            <ol class="run-steps" aria-label="Completed steps">
+              @for (step of r.steps; track step.ordinal) {
+                <li>{{ step.label }}</li>
+              }
+            </ol>
+          }
+          @if (r.status === 'cancelled') {
+            <p>Stopped. Nothing was saved.</p>
+          }
+          @if (r.status === 'failed') {
+            <p role="alert">We could not build your market brief. Nothing was saved.</p>
+            <div class="actions">
+              <button type="button" class="primary" (click)="start()" [disabled]="starting()">Try again</button>
+            </div>
+          }
+          <div class="actions">
+            @if (active()) {
+              <button type="button" class="secondary" (click)="cancel()" [disabled]="cancelling()">Cancel</button>
+            } @else if (r.status !== 'completed') {
+              <button type="button" class="secondary" (click)="startOver()">Back</button>
+            }
+          </div>
+        </section>
+      }
+    } @else if (loadingRun() || loadingBrief()) {
+      <p role="status">Loading your market brief…</p>
+    } @else if (!brief() && !occupationMissing()) {
+      <div class="actions">
+        <button type="button" class="primary" (click)="start()" [disabled]="starting()">Build my market brief</button>
+      </div>
+    }
+
+    @if (brief(); as b) {
+      <article class="market-brief" aria-labelledby="brief-heading" data-brief>
+        <section>
+          <h2 id="brief-heading">
+            {{ b.occupation.title }}
+            <span class="muted">({{ b.occupation.code }})</span>
+          </h2>
+          <p data-location>{{ locationText() }}</p>
+          <p class="muted">
+            Built {{ b.createdAt.slice(0, 10) }} from BLS wages {{ b.pinned.oewsRelease }} and projections
+            {{ b.pinned.projectionsRelease }}.
+          </p>
+          <div class="actions">
+            <button type="button" class="secondary" (click)="showAllSources()">Sources</button>
+          </div>
+        </section>
+
+        @if (b.stale) {
+          <div class="caution" role="status" data-stale>
+            <p>
+              Your goal or profile changed after this brief. It is kept as it was; build a new one for current inputs.
+            </p>
+            <button type="button" class="primary" (click)="start()" [disabled]="starting()">Build a new brief</button>
+          </div>
+        }
+        @if (b.dataStale) {
+          <p class="caution" role="status" data-data-stale>
+            Some of the official data is older than our freshness limit. Newer releases may exist.
+          </p>
+        }
+        @if (b.status === 'partial') {
+          <div class="caution" role="status" data-partial>
+            <p>Some sections could not be loaded. Completed sections are kept.</p>
+            <button type="button" class="primary" (click)="start()" [disabled]="starting()">Try again</button>
+          </div>
+        }
+
+        @for (section of b.sections; track section.key) {
+          <section [attr.aria-labelledby]="'section-' + section.key" [attr.data-section]="section.key">
+            <h2 [id]="'section-' + section.key">{{ section.title }}</h2>
+            <p class="muted">{{ section.note }}</p>
+            @if (section.figures.length) {
+              <p class="muted" data-as-of>{{ asOfText(section) }}</p>
+            }
+
+            @if (section.status !== 'complete') {
+              <p data-section-reason>{{ reasonText(section) }}</p>
+            }
+
+            @if (section.figures.length && (section.key === 'wages' || section.key === 'employment')) {
+              @let t = table(section);
+              <div class="market-table-wrap">
+                <table class="market-table">
+                  <caption>
+                    {{ section.title }}: {{ t.nationalTitle }}{{ t.localTitle ? ' and ' + t.localTitle : '' }}
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Measure</th>
+                      <th scope="col">National ({{ t.nationalTitle }})</th>
+                      @if (t.localTitle) {
+                        <th scope="col">Local ({{ localHeading(t.localTitle) }})</th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of t.rows; track row.key) {
+                      <tr>
+                        <th scope="row">{{ row.label }}</th>
+                        <td>
+                          @if (row.national; as f) {
+                            <span [attr.data-figure]="section.key + ':' + f.key + ':' + f.areaCode">
+                              {{ figureText(f) }}
+                            </span>
+                            <button type="button" class="source-link" (click)="showSource(f.sourceId)">Source</button>
+                          }
+                        </td>
+                        @if (t.localTitle) {
+                          <td>
+                            @if (row.local; as f) {
+                              <span [attr.data-figure]="section.key + ':' + f.key + ':' + f.areaCode">
+                                {{ figureText(f) }}
+                              </span>
+                              <button type="button" class="source-link" (click)="showSource(f.sourceId)">Source</button>
+                            }
+                          </td>
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else if (section.key === 'outlook' && section.figures.length) {
+              <dl class="market-list">
+                @for (f of section.figures; track f.key) {
+                  <dt>{{ f.label }}</dt>
+                  <dd>
+                    <span [attr.data-figure]="section.key + ':' + f.key + ':' + f.areaCode">{{ figureText(f) }}</span>
+                    <button type="button" class="source-link" (click)="showSource(f.sourceId)">Source</button>
+                  </dd>
+                }
+              </dl>
+            }
+
+            @if (section.key === 'alternatives' && section.items.length) {
+              <ul class="market-items">
+                @for (item of section.items; track item.code) {
+                  <li class="market-item" [attr.data-alternative]="item.code">
+                    <h3>
+                      {{ item.title }}
+                      <span class="muted">({{ item.code }})</span>
+                    </h3>
+                    <dl class="market-list">
+                      @for (f of item.figures; track f.key + f.areaCode) {
+                        <dt>{{ f.label }}</dt>
+                        <dd>
+                          <span [attr.data-figure]="section.key + ':' + item.code + ':' + f.key + ':' + f.areaCode">
+                            {{ figureText(f) }}
+                          </span>
+                          <button type="button" class="source-link" (click)="showSource(f.sourceId)">Source</button>
+                        </dd>
+                      }
+                    </dl>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+        }
+
+        @if (b.nextAction; as next) {
+          <p data-next-action>
+            <a [routerLink]="next.route">{{ next.label }}</a>
+          </p>
+        }
+        <p class="muted" data-retention>
+          Briefs are kept with your career data while your account exists. A newer profile or goal never changes a saved
+          brief.
+        </p>
+      </article>
+    }
+
+    @if (recent().length) {
+      <section aria-labelledby="recent-heading">
+        <h2 id="recent-heading">Recent briefs</h2>
+        <ul class="history">
+          @for (item of recent(); track item.id) {
+            <li>
+              <button type="button" class="secondary" (click)="open(item.id)">
+                {{ item.occupationTitle }}{{ item.areaTitle ? ' · ' + item.areaTitle : '' }} ·
+                {{ item.createdAt.slice(0, 10) }}
+              </button>
+              @if (item.stale) {
+                <span class="muted" data-stale-marker>Out of date</span>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+
+  <dialog #drawer class="source-drawer" aria-labelledby="drawer-heading">
+    <h2 id="drawer-heading">{{ drawerSources().length === 1 ? 'Source' : 'Sources' }}</h2>
+    @for (s of drawerSources(); track s.id) {
+      <section [attr.data-source]="s.id">
+        <h3>{{ s.name }}</h3>
+        <p>{{ s.publisher }} · Reference period {{ s.referencePeriod }} · Published {{ s.publishedOn }}</p>
+        <p>
+          <strong>Definition.</strong>
+          {{ s.definition }}
+        </p>
+        <p>
+          <strong>Coverage.</strong>
+          {{ s.coverage }}
+        </p>
+        <p>
+          <strong>License.</strong>
+          {{ s.license }}
+        </p>
+        <p>
+          <strong>Citation.</strong>
+          {{ s.citation }}
+        </p>
+        <p>
+          <a [href]="s.url" target="_blank" rel="noopener noreferrer">Data source</a>
+          ·
+          <a [href]="s.definitionsUrl" target="_blank" rel="noopener noreferrer">Definitions</a>
+        </p>
+      </section>
+    }
+    <button type="button" class="secondary" (click)="closeDrawer()">Close</button>
+  </dialog>
+</main>

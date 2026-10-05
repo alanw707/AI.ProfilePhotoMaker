@@ -46,6 +46,9 @@ public static class CareerOccupationErrorCodes
     public const string GoalRequired = "CareerGoalRequired";
     public const string MatchStale = "CareerMatchStale";
     public const string MatchNotConfirmable = "CareerMatchNotConfirmable";
+
+    /// <summary>A market brief needs a goal with a confirmed occupation (ADR 0011).</summary>
+    public const string OccupationRequired = "CareerOccupationRequired";
 }
 
 /// <summary>What a match stores in <c>ResultJson</c>; the status lives on the match row.</summary>

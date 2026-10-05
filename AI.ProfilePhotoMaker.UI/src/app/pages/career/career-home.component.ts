@@ -67,6 +67,9 @@ import {
         <a routerLink="/app/career/occupation">Confirm your occupation</a>
       </p>
       <p>
+        <a routerLink="/app/career/market">Analytics: market brief</a>
+      </p>
+      <p>
         <a routerLink="/app/career/materials">Materials and photo</a>
       </p>
       @if (error()) {

@@ -302,6 +302,7 @@ describe('CareerProfileService', () => {
       [409, 'CareerMatchStale', 'matchStale'],
       [409, 'CareerMatchNotConfirmable', 'notConfirmable'],
       [409, 'CareerGoalRequired', 'goalRequired'],
+      [409, 'CareerOccupationRequired', 'occupationRequired'],
       [412, 'CareerVersionConflict', 'conflict'],
       [503, 'CareerReferenceUnavailable', 'unavailable'],
     ];
@@ -361,6 +362,47 @@ describe('CareerProfileService', () => {
           .flush({ success: false, error: { code } }, { status, statusText: code });
       }
       expect(kinds).toEqual(['conflict', 'matchStale']);
+    });
+  });
+  describe('market briefs', () => {
+    it('starts a market_brief run', () => {
+      service.createRun('k', 'market_brief').subscribe();
+      const req = http.expectOne('/api/career/runs');
+      expect(req.request.body).toEqual({ task: 'market_brief' });
+      expect(req.request.headers.get('Idempotency-Key')).toBe('k');
+      req.flush({ success: true, data: { id: 'r1', marketBriefId: 'b1' } });
+    });
+    it('lists and reads briefs and the reference', () => {
+      service.listMarketBriefs().subscribe(r => expect(r.briefs.length).toBe(1));
+      http
+        .expectOne('/api/career/market-briefs')
+        .flush({ success: true, data: { briefs: [{ id: 'b1' }] } });
+      service.getMarketBrief('b 1').subscribe(b => expect(b.id).toBe('b 1'));
+      http
+        .expectOne('/api/career/market-briefs/b%201')
+        .flush({ success: true, data: { id: 'b 1' } });
+      service.getMarketReference().subscribe(r => expect(r.areaCount).toBe(445));
+      http
+        .expectOne('/api/career/market/reference')
+        .flush({ success: true, data: { sources: [], areaCount: 445, occupationCount: 831 } });
+    });
+    it('maps a missing brief and an unavailable reference', () => {
+      const kinds: string[] = [];
+      service.getMarketBrief('x').subscribe({ error: e => kinds.push(e.kind) });
+      http
+        .expectOne('/api/career/market-briefs/x')
+        .flush(
+          { success: false, error: { code: 'CareerMarketBriefNotFound', message: 'm' } },
+          { status: 404, statusText: 'x' }
+        );
+      service.getMarketReference().subscribe({ error: e => kinds.push(e.kind) });
+      http
+        .expectOne('/api/career/market/reference')
+        .flush(
+          { success: false, error: { code: 'CareerReferenceUnavailable', message: 'm' } },
+          { status: 503, statusText: 'x' }
+        );
+      expect(kinds).toEqual(['notFound', 'unavailable']);
     });
   });
 });

@@ -442,3 +442,80 @@ button:disabled {
     margin-top: 20px;
   }
 }
+
+.career-page {
+  .market-brief h2 {
+    margin-top: 0;
+  }
+  .market-table-wrap {
+    overflow-x: auto;
+  }
+  .market-table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  .market-table caption {
+    text-align: left;
+    font-weight: 700;
+    padding-bottom: 6px;
+  }
+  .market-table th,
+  .market-table td {
+    border-top: 1px solid #d1d8d4;
+    padding: 8px 6px;
+    text-align: left;
+    vertical-align: top;
+  }
+  .market-table thead th {
+    border-top: 0;
+  }
+  .market-list {
+    margin: 0;
+  }
+  .market-list dt {
+    font-weight: 700;
+    margin-top: 10px;
+  }
+  .market-list dd {
+    margin: 0;
+  }
+  .source-link {
+    min-height: 32px;
+    margin-left: 8px;
+    font-size: 14px;
+  }
+  .market-item {
+    border-top: 1px solid #d1d8d4;
+    padding: 10px 0;
+  }
+  // A right-hand drawer: full height, scrolls inside, never pinned under the page header.
+  .source-drawer {
+    position: fixed;
+    inset: 0 0 0 auto;
+    margin: 0;
+    width: min(480px, 100vw);
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: auto;
+    border: 0;
+    border-left: 1px solid #d1d8d4;
+    border-radius: 0;
+    padding: 24px 20px;
+    color: #1b2c31;
+    background: #fffefa;
+  }
+  .source-drawer::backdrop {
+    background: rgb(27 44 49 / 55%);
+  }
+  .source-drawer section {
+    border: 0;
+    padding: 0;
+    margin: 0 0 16px;
+  }
+}
+.career-page .market-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}

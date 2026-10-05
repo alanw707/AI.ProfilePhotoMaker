@@ -48,6 +48,8 @@
     <Content Include="content\blog\**\*" CopyToOutputDirectory="PreserveNewest" />
     <!-- O*NET occupation snapshot (ADR 0010); the loader verifies its SHA-256. -->
     <EmbeddedResource Include="Data\Reference\onet-snapshot.json.gz" LogicalName="onet-snapshot.json.gz" />
+    <!-- BLS OEWS + Employment Projections snapshot (ADR 0011); the loader verifies its SHA-256. -->
+    <EmbeddedResource Include="Data\Reference\bls-snapshot.json.gz" LogicalName="bls-snapshot.json.gz" />
   </ItemGroup>
 
 </Project>

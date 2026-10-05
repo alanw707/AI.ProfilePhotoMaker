@@ -165,6 +165,19 @@ export const routes: Routes = [
         title: 'Confirm Your Occupation - AI Profile Photo Maker',
       },
       {
+        // The analytics view for this release is the market brief (national/local comparison);
+        // multi-market comparison arrives with #385.
+        path: 'career/analytics',
+        redirectTo: 'career/market',
+        pathMatch: 'full',
+      },
+      {
+        path: 'career/market',
+        canActivate: [careerWorkspaceGuard],
+        loadComponent: () => import('./pages/career/career-market.component').then(m => m.CareerMarketComponent),
+        title: 'Career Market Brief - AI Profile Photo Maker',
+      },
+      {
         path: 'career/materials',
         canActivate: [careerWorkspaceGuard],
         loadComponent: () => import('./pages/career/career-materials.component').then(m => m.CareerMaterialsComponent),

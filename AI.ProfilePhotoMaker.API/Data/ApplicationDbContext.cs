@@ -65,6 +65,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Models.Career.CareerAgentStep> CareerAgentSteps { get; set; }
     public virtual DbSet<Models.Career.CareerAllowance> CareerAllowances { get; set; }
     public virtual DbSet<Models.Career.CareerOccupationMatch> CareerOccupationMatches { get; set; }
+    public virtual DbSet<Models.Career.CareerMarketBrief> CareerMarketBriefs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -308,6 +309,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         match.HasIndex(m => m.RunId).IsUnique();
         match.HasIndex(m => new { m.OwnerId, m.CreatedAt });
         match.HasOne<ApplicationUser>().WithMany().HasForeignKey(m => m.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        // Market briefs (#382, ADR 0011). One per run; cascade from the user.
+        var brief = builder.Entity<Models.Career.CareerMarketBrief>();
+        brief.ToTable("CareerMarketBriefs");
+        brief.Property(b => b.OwnerId).HasMaxLength(450).IsRequired();
+        brief.Property(b => b.OccupationCode).HasMaxLength(10).IsRequired();
+        brief.Property(b => b.OccupationTitle).HasMaxLength(200).IsRequired();
+        brief.Property(b => b.OewsRelease).HasMaxLength(20);
+        brief.Property(b => b.ProjectionsRelease).HasMaxLength(20);
+        brief.Property(b => b.Status).HasMaxLength(16).IsRequired();
+        brief.HasIndex(b => b.RunId).IsUnique();
+        brief.HasIndex(b => new { b.OwnerId, b.CreatedAt });
+        brief.HasOne<ApplicationUser>().WithMany().HasForeignKey(b => b.OwnerId).OnDelete(DeleteBehavior.Cascade);
     }
 
     private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)

@@ -15,6 +15,7 @@ public static class CareerAgentTasks
 {
     public const string ProfileSummary = "profile_summary";
     public const string OccupationMatch = "occupation_match";
+    public const string MarketBrief = "market_brief";
 }
 
 public static class CareerStepKinds
@@ -35,6 +36,10 @@ public static class CareerStepNames
     public const string MatchOccupations = "match_occupations";
     public const string AskOccupation = "ask_occupation";
     public const string SaveMatch = "save_match";
+    public const string LookUpWages = "look_up_wages";
+    public const string LookUpOutlook = "look_up_outlook";
+    public const string CompareAlternatives = "compare_alternatives";
+    public const string SaveBrief = "save_brief";
 }
 
 /// <summary>
