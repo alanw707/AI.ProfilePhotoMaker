@@ -25,8 +25,6 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
 
     private const int MaxClaimTries = 3;
     private const int MaxSaveAttempts = 5;
-    // Seconds kept free between the end of a model call and the end of the lease.
-    private const int ModelTimeoutMarginSeconds = 5;
     private const int MaxSummaryLength = CareerInputValidator.MaxSummary;
 
     private readonly ApplicationDbContext _db;
@@ -270,6 +268,13 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             await RetryOrFailModelAsync(run, ct);
             return null;
         }
+        catch (CareerModelException ex) when (!ex.Retryable)
+        {
+            // Retrying cannot help (bad key, empty account, refusal): fail now.
+            _logger.LogWarning("Career run {RunId} model call failed permanently: {Code}", run.Id, ex.Code);
+            await FinishAsync(run, CareerRunStatus.Failed, CareerAgentErrorCodes.ModelFailed, ct);
+            return null;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Log the type only: provider messages can echo the prompt.
@@ -394,7 +399,7 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
 
     private DateTime Now() => _clock.GetUtcNow().UtcDateTime;
 
-    private TimeSpan ModelTimeout => TimeSpan.FromSeconds(Math.Max(1, _options.LeaseSeconds - ModelTimeoutMarginSeconds));
+    private TimeSpan ModelTimeout => CareerAgentOptions.ModelCallTimeoutFor(_options.LeaseSeconds);
 
     /// <summary>
     /// True when another worker claimed the run, another writer finished it, or the user

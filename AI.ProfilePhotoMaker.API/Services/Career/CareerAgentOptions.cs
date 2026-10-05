@@ -21,4 +21,11 @@ public sealed class CareerAgentOptions
 
     /// <summary>A question nobody answers within this time fails the run and releases its unit.</summary>
     public int QuestionExpiryHours { get; set; } = 72;
+
+    /// <summary>Seconds kept free between the end of a model call and the end of the lease.</summary>
+    public const int ModelCallMarginSeconds = 5;
+
+    /// <summary>How long one model call may take: inside the lease, so no second worker re-asks.</summary>
+    public static TimeSpan ModelCallTimeoutFor(int leaseSeconds) =>
+        TimeSpan.FromSeconds(Math.Max(1, leaseSeconds - ModelCallMarginSeconds));
 }

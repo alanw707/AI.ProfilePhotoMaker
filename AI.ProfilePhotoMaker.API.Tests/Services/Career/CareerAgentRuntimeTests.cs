@@ -407,6 +407,37 @@ public class CareerAgentRuntimeTests
         (allowance.Reserved, allowance.Used).Should().Be((0, 0));
     }
 
+    [Fact]
+    public async Task ANonRetryableModelErrorFailsTheRunWithoutRetrying()
+    {
+        await SeedProfileAsync();
+        var runId = await CreateRunAsync();
+        var model = new FatalModel();
+
+        (await RunOnceAsync(model)).Should().BeTrue();
+        _clock.Advance(TimeSpan.FromSeconds(_options.RetryBackoffSeconds * _options.MaxAttempts + 1));
+        (await RunOnceAsync(model)).Should().BeFalse();
+
+        var run = await LoadRunAsync(runId);
+        (run.Status, run.ErrorCode).Should().Be((CareerRunStatus.Failed, "CareerModelFailed"));
+        model.Calls.Should().Be(1);
+        // The call was made, so the reserved unit is spent, never left reserved.
+        var allowance = await AllowanceAsync();
+        (allowance.Reserved, allowance.Used).Should().Be((0, 1));
+    }
+
+    [Fact]
+    public async Task ARetryableModelErrorIsRetried()
+    {
+        await SeedProfileAsync();
+        var runId = await CreateRunAsync();
+        var model = new FatalModel { Retryable = true };
+
+        await RunOnceAsync(model);
+
+        (await LoadRunAsync(runId)).Status.Should().Be(CareerRunStatus.Queued);
+    }
+
     // ---- Tools, ceilings and failures ------------------------------------------
 
     [Fact]
@@ -741,6 +772,18 @@ public class CareerAgentRuntimeTests
                 throw;
             }
             return CareerModelResult.Text("too late", usageTokens: 1, costCents: 0);
+        }
+    }
+
+    private sealed class FatalModel : ICareerTextModel
+    {
+        public bool Retryable { get; init; }
+        public int Calls { get; private set; }
+
+        public Task<CareerModelResult> CompleteAsync(CareerModelRequest request, CancellationToken ct = default)
+        {
+            Calls++;
+            throw new CareerModelException("invalid_api_key", Retryable, 401);
         }
     }
 
