@@ -18,6 +18,7 @@ import io
 import json
 import os
 import sys
+from collections import Counter
 import zipfile
 
 import openpyxl
@@ -107,11 +108,12 @@ def projections(xlsx):
 def crosswalk(onet_codes, available):
     """O*NET-SOC code -> published code: exact SOC detailed, else the SOC broad group."""
     result = {}
+    counts = Counter(code[:7] for code in onet_codes)
     for code in onet_codes:
         soc = code[:7]
         broad = soc[:6] + "0"
         if soc in available:
-            result[code] = {"code": soc, "match": "exact"}
+            result[code] = {"code": soc, "match": "shared" if counts[soc] > 1 else "exact"}
         elif broad in available:
             result[code] = {"code": broad, "match": "broad"}
     return result

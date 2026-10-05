@@ -42,6 +42,7 @@ API fixtures (`MarketBriefBuilderTests`, `MarketReferenceTests`, `MarketAreaReso
 | R8 | Standards | P3 | Rapid brief switching could show an older response. | Fixed: brief loading uses `switchMap`. |
 | R9 | Standards | P3 | Corrupt stored JSON → 500; replayed null step stalls until lease expiry; first snapshot load on a request thread; free runs still need allowance headroom. | Accepted for this slice (rows written only by the runner; consistent with occupation_match). |
 | R10 | Spec | P3 | Export of briefs. | Owned by #392. |
+| R11 | Both | P1 | Shared published SOC estimates were marked exact and undisclosed (including related occupations); related occupations lacked their own as-of/coverage line. | Fixed: deterministic shared crosswalk, published code/title mapping notes for primary and related occupations, and related as-of/coverage from both item sources; automated tests added. Live-review rerun and screenshot refresh follow branch merge. |
 
 Live review rerun after the fixes: 28 figures checked, 0 mismatches; 0 overflow / axe / page errors.
 

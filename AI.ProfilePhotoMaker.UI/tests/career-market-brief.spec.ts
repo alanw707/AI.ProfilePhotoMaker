@@ -102,8 +102,18 @@ const alternatives: MarketSection = {
     {
       code: '15-1211.00',
       title: 'Computer Systems Analysts',
+      note: null,
       figures: [fig('medianAnnual', 'Median annual wage', 103800, 'usd_per_year')],
-    },
+    } as MarketSection['items'][number] & { note: string | null },
+    {
+      code: '15-1299.08',
+      title: 'Computer Systems Engineers/Architects',
+      note: ' BLS publishes one estimate for 15-1299 Computer Occupations, All Other, which covers this occupation together with other detailed occupations.',
+      figures: [
+        fig('medianAnnual', 'Median annual wage', 116580, 'usd_per_year'),
+        fig('changePercent', 'Projected change', 5.1, 'percent', NAT, 'available', 'projections'),
+      ],
+    } as MarketSection['items'][number] & { note: string | null },
   ],
 };
 const sources = [
@@ -342,6 +352,22 @@ test('starts a run, shows real steps, then the saved brief with every figure for
   await expect(table.getByRole('columnheader', { name: 'Measure' })).toBeVisible();
   await expect(table.getByRole('columnheader', { name: `Local (${DEN.areaTitle})` })).toBeVisible();
   await expect(page.getByText('Recent briefs')).toBeVisible();
+});
+
+test('related occupations disclose shared mapping and both sources with coverage', async ({
+  page,
+}) => {
+  await mockBackend(page);
+  await open(page, `&brief=${BRIEF_ID}`);
+  const related = page.locator('[data-section="alternatives"]');
+  await expect(related.locator('[data-alternative="15-1299.08"] [data-mapping-note]')).toHaveText(
+    'BLS publishes one estimate for 15-1299 Computer Occupations, All Other, which covers this occupation together with other detailed occupations.'
+  );
+  await expect(related.locator('[data-as-of]')).toContainText('As of May 2025');
+  await expect(related.locator('[data-as-of]')).toContainText('As of 2025-2035');
+  await expect(related.locator('[data-as-of]')).toContainText(`Coverage: ${sources[0].coverage}`);
+  await expect(related.locator('[data-as-of]')).toContainText(`Coverage: ${sources[1].coverage}`);
+  await expectAllFigures(page, briefDto());
 });
 
 test('source drawer shows the citation and closes with Escape', async ({ page }) => {

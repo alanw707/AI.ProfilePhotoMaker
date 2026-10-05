@@ -159,6 +159,36 @@ public class MarketBriefBuilderTests
     }
 
     [Fact]
+    public void SharedAlternativeNamesThePublishedGroupWithoutChangingFigures()
+    {
+        var item = Section(Brief(alternatives: new[] { new MarketAlternative("15-1299.08", "Computer Systems Engineers/Architects") }), "alternatives")
+            .Items.Single();
+
+        item.Note.Should().Be(" BLS publishes one estimate for 15-1299 Computer Occupations, All Other, which covers this occupation together with other detailed occupations.");
+        Number(item.Figures.Single(f => f.Key == "medianAnnual")).Should().Be(116580);
+        Number(item.Figures.Single(f => f.Key == "changePercent")).Should().Be(5.1);
+    }
+
+    [Fact]
+    public void SharedPrimaryOccupationDisclosesThePublishedGroup()
+    {
+        var brief = Brief("15-1299.08");
+
+        brief.Occupation.Published.Oews.Should().Be(new MarketCodeDto("15-1299", "shared"));
+        Section(brief, "wages").Note.Should().Contain("BLS publishes one estimate for 15-1299 Computer Occupations, All Other, which covers this occupation together with other detailed occupations.");
+        Section(brief, "outlook").Note.Should().Contain("15-1299 Computer Occupations, All Other");
+    }
+
+    [Fact]
+    public void ExactMappingsHaveNoMappingNote()
+    {
+        var brief = Brief(alternatives: new[] { new MarketAlternative("15-1252.00", "Software Developers") });
+
+        brief.Sections.Where(s => s.Key != "alternatives").Should().OnlyContain(s => !s.Note.Contains("BLS publishes"));
+        Section(brief, "alternatives").Items.Single().Note.Should().BeNull();
+    }
+
+    [Fact]
     public void NoAlternativesIsAnHonestUnavailableSection()
     {
         var alternatives = Section(Brief(), "alternatives");
@@ -225,7 +255,7 @@ public class MarketBriefBuilderTests
 
         brief.Occupation.Published.Oews.Should().Be(new MarketCodeDto("13-1020", "broad"));
         brief.Occupation.Published.Projections.Should().Be(new MarketCodeDto("13-1020", "broad"));
-        Section(brief, "wages").Note.Should().Contain("broader group 13-1020");
+        Section(brief, "wages").Note.Should().Contain("broader group 13-1020 Buyers and Purchasing Agents");
         Number(Figure(Section(brief, "wages"), "medianAnnual", "99")).Should()
             .Be(RawSnapshot.Cell("99", "13-1020", "A_MEDIAN")!.Value.GetDouble());
         Section(brief, "wages").Status.Should().Be("complete");

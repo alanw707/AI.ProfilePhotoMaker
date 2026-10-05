@@ -19,7 +19,7 @@ public sealed record MarketOccupationDto(string Code, string Title, MarketPublis
 public sealed record MarketFigureDto(
     string Key, string Label, object? Value, string Status, string Unit, string? AreaCode, string? AreaTitle, string SourceId);
 
-public sealed record MarketItemDto(string Code, string Title, IReadOnlyList<MarketFigureDto> Figures);
+public sealed record MarketItemDto(string Code, string Title, IReadOnlyList<MarketFigureDto> Figures, string? Note);
 
 public sealed record MarketSectionDto(
     string Key,

@@ -187,7 +187,7 @@ public static class MarketBriefBuilder
         var reason = location.Resolution == MarketResolutions.Unresolved ? MarketSectionStatuses.LocationUnresolved : null;
         return Section(
             key, title, reason == null ? MarketSectionStatuses.Complete : MarketSectionStatuses.Unavailable, reason,
-            note + BroadNote(published), figures);
+            note + MappingNote(published, oews.OccupationTitle(published.Code)), figures);
     }
 
     private static List<MarketFigureDto> WageFigures(OewsData oews, MarketArea area, MarketWageRow? row, IEnumerable<FigureSpec> specs) =>
@@ -239,7 +239,7 @@ public static class MarketBriefBuilder
             F("annualOpenings", "Average annual openings, 2025–35", row?.AnnualOpeningsThousands ?? MarketValue.NotPublished, "jobs_thousands"),
             TextFigure("typicalEducation", "Typical entry education", row?.TypicalEducation, row == null, national, projections.Source.Id)
         };
-        return Section(key, title, MarketSectionStatuses.Complete, null, note + BroadNote(published), figures);
+        return Section(key, title, MarketSectionStatuses.Complete, null, note + MappingNote(published, reference.Oews?.OccupationTitle(published.Code) ?? projections.OccupationTitle(published.Code)), figures);
     }
 
     // ---- Alternatives ------------------------------------------------------------
@@ -272,16 +272,21 @@ public static class MarketBriefBuilder
     private static MarketItemDto AlternativeItem(MarketAlternative alternative, OewsData oews, ProjectionsData projections)
     {
         var national = oews.Areas.First(a => a.Type == "national");
-        var wageSoc = oews.Crosswalk(alternative.Code)?.Code;
-        var wage = wageSoc == null ? null : oews.Wage(national.Code, wageSoc)?.MedianAnnual;
-        var projectionSoc = projections.Crosswalk(alternative.Code)?.Code;
-        var change = projectionSoc == null ? null : projections.Row(projectionSoc)?.ChangePercent;
+        var wageMapping = oews.Crosswalk(alternative.Code);
+        var wage = wageMapping == null ? null : oews.Wage(national.Code, wageMapping.Code)?.MedianAnnual;
+        var projectionMapping = projections.Crosswalk(alternative.Code);
+        var change = projectionMapping == null ? null : projections.Row(projectionMapping.Code)?.ChangePercent;
+        var mappingNote = wageMapping is { Match: not "exact" }
+            ? MappingNote(wageMapping, oews.OccupationTitle(wageMapping.Code))
+            : projectionMapping is { Match: not "exact" }
+                ? MappingNote(projectionMapping, projections.OccupationTitle(projectionMapping.Code))
+                : null;
 
         return new MarketItemDto(alternative.Code, alternative.Title, new[]
         {
             Figure("medianAnnual", "Median annual wage", wage ?? MarketValue.NotPublished, "usd_per_year", national.Code, national.Title, oews.Source.Id),
             Figure("changePercent", "Projected change, 2025–35", change ?? MarketValue.NotPublished, "percent", national.Code, national.Title, projections.Source.Id)
-        });
+        }, mappingNote);
     }
 
     // ---- Pieces ------------------------------------------------------------------
@@ -307,7 +312,11 @@ public static class MarketBriefBuilder
     private static MarketSectionDto Failed(string key, string title, string note) =>
         Section(key, title, MarketSectionStatuses.Failed, CareerAgentErrorCodes.ReferenceUnavailable, note, Array.Empty<MarketFigureDto>());
 
-    /// <summary>BLS publishes some occupations only as a group; say so instead of implying a detailed figure.</summary>
-    private static string BroadNote(MarketCrosswalkEntry entry) =>
-        entry.Match == "broad" ? $" BLS publishes this occupation only as the broader group {entry.Code}." : string.Empty;
+    /// <summary>Name the published group when its estimate is not unique to the detailed occupation.</summary>
+    private static string MappingNote(MarketCrosswalkEntry entry, string? title) => entry.Match switch
+    {
+        "broad" => $" BLS publishes this occupation only as the broader group {entry.Code} {title}.",
+        "shared" => $" BLS publishes one estimate for {entry.Code} {title}, which covers this occupation together with other detailed occupations.",
+        _ => string.Empty
+    };
 }

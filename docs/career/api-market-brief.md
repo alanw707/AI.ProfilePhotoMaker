@@ -36,7 +36,7 @@ Same envelope, auth, flag (403 `CareerWorkspaceDisabled`) and error shape as `ap
           "unit": "usd_per_year | usd_per_hour | jobs | jobs_thousands | per_1000_jobs | ratio | percent | percent_rse | text",
           "areaCode": "99", "areaTitle": "U.S.", "sourceId": "oews" }
       ],
-      "items": []                                    // alternatives only: [{ code, title, figures: [...] }]
+      "items": []                                    // alternatives only: [{ code, title, note: string | null, figures: [...] }]
     }
   ],
   "nextAction": { "label": "Check your target occupation", "route": "/app/career/occupation" },
@@ -48,6 +48,8 @@ Same envelope, auth, flag (403 `CareerWorkspaceDisabled`) and error shape as `ap
   "createdAt": "…"
 }
 ```
+
+Published `match` is `exact` (one O*NET occupation per published SOC code), `shared` (multiple detailed O*NET occupations use one published SOC estimate), or `broad` (fallback to a published SOC broad group). Broad and shared mappings name the published code and title in the section note (or each related occupation item's nullable `note`); exact mappings add no mapping note. Related occupations cite both sources in their figures and show their own as-of and coverage line.
 
 `not_published` also covers wages outside the occupation's published pay basis (annual-only or hourly-only occupations). `value` is null unless `status` is `available` (`top_coded` carries the top code with unit). Wages section figures (per area, national first then local): `medianAnnual`, `pct10Annual`, `pct25Annual`, `pct75Annual`, `pct90Annual`, `meanAnnual`, `medianHourly`, `meanPrse`; local also `medianDifferenceAnnual` (local median − national median, dollars; only when both are available). Employment: `employment`, `employmentPrse`, and for local `jobsPer1000`, `locationQuotient`. Outlook: `employment2025`, `employment2035`, `changePercent`, `annualOpenings` (thousands), `typicalEducation` (text).
 

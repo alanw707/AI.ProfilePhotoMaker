@@ -67,7 +67,8 @@ public class MarketReferenceTests
     [Fact]
     public void ShippedBytesMatchThePinnedHashAndLoadBothSources()
     {
-        Hash(ShippedBytes()).Should().Be(EmbeddedMarketReference.ExpectedSha256);
+        Hash(ShippedBytes()).Should().Be("54a8afa5edee78caeabe9682b500887d92e6b60cc304860f0d3b569232201f9d");
+        EmbeddedMarketReference.ExpectedSha256.Should().Be("54a8afa5edee78caeabe9682b500887d92e6b60cc304860f0d3b569232201f9d");
 
         var reference = new EmbeddedMarketReference();
 
@@ -192,6 +193,23 @@ public class MarketReferenceTests
         oews.Crosswalk("21-1011.00").Should().BeNull();
     }
 
+    [Theory]
+    [InlineData("oews")]
+    [InlineData("projections")]
+    public void SharedCrosswalkLoadsButUnknownMatchFailsOnlyItsSource(string source)
+    {
+        var snapshot = TinySnapshot();
+        snapshot["crosswalk"]![source]!["15-1252.00"]!["match"] = "shared";
+        var loaded = Load(snapshot);
+        (source == "oews" ? loaded.Oews?.Crosswalk("15-1252.00") : loaded.Projections?.Crosswalk("15-1252.00"))
+            .Should().Be(new MarketCrosswalkEntry("15-1252", "shared"));
+
+        snapshot["crosswalk"]![source]!["15-1252.00"]!["match"] = "unknown";
+        loaded = Load(snapshot);
+        (loaded.Oews == null).Should().Be(source == "oews");
+        (loaded.Projections == null).Should().Be(source == "projections");
+    }
+
     [Fact]
     public void CrosswalkTellsExactFromBroadAndUnmapped()
     {
@@ -199,6 +217,7 @@ public class MarketReferenceTests
 
         reference.Oews!.Crosswalk("15-1252.00").Should().Be(new MarketCrosswalkEntry("15-1252", "exact"));
         reference.Oews.Crosswalk("13-1021.00").Should().Be(new MarketCrosswalkEntry("13-1020", "broad"));
+        reference.Oews.Crosswalk("15-1299.08").Should().Be(new MarketCrosswalkEntry("15-1299", "shared"));
         reference.Oews.Crosswalk("21-1011.00").Should().BeNull();
         reference.Projections!.Crosswalk("21-1011.00").Should().BeNull();
     }

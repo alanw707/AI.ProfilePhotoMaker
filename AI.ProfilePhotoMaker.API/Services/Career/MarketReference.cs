@@ -25,7 +25,7 @@ public readonly record struct MarketValue(double? Number, MarketValueStatus Stat
 
 public sealed record MarketArea(string Code, string Title, string Type, string State);
 
-/// <summary>Where an O*NET code lands in a BLS table: the SOC code and whether it is the exact or the broad-group code.</summary>
+/// <summary>Where an O*NET code lands in a BLS table: exact, shared detailed code, or broad group.</summary>
 public sealed record MarketCrosswalkEntry(string Code, string Match);
 
 public sealed record MarketSource(
@@ -82,6 +82,7 @@ public sealed class OewsData
     internal const double HourlyOnly = 2;
 
     private readonly Dictionary<string, MarketArea> _areas;
+    private readonly Dictionary<string, string> _occupations;
     private readonly Dictionary<string, AreaRows> _rows;
     private readonly Dictionary<string, MarketCrosswalkEntry> _crosswalk;
     private readonly double _topCodeAnnual;
@@ -90,12 +91,13 @@ public sealed class OewsData
     internal sealed record AreaRows(string[] Socs, double[] Values);
 
     internal OewsData(
-        MarketSource source, IReadOnlyList<MarketArea> areas, int occupationCount, Dictionary<string, AreaRows> rows,
+        MarketSource source, IReadOnlyList<MarketArea> areas, Dictionary<string, string> occupations, Dictionary<string, AreaRows> rows,
         Dictionary<string, MarketCrosswalkEntry> crosswalk, double topCodeAnnual, double topCodeHourly)
     {
         Source = source;
         Areas = areas;
-        OccupationCount = occupationCount;
+        OccupationCount = occupations.Count;
+        _occupations = occupations;
         _areas = areas.ToDictionary(a => a.Code, StringComparer.Ordinal);
         _rows = rows;
         _crosswalk = crosswalk;
@@ -108,6 +110,8 @@ public sealed class OewsData
     public int OccupationCount { get; }
 
     public MarketArea? Area(string code) => _areas.GetValueOrDefault(code);
+
+    public string? OccupationTitle(string soc) => _occupations.GetValueOrDefault(soc);
 
     public MarketCrosswalkEntry? Crosswalk(string onetCode) => _crosswalk.GetValueOrDefault(onetCode);
 
@@ -178,6 +182,8 @@ public sealed class ProjectionsData
     public MarketCrosswalkEntry? Crosswalk(string onetCode) => _crosswalk.GetValueOrDefault(onetCode);
 
     public MarketProjectionRow? Row(string soc) => _rows.GetValueOrDefault(soc);
+
+    public string? OccupationTitle(string soc) => Row(soc)?.Title;
 }
 
 /// <summary>
@@ -198,7 +204,7 @@ public interface IMarketReference
 public sealed class EmbeddedMarketReference : IMarketReference
 {
     /// <summary>SHA-256 of Data/Reference/bls-snapshot.json.gz (OEWS May 2025 + projections 2025-35, ADR 0011).</summary>
-    public const string ExpectedSha256 = "542f51c0c76b59648728162d7f31185319601147143b1e913dfe576cac36f418";
+    public const string ExpectedSha256 = "54a8afa5edee78caeabe9682b500887d92e6b60cc304860f0d3b569232201f9d";
 
     public const string RequiredLicense = "Public domain (U.S. government work)";
 
@@ -315,7 +321,7 @@ public sealed class EmbeddedMarketReference : IMarketReference
         foreach (var entry in root.GetProperty("crosswalk").GetProperty(id).EnumerateObject())
         {
             var match = Text(entry.Value, "match");
-            if (match is not ("exact" or "broad"))
+            if (match is not ("exact" or "broad" or "shared"))
             {
                 throw new FormatException("Unknown crosswalk match.");
             }
@@ -367,7 +373,7 @@ public sealed class EmbeddedMarketReference : IMarketReference
             throw new InvalidOperationException("Areas are duplicated or the nation is missing.");
         }
 
-        var occupations = root.GetProperty("occupations").EnumerateObject().ToDictionary(o => o.Name, o => o.Name, StringComparer.Ordinal);
+        var occupations = root.GetProperty("occupations").EnumerateObject().ToDictionary(o => o.Name, o => o.Value.GetString()!, StringComparer.Ordinal);
         var rows = new Dictionary<string, OewsData.AreaRows>(StringComparer.Ordinal);
         foreach (var area in root.GetProperty("wages").EnumerateObject())
         {
@@ -375,11 +381,11 @@ public sealed class EmbeddedMarketReference : IMarketReference
             var values = new List<double>();
             foreach (var row in area.Value.EnumerateObject().OrderBy(r => r.Name, StringComparer.Ordinal))
             {
-                if (row.Value.GetArrayLength() != fields.Count || !occupations.TryGetValue(row.Name, out var soc))
+                if (row.Value.GetArrayLength() != fields.Count || !occupations.ContainsKey(row.Name))
                 {
                     throw new FormatException("A wage row does not match the columns or occupations.");
                 }
-                socs.Add(soc);
+                socs.Add(row.Name);
                 for (var f = 0; f < WageFields.Length; f++)
                 {
                     values.Add(PackCell(row.Value[columns[f]]));
@@ -395,7 +401,7 @@ public sealed class EmbeddedMarketReference : IMarketReference
             throw new InvalidOperationException("National wages are missing.");
         }
 
-        return new OewsData(source, areas, occupations.Count, rows, ReadCrosswalk(root, "oews"), topAnnual, topHourly);
+        return new OewsData(source, areas, occupations, rows, ReadCrosswalk(root, "oews"), topAnnual, topHourly);
     }
 
     /// <summary>A number, null, or a BLS status string, packed with the sentinels of <see cref="OewsData"/>.</summary>
