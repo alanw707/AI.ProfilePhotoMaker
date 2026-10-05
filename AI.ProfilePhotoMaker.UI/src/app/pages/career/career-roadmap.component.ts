@@ -30,6 +30,7 @@ import {
   pollRun,
   releaseStartKey,
   startKey,
+  runErrorMessage,
 } from './career-run';
 import { CareerRoadmapTrackingComponent } from './career-roadmap-tracking.component';
 import { dateText } from './market-format';
@@ -342,10 +343,6 @@ export class CareerRoadmapComponent implements OnInit {
       this.error.set('This roadmap was already accepted or dismissed.');
       return;
     }
-    this.error.set(
-      e.kind === 'notFound'
-        ? 'That roadmap no longer exists.'
-        : e.message || 'Something went wrong. Try again.'
-    );
+    this.error.set(e.kind === 'notFound' ? 'That roadmap no longer exists.' : runErrorMessage(e));
   }
 }
