@@ -88,7 +88,8 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         typeof(CareerMaterial),
         typeof(CareerMaterialVersion),
         typeof(CareerMaterialProposal),
-        typeof(CareerExport)
+        typeof(CareerExport),
+        typeof(CareerUsageEvent)
     };
 
     /// <summary>
@@ -99,7 +100,7 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
     internal static readonly IReadOnlyList<Type> PurgeOrder = new[]
     {
         typeof(CareerProfileVersion), typeof(CareerGoalVersion), typeof(CareerAgentStep), typeof(CareerAgentRun),
-        typeof(CareerAllowance), typeof(CareerOccupationMatch), typeof(CareerMarketBrief), typeof(CareerPayAnalysis),
+        typeof(CareerAllowance), typeof(CareerUsageEvent), typeof(CareerOccupationMatch), typeof(CareerMarketBrief), typeof(CareerPayAnalysis),
         typeof(CareerRoadmapTaskProgress), typeof(CareerExport), typeof(CareerMaterialProposal),
         typeof(CareerMaterialVersion), typeof(CareerMaterial), typeof(CareerRoadmapReplan), typeof(CareerRoadmap),
         typeof(CareerProfileProposalItem), typeof(CareerProfileProposal),

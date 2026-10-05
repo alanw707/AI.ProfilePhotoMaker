@@ -163,6 +163,9 @@ public sealed record CareerOutcome<T>(
     public static CareerOutcome<T> QuotaExceeded(string code, string message) =>
         new(CareerOutcomeKind.QuotaExceeded, ErrorCode: code, Message: message);
 
+    public static CareerOutcome<T> RateLimited(string code, string message, int retryAfterSeconds) =>
+        new(CareerOutcomeKind.QuotaExceeded, ErrorCode: code, Message: message, RetryAfterSeconds: retryAfterSeconds);
+
     public static CareerOutcome<T> Gone(string code, string message) =>
         new(CareerOutcomeKind.Gone, ErrorCode: code, Message: message);
 

@@ -24,7 +24,10 @@ public class CareerAgentFactory : CareerWorkspaceEnabledFactory
         base.ConfigureWebHost(builder);
         builder.ConfigureAppConfiguration(config => config.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["Career:Agent:MonthlyRunAllowance"] = MonthlyAllowance.ToString()
+            ["Career:Agent:MonthlyRunAllowance"] = MonthlyAllowance.ToString(),
+            // Existing suites start many runs for one user; the usage limits have their own tests (CareerUsageControlsTests).
+            ["Career:Usage:PerMinuteRunLimit"] = "1000",
+            ["Career:Usage:MaxConcurrentRunsPerUser"] = "1000"
         }));
         builder.ConfigureTestServices(services =>
         {

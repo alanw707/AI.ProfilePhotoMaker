@@ -963,6 +963,11 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         }
 
         CareerModelResult result;
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        // Cost ledger (ADR 0022): counts, cost and timing only; saved with the next write of this run.
+        void Record(string outcome, int tokens = 0, int cents = 0) => _db.CareerUsageEvents.Add(CareerUsage.Event(
+            run.OwnerId, run.Id, Models.Career.CareerUsageActions.ModelStep, outcome, Now(),
+            (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, model.GetType().Name, tokens, cents));
         // The call must finish well inside the lease, or another worker could claim the run
         // and ask the provider a second time.
         using var timeout = new CancellationTokenSource(ModelTimeout, _clock);
@@ -974,6 +979,7 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         catch (OperationCanceledException) when (timeout.IsCancellationRequested && !ct.IsCancellationRequested)
         {
             _logger.LogWarning("Career run {RunId} model call timed out", run.Id);
+            Record(Models.Career.CareerUsageOutcomes.Timeout);
             await RetryOrFailModelAsync(run, ct);
             return null;
         }
@@ -981,6 +987,7 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         {
             // A paid answer that could not be used still counts toward the cost ceiling.
             run.CostCents += ex.CostCents;
+            Record(Models.Career.CareerUsageOutcomes.Failed, 0, ex.CostCents);
             if (run.CostCents > _options.MaxCostCents)
             {
                 _logger.LogWarning("Career run {RunId} stopped by the cost ceiling after {Code}", run.Id, ex.Code);
@@ -1002,11 +1009,13 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         {
             // Log the type only: provider messages can echo the prompt.
             _logger.LogWarning("Career run {RunId} model call failed: {ExceptionType}", run.Id, ex.GetType().Name);
+            Record(Models.Career.CareerUsageOutcomes.Failed);
             await RetryOrFailModelAsync(run, ct);
             return null;
         }
 
         run.CostCents += result.CostCents;
+        Record(Models.Career.CareerUsageOutcomes.Ok, result.UsageTokens, result.CostCents);
 
         if (result.ToolCall != null)
         {

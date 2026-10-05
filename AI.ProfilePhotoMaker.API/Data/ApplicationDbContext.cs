@@ -64,6 +64,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Models.Career.CareerAgentRun> CareerAgentRuns { get; set; }
     public virtual DbSet<Models.Career.CareerAgentStep> CareerAgentSteps { get; set; }
     public virtual DbSet<Models.Career.CareerAllowance> CareerAllowances { get; set; }
+    public virtual DbSet<Models.Career.CareerUsageEvent> CareerUsageEvents { get; set; }
+    public virtual DbSet<Models.Career.CareerOperatorState> CareerOperatorStates { get; set; }
     public virtual DbSet<Models.Career.CareerOccupationMatch> CareerOccupationMatches { get; set; }
     public virtual DbSet<Models.Career.CareerMarketBrief> CareerMarketBriefs { get; set; }
     public virtual DbSet<Models.Career.CareerPayAnalysis> CareerPayAnalyses { get; set; }
@@ -310,6 +312,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         allowance.Property(a => a.Version).IsConcurrencyToken();
         allowance.HasIndex(a => new { a.OwnerId, a.PeriodStart }).IsUnique();
         allowance.HasOne<ApplicationUser>().WithMany().HasForeignKey(a => a.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        // Usage controls (#395, ADR 0022). Events are private (owner-keyed, cascade); operator state is not.
+        var usage = builder.Entity<Models.Career.CareerUsageEvent>();
+        usage.ToTable("CareerUsageEvents");
+        usage.Property(u => u.OwnerId).HasMaxLength(450).IsRequired();
+        usage.Property(u => u.Action).HasMaxLength(24).IsRequired();
+        usage.Property(u => u.Model).HasMaxLength(80);
+        usage.Property(u => u.Outcome).HasMaxLength(16).IsRequired();
+        usage.HasIndex(u => new { u.OwnerId, u.CreatedAt });
+        usage.HasIndex(u => u.CreatedAt);
+        usage.HasOne<ApplicationUser>().WithMany().HasForeignKey(u => u.OwnerId).OnDelete(DeleteBehavior.Cascade);
+        var operatorState = builder.Entity<Models.Career.CareerOperatorState>();
+        operatorState.ToTable("CareerOperatorStates");
+        operatorState.Property(o => o.Id).ValueGeneratedNever();
+        operatorState.Property(o => o.UpdatedBy).HasMaxLength(450);
 
         // Occupation matches (#381, ADR 0010). One per run; cascade from the user.
         var match = builder.Entity<Models.Career.CareerOccupationMatch>();
