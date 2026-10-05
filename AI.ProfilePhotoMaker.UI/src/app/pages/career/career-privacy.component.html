@@ -1,0 +1,151 @@
+<main class="career-page career-privacy">
+  <div class="career-sheet">
+    <p><a routerLink="/app/career">Back to career workspace</a></p>
+    <h1>Your career data</h1>
+    <p>See what we keep, take a copy, or delete it. You stay in control of your career data.</p>
+
+    <section aria-labelledby="retention-heading" data-retention>
+      <h2 id="retention-heading">What we keep and for how long</h2>
+      @if (retentionError()) {
+        <p class="caution" role="alert">{{ retentionError() }}</p>
+      } @else if (!retention()) {
+        <p role="status">Loading…</p>
+      } @else {
+        <div class="privacy-table-wrap">
+          <table class="privacy-table">
+            <caption class="sr-only">What we keep and for how long</caption>
+            <thead>
+              <tr>
+                <th scope="col">What</th>
+                <th scope="col">How long</th>
+                <th scope="col">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of retention()!.items; track item.key) {
+                <tr>
+                  <th scope="row">{{ item.label }}</th>
+                  <td>{{ item.retention }}</td>
+                  <td>{{ item.notes }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (retention()!.processors.length) {
+          <h3 id="processors-heading">Who processes your data</h3>
+          <ul aria-labelledby="processors-heading" data-processors>
+            @for (p of retention()!.processors; track p.name) {
+              <li>
+                <strong>{{ p.name }}</strong>
+                : {{ p.purpose }}
+              </li>
+            }
+          </ul>
+        }
+      }
+    </section>
+
+    <section aria-labelledby="export-heading">
+      <h2 id="export-heading">Download my career data</h2>
+      <p>Get everything in your career profile as one JSON file. Uploaded files are listed, not included.</p>
+      <button type="button" class="secondary" (click)="download()" [disabled]="downloading()">
+        Download my career data
+      </button>
+      @if (exportStatus()) {
+        <p role="status" data-export-status>{{ exportStatus() }}</p>
+      }
+      @if (exportError()) {
+        <p class="caution" role="alert">{{ exportError() }}</p>
+      }
+    </section>
+
+    <section aria-labelledby="delete-heading" data-deletion>
+      <h2 id="delete-heading">Delete my career data</h2>
+      <fieldset>
+        <legend>What do you want to delete?</legend>
+        <div class="choice">
+          <label>
+            <input
+              type="radio"
+              name="scope"
+              value="raw_documents"
+              [checked]="scope() === 'raw_documents'"
+              (change)="scope.set('raw_documents')" />
+            <span>Delete uploaded resume files only</span>
+          </label>
+          <p class="muted" id="scope-raw-help">
+            Removes the resume files you uploaded. Your career profile, goal and drafts stay.
+          </p>
+        </div>
+        <div class="choice">
+          <label>
+            <input
+              type="radio"
+              name="scope"
+              value="career_profile"
+              [checked]="scope() === 'career_profile'"
+              (change)="scope.set('career_profile')" />
+            <span>Delete my whole career profile</span>
+          </label>
+          <p class="muted" id="scope-all-help">
+            Removes your profile, goal, drafts, exports and uploaded resumes. This cannot be undone.
+          </p>
+        </div>
+      </fieldset>
+      <p class="muted">
+        Your photos, purchases and billing records are not affected. To delete your account, use
+        <a routerLink="/app/settings">account settings</a>
+        .
+      </p>
+      <button type="button" class="danger" (click)="ask()" [disabled]="!scope() || busy()">Delete…</button>
+
+      @if (reauth()) {
+        <p class="caution" role="alert" data-reauth>
+          For your safety, sign in again before deleting.
+          <a routerLink="/auth/login" [queryParams]="{ returnUrl: path }">Sign in again</a>
+        </p>
+      }
+      @if (deleteError()) {
+        <p class="caution" role="alert">{{ deleteError() }}</p>
+      }
+
+      <div aria-live="polite" data-deletion-status>
+        @if (statusText()) {
+          <p [class.caution]="state() === 'failed'">
+            <strong>{{ statusText() }}</strong>
+          </p>
+        }
+        @if (state() === 'failed') {
+          <button type="button" class="secondary" (click)="retry()" [disabled]="busy()">Retry</button>
+        }
+      </div>
+    </section>
+  </div>
+
+  <dialog #confirm class="privacy-dialog" aria-labelledby="privacy-confirm-heading" (close)="typed.set('')">
+    <h2 id="privacy-confirm-heading">
+      {{ scope() === 'career_profile' ? 'Delete your whole career profile?' : 'Delete uploaded resume files?' }}
+    </h2>
+    @if (scope() === 'career_profile') {
+      <p>
+        This removes your profile, goal, drafts and exports. Photos, purchases and billing records are not affected.
+      </p>
+      <label for="confirm-text">Type DELETE to confirm</label>
+      <input
+        id="confirm-text"
+        type="text"
+        autocomplete="off"
+        [value]="typed()"
+        (input)="typed.set($any($event.target).value)" />
+    } @else {
+      <p>This removes the resume files you uploaded. Your profile and drafts stay.</p>
+    }
+    <div class="actions">
+      <button type="button" class="secondary" (click)="cancel()">Cancel</button>
+      <button type="button" class="danger" (click)="confirmDelete()" [disabled]="!canConfirm()">
+        Delete permanently
+      </button>
+    </div>
+  </dialog>
+</main>

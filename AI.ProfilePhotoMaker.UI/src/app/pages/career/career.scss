@@ -1023,3 +1023,67 @@ button:disabled {
     margin-left: 8px;
   }
 }
+
+// Career privacy (#392).
+.career-page.career-privacy {
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .privacy-table-wrap {
+    overflow-x: auto;
+  }
+  .privacy-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .privacy-table th,
+  .privacy-table td {
+    text-align: left;
+    vertical-align: top;
+    padding: 8px;
+    border-bottom: 1px solid #5d7075;
+    overflow-wrap: anywhere;
+  }
+  fieldset {
+    min-width: 0;
+    margin: 0 0 12px;
+  }
+  .choice {
+    margin: 0 0 12px;
+  }
+  .choice label {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-weight: 700;
+  }
+  .choice input[type="radio"] {
+    width: 24px;
+    height: 24px;
+    flex: none;
+  }
+  .choice p {
+    margin: 4px 0 0 34px;
+  }
+  .privacy-dialog {
+    max-width: min(480px, calc(100vw - 24px));
+    color: #1b2c31;
+    background: #fffefa;
+    border: 1px solid #5d7075;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .privacy-dialog::backdrop {
+    background: rgb(27 44 49 / 55%);
+  }
+  .privacy-dialog input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 44px;
+  }
+}

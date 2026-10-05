@@ -90,6 +90,9 @@ import {
       <p>
         <a routerLink="/app/career/materials">Materials and photo</a>
       </p>
+      <p>
+        <a routerLink="/app/career/privacy">Privacy and your data</a>
+      </p>
       @if (error()) {
         <p role="alert">{{ error() }}</p>
       }
