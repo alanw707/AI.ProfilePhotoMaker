@@ -158,7 +158,12 @@ export interface CareerPhotoSelection {
   selectedAt: string;
 }
 export type CareerRunStatus =
-  'queued' | 'working' | 'needs_input' | 'completed' | 'failed' | 'cancelled';
+  | 'queued'
+  | 'working'
+  | 'needs_input'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
 export interface CareerRunStep {
   ordinal: number;
   kind: string;
@@ -179,7 +184,11 @@ export interface CareerRunQuestion {
   choices?: CareerRunChoice[];
 }
 export type CareerRunTask =
-  'profile_summary' | 'occupation_match' | 'market_brief' | 'pay_analysis' | 'roadmap';
+  | 'profile_summary'
+  | 'occupation_match'
+  | 'market_brief'
+  | 'pay_analysis'
+  | 'roadmap';
 export interface CareerRunAllowance {
   used: number;
   reserved: number;
@@ -624,6 +633,54 @@ export interface RoadmapDto {
   goalUnchanged?: boolean;
   createdAt?: string;
 }
+export type TaskStatus = 'not_started' | 'in_progress' | 'done' | 'blocked';
+export interface TaskProgress {
+  taskId: string;
+  title: string;
+  origin: 'generated' | 'human';
+  milestoneDay: 0 | 30 | 60 | 90;
+  dependsOn: string[];
+  status: TaskStatus;
+  effectiveStatus: TaskStatus;
+  blockedBy: string[];
+  effortHours: number | null;
+  outputNote: string | null;
+  linkedMaterialId: string | null;
+  linkedMaterialMissing: boolean;
+  help: string;
+  etag: string;
+}
+export interface RoadmapProgress {
+  roadmapId: string;
+  version: number;
+  tasks: TaskProgress[];
+}
+export interface TaskProgressUpdate {
+  status?: TaskStatus;
+  effortHours?: number;
+  outputNote?: string;
+  linkedMaterialId?: string | null;
+}
+export interface NewHumanTask {
+  title: string;
+  effortHours: number;
+  milestoneDay: number;
+  dependsOn: string[];
+}
+export interface ReplanChange {
+  id: string;
+  kind: 'added' | 'removed' | 'changed';
+  taskId: string;
+  title: string;
+  fields: { field: string; before: unknown; after: unknown }[];
+  rationale: string;
+}
+export interface ReplanDto {
+  id: string;
+  baseVersion: number;
+  changes: ReplanChange[];
+  preserved: { taskId: string; title: string; reason: 'done' | 'has_output' | 'human' }[];
+}
 export interface RoadmapSummary {
   id: string;
   version: number;
@@ -666,6 +723,9 @@ export interface CareerApiError {
     | 'occupationRequired'
     | 'roadmapCycle'
     | 'roadmapNotProposed'
+    | 'roadmapNotAccepted'
+    | 'replanStale'
+    | 'replanClosed'
     | 'metricUnsupported'
     | 'areaNotFound'
     | 'unknown';
@@ -769,6 +829,9 @@ export class CareerProfileService {
       CareerOccupationRequired: 'occupationRequired',
       CareerRoadmapCycle: 'roadmapCycle',
       CareerRoadmapNotProposed: 'roadmapNotProposed',
+      CareerRoadmapNotAccepted: 'roadmapNotAccepted',
+      CareerReplanStale: 'replanStale',
+      CareerReplanClosed: 'replanClosed',
       CareerMetricUnsupported: 'metricUnsupported',
       CareerAreaNotFound: 'areaNotFound',
       CareerReferenceUnavailable: 'unavailable',
@@ -986,6 +1049,37 @@ export class CareerProfileService {
       `roadmaps/${encodeURIComponent(id)}/tasks/${encodeURIComponent(taskId)}`,
       { effortHours }
     );
+  }
+  getProgress(id: string) {
+    return this.request<RoadmapProgress>('GET', `roadmaps/${encodeURIComponent(id)}/progress`);
+  }
+  /** Saves one task's progress; the task etag goes in If-Match so edits elsewhere are caught. */
+  updateTaskProgress(id: string, taskId: string, update: TaskProgressUpdate, etag: string) {
+    return this.request<TaskProgress>(
+      'PUT',
+      `roadmaps/${encodeURIComponent(id)}/progress/${encodeURIComponent(taskId)}`,
+      update,
+      undefined,
+      false,
+      { 'If-Match': etag }
+    );
+  }
+  addHumanTask(id: string, task: NewHumanTask) {
+    return this.request<TaskProgress>('POST', `roadmaps/${encodeURIComponent(id)}/tasks`, task);
+  }
+  replan(id: string) {
+    return this.request<ReplanDto>('POST', `roadmaps/${encodeURIComponent(id)}/replan`);
+  }
+  getReplan(replanId: string) {
+    return this.request<ReplanDto>('GET', `replans/${encodeURIComponent(replanId)}`);
+  }
+  applyReplan(replanId: string, acceptedChangeIds: string[]) {
+    return this.request<RoadmapDto>('POST', `replans/${encodeURIComponent(replanId)}/apply`, {
+      acceptedChangeIds,
+    });
+  }
+  rejectReplan(replanId: string) {
+    return this.request<unknown>('POST', `replans/${encodeURIComponent(replanId)}/reject`);
   }
 
   listMarketBriefs() {
