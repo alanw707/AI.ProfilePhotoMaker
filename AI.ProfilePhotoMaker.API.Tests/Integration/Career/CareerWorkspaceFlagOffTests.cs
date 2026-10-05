@@ -22,6 +22,7 @@ public class CareerWorkspaceFlagOffTests : IClassFixture<CustomWebApplicationFac
     public static TheoryData<string, string> CareerEndpoints => new()
     {
         { "GET", "/api/career/profile" },
+        { "GET", "/api/career/journey" },
         { "PUT", "/api/career/profile" },
         { "GET", "/api/career/profile/versions" },
         { "GET", "/api/career/profile/versions/1" },
