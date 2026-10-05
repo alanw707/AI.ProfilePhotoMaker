@@ -25,7 +25,7 @@ Employer-disclosed USD pay only, annual or hourly **with explicit annual hours**
 | Check | Result |
 |---|---|
 | Reference implementation `node --test research/comparable-pay/cohort.test.mjs` | 5 passed, 0 failed (unchanged) |
-| .NET suite `dotnet test --filter "FullyQualifiedName!~Performance"` | 902 passed, 1 skipped (live OpenAI), 0 failed |
+| .NET suite `dotnet test --filter "FullyQualifiedName!~Performance"` | 904 passed, 1 skipped (live OpenAI), 0 failed (re-run after the P1-fix commit added two tests) |
 | Release build `-warnaserror` | clean |
 | Pre-existing test files touched | none (only the new fixture, new test file and the test csproj) |
 | Fixture intervals asserted as literals in C# | software/Denver $110,300–$195,200; operations/Denver $84,300–$156,200; nursing/Seattle $97,300–$162,200 |
@@ -42,5 +42,6 @@ Employer-disclosed USD pay only, annual or hourly **with explicit annual hours**
 | 2 | P3 | The research rule was JavaScript-only, so production code could have drifted from the validated rule. | Addressed by porting it to `PayEvidenceRules` with the same reason strings, arithmetic and fixture numbers, cross-checked against the Node tests. |
 | 3 | P1 | (review) `Evaluate` took a caller-supplied `providerQualified` boolean, so a caller could report authorization while the gate rows said no provider passes. | Fixed: the decision is derived from the gate rows only (`PayGateDecision.PersonalizedAllowed` = every row Passed), the boolean is gone, and tests prove a covered cohort stays blocked under the current rows while an all-passed row set authorizes it. |
 | 4 | P3 | The old qualification test did not exercise that bypass. | Fixed: `AQualifiedCohortIsStillBlockedWhileTheProviderRightsAreUnverified` covers the covered-cohort case. |
+| 5 | P2 | (audit + review) `PayGateDecision` could still be built by a caller: `FromRows` was public and, after the first fix, the record still exposed a public constructor, so an all-passed decision could be fabricated even though `Evaluate` no longer takes a flag. | Fixed properly: the constructor and the factory are `internal` (tests reach them through `InternalsVisibleTo`), and `PayEvidenceGates.Current()` is the only way to obtain a decision outside the assembly, so authorization cannot be fabricated. |
 
 Open P0/P1: **none**.
