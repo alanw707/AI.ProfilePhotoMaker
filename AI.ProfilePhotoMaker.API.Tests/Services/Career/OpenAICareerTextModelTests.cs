@@ -197,16 +197,81 @@ public class OpenAICareerTextModelTests
     }
 
     [Theory]
-    [InlineData("incomplete")]
-    [InlineData("failed")]
-    public async Task AnUnfinishedResponseIsRetryable(string status)
+    [InlineData("incomplete", "content_filter", "response_incomplete", true)]
+    [InlineData("failed", null, "response_failed", true)]
+    [InlineData("in_progress", null, "response_in_progress", true)]
+    [InlineData("<script>Data analyst</script>", null, "response_unknown", true)]
+    // The same output limit applies on every retry, so retrying cannot help.
+    [InlineData("incomplete", "max_output_tokens", "output_limit", false)]
+    public async Task MapsUnfinishedResponses(string status, string? reason, string code, bool retryable)
     {
-        var body = new { status, output = Array.Empty<object>(), usage = new { input_tokens = 1, output_tokens = 0, total_tokens = 1 } };
+        var body = new
+        {
+            status,
+            incomplete_details = reason == null ? null : new { reason },
+            output = Array.Empty<object>(),
+            usage = new { input_tokens = 500_000, output_tokens = 0, total_tokens = 500_000 }
+        };
         var (model, _) = Create((_, _) => Task.FromResult(Json(HttpStatusCode.OK, body)));
 
         var error = (await model.Invoking(m => m.CompleteAsync(Request)).Should().ThrowAsync<CareerModelException>()).Which;
 
-        (error.Code, error.Retryable).Should().Be(($"response_{status}", true));
+        (error.Code, error.Retryable).Should().Be((code, retryable));
+        // A paid but unusable response still costs money: 500,000 input at $2/M = 100 cents.
+        error.CostCents.Should().Be(100);
+    }
+
+    [Fact]
+    public async Task UnusableOutputCarriesItsCost()
+    {
+        var (model, _) = Create((_, _) => Task.FromResult(Json(HttpStatusCode.OK,
+            Completed(new { type = "output_text", text = "not json" }, 500_000, 0))));
+
+        var error = (await model.Invoking(m => m.CompleteAsync(Request)).Should().ThrowAsync<CareerModelException>()).Which;
+
+        error.CostCents.Should().Be(100);
+    }
+
+    [Fact]
+    public async Task MissingUsageIsChargedConservativelyAtTheOutputLimit()
+    {
+        var body = new
+        {
+            status = "completed",
+            output = new object[] { new { type = "message", content = new[] { SummaryText("A summary.") } } }
+        };
+        var (model, _) = Create((_, _) => Task.FromResult(Json(HttpStatusCode.OK, body)));
+
+        var result = await model.CompleteAsync(Request);
+
+        // Never zero: at least the full output allowance (400 tokens at $8/M) plus the input.
+        result.CostCents.Should().BeGreaterThan(0);
+        result.UsageTokens.Should().BeGreaterThanOrEqualTo(400);
+    }
+
+    [Fact]
+    public async Task SendsAReasoningEffortOnlyWhenConfigured()
+    {
+        var (plain, plainHandler) = Create((_, _) => Task.FromResult(Json(HttpStatusCode.OK, Completed(SummaryText("A.")))));
+        await plain.CompleteAsync(Request);
+        using (var body = JsonDocument.Parse(plainHandler.Requests[0].Body))
+        {
+            body.RootElement.TryGetProperty("reasoning", out _).Should().BeFalse();
+        }
+
+        var handler = new StubHandler((_, _) => Task.FromResult(Json(HttpStatusCode.OK, Completed(SummaryText("A.")))));
+        var options = Options();
+        var reasoning = new OpenAICareerTextModel(new HttpClient(handler),
+            new OpenAICareerTextModelOptions
+            {
+                ApiKey = options.ApiKey, BaseUrl = options.BaseUrl, Model = options.Model,
+                InputUsdPerMillionTokens = 2, OutputUsdPerMillionTokens = 8, MaxOutputTokens = 400,
+                RequestTimeout = options.RequestTimeout, ReasoningEffort = "low"
+            },
+            NullLogger<OpenAICareerTextModel>.Instance);
+        await reasoning.CompleteAsync(Request);
+        using var sent = JsonDocument.Parse(handler.Requests[0].Body);
+        sent.RootElement.GetProperty("reasoning").GetProperty("effort").GetString().Should().Be("low");
     }
 
     // ---- Error mapping --------------------------------------------------------
@@ -304,7 +369,7 @@ public class OpenAICareerTextModelTests
     [InlineData("k", "m", "0.15", "0.6", true)]
     public void IsConfiguredOnlyWithKeyModelAndPrices(string key, string model, string input, string output, bool expected)
     {
-        var options = OpenAICareerTextModelOptions.FromConfiguration(Config(key, model, input, output), leaseSeconds: 30);
+        var options = OpenAICareerTextModelOptions.FromConfiguration(Config(key, model, input, output), leaseSeconds: 30, out _);
 
         (options != null).Should().Be(expected);
         if (options != null)
@@ -338,6 +403,37 @@ public class OpenAICareerTextModelTests
         {
             provider.GetService<ICareerTextModel>().Should().BeNull();
         }
+    }
+
+    [Fact]
+    public void ExplainsWhyAKeyAndModelWithoutPricesStayOff()
+    {
+        var options = OpenAICareerTextModelOptions.FromConfiguration(Config("sk-secret-value", "m", "", ""), leaseSeconds: 30, out var problem);
+
+        options.Should().BeNull();
+        problem.Should().Contain("InputUsdPerMillionTokens").And.NotContain("sk-secret-value");
+    }
+
+    [Fact]
+    public void NothingConfiguredIsNotAProblem()
+    {
+        OpenAICareerTextModelOptions.FromConfiguration(Config("", "", "", ""), leaseSeconds: 30, out var problem).Should().BeNull();
+        problem.Should().BeNull();
+    }
+
+    [Fact]
+    public void AHalfConfiguredModelRegistersAStartupWarning()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        var env = new Mock<IHostEnvironment>();
+        env.SetupGet(e => e.EnvironmentName).Returns("Production");
+
+        services.AddCareerTextModel(Config("k", "m", "", ""), env.Object);
+
+        using var provider = services.BuildServiceProvider();
+        provider.GetService<ICareerTextModel>().Should().BeNull();
+        provider.GetServices<IHostedService>().Should().ContainSingle(s => s is CareerTextModelConfigurationWarning);
     }
 
     private static IConfiguration Config(string key, string model, string input, string output) =>

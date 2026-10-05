@@ -268,11 +268,25 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             await RetryOrFailModelAsync(run, ct);
             return null;
         }
-        catch (CareerModelException ex) when (!ex.Retryable)
+        catch (CareerModelException ex)
         {
-            // Retrying cannot help (bad key, empty account, refusal): fail now.
-            _logger.LogWarning("Career run {RunId} model call failed permanently: {Code}", run.Id, ex.Code);
-            await FinishAsync(run, CareerRunStatus.Failed, CareerAgentErrorCodes.ModelFailed, ct);
+            // A paid answer that could not be used still counts toward the cost ceiling.
+            run.CostCents += ex.CostCents;
+            if (run.CostCents > _options.MaxCostCents)
+            {
+                _logger.LogWarning("Career run {RunId} stopped by the cost ceiling after {Code}", run.Id, ex.Code);
+                await FinishAsync(run, CareerRunStatus.Failed, CareerAgentErrorCodes.CostLimit, ct);
+                return null;
+            }
+            if (!ex.Retryable)
+            {
+                // Retrying cannot help (bad key, empty account, refusal, output limit): fail now.
+                _logger.LogWarning("Career run {RunId} model call failed permanently: {Code}", run.Id, ex.Code);
+                await FinishAsync(run, CareerRunStatus.Failed, CareerAgentErrorCodes.ModelFailed, ct);
+                return null;
+            }
+            _logger.LogWarning("Career run {RunId} model call failed, will retry: {Code}", run.Id, ex.Code);
+            await RetryOrFailModelAsync(run, ct);
             return null;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

@@ -438,6 +438,34 @@ public class CareerAgentRuntimeTests
         (await LoadRunAsync(runId)).Status.Should().Be(CareerRunStatus.Queued);
     }
 
+    [Fact]
+    public async Task UnusableButPaidModelResponsesCountTowardTheCostCeiling()
+    {
+        await SeedProfileAsync();
+        var runId = await CreateRunAsync();
+        var model = new FatalModel { Retryable = true, CostCents = _options.MaxCostCents + 1 };
+
+        await RunOnceAsync(model);
+
+        var run = await LoadRunAsync(runId);
+        (run.Status, run.ErrorCode).Should().Be((CareerRunStatus.Failed, "CareerCostLimit"));
+        run.CostCents.Should().Be(_options.MaxCostCents + 1);
+        model.Calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ARetryableFailureKeepsItsCostOnTheRun()
+    {
+        await SeedProfileAsync();
+        var runId = await CreateRunAsync();
+        var model = new FatalModel { Retryable = true, CostCents = 2 };
+
+        await RunOnceAsync(model);
+
+        var run = await LoadRunAsync(runId);
+        (run.Status, run.CostCents).Should().Be((CareerRunStatus.Queued, 2));
+    }
+
     // ---- Tools, ceilings and failures ------------------------------------------
 
     [Fact]
@@ -778,12 +806,13 @@ public class CareerAgentRuntimeTests
     private sealed class FatalModel : ICareerTextModel
     {
         public bool Retryable { get; init; }
+        public int CostCents { get; init; }
         public int Calls { get; private set; }
 
         public Task<CareerModelResult> CompleteAsync(CareerModelRequest request, CancellationToken ct = default)
         {
             Calls++;
-            throw new CareerModelException("invalid_api_key", Retryable, 401);
+            throw new CareerModelException("invalid_api_key", Retryable, 401, CostCents);
         }
     }
 

@@ -23,23 +23,54 @@ public sealed class OpenAICareerTextModelOptions
     public decimal OutputUsdPerMillionTokens { get; init; }
     public int MaxOutputTokens { get; init; } = DefaultMaxOutputTokens;
 
+    /// <summary>Sent as <c>reasoning.effort</c> only when set; leave empty for models without reasoning.</summary>
+    public string? ReasoningEffort { get; init; }
+
     /// <summary>Kept inside the run lease so no second worker can ask the provider again mid-call.</summary>
     public TimeSpan RequestTimeout { get; init; }
 
     /// <summary>
     /// Reads the settings, or returns null when the key, the model or either price is
     /// missing or invalid: without prices the cost ceiling could not be enforced.
+    /// <paramref name="problem"/> names the missing settings (never their values) when the
+    /// career model was partly configured, so the operator learns why it stayed off.
     /// </summary>
-    public static OpenAICareerTextModelOptions? FromConfiguration(IConfiguration configuration, int leaseSeconds)
+    public static OpenAICareerTextModelOptions? FromConfiguration(IConfiguration configuration, int leaseSeconds, out string? problem)
     {
+        const string modelKey = "Career:Agent:Model";
+        const string inputKey = "Career:Agent:InputUsdPerMillionTokens";
+        const string outputKey = "Career:Agent:OutputUsdPerMillionTokens";
+
         var apiKey = configuration["OpenAI:ApiKey"];
-        var model = configuration["Career:Agent:Model"];
-        var input = ParsePrice(configuration["Career:Agent:InputUsdPerMillionTokens"]);
-        var output = ParsePrice(configuration["Career:Agent:OutputUsdPerMillionTokens"]);
-        if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(model) || input == null || output == null)
+        var model = configuration[modelKey];
+        var input = ParsePrice(configuration[inputKey]);
+        var output = ParsePrice(configuration[outputKey]);
+
+        var missing = new List<string>();
+        if (string.IsNullOrWhiteSpace(apiKey)) missing.Add("OpenAI:ApiKey");
+        if (string.IsNullOrWhiteSpace(model)) missing.Add(modelKey);
+        if (input == null) missing.Add(inputKey);
+        if (output == null) missing.Add(outputKey);
+
+        if (missing.Count > 0)
         {
+            // The OpenAI key alone is normal (it serves the photo features); anything
+            // career-specific being set means someone meant to turn the model on.
+            var careerIntent = !string.IsNullOrWhiteSpace(model)
+                || !string.IsNullOrWhiteSpace(configuration[inputKey])
+                || !string.IsNullOrWhiteSpace(configuration[outputKey]);
+            problem = careerIntent
+                ? $"Career text model stays off: missing or invalid {string.Join(", ", missing)}."
+                : null;
             return null;
         }
+        if (apiKey is null || model is null || input is not { } inputPrice || output is not { } outputPrice)
+        {
+            // Unreachable: the checks above already returned. Keeps the null flow explicit.
+            problem = null;
+            return null;
+        }
+        problem = null;
 
         var baseUrl = configuration["OpenAI:BaseUrl"];
         baseUrl = string.IsNullOrWhiteSpace(baseUrl) ? DefaultBaseUrl : baseUrl.TrimEnd('/') + "/";
@@ -52,9 +83,12 @@ public sealed class OpenAICareerTextModelOptions
             ApiKey = apiKey.Trim(),
             BaseUrl = baseUrl,
             Model = model.Trim(),
-            InputUsdPerMillionTokens = input.Value,
-            OutputUsdPerMillionTokens = output.Value,
+            InputUsdPerMillionTokens = inputPrice,
+            OutputUsdPerMillionTokens = outputPrice,
             MaxOutputTokens = maxOutput,
+            ReasoningEffort = string.IsNullOrWhiteSpace(configuration["Career:Agent:ReasoningEffort"])
+                ? null
+                : configuration["Career:Agent:ReasoningEffort"]!.Trim(),
             RequestTimeout = CareerAgentOptions.ModelCallTimeoutFor(leaseSeconds)
         };
     }
@@ -82,6 +116,18 @@ public sealed class OpenAICareerTextModel : ICareerTextModel
         "Return JSON with a single \"summary\" string.";
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
+
+    // Request bodies leave out unset optional fields (for example reasoning).
+    private static readonly JsonSerializerOptions Body = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+    };
+
+    // Statuses the Responses API documents; anything else is logged as "unknown".
+    private static readonly HashSet<string> KnownStatuses = new(StringComparer.Ordinal)
+    {
+        "completed", "incomplete", "failed", "in_progress", "queued", "cancelled"
+    };
 
     private static readonly object OutputFormat = new
     {
@@ -115,42 +161,47 @@ public sealed class OpenAICareerTextModel : ICareerTextModel
             throw new CareerModelException("unsupported_task", retryable: false);
         }
 
+        var json = JsonSerializer.Serialize(BuildBody(request), Body);
         using var message = new HttpRequestMessage(HttpMethod.Post, _options.BaseUrl + "responses")
         {
-            Content = new StringContent(JsonSerializer.Serialize(BuildBody(request), Web), Encoding.UTF8, "application/json")
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
 
         using var timeout = new CancellationTokenSource(_options.RequestTimeout);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
 
-        HttpResponseMessage response;
-        string body;
+        HttpResponseMessage? response = null;
         try
         {
-            response = await _http.SendAsync(message, linked.Token);
-            body = await response.Content.ReadAsStringAsync(linked.Token);
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            // Our own deadline (or the client's), not the caller's: worth another try later.
-            _logger.LogWarning("Career model call timed out after {TimeoutSeconds}s", _options.RequestTimeout.TotalSeconds);
-            throw new CareerModelException("timeout", retryable: true);
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogWarning("Career model call failed before a response: {ErrorType}", ex.GetType().Name);
-            throw new CareerModelException("network", retryable: true);
-        }
+            string body;
+            try
+            {
+                response = await _http.SendAsync(message, linked.Token);
+                body = await response.Content.ReadAsStringAsync(linked.Token);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // Our own deadline, not the caller's: worth another try later.
+                _logger.LogWarning("Career model call timed out after {TimeoutSeconds}s", _options.RequestTimeout.TotalSeconds);
+                throw new CareerModelException("timeout", retryable: true);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning("Career model call failed before a response: {ErrorType}", ex.GetType().Name);
+                throw new CareerModelException("network", retryable: true);
+            }
 
-        using (response)
-        {
             var requestId = response.Headers.TryGetValues("x-request-id", out var ids) ? ids.FirstOrDefault() : null;
             if (!response.IsSuccessStatusCode)
             {
                 throw HttpFailure(response.StatusCode, body, requestId);
             }
-            return Parse(body, requestId);
+            return Parse(body, requestId, json.Length);
+        }
+        finally
+        {
+            response?.Dispose();
         }
     }
 
@@ -182,6 +233,7 @@ public sealed class OpenAICareerTextModel : ICareerTextModel
             }
         },
         max_output_tokens = _options.MaxOutputTokens,
+        reasoning = _options.ReasoningEffort == null ? null : new { effort = _options.ReasoningEffort },
         text = new { format = OutputFormat }
     };
 
@@ -215,7 +267,7 @@ public sealed class OpenAICareerTextModel : ICareerTextModel
         }
     }
 
-    private CareerModelResult Parse(string body, string? requestId)
+    private CareerModelResult Parse(string body, string? requestId, int requestChars)
     {
         JsonDocument document;
         try
@@ -224,20 +276,32 @@ public sealed class OpenAICareerTextModel : ICareerTextModel
         }
         catch (JsonException)
         {
-            throw Malformed(requestId);
+            throw Malformed(requestId, Usage(default, requestChars, requestId).CostCents);
         }
 
         using (document)
         {
             var root = document.RootElement;
-            var status = root.TryGetProperty("status", out var s) ? s.GetString() : null;
+            // Usage first: every failure below was still a paid call.
+            var (usageTokens, costCents) = Usage(root, requestChars, requestId);
+
+            var rawStatus = root.TryGetProperty("status", out var s) && s.ValueKind == JsonValueKind.String ? s.GetString() : null;
+            var status = rawStatus != null && KnownStatuses.Contains(rawStatus) ? rawStatus : "unknown";
             if (status != "completed")
             {
-                _logger.LogWarning("Career model response was {ResponseStatus} (request {RequestId})", status ?? "missing", requestId ?? "none");
-                throw new CareerModelException($"response_{status ?? "missing"}", retryable: true);
+                var reason = root.TryGetProperty("incomplete_details", out var details)
+                    && details.ValueKind == JsonValueKind.Object
+                    && details.TryGetProperty("reason", out var r)
+                    && r.ValueKind == JsonValueKind.String
+                        ? r.GetString()
+                        : null;
+                // The same output limit applies on every retry, so retrying cannot help.
+                var outputLimit = status == "incomplete" && reason == "max_output_tokens";
+                var code = outputLimit ? "output_limit" : $"response_{status}";
+                _logger.LogWarning("Career model response was {ResponseStatus} {Code} (request {RequestId})", status, code, requestId ?? "none");
+                throw new CareerModelException(code, retryable: !outputLimit, costCents: costCents);
             }
 
-            var (usageTokens, costCents) = Usage(root);
             var text = new StringBuilder();
             if (root.TryGetProperty("output", out var output) && output.ValueKind == JsonValueKind.Array)
             {
@@ -260,7 +324,7 @@ public sealed class OpenAICareerTextModel : ICareerTextModel
                         if (partType == "refusal")
                         {
                             _logger.LogWarning("Career model refused (request {RequestId})", requestId ?? "none");
-                            throw new CareerModelException("refusal", retryable: false);
+                            throw new CareerModelException("refusal", retryable: false, costCents: costCents);
                         }
                         if (partType == "output_text" && part.TryGetProperty("text", out var value))
                         {
@@ -273,7 +337,7 @@ public sealed class OpenAICareerTextModel : ICareerTextModel
             var summary = Summary(text.ToString());
             if (summary == null)
             {
-                throw Malformed(requestId);
+                throw Malformed(requestId, costCents);
             }
             return CareerModelResult.Text(summary, usageTokens, costCents);
         }
@@ -297,55 +361,36 @@ public sealed class OpenAICareerTextModel : ICareerTextModel
         }
     }
 
-    private (int UsageTokens, int CostCents) Usage(JsonElement root)
+    /// <summary>
+    /// Tokens and cost from the response's usage. When usage is missing the call is still
+    /// charged, conservatively: the request size as input (about 4 characters a token) and
+    /// the whole output allowance, so a silent provider can never slip past the cost ceiling.
+    /// </summary>
+    private (int UsageTokens, int CostCents) Usage(JsonElement root, int requestChars, string? requestId)
     {
-        if (!root.TryGetProperty("usage", out var usage) || usage.ValueKind != JsonValueKind.Object)
+        int input, output, total;
+        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("usage", out var usage) && usage.ValueKind == JsonValueKind.Object)
         {
-            return (0, 0);
+            input = usage.TryGetProperty("input_tokens", out var i) && i.TryGetInt32(out var iv) ? iv : 0;
+            output = usage.TryGetProperty("output_tokens", out var o) && o.TryGetInt32(out var ov) ? ov : 0;
+            total = usage.TryGetProperty("total_tokens", out var tt) && tt.TryGetInt32(out var tv) ? tv : input + output;
         }
-        var input = usage.TryGetProperty("input_tokens", out var i) && i.TryGetInt32(out var iv) ? iv : 0;
-        var output = usage.TryGetProperty("output_tokens", out var o) && o.TryGetInt32(out var ov) ? ov : 0;
-        var total = usage.TryGetProperty("total_tokens", out var tt) && tt.TryGetInt32(out var tv) ? tv : input + output;
+        else
+        {
+            _logger.LogWarning("Career model response had no usage; charging the estimate (request {RequestId})", requestId ?? "none");
+            input = (requestChars + 3) / 4;
+            output = _options.MaxOutputTokens;
+            total = input + output;
+        }
 
         var usd = (input * _options.InputUsdPerMillionTokens + output * _options.OutputUsdPerMillionTokens) / 1_000_000m;
         // Rounded up, so the cost ceiling is never under-counted.
         return (total, (int)Math.Ceiling(usd * 100m));
     }
 
-    private CareerModelException Malformed(string? requestId)
+    private CareerModelException Malformed(string? requestId, int costCents)
     {
         _logger.LogWarning("Career model output did not match the schema (request {RequestId})", requestId ?? "none");
-        return new CareerModelException("malformed_output", retryable: true);
-    }
-}
-
-/// <summary>Registers the career text model for the environment (ADR 0009).</summary>
-public static class CareerTextModelRegistration
-{
-    /// <summary>
-    /// A configured OpenAI model is used in every environment. Without one, Development,
-    /// LocalDev and Testing get the offline fake, and production registers nothing, so
-    /// starting a run answers 503 <c>CareerModelUnavailable</c>.
-    /// </summary>
-    public static IServiceCollection AddCareerTextModel(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
-    {
-        var leaseSeconds = int.TryParse(configuration[$"{CareerAgentOptions.SectionName}:LeaseSeconds"], NumberStyles.Integer, CultureInfo.InvariantCulture, out var lease)
-            ? lease
-            : new CareerAgentOptions().LeaseSeconds;
-        var options = OpenAICareerTextModelOptions.FromConfiguration(configuration, leaseSeconds);
-        if (options != null)
-        {
-            services.AddSingleton(options);
-            // The adapter applies its own timeout inside the lease.
-            services.AddHttpClient<OpenAICareerTextModel>(client => client.Timeout = Timeout.InfiniteTimeSpan);
-            services.AddTransient<ICareerTextModel>(sp => sp.GetRequiredService<OpenAICareerTextModel>());
-            return services;
-        }
-
-        if (environment.IsDevelopment() || environment.IsEnvironment("LocalDev") || environment.IsEnvironment("Testing"))
-        {
-            services.AddSingleton<ICareerTextModel, FakeCareerTextModel>();
-        }
-        return services;
+        return new CareerModelException("malformed_output", retryable: true, costCents: costCents);
     }
 }

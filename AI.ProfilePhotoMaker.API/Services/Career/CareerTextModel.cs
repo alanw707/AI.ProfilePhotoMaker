@@ -29,17 +29,21 @@ public sealed record CareerModelResult(string? FinalText, string? ToolCall, int 
 /// </summary>
 public sealed class CareerModelException : Exception
 {
-    public CareerModelException(string code, bool retryable, int? statusCode = null)
+    public CareerModelException(string code, bool retryable, int? statusCode = null, int costCents = 0)
         : base($"Career model call failed: {code}")
     {
         Code = code;
         Retryable = retryable;
         StatusCode = statusCode;
+        CostCents = costCents;
     }
 
     public string Code { get; }
     public bool Retryable { get; }
     public int? StatusCode { get; }
+
+    /// <summary>What the provider charged for an answer that could not be used.</summary>
+    public int CostCents { get; }
 }
 
 /// <summary>
