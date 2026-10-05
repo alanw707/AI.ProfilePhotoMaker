@@ -206,6 +206,13 @@ export const routes: Routes = [
         title: 'Career Roadmap - AI Profile Photo Maker',
       },
       {
+        path: 'career/resume',
+        canActivate: [careerWorkspaceGuard],
+        loadComponent: () =>
+          import('./pages/career/career-resume.component').then(m => m.CareerResumeComponent),
+        title: 'Targeted Resume - AI Profile Photo Maker',
+      },
+      {
         path: 'career/materials',
         canActivate: [careerWorkspaceGuard],
         loadComponent: () => import('./pages/career/career-materials.component').then(m => m.CareerMaterialsComponent),

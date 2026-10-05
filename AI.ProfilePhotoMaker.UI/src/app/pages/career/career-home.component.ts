@@ -79,6 +79,9 @@ import {
         <a routerLink="/app/career/roadmap">Career roadmap</a>
       </p>
       <p>
+        <a routerLink="/app/career/resume">Targeted resume</a>
+      </p>
+      <p>
         <a routerLink="/app/career/jobs">Open postings</a>
       </p>
       <p>

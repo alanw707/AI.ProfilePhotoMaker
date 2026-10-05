@@ -649,4 +649,69 @@ describe('CareerProfileService', () => {
       'precondition',
     ]);
   });
+
+  it('starts a targeted resume run with an optional material id', () => {
+    service.createRun('k1', 'targeted_resume').subscribe();
+    expect(http.expectOne('/api/career/runs').request.body).toEqual({ task: 'targeted_resume' });
+    service
+      .createRun('k2', 'targeted_resume', 'm1')
+      .subscribe(r => expect(r.materialId).toBe('m1'));
+    const req = http.expectOne('/api/career/runs');
+    expect(req.request.body).toEqual({ task: 'targeted_resume', materialId: 'm1' });
+    req.flush({ success: true, data: { id: 'run', materialId: 'm1' } });
+  });
+  it('saves, restores and applies resume changes with If-Match', () => {
+    const body = {
+      sections: [],
+      contact: { name: true, email: true, phone: false, location: false, links: false },
+    };
+    service.saveResume('m1', body, '"material-v1"').subscribe();
+    const put = http.expectOne('/api/career/materials/m1');
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.headers.get('If-Match')).toBe('"material-v1"');
+    put.flush({ success: true, data: { id: 'm1' } });
+    service.restoreResumeVersion('m1', 2, '"material-v3"').subscribe();
+    const restore = http.expectOne('/api/career/materials/m1/versions/2/restore');
+    expect(restore.request.headers.get('If-Match')).toBe('"material-v3"');
+    restore.flush({ success: true, data: { id: 'm1' } });
+    service.applyResumeProposal('m1', 'p1', ['c1'], '"material-v3"').subscribe();
+    const apply = http.expectOne('/api/career/materials/m1/proposals/p1/apply');
+    expect(apply.request.body).toEqual({ acceptedChangeIds: ['c1'] });
+    expect(apply.request.headers.get('If-Match')).toBe('"material-v3"');
+    apply.flush({ success: true, data: { id: 'm1' } });
+  });
+  it('lists materials, versions and proposals', () => {
+    service.listResumeMaterials().subscribe();
+    http
+      .expectOne('/api/career/materials?kind=resume')
+      .flush({ success: true, data: { materials: [] } });
+    service.listResumeVersions('m1').subscribe();
+    http
+      .expectOne('/api/career/materials/m1/versions?page=1')
+      .flush({ success: true, data: { versions: [], total: 0 } });
+    service.getResumeProposal('m1', 'p1').subscribe();
+    http
+      .expectOne('/api/career/materials/m1/proposals/p1')
+      .flush({ success: true, data: { id: 'p1' } });
+    service.rejectResumeProposal('m1', 'p1').subscribe();
+    http
+      .expectOne('/api/career/materials/m1/proposals/p1/reject')
+      .flush({ success: true, data: {} });
+  });
+  it('maps resume conflicts and preconditions', () => {
+    const cases: [number, string | undefined, string][] = [
+      [409, 'CareerResumeUnsupportedClaim', 'unsupportedClaim'],
+      [409, 'CareerOccupationRequired', 'occupationRequired'],
+      [412, undefined, 'conflict'],
+      [428, undefined, 'precondition'],
+    ];
+    for (const [status, code, kind] of cases) {
+      let got = '';
+      service.getResumeMaterial('m1').subscribe({ error: e => (got = e.kind) });
+      http
+        .expectOne('/api/career/materials/m1')
+        .flush({ success: false, error: { code, message: 'x' } }, { status, statusText: 'x' });
+      expect(got).toBe(kind);
+    }
+  });
 });
