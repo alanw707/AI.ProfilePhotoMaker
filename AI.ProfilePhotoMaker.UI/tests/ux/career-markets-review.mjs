@@ -215,6 +215,23 @@ const mobile320 = await page.evaluate(() => ({
 }));
 results.push({ label: 'mobile 320', ...mobile320 });
 
+// Formatted dates and no bare area codes anywhere on the page.
+const textChecks = await page.evaluate(() => {
+  const text = document.querySelector('main')?.innerText ?? '';
+  return {
+    isoDates: (text.match(/\d{4}-\d{2}-\d{2}/g) ?? []).slice(0, 3),
+    hasReadableDate: /15 May 2026/.test(text),
+    hasReadablePeriod: /May 2025/.test(text),
+  };
+});
+await page.goto(`${BASE}/app/career/markets?metric=median_wage&level=state&q=colo&areas=06`);
+await page.waitForTimeout(1500);
+const hiddenSelection = await page.evaluate(() => {
+  const text = document.querySelector('main')?.innerText ?? '';
+  return { mentionsNeutralPhrase: /not shown by the current filter/.test(text), showsBareCode: /\b06\b/.test(text) };
+});
+results.push({ label: 'dates and codes', ...textChecks, ...hiddenSelection });
+
 // Expired session.
 await context.clearCookies();
 await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });

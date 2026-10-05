@@ -73,7 +73,7 @@
     {
       "label": "missing cells",
       "patterns": 2,
-      "legendText": "Median annual wage by state Unit: U.S. dollars per year. Measure: BLS OEWS median annual wage. Reference period: May 2025, published 2026-05-15.  U.S. (national): $135,980 Highest fifth of ranked area"
+      "legendText": "Median annual wage by state Unit: U.S. dollars per year. Measure: BLS OEWS median annual wage. Reference period: May 2025, published 15 May 2026.  U.S. (national): $135,980 Highest fifth of ranked are"
     },
     {
       "label": "metro coverage",
@@ -179,6 +179,14 @@
       "listItems": 51,
       "tiles": 0,
       "overflow": 0
+    },
+    {
+      "label": "dates and codes",
+      "isoDates": [],
+      "hasReadableDate": true,
+      "hasReadablePeriod": true,
+      "mentionsNeutralPhrase": true,
+      "showsBareCode": false
     },
     {
       "label": "expired session",
