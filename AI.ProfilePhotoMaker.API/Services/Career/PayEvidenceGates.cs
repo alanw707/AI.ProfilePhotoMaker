@@ -14,7 +14,11 @@ public sealed record PayGateDecision(IReadOnlyList<PayGateRow> Rows)
 
     public IReadOnlyList<string> BlockedReasons => PersonalizedAllowed ? Array.Empty<string>() : new[] { PayEvidenceGates.RightsBlock };
 
-    public static PayGateDecision FromRows(IReadOnlyList<PayGateRow> rows) => new(rows);
+    /// <summary>
+    /// Builds a decision from gate rows. Internal on purpose: only the qualification itself (and
+    /// tests) may construct authorization, so no production caller can fabricate one.
+    /// </summary>
+    internal static PayGateDecision FromRows(IReadOnlyList<PayGateRow> rows) => new(rows);
 }
 
 /// <summary>Current provider qualification, not an authorization to display personalized pay (ADR 0012).</summary>
