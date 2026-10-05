@@ -1,4 +1,5 @@
 /* eslint-disable max-lines -- legacy workspace orchestration remains in one route component; state seams are covered by focused and E2E tests */
+import { CareerReturn, resolveCareerReturn } from '../../pages/career/career-return';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -135,6 +136,9 @@ interface PortraitStyleCard {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PhotoEnhancementComponent implements OnInit, OnDestroy {
+  /** Optional link back to the career workspace; null unless the URL carries a valid key. */
+  careerReturn: CareerReturn | null = null;
+  private careerReturnKey = '';
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild(TurnstileComponent) turnstile?: TurnstileComponent;
 
@@ -1296,6 +1300,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     }
 
     this._route.queryParamMap.subscribe(params => {
+      this.careerReturnKey = params.get('careerReturn') ?? '';
+      this.careerReturn = resolveCareerReturn(params.get('careerReturn'), params.get('careerGoal'));
       const upgraded = params.get('upgraded');
       const resumePreviewId = Number(params.get('resumePreviewId') ?? params.get('previewId'));
       const refineImageId = Number(params.get('refineImageId'));
@@ -2642,9 +2648,17 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         packageId: option.internalCreditPackageId,
         outcomePackage: option.code,
         previewId: this.previewCandidate?.processedImageId ?? null,
-        returnUrl: `/app/enhance?useCase=${this.selectedUseCaseCode}&previewId=${this.previewCandidate?.processedImageId ?? ''}`,
+        returnUrl: `/app/enhance?useCase=${this.selectedUseCaseCode}&previewId=${this.previewCandidate?.processedImageId ?? ''}${this.careerReturnQuery()}`,
       },
     });
+  }
+
+  /** Keeps the optional career back link alive through checkout (#391). */
+  private careerReturnQuery(): string {
+    if (!this.careerReturn) {
+      return '';
+    }
+    return `&careerReturn=${encodeURIComponent(this.careerReturnKey)}&careerGoal=${encodeURIComponent(this.careerReturn.goalId)}`;
   }
 
   private persistPreviewDraft(packageCode: string): void {
