@@ -6,10 +6,14 @@ import {
   CareerPhotoDto,
   CareerPhotoEntitlement,
   CareerProfileService,
+  ResumeMaterialSummary,
 } from '../../services/career-profile.service';
 import { careerHandoffQuery } from './career-return';
+import { clearStartKey, releaseStartKey, startKey } from './career-run';
+import { dateText } from './market-format';
 
 const MATERIALS_PATH = '/app/career/materials';
+const SUMMARY_KEY = 'career-materials-summary-start-key';
 
 @Component({
   standalone: true,
@@ -33,6 +37,10 @@ export class CareerMaterialsComponent implements OnInit {
   goalId = signal<string | null>(null);
   goalChanged = signal(false);
   saving = signal(false);
+  materials = signal<ResumeMaterialSummary[]>([]);
+  materialsLoading = signal(true);
+  materialsError = signal('');
+  drafting = signal(false);
   status = signal('');
   error = signal('');
 
@@ -54,6 +62,20 @@ export class CareerMaterialsComponent implements OnInit {
   );
 
   ngOnInit() {
+    this.api.listMaterials().subscribe({
+      next: list => {
+        this.materials.set(list.materials ?? []);
+        this.materialsLoading.set(false);
+      },
+      error: (e: CareerApiError) => {
+        this.materialsLoading.set(false);
+        if (e.kind === 'unauthorized' || e.kind === 'disabled') {
+          this.handle(e);
+        } else {
+          this.materialsError.set('We could not load your drafts. Try again later.');
+        }
+      },
+    });
     this.api.listPhotos().subscribe({
       next: list => {
         this.photos.set(list.photos);
@@ -78,6 +100,47 @@ export class CareerMaterialsComponent implements OnInit {
       error: (e: CareerApiError) => {
         if (e.kind !== 'notFound') {
           this.handle(e);
+        }
+      },
+    });
+  }
+
+  kindText(m: ResumeMaterialSummary): string {
+    return m.kind === 'summary' ? 'Professional summary' : 'Resume';
+  }
+  updatedText(m: ResumeMaterialSummary): string {
+    const text = dateText(String(m.updatedAt ?? '').slice(0, 10));
+    return /^\d{4}-\d{2}-\d{2}$/.test(text) ? 'Updated recently' : `Updated ${text}`;
+  }
+  openPath(m: ResumeMaterialSummary): string {
+    return m.kind === 'summary' ? '/app/career/summary-draft' : '/app/career/resume';
+  }
+
+  draftSummary() {
+    if (this.drafting()) {
+      return;
+    }
+    this.drafting.set(true);
+    this.materialsError.set('');
+    this.api.createRun(startKey(SUMMARY_KEY), 'professional_summary').subscribe({
+      next: run => {
+        this.drafting.set(false);
+        clearStartKey(SUMMARY_KEY);
+        this.router.navigate(['/app/career/summary-draft'], { queryParams: { run: run.id } });
+      },
+      error: (e: CareerApiError) => {
+        this.drafting.set(false);
+        releaseStartKey(SUMMARY_KEY, e);
+        if (e.kind === 'unauthorized' || e.kind === 'disabled') {
+          this.handle(e);
+        } else if (e.kind === 'allowance') {
+          this.materialsError.set(
+            'You have used this period’s drafting allowance, so we cannot draft a new summary now. You can still open, edit and download what you have.'
+          );
+        } else if (e.kind === 'profileRequired') {
+          this.materialsError.set('Add your profile first so we have facts to use.');
+        } else {
+          this.materialsError.set('We could not start your summary. Try again.');
         }
       },
     });

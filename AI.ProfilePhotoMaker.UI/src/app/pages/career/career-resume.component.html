@@ -1,11 +1,20 @@
 <main class="career-page career-resume">
   <div class="career-sheet">
     <p><a routerLink="/app/career">Back to career workspace</a></p>
-    <h1>Your targeted resume</h1>
-    <p>
-      A resume draft built only from facts in your confirmed profile and aimed at your career goal. You can edit every
-      line. Nothing is shared or sent anywhere.
-    </p>
+    <p><a routerLink="/app/career/materials">All career materials</a></p>
+    @if (isSummary()) {
+      <h1>Your professional summary</h1>
+      <p>
+        A short bio and a longer summary built only from facts in your confirmed profile. You can edit both. Copy them
+        to use where you like. Nothing is posted for you.
+      </p>
+    } @else {
+      <h1>Your targeted resume</h1>
+      <p>
+        A resume draft built only from facts in your confirmed profile and aimed at your career goal. You can edit every
+        line. Nothing is shared or sent anywhere.
+      </p>
+    }
     @if (occupationMissing()) {
       <div class="caution" role="status" data-occupation-required>
         <p>Confirm your occupation first.</p>
@@ -42,22 +51,25 @@
             </ol>
           }
           @if (r.status === 'failed') {
-            <p role="alert">We could not draft your resume.</p>
+            <p role="alert">We could not draft your {{ isSummary() ? 'summary' : 'resume' }}.</p>
             <button type="button" class="primary" (click)="start()">Try again</button>
           }
         </section>
       }
     } @else if (loading()) {
-      <p role="status">Loading your resume…</p>
+      <p role="status">Loading your {{ isSummary() ? 'summary' : 'resume' }}…</p>
     } @else if (!material() && !occupationMissing()) {
       <div class="actions">
-        <button type="button" class="primary" (click)="start()" [disabled]="starting()">Draft my resume</button>
+        <button type="button" class="primary" (click)="start()" [disabled]="starting()">
+          {{ isSummary() ? 'Draft my summary' : 'Draft my resume' }}
+        </button>
       </div>
     }
 
     @if (material(); as m) {
       <div class="resume-status">
         <p role="status" aria-live="polite" data-save-status>{{ status() }}</p>
+        <p class="visually-hidden" role="status" aria-live="polite" data-copy-status>{{ copied() }}</p>
         @if (notice()) {
           <p class="muted" role="status" data-notice>{{ notice() }}</p>
         }
@@ -74,7 +86,7 @@
 
       @if (conflict()) {
         <section class="caution conflict" aria-labelledby="conflict-heading" data-conflict>
-          <h2 id="conflict-heading">This resume changed elsewhere</h2>
+          <h2 id="conflict-heading">This {{ isSummary() ? 'summary' : 'resume' }} changed elsewhere</h2>
           <p>Your latest text is still here and has not been saved. Choose what to do.</p>
           <div class="actions">
             <button type="button" class="secondary" (click)="compare()">Compare with the latest</button>
@@ -100,36 +112,68 @@
       @for (s of sections(); track s.key) {
         <section class="resume-section" [attr.data-section]="s.key" [attr.aria-labelledby]="'h-' + s.key">
           <h2 [id]="'h-' + s.key">{{ sectionLabel(s.key) }}</h2>
-          @for (line of s.lines; track line.id; let i = $index) {
-            <div class="resume-line" [attr.data-line]="line.id">
-              <label [for]="'ln-' + line.id">{{ sectionLabel(s.key) }}, line {{ i + 1 }}</label>
-              <textarea
-                [id]="'ln-' + line.id"
-                rows="2"
-                [attr.maxlength]="maxLineLength"
-                [value]="line.text"
-                (input)="editLine(s.key, line.id, $any($event.target).value)"></textarea>
-              @if (line.origin === 'human') {
-                <p class="muted" data-origin>Your wording</p>
-              } @else if (basedOn(line.factIds)) {
-                <p class="muted" data-origin>Based on: {{ basedOn(line.factIds) }}</p>
-              }
-              <button
-                type="button"
-                class="secondary"
-                [attr.aria-label]="'Remove ' + sectionLabel(s.key) + ', line ' + (i + 1)"
-                (click)="removeLine(s.key, line.id)">
-                Remove line
+          @if (isSummary()) {
+            @for (line of s.lines.slice(0, 1); track line.id) {
+              <div class="resume-line" [attr.data-line]="line.id">
+                <label [for]="'ln-' + line.id">{{ sectionLabel(s.key) }}</label>
+                <textarea
+                  [id]="'ln-' + line.id"
+                  [rows]="s.key === 'long' ? 8 : 4"
+                  [attr.maxlength]="limit(s.key)"
+                  [attr.aria-describedby]="'count-' + line.id"
+                  [value]="line.text"
+                  (input)="editLine(s.key, line.id, $any($event.target).value)"></textarea>
+                <p class="muted" [id]="'count-' + line.id" data-counter>{{ counterText(s.key, line.text) }}</p>
+                @if (line.origin === 'human') {
+                  <p class="muted" data-origin>Your wording</p>
+                } @else if (basedOn(line.factIds)) {
+                  <p class="muted" data-origin>Based on: {{ basedOn(line.factIds) }}</p>
+                }
+                <button
+                  type="button"
+                  class="secondary"
+                  [attr.aria-label]="'Copy ' + sectionLabel(s.key).toLowerCase() + ' to clipboard'"
+                  (click)="copy(s.key, line.text)">
+                  Copy to clipboard
+                </button>
+              </div>
+            } @empty {
+              <button type="button" class="secondary" (click)="addLine(s.key)">
+                Write your {{ sectionLabel(s.key).toLowerCase() }}
               </button>
-            </div>
+            }
+          } @else {
+            @for (line of s.lines; track line.id; let i = $index) {
+              <div class="resume-line" [attr.data-line]="line.id">
+                <label [for]="'ln-' + line.id">{{ sectionLabel(s.key) }}, line {{ i + 1 }}</label>
+                <textarea
+                  [id]="'ln-' + line.id"
+                  rows="2"
+                  [attr.maxlength]="maxLineLength"
+                  [value]="line.text"
+                  (input)="editLine(s.key, line.id, $any($event.target).value)"></textarea>
+                @if (line.origin === 'human') {
+                  <p class="muted" data-origin>Your wording</p>
+                } @else if (basedOn(line.factIds)) {
+                  <p class="muted" data-origin>Based on: {{ basedOn(line.factIds) }}</p>
+                }
+                <button
+                  type="button"
+                  class="secondary"
+                  [attr.aria-label]="'Remove ' + sectionLabel(s.key) + ', line ' + (i + 1)"
+                  (click)="removeLine(s.key, line.id)">
+                  Remove line
+                </button>
+              </div>
+            }
+            <button type="button" class="secondary" (click)="addLine(s.key)">
+              Add a line to {{ sectionLabel(s.key) }}
+            </button>
           }
-          <button type="button" class="secondary" (click)="addLine(s.key)">
-            Add a line to {{ sectionLabel(s.key) }}
-          </button>
         </section>
       }
 
-      @if (m.questions.length) {
+      @if (m.questions.length && !isSummary()) {
         <section aria-labelledby="questions-heading" data-questions>
           <h2 id="questions-heading">Questions to strengthen your resume</h2>
           <p class="muted">These are not part of your resume. Answer one by adding your own line.</p>
@@ -153,7 +197,7 @@
       <section aria-labelledby="contact-heading" data-contact>
         <h2 id="contact-heading">Contact details</h2>
         <fieldset>
-          <legend>Include these on your resume</legend>
+          <legend>Include these in your file</legend>
           @for (f of contactFields; track f.key) {
             <label class="check">
               <input
@@ -164,12 +208,17 @@
             </label>
           }
         </fieldset>
-        <p class="muted">No photo is included on this resume.</p>
+        <p class="muted">No photo is included unless you ask for the separate photo PDF below.</p>
       </section>
+
+      <app-career-export-panel [materialId]="m.id" [currentVersion]="m.currentVersion" [versions]="versions()" />
 
       <section aria-labelledby="refresh-heading" data-refresh>
         <h2 id="refresh-heading">Refresh from my profile</h2>
-        <p>We re-check your resume against your profile and goal. You choose which changes to apply.</p>
+        <p>
+          We re-check your {{ isSummary() ? 'summary' : 'resume' }} against your profile and goal. You choose which
+          changes to apply.
+        </p>
         <button type="button" class="secondary" (click)="start(true)" [disabled]="starting() || active()">
           Refresh from my profile
         </button>
@@ -184,7 +233,7 @@
         }
         @if (proposal(); as p) {
           @if (!p.changes.length) {
-            <p role="status" data-no-changes>Your resume is still current.</p>
+            <p role="status" data-no-changes>Your {{ isSummary() ? 'summary' : 'resume' }} is still current.</p>
           } @else {
             <fieldset class="diff">
               <legend>Suggested changes</legend>

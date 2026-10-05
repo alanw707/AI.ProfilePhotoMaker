@@ -82,6 +82,9 @@ import {
         <a routerLink="/app/career/resume">Targeted resume</a>
       </p>
       <p>
+        <a routerLink="/app/career/summary-draft">Professional summary</a>
+      </p>
+      <p>
         <a routerLink="/app/career/jobs">Open postings</a>
       </p>
       <p>

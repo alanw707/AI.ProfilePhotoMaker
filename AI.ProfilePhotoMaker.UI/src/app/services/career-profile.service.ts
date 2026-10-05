@@ -158,7 +158,12 @@ export interface CareerPhotoSelection {
   selectedAt: string;
 }
 export type CareerRunStatus =
-  'queued' | 'working' | 'needs_input' | 'completed' | 'failed' | 'cancelled';
+  | 'queued'
+  | 'working'
+  | 'needs_input'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
 export interface CareerRunStep {
   ordinal: number;
   kind: string;
@@ -184,7 +189,8 @@ export type CareerRunTask =
   | 'market_brief'
   | 'pay_analysis'
   | 'roadmap'
-  | 'targeted_resume';
+  | 'targeted_resume'
+  | 'professional_summary';
 export interface CareerRunAllowance {
   used: number;
   reserved: number;
@@ -693,7 +699,24 @@ export interface PayRecomputeResult {
   differences: string[];
   sections: PaySection[];
 }
-export type ResumeSectionKey = 'headline' | 'summary' | 'experience_highlights' | 'skills';
+export type ResumeSectionKey =
+  | 'headline'
+  | 'summary'
+  | 'experience_highlights'
+  | 'skills'
+  | 'short'
+  | 'long';
+export type MaterialKind = 'resume' | 'summary';
+export type ExportFormat = 'pdf' | 'docx';
+export interface CareerExportDto {
+  id: string;
+  format: ExportFormat;
+  version: number;
+  includesPhoto: boolean;
+  fileName: string;
+  expiresAt: string;
+  downloadUrl: string;
+}
 export interface ResumeLine {
   id: string;
   text: string;
@@ -713,6 +736,7 @@ export interface ResumeContact {
 }
 export interface ResumeMaterialSummary {
   id: string;
+  kind?: MaterialKind;
   title: string;
   stale: boolean;
   currentVersion: number;
@@ -720,6 +744,7 @@ export interface ResumeMaterialSummary {
 }
 export interface ResumeMaterialDto {
   id: string;
+  kind?: MaterialKind;
   title: string;
   etag: string;
   currentVersion: number;
@@ -789,6 +814,8 @@ export interface CareerApiError {
     | 'roadmapCycle'
     | 'roadmapNotProposed'
     | 'roadmapNotAccepted'
+    | 'exportPhotoUnavailable'
+    | 'exportExpired'
     | 'replanStale'
     | 'replanClosed'
     | 'metricUnsupported'
@@ -878,6 +905,7 @@ export class CareerProfileService {
       415: 'unsupported',
       422: 'rejected',
       428: 'precondition',
+      410: 'exportExpired',
       503: 'scannerUnavailable',
     };
     const retryHeader = Number(error.headers?.get('Retry-After'));
@@ -901,6 +929,8 @@ export class CareerProfileService {
       CareerMetricUnsupported: 'metricUnsupported',
       CareerAreaNotFound: 'areaNotFound',
       CareerReferenceUnavailable: 'unavailable',
+      CareerExportPhotoUnavailable: 'exportPhotoUnavailable',
+      CareerExportExpired: 'exportExpired',
     };
     const kind = codeKinds[payload?.code ?? ''] ?? kinds[error.status] ?? 'unknown';
     return {
@@ -1151,6 +1181,34 @@ export class CareerProfileService {
 
   listResumeMaterials() {
     return this.request<{ materials: ResumeMaterialSummary[] }>('GET', 'materials?kind=resume');
+  }
+  listMaterials(kind?: MaterialKind) {
+    return this.request<{ materials: ResumeMaterialSummary[] }>(
+      'GET',
+      kind ? `materials?kind=${kind}` : 'materials'
+    );
+  }
+  createExport(
+    materialId: string,
+    body: { format: ExportFormat; version?: number; includePhoto?: boolean }
+  ) {
+    return this.request<CareerExportDto>(
+      'POST',
+      `materials/${encodeURIComponent(materialId)}/exports`,
+      body
+    );
+  }
+  listExports(materialId: string) {
+    return this.request<{ exports: CareerExportDto[] }>(
+      'GET',
+      `materials/${encodeURIComponent(materialId)}/exports`
+    );
+  }
+  /** The file bytes; the caller turns them into an object URL and clicks a link. */
+  downloadExport(id: string) {
+    return this.http
+      .get(this.url(`exports/${encodeURIComponent(id)}`), { responseType: 'blob' })
+      .pipe(catchError(error => throwError(() => this.mapError(error))));
   }
   getResumeMaterial(id: string) {
     return this.request<ResumeMaterialDto>('GET', `materials/${encodeURIComponent(id)}`);
