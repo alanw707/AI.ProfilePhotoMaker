@@ -1,0 +1,106 @@
+<section class="admin-shell">
+  <header class="admin-header">
+    <div>
+      <p class="admin-kicker">Career</p>
+      <h1>Career usage</h1>
+      <p class="admin-subtitle">Run counts, cost and speed. No personal details are shown.</p>
+    </div>
+  </header>
+
+  <nav class="admin-nav" aria-label="Admin sections">
+    <a routerLink="/admin/dashboard" routerLinkActive="is-active">Overview</a>
+    <a routerLink="/admin/product-health" routerLinkActive="is-active">Product Health</a>
+    <a routerLink="/admin/users" routerLinkActive="is-active">Users</a>
+    <a routerLink="/admin/coupons" routerLinkActive="is-active">Coupons</a>
+    <a routerLink="/admin/audit-log" routerLinkActive="is-active">Audit Log</a>
+    <a routerLink="/admin/campaigns" routerLinkActive="is-active">Campaigns</a>
+    <a routerLink="/admin/career-usage" routerLinkActive="is-active">Career usage</a>
+  </nav>
+
+  @if (error()) {
+    <p class="error-text" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p role="status">{{ notice() }}</p>
+  }
+
+  <section class="admin-panel" aria-labelledby="controls-heading">
+    <h2 id="controls-heading">Controls</h2>
+    @if (controls(); as c) {
+      @for (s of switches; track s.key) {
+        <p>
+          <label>
+            <input
+              type="checkbox"
+              role="switch"
+              [attr.data-switch]="s.key"
+              [checked]="c[s.key]"
+              (click)="$event.preventDefault(); request(s.key)" />
+            {{ s.label }}
+          </label>
+          — {{ c[s.key] ? s.on : 'On.' }}
+        </p>
+      }
+      @if (c.updatedAt) {
+        <p>Last changed {{ c.updatedAt | date: 'medium' }}.</p>
+      }
+      @if (pending()) {
+        <div role="alertdialog" aria-labelledby="confirm-text" data-confirm>
+          <p id="confirm-text">{{ pendingText() }}</p>
+          <button class="btn btn-primary" type="button" [disabled]="saving()" (click)="confirm()">Confirm</button>
+          <button class="btn btn-ghost" type="button" (click)="cancel()">Cancel</button>
+        </div>
+      }
+    }
+  </section>
+
+  @if (usage(); as u) {
+    <section class="admin-panel" aria-labelledby="usage-heading">
+      <h2 id="usage-heading">Usage by action</h2>
+      <div class="table-wrap" role="region" aria-label="Usage by action table" tabindex="0">
+        <table>
+          <caption>Total cost {{ u.totalCostUsd | number: '1.2-2' }} USD</caption>
+          <thead>
+            <tr>
+              <th scope="col">Action</th>
+              <th scope="col">Runs</th>
+              <th scope="col">Cost (USD)</th>
+              <th scope="col">Median time (ms)</th>
+              <th scope="col">Slow-end time (ms)</th>
+              <th scope="col">Failure rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of u.actions; track a.action) {
+              <tr data-action-row>
+                <th scope="row">{{ label(a.action) }}</th>
+                <td>{{ a.count }}</td>
+                <td>{{ a.costUsd | number: '1.2-2' }}</td>
+                <td>{{ a.latencyP50Ms | number: '1.0-0' }}</td>
+                <td>{{ a.latencyP95Ms | number: '1.0-0' }}</td>
+                <td>{{ a.failureRate | percent: '1.0-1' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section class="admin-panel" aria-labelledby="users-heading">
+      <h2 id="users-heading">Per-user spread</h2>
+      <dl data-per-user>
+        <dt>Active users</dt>
+        <dd>{{ u.perUser.activeUsers }}</dd>
+        <dt>Median cost per user (USD)</dt>
+        <dd>{{ u.perUser.p50Cost | number: '1.2-2' }}</dd>
+        <dt>Slow-end cost per user (USD)</dt>
+        <dd>{{ u.perUser.p95Cost | number: '1.2-2' }}</dd>
+        <dt>Highest cost (USD)</dt>
+        <dd>{{ u.perUser.maxCost | number: '1.2-2' }}</dd>
+        <dt>Median runs per user</dt>
+        <dd>{{ u.perUser.p50Runs | number: '1.0-0' }}</dd>
+        <dt>Slow-end runs per user</dt>
+        <dd>{{ u.perUser.p95Runs | number: '1.0-0' }}</dd>
+      </dl>
+    </section>
+  }
+</section>

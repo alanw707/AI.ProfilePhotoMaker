@@ -19,6 +19,31 @@ describe('CareerProfileService', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  it('reads the allowance and admin usage and controls from their envelopes', () => {
+    service.getAllowance().subscribe(a => expect(a.remaining).toBe(3));
+    http.expectOne('/api/career/allowance').flush({ success: true, data: { remaining: 3 } });
+    service.getAdminUsage('2026-10-01', '2026-10-31').subscribe();
+    http
+      .expectOne('/api/admin/career/usage?from=2026-10-01&to=2026-10-31')
+      .flush({ success: true, data: { actions: [] } });
+    service.putAdminControls({ generationDisabled: true, sourcesDisabled: false }).subscribe();
+    const put = http.expectOne('/api/admin/career/controls');
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body).toEqual({ generationDisabled: true, sourcesDisabled: false });
+    put.flush({ success: true, data: {} });
+  });
+  it('gives the 503 codes plain messages and keeps Retry-After', () => {
+    let caught: CareerApiError | undefined;
+    service.createRun('k').subscribe({ error: e => (caught = e) });
+    http
+      .expectOne('/api/career/runs')
+      .flush(
+        { success: false, error: { code: 'CareerBusy', message: 'raw' } },
+        { status: 503, statusText: 'x', headers: { 'Retry-After': '60' } }
+      );
+    expect(caught?.message).toBe('Busy \u2014 try again in a minute.');
+    expect(caught?.retryAfterSeconds).toBe(60);
+  });
   it('reads the journey with a single GET and no body', () => {
     let out: any;
     service.getJourney().subscribe(j => (out = j));
@@ -313,6 +338,9 @@ describe('CareerProfileService', () => {
       [409, 'CareerOccupationRequired', 'occupationRequired'],
       [412, 'CareerVersionConflict', 'conflict'],
       [503, 'CareerReferenceUnavailable', 'unavailable'],
+      [503, 'CareerGenerationPaused', 'paused'],
+      [503, 'CareerBusy', 'busy'],
+      [503, 'CareerCostCapReached', 'costCap'],
     ];
     for (const [status, code, kind] of cases) {
       it(`maps ${status} ${code} to ${kind}`, () => {

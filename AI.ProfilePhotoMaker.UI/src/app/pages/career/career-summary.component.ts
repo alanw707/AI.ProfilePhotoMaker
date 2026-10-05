@@ -17,6 +17,7 @@ import {
   pollRun,
   releaseStartKey,
   startKey,
+  runErrorMessage,
 } from './career-run';
 
 export const START_KEY_STORAGE = 'career-summary-start-key';
@@ -221,7 +222,7 @@ export class CareerSummaryComponent implements OnInit {
         this.error.set('The assistant is no longer waiting for an answer.');
         break;
       default:
-        this.error.set(e.message || 'Something went wrong. Try again.');
+        this.error.set(runErrorMessage(e));
     }
     this.errorKind.set(e.kind);
   }

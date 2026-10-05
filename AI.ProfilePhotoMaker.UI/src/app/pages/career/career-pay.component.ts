@@ -31,6 +31,7 @@ import {
   pollRun,
   releaseStartKey,
   startKey,
+  runErrorMessage,
 } from './career-run';
 import { comparisonRows, formatFigure } from './market-format';
 import { periodText } from './career-market.component';
@@ -311,9 +312,7 @@ export class CareerPayComponent implements OnInit {
       return;
     }
     this.error.set(
-      e.kind === 'notFound'
-        ? 'That pay analysis no longer exists.'
-        : e.message || 'Something went wrong. Try again.'
+      e.kind === 'notFound' ? 'That pay analysis no longer exists.' : runErrorMessage(e)
     );
   }
 }

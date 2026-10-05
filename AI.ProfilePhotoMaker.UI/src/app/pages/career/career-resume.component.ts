@@ -14,6 +14,7 @@ import {
   ResumeSection,
   ResumeSectionKey,
   ResumeVersionInfo,
+  PLAIN_503,
 } from '../../services/career-profile.service';
 import {
   clearStartKey,
@@ -631,6 +632,8 @@ export class CareerResumeComponent implements OnInit {
       this.error.set('Add your profile first so we have facts to use.');
     } else if (e.kind === 'allowance') {
       this.error.set('You have used this period’s agent runs. Try again later.');
+    } else if (PLAIN_503[e.kind]) {
+      this.error.set(PLAIN_503[e.kind] as string);
     } else if (e.kind === 'notFound') {
       this.error.set(`We could not find that ${this.isSummary() ? 'summary' : 'resume'}.`);
     } else {

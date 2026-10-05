@@ -803,6 +803,9 @@ export interface CareerApiError {
     | 'alreadyExists'
     | 'preview'
     | 'allowance'
+    | 'paused'
+    | 'busy'
+    | 'costCap'
     | 'unavailable'
     | 'profileRequired'
     | 'idempotencyMismatch'
@@ -828,6 +831,46 @@ export interface CareerApiError {
   /** Extra explanation for 415 (for example "encrypted PDF"). */
   detail?: string;
   retryAfterSeconds?: number;
+}
+/** Plain wording for the 503 codes; machine codes are never shown. */
+export const PLAIN_503: Partial<Record<CareerApiError['kind'], string>> = {
+  paused: 'Drafting is paused for now. Your saved work is still available.',
+  busy: 'Busy \u2014 try again in a minute.',
+  costCap:
+    'Drafting is unavailable for the rest of this period. Your saved work is still available.',
+};
+export interface CareerAllowanceDto {
+  policyVersion: string;
+  limit: number;
+  used: number;
+  reserved: number;
+  remaining: number;
+  resetsAt: string;
+}
+export interface CareerUsageAction {
+  action: string;
+  count: number;
+  costUsd: number;
+  latencyP50Ms: number;
+  latencyP95Ms: number;
+  failureRate: number;
+}
+export interface CareerUsageDto {
+  actions: CareerUsageAction[];
+  perUser: {
+    activeUsers: number;
+    p50Cost: number;
+    p95Cost: number;
+    maxCost: number;
+    p50Runs: number;
+    p95Runs: number;
+  };
+  totalCostUsd: number;
+}
+export interface CareerControlsDto {
+  generationDisabled: boolean;
+  sourcesDisabled: boolean;
+  updatedAt: string | null;
 }
 interface Envelope<T> {
   success: boolean;
@@ -891,7 +934,7 @@ export class CareerProfileService {
   private profileEtag: string | null = null;
   private goalEtag: string | null = null;
   private url(path: string) {
-    return this.config.buildApiEndpoint(`career/${path}`);
+    return this.config.buildApiEndpoint(path.startsWith('/') ? path.slice(1) : `career/${path}`);
   }
 
   private request<T>(
@@ -949,6 +992,9 @@ export class CareerProfileService {
     const codeKinds: Record<string, CareerApiError['kind']> = {
       CareerPhotoIsPreview: 'preview',
       CareerAllowanceExhausted: 'allowance',
+      CareerGenerationPaused: 'paused',
+      CareerBusy: 'busy',
+      CareerCostCapReached: 'costCap',
       CareerModelUnavailable: 'unavailable',
       CareerIdempotencyMismatch: 'idempotencyMismatch',
       CareerProfileRequired: 'profileRequired',
@@ -974,7 +1020,7 @@ export class CareerProfileService {
     return {
       kind,
       code: payload?.code,
-      message: payload?.message ?? 'Unable to complete the request.',
+      message: PLAIN_503[kind] ?? payload?.message ?? 'Unable to complete the request.',
       fieldErrors: payload?.fieldErrors,
       currentVersion: payload?.currentVersion,
       detail: payload?.detail,
@@ -1099,6 +1145,21 @@ export class CareerProfileService {
       .pipe(catchError(error => throwError(() => this.mapError(error))));
   }
 
+  getAllowance() {
+    return this.request<CareerAllowanceDto>('GET', 'allowance');
+  }
+  getAdminUsage(from?: string, to?: string) {
+    const q = [from && `from=${encodeURIComponent(from)}`, to && `to=${encodeURIComponent(to)}`]
+      .filter(Boolean)
+      .join('&');
+    return this.request<CareerUsageDto>('GET', `/admin/career/usage${q ? '?' + q : ''}`);
+  }
+  getAdminControls() {
+    return this.request<CareerControlsDto>('GET', '/admin/career/controls');
+  }
+  putAdminControls(controls: Pick<CareerControlsDto, 'generationDisabled' | 'sourcesDisabled'>) {
+    return this.request<CareerControlsDto>('PUT', '/admin/career/controls', controls);
+  }
   createRun(idempotencyKey: string, task: CareerRunTask = 'profile_summary', materialId?: string) {
     const body = materialId ? { task, materialId } : { task };
     return this.request<CareerRunDto>('POST', 'runs', body, undefined, false, {
