@@ -19,20 +19,20 @@ public class CareerRoadmapApiTests
         "Analyzed user needs and software requirements to determine feasibility of design"
     };
 
-    private static object Profile(string title = "Software Engineer") => new
+    internal static object Profile(string title = "Software Engineer") => new
     {
         currentTitle = title, industry = "Technology", yearsExperience = 5, location = "Austin, TX",
         summary = "Reliable and curious.", skills = new[] { "Programming", "Systems Analysis" },
         highlights = Duties, workArrangement = "hybrid", confirmed = true
     };
 
-    private static object Goal(int hours = 6, string location = "Denver, CO") => new
+    internal static object Goal(int hours = 6, string location = "Denver, CO") => new
     {
         targetRole = "Senior software developer", targetLocation = location, workArrangement = "hybrid",
         desiredPayMin = 150000, desiredPayMax = 150000, weeklyEffortHours = hours, confirmed = true
     };
 
-    private static async Task<JsonElement> StartAsync(CareerClient user, CareerPayFactory host, string task, int status = 202)
+    internal static async Task<JsonElement> StartAsync(CareerClient user, CareerPayFactory host, string task, int status = 202)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/career/runs") { Content = JsonContent.Create(new { task }, options: CareerClient.Json) };
         request.Headers.Add("X-Test-UserId", user.UserId);
@@ -41,14 +41,14 @@ public class CareerRoadmapApiTests
         return status == 202 ? await CareerClient.ReadDataAsync(result, status) : await CareerClient.ReadErrorAsync(result, status);
     }
 
-    private static async Task<JsonElement> RunAsync(CareerClient user, CareerPayFactory host, string task)
+    internal static async Task<JsonElement> RunAsync(CareerClient user, CareerPayFactory host, string task)
     {
         var queued = await StartAsync(user, host, task);
         await host.DrainWorkerAsync();
         return await CareerClient.ReadDataAsync(await user.GetAsync($"/api/career/runs/{queued.GetProperty("id").GetString()}"), 200);
     }
 
-    private static async Task<CareerClient> UserAsync(CareerPayFactory host, int hours = 6, bool confirm = true)
+    internal static async Task<CareerClient> UserAsync(CareerPayFactory host, int hours = 6, bool confirm = true)
     {
         var user = new CareerClient(host);
         (await user.PutProfileAsync(Profile())).EnsureSuccessStatusCode();
@@ -62,14 +62,14 @@ public class CareerRoadmapApiTests
         return user;
     }
 
-    private static async Task<JsonElement> RoadmapAsync(CareerClient user, CareerPayFactory host)
+    internal static async Task<JsonElement> RoadmapAsync(CareerClient user, CareerPayFactory host)
     {
         var run = await RunAsync(user, host, "roadmap");
         Assert.Equal("completed", run.GetProperty("status").GetString());
         return await CareerClient.ReadDataAsync(await user.GetAsync($"/api/career/roadmaps/{run.GetProperty("roadmapId").GetString()}"), 200);
     }
 
-    private static IEnumerable<JsonElement> Tasks(JsonElement option) =>
+    internal static IEnumerable<JsonElement> Tasks(JsonElement option) =>
         option.GetProperty("thisWeek").EnumerateArray()
             .Concat(option.GetProperty("milestones").EnumerateArray().SelectMany(m => m.GetProperty("tasks").EnumerateArray()));
 

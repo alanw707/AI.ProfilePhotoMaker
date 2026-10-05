@@ -594,4 +594,59 @@ describe('CareerProfileService', () => {
       'precondition',
     ]);
   });
+  it('reads and saves task progress with If-Match, adds tasks and replans', () => {
+    service.getProgress('r1').subscribe();
+    http
+      .expectOne('/api/career/roadmaps/r1/progress')
+      .flush({ success: true, data: { roadmapId: 'r1', version: 1, tasks: [] } });
+    service.updateTaskProgress('r1', 't1', { status: 'done' }, 'task-v2').subscribe();
+    const put = http.expectOne('/api/career/roadmaps/r1/progress/t1');
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.headers.get('If-Match')).toBe('task-v2');
+    expect(put.request.body).toEqual({ status: 'done' });
+    put.flush({ success: true, data: { taskId: 't1' } });
+    service
+      .addHumanTask('r1', { title: 'Mine', effortHours: 2, milestoneDay: 30, dependsOn: ['t1'] })
+      .subscribe();
+    const add = http.expectOne('/api/career/roadmaps/r1/tasks');
+    expect(add.request.method).toBe('POST');
+    add.flush({ success: true, data: { taskId: 'h1' } });
+    service.replan('r1').subscribe();
+    http
+      .expectOne('/api/career/roadmaps/r1/replan')
+      .flush({ success: true, data: { id: 'p1', changes: [], preserved: [] } });
+    service.getReplan('p1').subscribe();
+    http.expectOne('/api/career/replans/p1').flush({ success: true, data: { id: 'p1' } });
+    service.applyReplan('p1', ['c1']).subscribe();
+    const apply = http.expectOne('/api/career/replans/p1/apply');
+    expect(apply.request.body).toEqual({ acceptedChangeIds: ['c1'] });
+    apply.flush({ success: true, data: { id: 'r1' } });
+    service.rejectReplan('p1').subscribe();
+    const reject = http.expectOne('/api/career/replans/p1/reject');
+    expect(reject.request.method).toBe('POST');
+    reject.flush({ success: true, data: {} });
+  });
+  it('maps tracking and replan errors', () => {
+    const kinds: string[] = [];
+    const fail = (status: number, code?: string) => {
+      service.replan('r1').subscribe({ error: (e: CareerApiError) => kinds.push(e.kind) });
+      http
+        .expectOne('/api/career/roadmaps/r1/replan')
+        .flush({ success: false, error: { code } }, { status, statusText: 'x' });
+    };
+    fail(409, 'CareerRoadmapNotAccepted');
+    fail(409, 'CareerRoadmapCycle');
+    fail(409, 'CareerReplanStale');
+    fail(409, 'CareerReplanClosed');
+    fail(412);
+    fail(428);
+    expect(kinds).toEqual([
+      'roadmapNotAccepted',
+      'roadmapCycle',
+      'replanStale',
+      'replanClosed',
+      'conflict',
+      'precondition',
+    ]);
+  });
 });

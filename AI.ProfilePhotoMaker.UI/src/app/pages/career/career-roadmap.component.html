@@ -180,6 +180,9 @@
             }
           </div>
         }
+        @if (rm.status === 'accepted') {
+          <app-career-roadmap-tracking [roadmapId]="rm.id" (applied)="onReplanApplied($event)" />
+        }
         @if (rm.status === 'dismissed') {
           <p role="status" data-dismissed>This roadmap was dismissed.</p>
         }

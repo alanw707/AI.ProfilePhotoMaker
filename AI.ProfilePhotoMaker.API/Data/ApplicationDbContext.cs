@@ -68,6 +68,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Models.Career.CareerMarketBrief> CareerMarketBriefs { get; set; }
     public virtual DbSet<Models.Career.CareerPayAnalysis> CareerPayAnalyses { get; set; }
     public virtual DbSet<Models.Career.CareerRoadmap> CareerRoadmaps { get; set; }
+    public virtual DbSet<Models.Career.CareerRoadmapTaskProgress> CareerRoadmapTaskProgress { get; set; }
+    public virtual DbSet<Models.Career.CareerRoadmapReplan> CareerRoadmapReplans { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -361,6 +363,29 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         roadmap.HasIndex(r => r.RunId).IsUnique();
         roadmap.HasIndex(r => new { r.OwnerId, r.Version });
         roadmap.HasOne<ApplicationUser>().WithMany().HasForeignKey(r => r.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        // Roadmap tracking (#388, ADR 0017). Owner cascade; rows are also removed explicitly by CareerPrivateDataService.
+        var progress = builder.Entity<Models.Career.CareerRoadmapTaskProgress>();
+        progress.ToTable("CareerRoadmapTaskProgress");
+        progress.Property(p => p.OwnerId).HasMaxLength(450).IsRequired();
+        progress.Property(p => p.TaskId).HasMaxLength(32).IsRequired();
+        progress.Property(p => p.Origin).HasMaxLength(16).IsRequired();
+        progress.Property(p => p.Title).HasMaxLength(200);
+        progress.Property(p => p.DependsOnJson).HasMaxLength(2000);
+        progress.Property(p => p.Status).HasMaxLength(16).IsRequired();
+        progress.Property(p => p.OutputNote).HasMaxLength(2000);
+        progress.Property(p => p.RowVersion).IsConcurrencyToken();
+        progress.HasIndex(p => new { p.RoadmapId, p.TaskId }).IsUnique();
+        progress.HasIndex(p => p.OwnerId);
+        progress.HasOne<ApplicationUser>().WithMany().HasForeignKey(p => p.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        var replan = builder.Entity<Models.Career.CareerRoadmapReplan>();
+        replan.ToTable("CareerRoadmapReplans");
+        replan.Property(r => r.OwnerId).HasMaxLength(450).IsRequired();
+        replan.Property(r => r.Status).HasMaxLength(16).IsRequired().IsConcurrencyToken();
+        replan.HasIndex(r => new { r.OwnerId, r.CreatedAt });
+        replan.HasIndex(r => r.RoadmapId);
+        replan.HasOne<ApplicationUser>().WithMany().HasForeignKey(r => r.OwnerId).OnDelete(DeleteBehavior.Cascade);
     }
 
     private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)

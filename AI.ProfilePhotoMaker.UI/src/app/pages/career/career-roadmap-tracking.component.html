@@ -1,0 +1,186 @@
+<section class="tracking" aria-labelledby="tracking-heading" data-tracking>
+  <h2 id="tracking-heading">Track progress</h2>
+  <p class="muted" data-pay-note>
+    Completing tasks never changes your pay estimates or your goal. Progress is only for your own tracking.
+  </p>
+  @if (error()) {
+    <p class="caution" role="alert">{{ error() }}</p>
+  }
+  <p role="status" class="saved-note" data-saved>{{ saved() }}</p>
+  @if (!loaded()) {
+    <p role="status">Loading your progress…</p>
+  }
+  @for (g of groups(); track g.day) {
+    @if (g.tasks.length) {
+      <h3>{{ g.label }}</h3>
+      <ul class="task-list">
+        @for (t of g.tasks; track t.taskId) {
+          <li class="task track-task" [attr.data-track]="t.taskId">
+            <span class="task-title">{{ t.title }}</span>
+            <span class="muted">
+              {{ statusText(t.effectiveStatus) }} · {{ hoursText(t.effortHours) }}
+              @if (t.origin === 'human') {
+                · Added by you
+              }
+            </span>
+            @if (t.effectiveStatus === 'blocked' && t.blockedBy.length) {
+              <span class="muted" data-blocked>Waiting on: {{ t.blockedBy.join(', ') }}</span>
+            }
+            <button
+              type="button"
+              class="secondary"
+              [attr.aria-pressed]="selected() === t.taskId"
+              [attr.aria-label]="'Help for ' + t.title"
+              (click)="select(t.taskId)">
+              {{ selected() === t.taskId ? 'Hide help' : 'Show help' }}
+            </button>
+            @if (selected() === t.taskId) {
+              <div class="notice" role="note" data-help>
+                <p>{{ t.help }}</p>
+              </div>
+            }
+            <div class="track-field">
+              <label [for]="'st-' + t.taskId">Status for {{ t.title }}</label>
+              <select
+                [id]="'st-' + t.taskId"
+                [value]="status(t)"
+                (change)="edit(t, { status: $any($event.target).value })">
+                @for (s of statuses; track s.value) {
+                  <option [value]="s.value" [selected]="status(t) === s.value">{{ s.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="track-field">
+              <label [for]="'ef-' + t.taskId">Hours spent on {{ t.title }}</label>
+              <input
+                type="number"
+                min="0.5"
+                max="40"
+                step="0.5"
+                inputmode="decimal"
+                [id]="'ef-' + t.taskId"
+                [value]="effort(t)"
+                [attr.aria-describedby]="'tr-err-' + t.taskId"
+                (input)="edit(t, { effort: $any($event.target).value })" />
+            </div>
+            <div class="track-field">
+              <label [for]="'nt-' + t.taskId">What you produced for {{ t.title }}</label>
+              <textarea
+                rows="3"
+                maxlength="2000"
+                [id]="'nt-' + t.taskId"
+                [value]="note(t)"
+                (input)="edit(t, { note: $any($event.target).value })"></textarea>
+            </div>
+            @if (t.linkedMaterialMissing) {
+              <span class="muted" data-material-missing>This material was deleted.</span>
+            } @else if (t.linkedMaterialId) {
+              <span class="muted" data-material>A material from your career workspace is linked to this task.</span>
+            }
+            <span class="field-error" role="alert" [id]="'tr-err-' + t.taskId" data-task-error>
+              {{ errors()[t.taskId] }}
+            </span>
+            <button type="button" class="primary" (click)="save(t)">Save changes for {{ t.title }}</button>
+          </li>
+        }
+      </ul>
+    }
+  }
+
+  <form
+    class="add-task"
+    (submit)="$event.preventDefault(); addTask(title.value, hours.value, day.value, reset)"
+    aria-labelledby="add-heading"
+    data-add-task>
+    <h3 id="add-heading">Add my own task</h3>
+    <div class="track-field">
+      <label for="add-title">Task title</label>
+      <input id="add-title" type="text" maxlength="200" #title />
+    </div>
+    <div class="track-field">
+      <label for="add-hours">Hours</label>
+      <input id="add-hours" type="number" min="0.5" max="40" step="0.5" inputmode="decimal" #hours />
+    </div>
+    <div class="track-field">
+      <label for="add-day">When</label>
+      <select id="add-day" #day>
+        <option value="0">This week</option>
+        <option value="30">By day 30</option>
+        <option value="60">By day 60</option>
+        <option value="90">By day 90</option>
+      </select>
+    </div>
+    @if (tasks().length) {
+      <fieldset class="deps">
+        <legend>Do this after</legend>
+        @for (t of tasks(); track t.taskId) {
+          <label class="check">
+            <input
+              type="checkbox"
+              [checked]="newDeps().includes(t.taskId)"
+              (change)="toggleDep(t.taskId, $any($event.target).checked)" />
+            {{ t.title }}
+          </label>
+        }
+      </fieldset>
+    }
+    <p class="field-error" role="alert" data-add-error>{{ addError() }}</p>
+    <p role="status" data-add-saved>{{ addSaved() }}</p>
+    <button type="submit" class="primary">Add task</button>
+  </form>
+
+  <section aria-labelledby="replan-heading" class="replan" data-replan>
+    <h3 id="replan-heading">Check for a new plan</h3>
+    <p>
+      We re-check your plan against current evidence. You choose which changes to apply. Finished tasks and tasks you
+      added are never removed.
+    </p>
+    <button type="button" class="secondary" (click)="check()" [disabled]="busy()">Check for a new plan</button>
+    <p class="field-error" role="alert" data-replan-error>{{ replanError() }}</p>
+    <p role="status" data-replan-notice>{{ replanNotice() }}</p>
+    @if (replan(); as r) {
+      @if (!r.changes.length) {
+        <p role="status" data-no-changes>Your plan is still current.</p>
+      } @else {
+        <fieldset class="diff">
+          <legend>Suggested changes</legend>
+          @for (c of r.changes; track c.id) {
+            <div class="change" [attr.data-change]="c.id">
+              <label class="check">
+                <input
+                  type="checkbox"
+                  [checked]="checked().includes(c.id)"
+                  (change)="toggleChange(c.id, $any($event.target).checked)" />
+                {{ kindText(c) }}: {{ c.title }}
+              </label>
+              @if (c.fields.length) {
+                <ul>
+                  @for (f of c.fields; track f.field) {
+                    <li>
+                      {{ fieldText(f.field) }}: {{ valueText(f.field, f.before) }} → {{ valueText(f.field, f.after) }}
+                    </li>
+                  }
+                </ul>
+              }
+              <p class="muted">Why: {{ c.rationale }}</p>
+            </div>
+          }
+        </fieldset>
+      }
+      @if (r.preserved.length) {
+        <h4>Kept as is</h4>
+        <ul data-preserved>
+          @for (p of r.preserved; track p.taskId) {
+            <li>{{ p.title }}: {{ keptText(p.reason) }}</li>
+          }
+        </ul>
+      }
+      <div class="actions">
+        @if (r.changes.length) {
+          <button type="button" class="primary" (click)="apply()" [disabled]="busy()">Apply selected changes</button>
+        }
+        <button type="button" class="secondary" (click)="keep()">Keep current plan</button>
+      </div>
+    }
+  </section>
+</section>
