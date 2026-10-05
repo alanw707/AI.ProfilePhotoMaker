@@ -253,6 +253,10 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
     this.setFallbackCreditCosts();
   }
 
+  get careerEnabled(): boolean {
+    return this._config.isCareerWorkspaceEnabled === true;
+  }
+
   ngOnInit(): void {
     this.isAuthenticated = this._authService.isAuthenticated();
     this.themeSubscription.add(
