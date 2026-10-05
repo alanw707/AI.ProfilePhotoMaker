@@ -81,7 +81,7 @@ public sealed class CareerJourneyService : ICareerJourneyService
         if (briefs.FirstOrDefault() is { } lb) results.Add(new("market_brief", lb.Id, null, Utc(lb.CreatedAt)));
         if (analyses.FirstOrDefault() is { } la) results.Add(new("pay_analysis", la.Id, null, Utc(la.CreatedAt)));
         if (roadmaps.FirstOrDefault() is { } lr) results.Add(new("roadmap", lr.Id, lr.Version, Utc(lr.CreatedAt)));
-        if (materials.OrderByDescending(m => m.CreatedAt).FirstOrDefault() is { } lm) results.Add(new("material", lm.Id, lm.CurrentVersion, Utc(lm.CreatedAt)));
+        if (materials.OrderByDescending(m => m.CreatedAt).FirstOrDefault() is { } lm) results.Add(new(lm.Kind, lm.Id, lm.CurrentVersion, Utc(lm.CreatedAt)));
 
         var openProposal = await _db.CareerProfileProposals.AsNoTracking()
             .AnyAsync(p => p.OwnerId == ownerId && p.Status == ProposalStatus.Pending, ct);

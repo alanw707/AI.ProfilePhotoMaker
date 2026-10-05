@@ -76,7 +76,7 @@ public class CareerJourneyApiTests
         resume.GetProperty("status").GetString().Should().Be("completed");
         var after = await JourneyAsync(user);
         after.GetProperty("nextAction").GetProperty("key").GetString().Should().Be("export_material");
-        after.GetProperty("latestResult").GetProperty("kind").GetString().Should().Be("material");
+        after.GetProperty("latestResult").GetProperty("kind").GetString().Should().Be("resume");
 
         (await user.SendAsync(HttpMethod.Post, $"/api/career/materials/{resume.GetProperty("materialId").GetString()}/exports",
             new { format = "pdf", includePhoto = false })).EnsureSuccessStatusCode();
