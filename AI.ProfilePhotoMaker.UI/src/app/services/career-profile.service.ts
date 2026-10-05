@@ -281,6 +281,8 @@ export interface MarketFigure {
 export interface MarketAlternative {
   code: string;
   title: string;
+  /** Set when BLS publishes this occupation only under a broader or shared group. */
+  note: string | null;
   figures: MarketFigure[];
 }
 export type MarketSectionKey = 'wages' | 'employment' | 'outlook' | 'alternatives';

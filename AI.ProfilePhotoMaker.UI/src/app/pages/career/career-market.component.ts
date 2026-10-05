@@ -18,6 +18,7 @@ import {
   CareerRunStatus,
   MarketBriefDto,
   MarketBriefSummary,
+  MarketAlternative,
   MarketFigure,
   MarketSection,
   MarketSource,
@@ -259,9 +260,18 @@ export class CareerMarketComponent implements OnInit {
     return this.brief()?.location.resolution === 'state' ? `${title}, state figures` : title;
   }
 
+  // The saved brief's item DTO includes note; the shared client interface predates this field.
+  itemNote(item: MarketAlternative): string | null {
+    return item.note ?? null;
+  }
+
   /** "As of …" for the sources a section's figures come from, with their coverage limits. */
   asOfText(section: MarketSection) {
-    const ids = [...new Set(section.figures.map(f => f.sourceId))];
+    const ids = [
+      ...new Set(
+        [...section.figures, ...section.items.flatMap(item => item.figures)].map(f => f.sourceId)
+      ),
+    ];
     const sources = this.brief()?.sources.filter(s => ids.includes(s.id)) ?? [];
     return sources
       .map(

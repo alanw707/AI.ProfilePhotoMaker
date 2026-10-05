@@ -101,7 +101,7 @@
           <section [attr.aria-labelledby]="'section-' + section.key" [attr.data-section]="section.key">
             <h2 [id]="'section-' + section.key">{{ section.title }}</h2>
             <p class="muted">{{ section.note }}</p>
-            @if (section.figures.length) {
+            @if (section.figures.length || section.items.length) {
               <p class="muted" data-as-of>{{ asOfText(section) }}</p>
             }
 
@@ -172,6 +172,9 @@
                       {{ item.title }}
                       <span class="muted">({{ item.code }})</span>
                     </h3>
+                    @if (itemNote(item); as note) {
+                      <p class="muted" data-mapping-note>{{ note }}</p>
+                    }
                     <dl class="market-list">
                       @for (f of item.figures; track f.key + f.areaCode) {
                         <dt>{{ f.label }}</dt>
