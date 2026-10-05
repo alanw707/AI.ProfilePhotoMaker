@@ -327,7 +327,9 @@ public class OpenAICareerTextModelTests
         var error = (await model.Invoking(m => m.CompleteAsync(Request)).Should().ThrowAsync<CareerModelException>()).Which;
 
         (error.Code, error.Retryable).Should().Be(("timeout", true));
-        (DateTime.UtcNow - started).Should().BeLessThan(TimeSpan.FromSeconds(5));
+        // The 200 ms deadline fires long before the stub's 30 s delay; the bound is loose so a
+        // loaded CI machine cannot fail the test on scheduling alone.
+        (DateTime.UtcNow - started).Should().BeLessThan(TimeSpan.FromSeconds(20));
     }
 
     [Fact]

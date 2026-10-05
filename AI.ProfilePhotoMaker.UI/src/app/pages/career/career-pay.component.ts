@@ -140,7 +140,9 @@ export class CareerPayComponent implements OnInit {
       });
   }
   start() {
-    if (this.starting()) {return;}
+    if (this.starting()) {
+      return;
+    }
     this.error.set('');
     this.starting.set(true);
     this.api.createRun(startKey(START_KEY), 'pay_analysis').subscribe({
@@ -159,7 +161,9 @@ export class CareerPayComponent implements OnInit {
   }
   recompute() {
     const analysis = this.analysis();
-    if (!analysis || this.recomputing()) {return;}
+    if (!analysis || this.recomputing()) {
+      return;
+    }
     this.recomputing.set(true);
     this.recomputeMessage.set('');
     this.api.recomputePayAnalysis(analysis.id).subscribe({
@@ -220,7 +224,9 @@ export class CareerPayComponent implements OnInit {
   private openDrawer(sources: MarketSource[]) {
     this.drawerSources.set(sources);
     const dialog = this.drawer()?.nativeElement;
-    if (dialog && !dialog.open) {dialog.showModal();}
+    if (dialog && !dialog.open) {
+      dialog.showModal();
+    }
   }
   private loadRecent() {
     this.api

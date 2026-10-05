@@ -84,7 +84,10 @@
           </div>
         }
         @if (a.blockedReasons.length) {
-          <p class="caution" role="status" data-blocked>Advertised pay blocked: {{ a.blockedReasons.join(', ') }}</p>
+          <p class="caution" role="status" data-blocked>
+            Advertised pay is not available: no provider has granted written rights for ongoing commercial use. The
+            benchmark below is published BLS data, not advertised pay.
+          </p>
         }
         <section data-section="benchmark" aria-labelledby="pay-benchmark">
           <h2 id="pay-benchmark">Occupational benchmark</h2>

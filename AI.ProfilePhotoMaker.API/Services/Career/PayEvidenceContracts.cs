@@ -19,6 +19,17 @@ public sealed record PayEvidenceResult(
     string RuleVersion, string Role, string Geography, string Level, int Included, int Employers,
     decimal EmployerConcentration, int Excluded, IReadOnlyDictionary<string, int> ExclusionReasons,
     PayInterval? Interval, string Decision, string Note, PayBenchmarkFallback? BenchmarkFallback,
-    bool PersonalizedAllowed, IReadOnlyList<string> BlockedReasons);
+    bool PersonalizedAllowed, IReadOnlyList<string> BlockedReasons)
+{
+    /// <summary>One employer above this share of the cohort (ADR 0012/0013).</summary>
+    public bool Concentrated => EmployerConcentration > PayEvidenceRules.ConcentrationThreshold;
+
+    /// <summary>True when dropping the largest employer or the hourly-normalized rows moves an interval end by more than the sensitivity limit.</summary>
+    public bool Sensitive { get; init; }
+
+    public PayInterval? IntervalWithoutLargestEmployer { get; init; }
+
+    public PayInterval? IntervalWithoutHourly { get; init; }
+}
 
 public sealed record NormalizedPayObservation(PayObservation Record, decimal Low, decimal High, IReadOnlyList<string> Reasons);

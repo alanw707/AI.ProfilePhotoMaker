@@ -8,6 +8,15 @@ public static class PayEvidenceRules
     public const int MinEmployers = 5;
     public const string RuleVersion = "candidate-1.0";
 
+    /// <summary>A cohort where one employer supplies more than this share is flagged concentrated.</summary>
+    public const decimal ConcentrationThreshold = 0.4m;
+
+    /// <summary>Sensitivity limit: an interval end moving more than this share when a group is removed.</summary>
+    public const decimal SensitivityLimit = 0.1m;
+
+    /// <summary>Smallest reduced cohort the sensitivity check will measure.</summary>
+    public const int MinSensitivityObservations = 2;
+
     public static decimal? Quantile(IEnumerable<decimal> values, decimal p)
     {
         var sorted = values.OrderBy(v => v).ToArray();
@@ -118,6 +127,11 @@ public static class PayEvidenceRules
         var concentration = included.Count == 0 ? 0m
             : Math.Round((decimal)employerCounts.Max() / included.Count * 100, 0, MidpointRounding.AwayFromZero) / 100;
         var supported = included.Count >= MinObservations && employers >= MinEmployers;
+        // Sensitivity: the same rule without the largest employer, and without hourly-normalized rows.
+        var largestEmployer = included.GroupBy(n => n.Record.Employer, StringComparer.Ordinal)
+            .OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal).FirstOrDefault()?.Key;
+        var withoutLargest = IntervalFor(included.Where(n => n.Record.Employer != largestEmployer).ToList());
+        var withoutHourly = IntervalFor(included.Where(n => n.Record.Basis != PayBasis.Hourly).ToList());
         var interval = supported ? new PayInterval(
             Math.Round(Quantile(included.Select(n => n.Low), .25m)!.Value, 0, MidpointRounding.AwayFromZero),
             Math.Round(Quantile(included.Select(n => n.High), .75m)!.Value, 0, MidpointRounding.AwayFromZero),
@@ -128,6 +142,35 @@ public static class PayEvidenceRules
             supported ? "observed interval" : "occupational benchmark fallback",
             supported ? "Employer-disclosed advertised pay, not an offer prediction." : "Insufficient independent current observations or employers.",
             // Authorization comes from the verified gate rows; an absent decision blocks.
-            benchmarkFallback, decision.PersonalizedAllowed, decision.BlockedReasons);
+            benchmarkFallback, decision.PersonalizedAllowed, decision.BlockedReasons)
+        {
+            IntervalWithoutLargestEmployer = withoutLargest,
+            IntervalWithoutHourly = withoutHourly,
+            Sensitive = interval != null && (Moves(interval, withoutLargest) || Moves(interval, withoutHourly))
+        };
     }
+
+    /// <summary>
+    /// The interval for a sub-cohort used by the sensitivity check. It deliberately does not
+    /// require the publication floors: the question is how much the interval moves, not whether
+    /// the reduced cohort could be published.
+    /// </summary>
+    private static PayInterval? IntervalFor(IReadOnlyList<NormalizedPayObservation> rows)
+    {
+        if (rows.Count < MinSensitivityObservations)
+        {
+            return null;
+        }
+        return new PayInterval(
+            Math.Round(Quantile(rows.Select(n => n.Low), .25m)!.Value, 0, MidpointRounding.AwayFromZero),
+            Math.Round(Quantile(rows.Select(n => n.High), .75m)!.Value, 0, MidpointRounding.AwayFromZero),
+            "USD / year", "P25 of advertised lower bounds to P75 of advertised upper bounds; linear interpolation");
+    }
+
+    /// <summary>True when removing a group moved either end of the interval beyond the limit.</summary>
+    private static bool Moves(PayInterval full, PayInterval? reduced) =>
+        reduced != null && (Moved(full.Low, reduced.Low) || Moved(full.High, reduced.High));
+
+    private static bool Moved(decimal full, decimal reduced) =>
+        full != 0 && Math.Abs(reduced - full) / Math.Abs(full) > SensitivityLimit;
 }

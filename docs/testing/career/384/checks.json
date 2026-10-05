@@ -1,0 +1,189 @@
+{
+  "results": [
+    {
+      "label": "01-start @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-start @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-start @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "analysis vs snapshot",
+      "status": "complete",
+      "checked": 6,
+      "mismatches": [],
+      "benchmarkLabel": "Occupational wage benchmark",
+      "benchmarkStatus": "complete",
+      "personalized": {
+        "status": "unavailable",
+        "reason": "provider_rights_unverified",
+        "interval": null,
+        "cohort": {
+          "included": 0,
+          "excluded": 0,
+          "employers": 0,
+          "largestEmployerShare": 0,
+          "concentrated": false,
+          "sensitive": false,
+          "exclusionReasons": {}
+        }
+      },
+      "blockedReasons": [
+        "provider_rights_unverified"
+      ],
+      "personalizedAllowed": false,
+      "blockedBannerShowsRawCode": false,
+      "gateCount": 8,
+      "scenario": {
+        "requested": 150000,
+        "median": 135980,
+        "gap": 14020,
+        "percent": 10.3
+      },
+      "scenarioCheck": true,
+      "dollarSignsInPersonalizedCard": 0,
+      "allowance": {
+        "used": 0,
+        "reserved": 0,
+        "limit": 20,
+        "periodStart": "2026-10-01T00:00:00Z"
+      },
+      "inputHash": "8685312b7c03",
+      "stale": false,
+      "sources": [
+        "oews 2025-05",
+        "projections 2025-2035"
+      ]
+    },
+    {
+      "label": "02-analysis @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-analysis @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-analysis @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "recompute",
+      "httpStatus": 200,
+      "matches": true,
+      "hashEqual": true,
+      "differences": [],
+      "pageText": "Reproduced exactly (input hash 8685312b7c03)"
+    },
+    {
+      "label": "03-recompute @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-recompute @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-recompute @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "cross-user",
+      "get": 404,
+      "recompute": 404
+    },
+    {
+      "label": "stale after profile change",
+      "stale": true,
+      "reasons": [
+        "profile_changed"
+      ],
+      "sectionsUnchanged": true,
+      "banner": 1
+    },
+    {
+      "label": "04-stale @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "04-stale @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "04-stale @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "no requested pay",
+      "scenarioStatus": "unavailable",
+      "personalized": "unavailable"
+    },
+    {
+      "label": "qualification",
+      "status": 200,
+      "allowed": false,
+      "blocked": [
+        "provider_rights_unverified"
+      ],
+      "gates": 8
+    },
+    {
+      "label": "expired session",
+      "url": "/auth/login?message=Please log in to access this feature&returnUrl=/app/career/pay"
+    }
+  ],
+  "errors": []
+}

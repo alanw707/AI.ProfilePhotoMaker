@@ -223,4 +223,48 @@ public class PayEvidenceRulesTests
         Assert.Contains(gates.Rows, g => g.GateId == "G1" && g.Status == PayGateStatus.Unverified);
         Assert.Contains(gates.Rows, g => g.GateId == "G8" && g.Status == PayGateStatus.Failed);
     }
+
+    [Fact]
+    public void ConcentrationIsFlaggedAboveFortyPercent()
+    {
+        using var fixture = Fixture();
+        var root = fixture.RootElement;
+        var asOf = root.GetProperty("asOf").GetDateTime();
+        var rows = Rows(root.GetProperty("covered")).Where(r => r.Role == "software").ToList();
+
+        // 5 of 12 observations from one employer = 41.7% -> concentrated.
+        var concentrated = PayEvidenceRules.Evaluate(
+            rows.Select((r, i) => i < 5 ? r with { Employer = "Big Co" } : r).ToList(), Query("software", "Denver, CO"), asOf);
+        Assert.Equal(0.42m, concentrated.EmployerConcentration);
+        Assert.True(concentrated.Concentrated);
+
+        // 4 of 12 = 33.3% -> not concentrated.
+        var spread = PayEvidenceRules.Evaluate(
+            rows.Select((r, i) => i < 4 ? r with { Employer = "Big Co" } : r).ToList(), Query("software", "Denver, CO"), asOf);
+        Assert.Equal(0.33m, spread.EmployerConcentration);
+        Assert.False(spread.Concentrated);
+    }
+
+    [Fact]
+    public void SensitivityIsFlaggedOnlyWhenRemovingAGroupMovesTheInterval()
+    {
+        using var fixture = Fixture();
+        var root = fixture.RootElement;
+        var asOf = root.GetProperty("asOf").GetDateTime();
+        var rows = Rows(root.GetProperty("covered")).Where(r => r.Role == "software").ToList();
+
+        // Half the cohort is one employer paying far above the rest, so dropping it moves an
+        // interval end by more than 10% and the result must be flagged sensitive.
+        var skewed = rows.Select((r, i) => i < 6
+            ? r with { Employer = "High payer", Low = r.Low + 90_000, High = r.High + 90_000 }
+            : r).ToList();
+        var sensitive = PayEvidenceRules.Evaluate(skewed, Query("software", "Denver, CO"), asOf);
+        Assert.True(sensitive.Sensitive);
+        Assert.NotNull(sensitive.IntervalWithoutLargestEmployer);
+
+        // The plain fixture spreads pay evenly, so removing any employer stays inside the limit.
+        var stable = PayEvidenceRules.Evaluate(rows, Query("software", "Denver, CO"), asOf);
+        Assert.False(stable.Sensitive);
+        Assert.NotNull(stable.IntervalWithoutLargestEmployer);
+    }
 }
