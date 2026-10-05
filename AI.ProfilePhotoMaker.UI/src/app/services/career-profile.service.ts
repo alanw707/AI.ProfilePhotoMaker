@@ -868,6 +868,20 @@ export interface CareerDeletionDto {
   completedAt: string | null;
 }
 
+export interface CareerJourneyDto {
+  profile: { version: number; confirmed: boolean } | null;
+  goal: {
+    version: number;
+    occupationCode?: string | null;
+    occupationTitle?: string | null;
+    location?: string | null;
+  } | null;
+  nextAction: { key: string; route?: string | null };
+  latestResult: { kind: string; id: string; version?: number; createdAt: string } | null;
+  activeRuns: { id: string; task: string; status: string; startedAt: string }[];
+  stale: { kind: string; id: string; reasons?: string[] }[];
+}
+
 export const RESUME_CONSENT_VERSION = 'resume-notice-2026-10-04';
 
 @Injectable({ providedIn: 'root' })
@@ -987,6 +1001,9 @@ export class CareerProfileService {
       'profile',
       true
     );
+  }
+  getJourney() {
+    return this.request<CareerJourneyDto>('GET', 'journey');
   }
   getGoal() {
     return this.request<CareerGoalDto>('GET', 'goals', undefined, 'goal');

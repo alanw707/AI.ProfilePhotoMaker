@@ -2,11 +2,67 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import {
-  CareerGoalDto,
-  CareerProfileDto,
-  CareerProfileService,
   CareerApiError,
+  CareerJourneyDto,
+  CareerProfileService,
 } from '../../services/career-profile.service';
+
+interface Target {
+  label: string;
+  path: string;
+  param?: string;
+}
+const BASE = '/app/career/';
+
+/** Fixed allowlist: unknown keys from the server render nothing. */
+export const NEXT_ACTIONS: Record<string, Target> = {
+  create_profile: { label: 'Create your profile', path: 'setup' },
+  confirm_profile: { label: 'Confirm your profile', path: 'profile' },
+  set_goal: { label: 'Set your goal', path: 'setup' },
+  confirm_occupation: { label: 'Confirm your occupation', path: 'occupation' },
+  build_brief: { label: 'Build your market brief', path: 'market' },
+  analyze_pay: { label: 'Analyze pay', path: 'pay' },
+  build_roadmap: { label: 'Build your roadmap', path: 'roadmap' },
+  accept_roadmap: { label: 'Review and accept your roadmap', path: 'roadmap' },
+  draft_resume: { label: 'Draft your resume', path: 'resume' },
+  export_material: { label: 'Export your materials', path: 'materials' },
+};
+/** Latest-result kinds -> label, page and the query param that page already reads. */
+export const RESULTS: Record<string, Target> = {
+  occupation_match: { label: 'Occupation match', path: 'occupation' },
+  market_brief: { label: 'Market brief', path: 'market', param: 'brief' },
+  pay_analysis: { label: 'Pay analysis', path: 'pay', param: 'analysis' },
+  roadmap: { label: 'Career roadmap', path: 'roadmap', param: 'roadmap' },
+  targeted_resume: { label: 'Targeted resume', path: 'resume', param: 'material' },
+  resume: { label: 'Targeted resume', path: 'resume', param: 'material' },
+  professional_summary: { label: 'Professional summary', path: 'summary-draft', param: 'material' },
+  summary: { label: 'Professional summary', path: 'summary-draft', param: 'material' },
+};
+const TASKS: Record<string, Target> = {
+  profile_summary: { label: 'Profile summary', path: 'summary' },
+  occupation_match: RESULTS['occupation_match'],
+  market_brief: RESULTS['market_brief'],
+  pay_analysis: RESULTS['pay_analysis'],
+  roadmap: RESULTS['roadmap'],
+  targeted_resume: RESULTS['targeted_resume'],
+  professional_summary: RESULTS['professional_summary'],
+};
+const RUNNING = ['queued', 'running', 'working'];
+const PAGES: { label: string; path: string }[] = [
+  { label: 'Profile and goal', path: 'profile' },
+  { label: 'Import from a resume', path: 'import' },
+  { label: 'Profile summary', path: 'summary' },
+  { label: 'Occupation', path: 'occupation' },
+  { label: 'Market brief', path: 'market' },
+  { label: 'Compare markets', path: 'markets' },
+  { label: 'Pay analysis', path: 'pay' },
+  { label: 'Open postings', path: 'jobs' },
+  { label: 'Career roadmap', path: 'roadmap' },
+  { label: 'Targeted resume', path: 'resume' },
+  { label: 'Professional summary', path: 'summary-draft' },
+  { label: 'Materials and photo', path: 'materials' },
+  { label: 'Privacy and your data', path: 'privacy' },
+];
 
 @Component({
   standalone: true,
@@ -15,84 +71,77 @@ import {
   template: ` <main class="career-page">
     <div class="career-sheet">
       <h1>Career workspace</h1>
-      <p>
-        Keep your professional facts and next goal in one place. You enter and confirm every detail.
-      </p>
-      @if (profile(); as p) {
-        <section aria-labelledby="profile-heading">
-          <h2 id="profile-heading">Professional profile</h2>
-          <p>
-            {{ p.facts.currentTitle }}
-            @if (p.facts.industry) {
-              · {{ p.facts.industry }}
-            }
-          </p>
-          <p class="muted">
-            {{ sourceLabel(p.provenance.source) }} · confirmed
-            {{ p.provenance.confirmedAt | date: 'mediumDate' }}
-          </p>
-          <a routerLink="/app/career/profile">View and edit profile</a>
+      <p>Your goal, next step and latest work in one place. You enter and confirm every detail.</p>
+      @if (journey(); as j) {
+        <section aria-labelledby="goal-heading">
+          <h2 id="goal-heading">Your goal</h2>
+          @if (j.goal) {
+            <p data-goal>
+              {{ j.goal.occupationTitle || 'Goal saved' }}
+              @if (j.goal.location) {
+                · {{ j.goal.location }}
+              }
+            </p>
+          } @else {
+            <p>You have not set a goal yet. Set one to get a tailored plan.</p>
+            <a routerLink="/app/career/setup">Set your goal</a>
+          }
         </section>
+        @if (next(); as n) {
+          <section aria-labelledby="next-heading">
+            <h2 id="next-heading">Next step</h2>
+            <a class="primary" data-next [routerLink]="n.link" [queryParams]="n.params">{{
+              n.label
+            }}</a>
+          </section>
+        }
+        @if (latest(); as l) {
+          <section aria-labelledby="latest-heading">
+            <h2 id="latest-heading">Latest result</h2>
+            <p>
+              <a data-latest [routerLink]="l.link" [queryParams]="l.params">{{ l.label }}</a>
+              · {{ l.at | date: 'mediumDate' }}
+            </p>
+          </section>
+        }
+        @if (runs().length) {
+          <section aria-labelledby="runs-heading">
+            <h2 id="runs-heading">Work in progress</h2>
+            <ul>
+              @for (r of runs(); track r.id) {
+                <li>
+                  {{ r.label }}:
+                  <a data-run [routerLink]="r.link" [queryParams]="r.params">{{
+                    r.failed ? 'Try again' : 'Still working'
+                  }}</a>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+        @for (s of stale(); track s.id) {
+          <p class="caution" data-stale>
+            Needs review · Your {{ s.label }} may be out of date because your profile or goal
+            changed.
+            <a data-stale-link [routerLink]="s.link" [queryParams]="s.params">Open</a>
+          </p>
+        }
       } @else if (!loading()) {
         <section>
           <h2>Start with your facts</h2>
-          <p>No professional profile saved yet.</p>
           <a class="primary" routerLink="/app/career/setup">Set up your profile and goal</a>
         </section>
       }
-      @if (goal(); as g) {
-        <section aria-labelledby="goal-heading">
-          <h2 id="goal-heading">Your goal</h2>
-          <p>{{ g.goal.targetRole }}</p>
-          @if (g.occupation; as o) {
-            <p data-occupation>Occupation: {{ o.title }} ({{ o.code }})</p>
+      <nav aria-labelledby="pages-heading">
+        <h2 id="pages-heading">Your career pages</h2>
+        <ul>
+          @for (p of pages; track p.path) {
+            <li>
+              <a [routerLink]="'/app/career/' + p.path">{{ p.label }}</a>
+            </li>
           }
-          @if (g.isStale) {
-            <p class="caution">
-              Needs review · Your profile changed since you confirmed this goal.
-            </p>
-          }
-          <a routerLink="/app/career/profile">{{
-            g.isStale ? 'Review your goal' : 'Edit your goal'
-          }}</a>
-        </section>
-      }
-      <p>
-        <a routerLink="/app/career/import">Import from a resume</a>
-      </p>
-      <p>
-        <a routerLink="/app/career/summary">Draft a profile summary</a>
-      </p>
-      <p>
-        <a routerLink="/app/career/occupation">Confirm your occupation</a>
-      </p>
-      <p>
-        <a routerLink="/app/career/market">Analytics: market brief</a>
-      </p>
-      <p>
-        <a routerLink="/app/career/markets">Compare markets</a>
-      </p>
-      <p>
-        <a routerLink="/app/career/pay">Pay analysis</a>
-      </p>
-      <p>
-        <a routerLink="/app/career/roadmap">Career roadmap</a>
-      </p>
-      <p>
-        <a routerLink="/app/career/resume">Targeted resume</a>
-      </p>
-      <p>
-        <a routerLink="/app/career/summary-draft">Professional summary</a>
-      </p>
-      <p>
-        <a routerLink="/app/career/jobs">Open postings</a>
-      </p>
-      <p>
-        <a routerLink="/app/career/materials">Materials and photo</a>
-      </p>
-      <p>
-        <a routerLink="/app/career/privacy">Privacy and your data</a>
-      </p>
+        </ul>
+      </nav>
       @if (error()) {
         <p role="alert">{{ error() }}</p>
       }
@@ -103,14 +152,14 @@ import {
 export class CareerHomeComponent implements OnInit {
   private api = inject(CareerProfileService);
   private router = inject(Router);
-  profile = signal<CareerProfileDto | null>(null);
-  goal = signal<CareerGoalDto | null>(null);
+  pages = PAGES;
+  journey = signal<CareerJourneyDto | null>(null);
   loading = signal(true);
   error = signal('');
   ngOnInit() {
-    this.api.getProfile().subscribe({
-      next: p => {
-        this.profile.set(p);
+    this.api.getJourney().subscribe({
+      next: j => {
+        this.journey.set(j);
         this.loading.set(false);
       },
       error: (e: CareerApiError) => {
@@ -118,13 +167,66 @@ export class CareerHomeComponent implements OnInit {
         this.handle(e);
       },
     });
-    this.api.getGoal().subscribe({ next: g => this.goal.set(g), error: e => this.handle(e) });
   }
-  sourceLabel(source: string): string {
-    if (source === 'resume') {
-      return 'From your resume';
+  next() {
+    const j = this.journey();
+    const t = j ? NEXT_ACTIONS[j.nextAction?.key] : undefined;
+    if (!t || !j) {
+      return null;
     }
-    return source === 'pasted' ? 'From pasted text' : 'Entered manually';
+    const l = j.latestResult;
+    const r = l ? RESULTS[l.kind] : undefined;
+    const same = r && r.path === t.path && r.param && l;
+    return {
+      label: t.label,
+      link: BASE + t.path,
+      params: same ? { [r.param as string]: l.id } : {},
+    };
+  }
+  latest() {
+    const l = this.journey()?.latestResult;
+    const t = l ? RESULTS[l.kind] : undefined;
+    if (!l || !t) {
+      return null;
+    }
+    return {
+      label: t.label,
+      link: BASE + t.path,
+      params: t.param ? { [t.param]: l.id } : {},
+      at: l.createdAt,
+    };
+  }
+  runs() {
+    const out: { id: string; label: string; link: string; params: object; failed: boolean }[] = [];
+    for (const r of this.journey()?.activeRuns ?? []) {
+      const t = TASKS[r.task];
+      const failed = r.status === 'failed';
+      if (t && (failed || RUNNING.includes(r.status))) {
+        out.push({
+          id: r.id,
+          label: t.label,
+          link: BASE + t.path,
+          params: { run: r.id },
+          failed,
+        });
+      }
+    }
+    return out;
+  }
+  stale() {
+    const out: { id: string; label: string; link: string; params: object }[] = [];
+    for (const s of this.journey()?.stale ?? []) {
+      const t = RESULTS[s.kind];
+      if (t) {
+        out.push({
+          id: s.id,
+          label: t.label.toLowerCase(),
+          link: BASE + t.path,
+          params: t.param ? { [t.param]: s.id } : {},
+        });
+      }
+    }
+    return out;
   }
   private handle(e: CareerApiError) {
     if (e.kind === 'disabled') {

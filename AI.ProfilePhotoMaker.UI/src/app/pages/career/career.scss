@@ -485,6 +485,8 @@ button:disabled {
     margin: 0;
   }
   .source-link {
+    white-space: nowrap;
+    word-break: keep-all;
     min-height: 32px;
     margin-left: 8px;
     font-size: 14px;

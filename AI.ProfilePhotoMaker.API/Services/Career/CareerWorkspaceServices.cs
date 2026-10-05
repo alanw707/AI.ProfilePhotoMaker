@@ -133,6 +133,7 @@ public static class CareerWorkspaceServiceCollectionExtensions
         services.AddScoped<ICareerPayService, CareerPayService>();
         services.AddScoped<ICareerRoadmapService, CareerRoadmapService>();
         services.AddScoped<ICareerMaterialService, CareerMaterialService>();
+        services.AddScoped<ICareerJourneyService, CareerJourneyService>();
 
         // Exports (#390, ADR 0019): renderers sit behind IMaterialExportRenderer.
         services.AddSingleton<IMaterialExportRenderer, PdfMaterialRenderer>();
