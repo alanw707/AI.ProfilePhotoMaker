@@ -33,12 +33,15 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
     private readonly TimeProvider _clock;
     private readonly ILogger<CareerAgentRunner> _logger;
     private readonly IOccupationReference? _reference;
+    private readonly IMarketReference? _market;
 
     public CareerAgentRunner(
         ApplicationDbContext db, ICareerTextModel? model, IOptions<CareerAgentOptions> options,
-        TimeProvider clock, ILogger<CareerAgentRunner> logger, IOccupationReference? reference = null)
+        TimeProvider clock, ILogger<CareerAgentRunner> logger, IOccupationReference? reference = null,
+        IMarketReference? market = null)
     {
         _reference = reference;
+        _market = market;
         _db = db;
         _model = model;
         _options = options.Value;
@@ -54,7 +57,7 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         }
 
         // With no model a profile summary cannot run: leave it queued rather than failing it.
-        // Occupation matching never calls a model, so it still runs.
+        // Occupation matching and market briefs never call a model, so they still run.
         var (run, worked) = await ClaimAsync(workerId, ct);
         if (run == null)
         {
@@ -63,6 +66,10 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         if (run.Task == CareerAgentTasks.OccupationMatch)
         {
             await ExecuteOccupationMatchAsync(run, ct);
+        }
+        else if (run.Task == CareerAgentTasks.MarketBrief)
+        {
+            await ExecuteMarketBriefAsync(run, ct);
         }
         else
         {
@@ -83,7 +90,7 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             var run = await _db.CareerAgentRuns
                 .Where(r => (r.Status == CareerRunStatus.Queued || r.Status == CareerRunStatus.Working)
                     && (r.LeaseExpiresAt == null || r.LeaseExpiresAt < now)
-                    && (modelAvailable || r.Task == CareerAgentTasks.OccupationMatch))
+                    && (modelAvailable || r.Task == CareerAgentTasks.OccupationMatch || r.Task == CareerAgentTasks.MarketBrief))
                 .OrderBy(r => r.CreatedAt)
                 .FirstOrDefaultAsync(ct);
             if (run == null)
@@ -338,6 +345,152 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             _logger.LogInformation("Career run {RunId} completed with occupation match {MatchId}", run.Id, match.Id);
         }
     }
+
+    // ---- Market brief (ADR 0011) -----------------------------------------------
+
+    private sealed record WagesStepOutput(MarketLocationDto Location, MarketSectionDto Wages, MarketSectionDto Employment);
+
+    private sealed record SectionStepOutput(MarketSectionDto Section);
+
+    /// <summary>
+    /// Plan: read the pinned goal, look up wages and employment, look up the outlook, compare the match's
+    /// other candidates, save the brief. Every step is a deterministic read of the BLS snapshot; each
+    /// result is saved as a step before it is used, and no model is called, so the allowance unit is released.
+    /// </summary>
+    private async Task ExecuteMarketBriefAsync(CareerAgentRun run, CancellationToken ct)
+    {
+        var steps = await LoadStepsAsync(run, ct);
+        var reference = _market;
+        if (reference?.Oews == null && reference?.Projections == null)
+        {
+            _logger.LogWarning("Career run {RunId} failed: market reference unavailable", run.Id);
+            await FinishAsync(run, CareerRunStatus.Failed, CareerAgentErrorCodes.ReferenceUnavailable, ct);
+            return;
+        }
+
+        var goal = await _db.CareerGoalVersions.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.OwnerId == run.OwnerId && v.VersionNumber == run.PinnedGoalVersion, ct);
+        if (goal?.OccupationCode == null || goal.OccupationTitle == null)
+        {
+            // The pinned version is immutable and was checked at creation; this guards a lost row only.
+            await FinishAsync(run, CareerRunStatus.Failed, CareerOccupationErrorCodes.OccupationRequired, ct);
+            return;
+        }
+
+        if (!steps.Any(s => s.Name == CareerStepNames.ReadGoal))
+        {
+            if (!await CanStartStepAsync(run, steps, ct)
+                || !await SaveStepAsync(run, steps, CareerStepKinds.Tool, CareerStepNames.ReadGoal,
+                    JsonSerializer.Serialize(new { version = run.PinnedGoalVersion, occupationCode = goal.OccupationCode }), ct))
+            {
+                return;
+            }
+        }
+
+        var wages = await MarketStepAsync(run, steps, CareerStepNames.LookUpWages, ct, () =>
+        {
+            var location = MarketBriefBuilder.ResolveLocation(goal.TargetLocation, reference!);
+            return new WagesStepOutput(
+                location,
+                MarketBriefBuilder.BuildWages(goal.OccupationCode, location, reference!),
+                MarketBriefBuilder.BuildEmployment(goal.OccupationCode, location, reference!));
+        });
+        if (wages == null)
+        {
+            return;
+        }
+
+        var outlook = await MarketStepAsync(run, steps, CareerStepNames.LookUpOutlook, ct,
+            () => new SectionStepOutput(MarketBriefBuilder.BuildOutlook(goal.OccupationCode, reference!)));
+        if (outlook == null)
+        {
+            return;
+        }
+
+        // The other candidates of the confirmed match; none when the match is gone.
+        var alternatives = await LoadAlternativesAsync(run.OwnerId, goal, ct);
+        var compared = await MarketStepAsync(run, steps, CareerStepNames.CompareAlternatives, ct,
+            () => new SectionStepOutput(MarketBriefBuilder.BuildAlternatives(alternatives, reference!)));
+        if (compared == null || !await CanStartStepAsync(run, steps, ct))
+        {
+            return;
+        }
+
+        var content = MarketBriefBuilder.Assemble(
+            goal.OccupationCode, goal.OccupationTitle, wages.Location,
+            new[] { wages.Wages, wages.Employment, outlook.Section, compared.Section }, reference!);
+        var brief = new CareerMarketBrief
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = run.OwnerId,
+            RunId = run.Id,
+            PinnedProfileVersion = run.PinnedProfileVersion!.Value,
+            PinnedGoalVersion = run.PinnedGoalVersion!.Value,
+            OccupationCode = goal.OccupationCode,
+            OccupationTitle = goal.OccupationTitle,
+            OewsRelease = content.OewsRelease,
+            ProjectionsRelease = content.ProjectionsRelease,
+            Status = content.Status,
+            PublishedJson = JsonSerializer.Serialize(content.Occupation.Published, MarketBriefJson.Options),
+            LocationJson = JsonSerializer.Serialize(content.Location, MarketBriefJson.Options),
+            SectionsJson = JsonSerializer.Serialize(content.Sections, MarketBriefJson.Options),
+            SourcesJson = JsonSerializer.Serialize(content.Sources, MarketBriefJson.Options),
+            NextActionJson = JsonSerializer.Serialize(content.NextAction, MarketBriefJson.Options),
+            CreatedAt = Now()
+        };
+        // Saved in the same fenced write that completes the run, so a lost lease leaves no brief behind.
+        _db.CareerMarketBriefs.Add(brief);
+        AddStep(run, steps, CareerStepKinds.Save, CareerStepNames.SaveBrief, JsonSerializer.Serialize(new { briefId = brief.Id }));
+
+        if (await FinishAsync(run, CareerRunStatus.Completed, null, ct))
+        {
+            _logger.LogInformation("Career run {RunId} completed with market brief {BriefId}", run.Id, brief.Id);
+        }
+    }
+
+    /// <summary>Replays a saved step's result, or computes it and saves the step. Null when the run stopped.</summary>
+    private async Task<T?> MarketStepAsync<T>(
+        CareerAgentRun run, List<CareerAgentStep> steps, string name, CancellationToken ct, Func<T> compute) where T : class
+    {
+        var saved = steps.FirstOrDefault(s => s.Name == name);
+        if (saved != null)
+        {
+            return JsonSerializer.Deserialize<T>(saved.OutputJson!, MarketBriefJson.Options);
+        }
+
+        if (!await CanStartStepAsync(run, steps, ct))
+        {
+            return null;
+        }
+        var result = compute();
+        return await SaveStepAsync(run, steps, CareerStepKinds.Tool, name, JsonSerializer.Serialize(result, MarketBriefJson.Options), ct)
+            ? result
+            : null;
+    }
+
+    private async Task<IReadOnlyList<MarketAlternative>> LoadAlternativesAsync(string ownerId, CareerGoalVersion goal, CancellationToken ct)
+    {
+        if (goal.OccupationMatchId == null)
+        {
+            return Array.Empty<MarketAlternative>();
+        }
+        var json = await _db.CareerOccupationMatches.AsNoTracking()
+            .Where(m => m.Id == goal.OccupationMatchId && m.OwnerId == ownerId)
+            .Select(m => m.ResultJson).FirstOrDefaultAsync(ct);
+        if (json == null)
+        {
+            return Array.Empty<MarketAlternative>();
+        }
+
+        var stored = JsonSerializer.Deserialize<StoredOccupationResult>(json, OccupationMatchJson.Options);
+        return (stored?.Candidates ?? Array.Empty<OccupationCandidate>())
+            .Where(c => c.Code != goal.OccupationCode)
+            .Take(MaxMarketAlternatives)
+            .Select(c => new MarketAlternative(c.Code, c.Title))
+            .ToList();
+    }
+
+    private const int MaxMarketAlternatives = 3;
 
     private async Task AskAudienceAsync(CareerAgentRun run, List<CareerAgentStep> steps, CancellationToken ct)
     {

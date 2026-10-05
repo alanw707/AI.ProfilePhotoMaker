@@ -96,7 +96,8 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         typeof(CareerAgentRun),
         typeof(CareerAgentStep),
         typeof(CareerAllowance),
-        typeof(CareerOccupationMatch)
+        typeof(CareerOccupationMatch),
+        typeof(CareerMarketBrief)
     };
 
     private readonly ApplicationDbContext _db;
@@ -118,6 +119,7 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         _db.CareerAgentRuns.RemoveRange(await _db.CareerAgentRuns.Where(r => r.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerAllowances.RemoveRange(await _db.CareerAllowances.Where(a => a.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerOccupationMatches.RemoveRange(await _db.CareerOccupationMatches.Where(m => m.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerMarketBriefs.RemoveRange(await _db.CareerMarketBriefs.Where(b => b.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerProfileProposalItems.RemoveRange(await _db.CareerProfileProposalItems.Where(i => i.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerProfileProposals.RemoveRange(await _db.CareerProfileProposals.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
 
@@ -170,7 +172,8 @@ public static class CareerWorkspaceServiceCollectionExtensions
             sp.GetRequiredService<IOptions<CareerAgentOptions>>(),
             sp.GetRequiredService<TimeProvider>(),
             sp.GetRequiredService<ILogger<CareerAgentRunner>>(),
-            sp.GetService<IOccupationReference>()));
+            sp.GetService<IOccupationReference>(),
+            sp.GetService<IMarketReference>()));
 
         // Occupation matches (#381). The reference is a singleton so the snapshot is parsed and
         // indexed once; tests replace it to cover an unavailable snapshot.
@@ -178,6 +181,13 @@ public static class CareerWorkspaceServiceCollectionExtensions
             new EmbeddedOccupationReference(EmbeddedOccupationReference.OpenEmbeddedSnapshot, EmbeddedOccupationReference.ExpectedSha256,
                 sp.GetRequiredService<ILoggerFactory>().CreateLogger<EmbeddedOccupationReference>()));
         services.AddScoped<ICareerOccupationService, CareerOccupationService>();
+
+        // Market briefs (#382). The BLS reference is a singleton too, parsed once into compact tables.
+        services.AddOptions<CareerMarketOptions>().BindConfiguration(CareerMarketOptions.SectionName);
+        services.TryAddSingleton<IMarketReference>(sp =>
+            new EmbeddedMarketReference(EmbeddedMarketReference.OpenEmbeddedSnapshot, EmbeddedMarketReference.ExpectedSha256,
+                sp.GetRequiredService<ILoggerFactory>().CreateLogger<EmbeddedMarketReference>()));
+        services.AddScoped<ICareerMarketService, CareerMarketService>();
         return services;
     }
 }

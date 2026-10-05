@@ -40,6 +40,7 @@ public sealed record CareerAgentRunDto(
     CareerRunQuestionDto? Question,
     Guid? ProposalId,
     Guid? OccupationMatchId,
+    Guid? MarketBriefId,
     bool ProfileChanged,
     string? ErrorCode,
     CareerAllowanceDto Allowance);

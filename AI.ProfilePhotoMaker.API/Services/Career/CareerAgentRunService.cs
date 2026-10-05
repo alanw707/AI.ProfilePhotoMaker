@@ -35,7 +35,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
 
     // A lost race is retried a few times; more than that means heavy contention.
     private const int MaxCommitAttempts = 5;
-    private const string TaskError = "Choose a task the assistant can do: profile_summary or occupation_match.";
+    private const string TaskError = "Choose a task the assistant can do: profile_summary, occupation_match or market_brief.";
 
     private static readonly IReadOnlyDictionary<string, string> StepLabels = new Dictionary<string, string>
     {
@@ -46,7 +46,11 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
         [CareerStepNames.SaveProposal] = "Saved the draft for your review",
         [CareerStepNames.MatchOccupations] = "Compared your duties with occupation tasks",
         [CareerStepNames.AskOccupation] = "Asked which occupation is closest",
-        [CareerStepNames.SaveMatch] = "Saved the matches for your review"
+        [CareerStepNames.SaveMatch] = "Saved the matches for your review",
+        [CareerStepNames.LookUpWages] = "Looked up wages and employment",
+        [CareerStepNames.LookUpOutlook] = "Looked up the job outlook",
+        [CareerStepNames.CompareAlternatives] = "Compared related occupations",
+        [CareerStepNames.SaveBrief] = "Saved your market brief"
     };
 
     private readonly ApplicationDbContext _db;
@@ -55,13 +59,16 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
     private readonly ILogger<CareerAgentRunService> _logger;
     private readonly ICareerTextModel? _model;
     private readonly IOccupationReference? _reference;
+    private readonly IMarketReference? _market;
 
     // The model is optional: with none registered, a profile summary fails closed (503).
-    // Occupation matching needs no model, only the verified O*NET snapshot.
+    // Occupation matching needs no model, only the verified O*NET snapshot; market briefs only the BLS snapshot.
     public CareerAgentRunService(
         ApplicationDbContext db, IOptions<CareerAgentOptions> options, TimeProvider clock,
-        ILogger<CareerAgentRunService> logger, ICareerTextModel? model = null, IOccupationReference? reference = null)
+        ILogger<CareerAgentRunService> logger, ICareerTextModel? model = null, IOccupationReference? reference = null,
+        IMarketReference? market = null)
     {
+        _market = market;
         _db = db;
         _options = options.Value;
         _clock = clock;
@@ -119,6 +126,11 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
                 return CareerOutcome<CareerAgentRunDto>.ReferenceUnavailable();
             }
 
+            if (task == CareerAgentTasks.MarketBrief && _market?.Oews == null && _market?.Projections == null)
+            {
+                return CareerOutcome<CareerAgentRunDto>.ReferenceUnavailable();
+            }
+
             var profileVersion = await _db.CareerProfiles.AsNoTracking()
                 .Where(p => p.OwnerId == ownerId).Select(p => (int?)p.ActiveVersionNumber).FirstOrDefaultAsync(ct);
             if (profileVersion == null)
@@ -128,6 +140,13 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             }
             var goalVersion = await _db.CareerGoals.AsNoTracking()
                 .Where(g => g.OwnerId == ownerId).Select(g => (int?)g.ActiveVersionNumber).FirstOrDefaultAsync(ct);
+            if (task == CareerAgentTasks.MarketBrief
+                && (goalVersion == null || !await _db.CareerGoalVersions.AsNoTracking().AnyAsync(
+                    v => v.OwnerId == ownerId && v.VersionNumber == goalVersion && v.OccupationCode != null, ct)))
+            {
+                return CareerOutcome<CareerAgentRunDto>.AlreadyExists(
+                    CareerOccupationErrorCodes.OccupationRequired, "Confirm your target occupation before asking for a market brief.");
+            }
 
             var now = Now();
             var period = CareerAllowanceStore.PeriodStart(now);
@@ -204,9 +223,14 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
         var matchIds = await _db.CareerOccupationMatches.AsNoTracking()
             .Where(m => m.OwnerId == ownerId && runIds.Contains(m.RunId))
             .ToDictionaryAsync(m => m.RunId, m => m.Id, ct);
+        var briefIds = await _db.CareerMarketBriefs.AsNoTracking()
+            .Where(b => b.OwnerId == ownerId && runIds.Contains(b.RunId))
+            .ToDictionaryAsync(b => b.RunId, b => b.Id, ct);
 
         var dtos = runs.Select(run => ToDto(
-            run, stepsByRun[run.Id], currentProfile, allowance, matchIds.TryGetValue(run.Id, out var matchId) ? matchId : null)).ToList();
+            run, stepsByRun[run.Id], currentProfile, allowance,
+            matchIds.TryGetValue(run.Id, out var matchId) ? matchId : null,
+            briefIds.TryGetValue(run.Id, out var briefId) ? briefId : null)).ToList();
         return CareerOutcome<CareerRunListDto>.Ok(new CareerRunListDto(dtos, allowance));
     }
 
@@ -338,7 +362,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
 
     private DateTime Now() => _clock.GetUtcNow().UtcDateTime;
 
-    private static bool IsKnownTask(string? task) => task is CareerAgentTasks.ProfileSummary or CareerAgentTasks.OccupationMatch;
+    private static bool IsKnownTask(string? task) => task is CareerAgentTasks.ProfileSummary or CareerAgentTasks.OccupationMatch or CareerAgentTasks.MarketBrief;
 
     /// <summary>The offered choices, saved with the question step so the answer can be checked against them.</summary>
     internal static IReadOnlyList<CareerRunChoiceDto>? ChoicesFrom(IEnumerable<CareerAgentStep> steps)
@@ -380,7 +404,9 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             .Where(s => s.RunId == run.Id && s.OwnerId == run.OwnerId).ToListAsync(ct);
         var matchId = await _db.CareerOccupationMatches.AsNoTracking()
             .Where(m => m.RunId == run.Id && m.OwnerId == run.OwnerId).Select(m => (Guid?)m.Id).FirstOrDefaultAsync(ct);
-        return ToDto(run, steps, await CurrentProfileVersionAsync(run.OwnerId, ct), await AllowanceDtoAsync(run.OwnerId, ct), matchId);
+        var briefId = await _db.CareerMarketBriefs.AsNoTracking()
+            .Where(b => b.RunId == run.Id && b.OwnerId == run.OwnerId).Select(b => (Guid?)b.Id).FirstOrDefaultAsync(ct);
+        return ToDto(run, steps, await CurrentProfileVersionAsync(run.OwnerId, ct), await AllowanceDtoAsync(run.OwnerId, ct), matchId, briefId);
     }
 
     private async Task<int?> CurrentProfileVersionAsync(string ownerId, CancellationToken ct) =>
@@ -388,7 +414,8 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             .Where(p => p.OwnerId == ownerId).Select(p => (int?)p.ActiveVersionNumber).FirstOrDefaultAsync(ct);
 
     private static CareerAgentRunDto ToDto(
-        CareerAgentRun run, IEnumerable<CareerAgentStep> steps, int? currentProfile, CareerAllowanceDto allowance, Guid? occupationMatchId)
+        CareerAgentRun run, IEnumerable<CareerAgentStep> steps, int? currentProfile, CareerAllowanceDto allowance, Guid? occupationMatchId,
+        Guid? marketBriefId)
     {
         var stepList = steps.ToList();
         return new CareerAgentRunDto(
@@ -411,6 +438,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
                 : null,
             run.ProposalId,
             occupationMatchId,
+            marketBriefId,
             ProfileChanged: run.PinnedProfileVersion != null && currentProfile != run.PinnedProfileVersion,
             run.ErrorCode,
             allowance);
