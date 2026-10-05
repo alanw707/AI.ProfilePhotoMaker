@@ -179,7 +179,7 @@ export interface CareerRunQuestion {
   choices?: CareerRunChoice[];
 }
 export type CareerRunTask =
-  'profile_summary' | 'occupation_match' | 'market_brief' | 'pay_analysis';
+  'profile_summary' | 'occupation_match' | 'market_brief' | 'pay_analysis' | 'roadmap';
 export interface CareerRunAllowance {
   used: number;
   reserved: number;
@@ -201,6 +201,7 @@ export interface CareerRunDto {
   occupationMatchId?: string | null;
   marketBriefId?: string | null;
   payAnalysisId?: string | null;
+  roadmapId?: string | null;
   profileChanged: boolean;
   errorCode: string | null;
   allowance: CareerRunAllowance;
@@ -578,6 +579,59 @@ export interface PayAnalysisDto {
   sources: MarketSource[];
   createdAt: string;
 }
+export type RoadmapStatus = 'proposed' | 'accepted' | 'dismissed';
+export type RoadmapOptionKey = 'closest_fit' | 'higher_ambition' | 'steadier_transition';
+export interface RoadmapTask {
+  id: string;
+  title: string;
+  effortHours: number;
+  dependsOn: string[];
+}
+export interface RoadmapRationale {
+  text: string;
+  sourceId: string;
+  release: string;
+}
+export interface RoadmapOption {
+  key: RoadmapOptionKey;
+  occupationCode: string;
+  title: string;
+  rationale: RoadmapRationale[];
+  assumptions: string[];
+  missingEvidence: string[];
+  timelineNote: string;
+  thisWeek: RoadmapTask[];
+  milestones: { day: number; tasks: RoadmapTask[] }[];
+}
+export interface RoadmapDto {
+  id: string;
+  version: number;
+  status: RoadmapStatus;
+  selectedOption: RoadmapOptionKey | null;
+  pinned: {
+    profileVersion: number;
+    goalVersion: number;
+    occupationCode: string;
+    marketBriefId: string | null;
+    payAnalysisId: string | null;
+  };
+  stale: boolean;
+  staleReasons: string[];
+  weeklyEffortHours: number | null;
+  options: RoadmapOption[];
+  omittedOptions: { key: RoadmapOptionKey; reason: string }[];
+  lowTimeNote: string | null;
+  goalUnchanged?: boolean;
+  createdAt?: string;
+}
+export interface RoadmapSummary {
+  id: string;
+  version: number;
+  status: RoadmapStatus;
+  stale: boolean;
+  optionCount: number;
+  createdAt: string;
+}
 export interface PayRecomputeResult {
   matches: boolean;
   inputHash: string;
@@ -610,6 +664,8 @@ export interface CareerApiError {
     | 'notConfirmable'
     | 'goalRequired'
     | 'occupationRequired'
+    | 'roadmapCycle'
+    | 'roadmapNotProposed'
     | 'metricUnsupported'
     | 'areaNotFound'
     | 'unknown';
@@ -711,6 +767,8 @@ export class CareerProfileService {
       CareerMatchNotConfirmable: 'notConfirmable',
       CareerGoalRequired: 'goalRequired',
       CareerOccupationRequired: 'occupationRequired',
+      CareerRoadmapCycle: 'roadmapCycle',
+      CareerRoadmapNotProposed: 'roadmapNotProposed',
       CareerMetricUnsupported: 'metricUnsupported',
       CareerAreaNotFound: 'areaNotFound',
       CareerReferenceUnavailable: 'unavailable',
@@ -900,6 +958,34 @@ export class CareerProfileService {
   }
   getPayQualification() {
     return this.request<PayQualification>('GET', 'pay/qualification');
+  }
+
+  listRoadmaps() {
+    return this.request<{ roadmaps: RoadmapSummary[] }>('GET', 'roadmaps');
+  }
+  getRoadmap(id: string) {
+    return this.request<RoadmapDto>('GET', `roadmaps/${encodeURIComponent(id)}`);
+  }
+  /** Records the chosen path; the goal itself is not changed. Needs the goal ETag. */
+  acceptRoadmap(id: string, optionKey: RoadmapOptionKey, goalEtag: string) {
+    return this.request<RoadmapDto>(
+      'POST',
+      `roadmaps/${encodeURIComponent(id)}/accept`,
+      { optionKey },
+      undefined,
+      false,
+      { 'If-Match': goalEtag }
+    );
+  }
+  dismissRoadmap(id: string) {
+    return this.request<RoadmapDto>('POST', `roadmaps/${encodeURIComponent(id)}/dismiss`);
+  }
+  updateRoadmapTask(id: string, taskId: string, effortHours: number) {
+    return this.request<RoadmapDto>(
+      'PUT',
+      `roadmaps/${encodeURIComponent(id)}/tasks/${encodeURIComponent(taskId)}`,
+      { effortHours }
+    );
   }
 
   listMarketBriefs() {
