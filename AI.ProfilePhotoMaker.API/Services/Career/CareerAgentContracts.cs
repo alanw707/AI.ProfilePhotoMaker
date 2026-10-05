@@ -5,6 +5,9 @@ namespace AI.ProfilePhotoMaker.API.Services.Career;
 public sealed class CreateCareerRunRequest
 {
     public string? Task { get; set; }
+
+    /// <summary>targeted_resume only: propose changes to this resume instead of creating a new one.</summary>
+    public Guid? MaterialId { get; set; }
 }
 
 public sealed class AnswerCareerRunRequest
@@ -45,7 +48,8 @@ public sealed record CareerAgentRunDto(
     string? ErrorCode,
     CareerAllowanceDto Allowance,
     Guid? PayAnalysisId = null,
-    Guid? RoadmapId = null);
+    Guid? RoadmapId = null,
+    Guid? MaterialId = null);
 
 public sealed record CareerRunListDto(IReadOnlyList<CareerAgentRunDto> Runs, CareerAllowanceDto Allowance);
 

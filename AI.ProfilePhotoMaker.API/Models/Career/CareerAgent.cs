@@ -18,6 +18,7 @@ public static class CareerAgentTasks
     public const string MarketBrief = "market_brief";
     public const string PayAnalysis = "pay_analysis";
     public const string Roadmap = "roadmap";
+    public const string TargetedResume = "targeted_resume";
 }
 
 public static class CareerStepKinds
@@ -50,6 +51,9 @@ public static class CareerStepNames
     public const string BuildOptions = "build_options";
     public const string PlanTasks = "plan_tasks";
     public const string SaveRoadmap = "save_roadmap";
+    public const string SelectFacts = "select_facts";
+    public const string DraftResume = "draft_resume";
+    public const string SaveResume = "save_resume";
 }
 
 /// <summary>
@@ -91,6 +95,9 @@ public class CareerAgentRun
     public long FencingToken { get; set; }
 
     public Guid? ProposalId { get; set; }
+
+    /// <summary>targeted_resume only: the material to propose changes for; null creates a new one.</summary>
+    public Guid? MaterialId { get; set; }
     public string? ErrorCode { get; set; }
 
     /// <summary>True once a provider call was made, so the allowance is spent rather than released.</summary>

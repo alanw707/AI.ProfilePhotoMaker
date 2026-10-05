@@ -81,6 +81,10 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         {
             await ExecuteRoadmapAsync(run, ct);
         }
+        else if (run.Task == CareerAgentTasks.TargetedResume)
+        {
+            await ExecuteTargetedResumeAsync(run, ct);
+        }
         else
         {
             await ExecuteAsync(run, _model!, ct);
@@ -100,7 +104,7 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             var run = await _db.CareerAgentRuns
                 .Where(r => (r.Status == CareerRunStatus.Queued || r.Status == CareerRunStatus.Working)
                     && (r.LeaseExpiresAt == null || r.LeaseExpiresAt < now)
-                    && (modelAvailable || r.Task == CareerAgentTasks.OccupationMatch || r.Task == CareerAgentTasks.MarketBrief || r.Task == CareerAgentTasks.PayAnalysis || r.Task == CareerAgentTasks.Roadmap))
+                    && (modelAvailable || r.Task == CareerAgentTasks.OccupationMatch || r.Task == CareerAgentTasks.MarketBrief || r.Task == CareerAgentTasks.PayAnalysis || r.Task == CareerAgentTasks.Roadmap || r.Task == CareerAgentTasks.TargetedResume))
                 .OrderBy(r => r.CreatedAt)
                 .FirstOrDefaultAsync(ct);
             if (run == null)
@@ -481,6 +485,140 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         if (await FinishAsync(run, CareerRunStatus.Completed, null, ct))
         {
             _logger.LogInformation("Career run {RunId} completed with roadmap {RoadmapId}", run.Id, roadmap.Id);
+        }
+    }
+
+    // ---- Targeted resume (ADR 0018) ----------------------------------------------
+
+    private sealed record DraftStepOutput(ResumeDraft Draft, string Title);
+
+    /// <summary>
+    /// Plan: read profile and goal, choose the facts that overlap the target occupation, draft, save. Deterministic and
+    /// model-free, so the allowance unit is released. Every generated line is checked against the pinned profile
+    /// before anything is saved, and a run for an existing resume saves a proposal, never a version.
+    /// </summary>
+    private async Task ExecuteTargetedResumeAsync(CareerAgentRun run, CancellationToken ct)
+    {
+        var steps = await LoadStepsAsync(run, ct);
+        var goal = await _db.CareerGoalVersions.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.OwnerId == run.OwnerId && v.VersionNumber == run.PinnedGoalVersion, ct);
+        var occupation = goal?.OccupationCode == null ? null : _reference?.Data?.Find(goal.OccupationCode);
+        if (goal?.OccupationCode == null || goal.OccupationTitle == null)
+        {
+            await FinishAsync(run, CareerRunStatus.Failed, CareerOccupationErrorCodes.OccupationRequired, ct);
+            return;
+        }
+        if (occupation == null)
+        {
+            await FinishAsync(run, CareerRunStatus.Failed, CareerAgentErrorCodes.ReferenceUnavailable, ct);
+            return;
+        }
+        if (!await ReadFactsAsync(run, steps, ct))
+        {
+            return;
+        }
+        var profile = await LoadProfileAsync(run, ct);
+
+        if (!steps.Any(s => s.Name == CareerStepNames.SelectFacts))
+        {
+            if (!await CanStartStepAsync(run, steps, ct)
+                || !await SaveStepAsync(run, steps, CareerStepKinds.Tool, CareerStepNames.SelectFacts,
+                    JsonSerializer.Serialize(new { highlights = profile.Highlights.Count, skills = profile.Skills.Count, occupationCode = goal.OccupationCode }), ct))
+            {
+                return;
+            }
+        }
+
+        var draftStep = steps.FirstOrDefault(s => s.Name == CareerStepNames.DraftResume);
+        DraftStepOutput drafted;
+        if (draftStep != null)
+        {
+            drafted = JsonSerializer.Deserialize<DraftStepOutput>(draftStep.OutputJson!, ResumeJson.Options)!;
+        }
+        else
+        {
+            if (!await CanStartStepAsync(run, steps, ct))
+            {
+                return;
+            }
+            drafted = new DraftStepOutput(
+                ResumeAssembler.Assemble(profile, goal.OccupationTitle, ResumeAssembler.OccupationWords(occupation)),
+                $"Resume for {goal.OccupationTitle}");
+            if (!await SaveStepAsync(run, steps, CareerStepKinds.Tool, CareerStepNames.DraftResume,
+                    JsonSerializer.Serialize(drafted, ResumeJson.Options), ct))
+            {
+                return;
+            }
+        }
+        if (!await CanStartStepAsync(run, steps, ct))
+        {
+            return;
+        }
+
+        // The server rejects any line whose fact ids do not resolve, whatever produced it.
+        if (ResumeFacts.UnsupportedLineIds(profile, drafted.Draft.Sections).Count > 0)
+        {
+            await FinishAsync(run, CareerRunStatus.Failed, ResumeErrorCodes.UnsupportedClaim, ct);
+            return;
+        }
+
+        var now = Now();
+        Guid savedId;
+        if (run.MaterialId is { } materialId)
+        {
+            var material = await _db.CareerMaterials.AsNoTracking().FirstOrDefaultAsync(m => m.Id == materialId && m.OwnerId == run.OwnerId, ct);
+            var current = material == null ? null : await _db.CareerMaterialVersions.AsNoTracking()
+                .FirstOrDefaultAsync(v => v.MaterialId == materialId && v.OwnerId == run.OwnerId && v.Number == material.CurrentVersion, ct);
+            if (material == null || current == null)
+            {
+                await FinishAsync(run, CareerRunStatus.Failed, ResumeErrorCodes.MaterialNotFound, ct);
+                return;
+            }
+            var currentSections = JsonSerializer.Deserialize<List<ResumeSection>>(current.SectionsJson, ResumeJson.Options) ?? new();
+            var proposal = new CareerMaterialProposal
+            {
+                Id = Guid.NewGuid(),
+                OwnerId = run.OwnerId,
+                MaterialId = material.Id,
+                RunId = run.Id,
+                BaseVersion = material.CurrentVersion,
+                ChangesJson = JsonSerializer.Serialize(ResumeAssembler.Diff(currentSections, drafted.Draft.Sections), ResumeJson.Options),
+                ProposedJson = JsonSerializer.Serialize(new CareerMaterialService.StoredProposal(
+                    drafted.Draft.Sections, drafted.Draft.Questions, run.PinnedProfileVersion!.Value, run.PinnedGoalVersion!.Value, goal.OccupationCode), ResumeJson.Options),
+                CreatedAt = now
+            };
+            _db.CareerMaterialProposals.Add(proposal);
+            savedId = proposal.Id;
+        }
+        else
+        {
+            var material = new CareerMaterial
+            {
+                Id = Guid.NewGuid(),
+                OwnerId = run.OwnerId,
+                RunId = run.Id,
+                Kind = CareerMaterialKinds.Resume,
+                Title = drafted.Title.Length > 200 ? drafted.Title[..200] : drafted.Title,
+                CurrentVersion = 1,
+                PinnedProfileVersion = run.PinnedProfileVersion!.Value,
+                PinnedGoalVersion = run.PinnedGoalVersion!.Value,
+                OccupationCode = goal.OccupationCode,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            // Name and email only; phone, location and links stay off until the user turns them on.
+            _db.CareerMaterials.Add(material);
+            _db.CareerMaterialVersions.Add(CareerMaterialService.NewVersion(
+                material, drafted.Draft.Sections, drafted.Draft.Questions, new ResumeContact(), ResumeAuthors.Agent, null, now));
+            savedId = material.Id;
+        }
+
+        // Saved in the same fenced write that completes the run, so a lost lease leaves nothing behind.
+        AddStep(run, steps, CareerStepKinds.Save, CareerStepNames.SaveResume,
+            JsonSerializer.Serialize(new { materialId = run.MaterialId ?? savedId, proposalId = run.MaterialId == null ? (Guid?)null : savedId }));
+        if (await FinishAsync(run, CareerRunStatus.Completed, null, ct))
+        {
+            _logger.LogInformation("Career run {RunId} completed with resume {SavedId}", run.Id, savedId);
         }
     }
 

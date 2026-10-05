@@ -101,7 +101,10 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         typeof(CareerPayAnalysis),
         typeof(CareerRoadmap),
         typeof(CareerRoadmapTaskProgress),
-        typeof(CareerRoadmapReplan)
+        typeof(CareerRoadmapReplan),
+        typeof(CareerMaterial),
+        typeof(CareerMaterialVersion),
+        typeof(CareerMaterialProposal)
     };
 
     private readonly ApplicationDbContext _db;
@@ -126,6 +129,9 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         _db.CareerMarketBriefs.RemoveRange(await _db.CareerMarketBriefs.Where(b => b.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerPayAnalyses.RemoveRange(await _db.CareerPayAnalyses.Where(b => b.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerRoadmapTaskProgress.RemoveRange(await _db.CareerRoadmapTaskProgress.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerMaterialProposals.RemoveRange(await _db.CareerMaterialProposals.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerMaterialVersions.RemoveRange(await _db.CareerMaterialVersions.Where(v => v.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerMaterials.RemoveRange(await _db.CareerMaterials.Where(m => m.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerRoadmapReplans.RemoveRange(await _db.CareerRoadmapReplans.Where(r => r.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerRoadmaps.RemoveRange(await _db.CareerRoadmaps.Where(r => r.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerProfileProposalItems.RemoveRange(await _db.CareerProfileProposalItems.Where(i => i.OwnerId == ownerId).ToListAsync(ct));
@@ -201,6 +207,7 @@ public static class CareerWorkspaceServiceCollectionExtensions
         services.TryAddSingleton<IPayObservationSource, NoQualifiedPayObservationSource>();
         services.AddScoped<ICareerPayService, CareerPayService>();
         services.AddScoped<ICareerRoadmapService, CareerRoadmapService>();
+        services.AddScoped<ICareerMaterialService, CareerMaterialService>();
         services.AddScoped<ICareerRoadmapTrackingService>(sp => new CareerRoadmapTrackingService(
             sp.GetRequiredService<ApplicationDbContext>(),
             sp.GetRequiredService<ICareerRoadmapService>(),
