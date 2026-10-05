@@ -52,5 +52,6 @@ public static class CareerAgentErrorCodes
     public const string RetryLimit = "CareerRetryLimit";
     public const string CostLimit = "CareerCostLimit";
     public const string ToolNotAllowed = "CareerToolNotAllowed";
+    public const string QuestionExpired = "CareerQuestionExpired";
     public const string ModelFailed = "CareerModelFailed";
 }

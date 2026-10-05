@@ -251,7 +251,7 @@ public class CareerAgentRuntimeTests
     // ---- Cancel ----------------------------------------------------------------
 
     [Fact]
-    public async Task CancelWhileWorkingDiscardsTheWorkersCompletionAndReleasesTheUnit()
+    public async Task CancelDuringTheModelCallDiscardsTheWorkersCompletionAndSpendsTheUnit()
     {
         await SeedProfileAsync();
         var runId = await CreateRunAsync();
@@ -266,8 +266,9 @@ public class CareerAgentRuntimeTests
         (await LoadRunAsync(runId)).Status.Should().Be(CareerRunStatus.Cancelled);
         (await ProposalCountAsync()).Should().Be(0);
         (await StepNamesAsync(runId)).Should().NotContain("draft_summary").And.NotContain("save_proposal");
+        // The provider call had started, so the draft counts even though the result is dropped.
         var allowance = await AllowanceAsync();
-        (allowance.Reserved, allowance.Used).Should().Be((0, 0));
+        (allowance.Reserved, allowance.Used).Should().Be((0, 1));
     }
 
     [Fact]
@@ -306,6 +307,104 @@ public class CareerAgentRuntimeTests
         var allowance = await AllowanceAsync();
         (allowance.Reserved, allowance.Used).Should().Be((0, 1));
         (await ProposalCountAsync()).Should().Be(0);
+    }
+
+    // ---- Review fixes: fencing on terminal writes, spend accounting, backoff ----
+
+    [Fact]
+    public async Task AWorkerThatLostItsLeaseCannotCompleteARunTheRetryLimitFailed()
+    {
+        await SeedProfileAsync();
+        var runId = await CreateRunAsync();
+        for (var attempt = 1; attempt < _options.MaxAttempts; attempt++)
+        {
+            await using var crashing = new CrashAfterClaimContext(DbOptions);
+            await Runner(crashing, new CountingModel()).Invoking(r => r.RunOnceAsync("w")).Should().ThrowAsync<InvalidOperationException>();
+            _clock.Advance(TimeSpan.FromSeconds(_options.LeaseSeconds + 1));
+        }
+
+        // Worker A takes the last allowed claim. While its model call is slow the lease
+        // expires and worker B fails the run with the retry limit.
+        var model = new HookModel(async () =>
+        {
+            _clock.Advance(TimeSpan.FromSeconds(_options.LeaseSeconds + 1));
+            (await RunOnceAsync(new CountingModel(), "worker-b")).Should().BeTrue();
+        });
+        await RunOnceAsync(model, "worker-a");
+
+        var run = await LoadRunAsync(runId);
+        (run.Status, run.ErrorCode).Should().Be((CareerRunStatus.Failed, "CareerRetryLimit"));
+        run.ProposalId.Should().BeNull();
+        (await ProposalCountAsync()).Should().Be(0);
+        var allowance = await AllowanceAsync();
+        (allowance.Reserved, allowance.Used).Should().Be((0, 1));
+    }
+
+    [Fact]
+    public async Task TheModelCallIsRecordedBeforeTheProviderIsAsked()
+    {
+        await SeedProfileAsync();
+        var runId = await CreateRunAsync();
+        bool? recordedDuringCall = null;
+        var model = new HookModel(async () => recordedDuringCall = (await LoadRunAsync(runId)).ModelCalled);
+
+        await RunOnceAsync(model);
+
+        recordedDuringCall.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task AFailedModelCallIsRetriedOnlyAfterABackoff()
+    {
+        await SeedProfileAsync();
+        var runId = await CreateRunAsync();
+        var model = new ThrowingModel { FailFirst = 1 };
+
+        (await RunOnceAsync(model)).Should().BeTrue();
+        (await RunOnceAsync(model)).Should().BeFalse();
+        model.Calls.Should().Be(1);
+
+        _clock.Advance(TimeSpan.FromSeconds(_options.RetryBackoffSeconds + 1));
+        (await RunOnceAsync(model)).Should().BeTrue();
+
+        model.Calls.Should().Be(2);
+        (await LoadRunAsync(runId)).Status.Should().Be(CareerRunStatus.Completed);
+    }
+
+    [Fact]
+    public async Task AModelCallThatWouldOutliveTheLeaseIsAbandonedAndRetried()
+    {
+        // Lease 6s gives the call a 1s budget, so another worker never re-claims mid-call.
+        _options.LeaseSeconds = 6;
+        await SeedProfileAsync();
+        var runId = await CreateRunAsync();
+        var model = new HangingModel();
+
+        (await RunOnceAsync(model)).Should().BeTrue();
+
+        model.SawCancellation.Should().BeTrue();
+        var run = await LoadRunAsync(runId);
+        run.Status.Should().Be(CareerRunStatus.Queued);
+        (await ProposalCountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task AnUnansweredQuestionExpiresAndReleasesTheUnit()
+    {
+        await SeedProfileAsync(withGoal: false);
+        var runId = await CreateRunAsync();
+        await RunOnceAsync(new CountingModel());
+        (await LoadRunAsync(runId)).Status.Should().Be(CareerRunStatus.NeedsInput);
+
+        _clock.Advance(TimeSpan.FromHours(_options.QuestionExpiryHours) - TimeSpan.FromMinutes(1));
+        (await RunOnceAsync(new CountingModel())).Should().BeFalse();
+        _clock.Advance(TimeSpan.FromMinutes(2));
+        (await RunOnceAsync(new CountingModel())).Should().BeTrue();
+
+        var run = await LoadRunAsync(runId);
+        (run.Status, run.ErrorCode).Should().Be((CareerRunStatus.Failed, "CareerQuestionExpired"));
+        var allowance = await AllowanceAsync();
+        (allowance.Reserved, allowance.Used).Should().Be((0, 0));
     }
 
     // ---- Tools, ceilings and failures ------------------------------------------
@@ -411,6 +510,7 @@ public class CareerAgentRuntimeTests
             var retrying = await LoadRunAsync(runId);
             retrying.Status.Should().Be(CareerRunStatus.Queued);
             retrying.LeaseOwner.Should().BeNull();
+            _clock.Advance(TimeSpan.FromSeconds(_options.RetryBackoffSeconds * attempt + 1));
         }
         (await RunOnceAsync(model)).Should().BeTrue();
 
@@ -418,7 +518,8 @@ public class CareerAgentRuntimeTests
         (run.Status, run.ErrorCode).Should().Be((CareerRunStatus.Failed, "CareerModelFailed"));
         model.Calls.Should().Be(_options.MaxAttempts);
         (await ProposalCountAsync()).Should().Be(0);
-        (await AllowanceAsync()).Used.Should().Be(0);
+        // Calls were started (the provider may have billed them), so the one reserved unit is spent.
+        (await AllowanceAsync()).Used.Should().Be(1);
         (await AllowanceAsync()).Reserved.Should().Be(0);
     }
 
@@ -430,6 +531,7 @@ public class CareerAgentRuntimeTests
         var model = new ThrowingModel { FailFirst = 1 };
 
         await RunOnceAsync(model);
+        _clock.Advance(TimeSpan.FromSeconds(_options.RetryBackoffSeconds + 1));
         await RunOnceAsync(model);
 
         (await LoadRunAsync(runId)).Status.Should().Be(CareerRunStatus.Completed);
@@ -619,6 +721,26 @@ public class CareerAgentRuntimeTests
         {
             await _during();
             return await new FakeCareerTextModel().CompleteAsync(request, ct);
+        }
+    }
+
+    /// <summary>Never answers on its own; returns only when the call is cancelled.</summary>
+    private sealed class HangingModel : ICareerTextModel
+    {
+        public bool SawCancellation { get; private set; }
+
+        public async Task<CareerModelResult> CompleteAsync(CareerModelRequest request, CancellationToken ct = default)
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(30), ct);
+            }
+            catch (OperationCanceledException)
+            {
+                SawCancellation = true;
+                throw;
+            }
+            return CareerModelResult.Text("too late", usageTokens: 1, costCents: 0);
         }
     }
 

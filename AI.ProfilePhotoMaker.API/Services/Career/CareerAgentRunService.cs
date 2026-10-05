@@ -178,12 +178,17 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             .Take(MaxListed)
             .ToListAsync(ct);
 
-        var dtos = new List<CareerAgentRunDto>();
-        foreach (var run in runs)
-        {
-            dtos.Add(await ToDtoAsync(run, ct));
-        }
-        return CareerOutcome<CareerRunListDto>.Ok(new CareerRunListDto(dtos, await AllowanceDtoAsync(ownerId, ct)));
+        // One query each for steps, profile version and allowance, however many runs are listed.
+        var runIds = runs.Select(r => r.Id).ToList();
+        var stepsByRun = (await _db.CareerAgentSteps.AsNoTracking()
+                .Where(s => s.OwnerId == ownerId && runIds.Contains(s.RunId))
+                .ToListAsync(ct))
+            .ToLookup(s => s.RunId);
+        var currentProfile = await CurrentProfileVersionAsync(ownerId, ct);
+        var allowance = await AllowanceDtoAsync(ownerId, ct);
+
+        var dtos = runs.Select(run => ToDto(run, stepsByRun[run.Id], currentProfile, allowance)).ToList();
+        return CareerOutcome<CareerRunListDto>.Ok(new CareerRunListDto(dtos, allowance));
     }
 
     public async Task<CareerOutcome<CareerAgentRunDto>> AnswerAsync(
@@ -321,10 +326,17 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
     private async Task<CareerAgentRunDto> ToDtoAsync(CareerAgentRun run, CancellationToken ct)
     {
         var steps = await _db.CareerAgentSteps.AsNoTracking()
-            .Where(s => s.RunId == run.Id).OrderBy(s => s.Ordinal).ToListAsync(ct);
-        var currentProfile = await _db.CareerProfiles.AsNoTracking()
-            .Where(p => p.OwnerId == run.OwnerId).Select(p => (int?)p.ActiveVersionNumber).FirstOrDefaultAsync(ct);
+            .Where(s => s.RunId == run.Id && s.OwnerId == run.OwnerId).ToListAsync(ct);
+        return ToDto(run, steps, await CurrentProfileVersionAsync(run.OwnerId, ct), await AllowanceDtoAsync(run.OwnerId, ct));
+    }
 
+    private async Task<int?> CurrentProfileVersionAsync(string ownerId, CancellationToken ct) =>
+        await _db.CareerProfiles.AsNoTracking()
+            .Where(p => p.OwnerId == ownerId).Select(p => (int?)p.ActiveVersionNumber).FirstOrDefaultAsync(ct);
+
+    private static CareerAgentRunDto ToDto(
+        CareerAgentRun run, IEnumerable<CareerAgentStep> steps, int? currentProfile, CareerAllowanceDto allowance)
+    {
         return new CareerAgentRunDto(
             run.Id,
             run.Task,
@@ -334,7 +346,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             run.CompletedAt is { } completed ? Utc(completed) : null,
             run.PinnedProfileVersion,
             run.PinnedGoalVersion,
-            steps.Select(s => new CareerRunStepDto(
+            steps.OrderBy(s => s.Ordinal).Select(s => new CareerRunStepDto(
                 s.Ordinal, s.Kind, s.Name, StepLabels.GetValueOrDefault(s.Name, s.Name), s.Status,
                 s.CompletedAt is { } done ? Utc(done) : null)).ToList(),
             run.Status == CareerRunStatus.NeedsInput && run.QuestionId != null
@@ -343,7 +355,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             run.ProposalId,
             ProfileChanged: run.PinnedProfileVersion != null && currentProfile != run.PinnedProfileVersion,
             run.ErrorCode,
-            await AllowanceDtoAsync(run.OwnerId, ct));
+            allowance);
     }
 
     private static DateTime Utc(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);

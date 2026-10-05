@@ -25,6 +25,8 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
 
     private const int MaxClaimTries = 3;
     private const int MaxSaveAttempts = 5;
+    // Seconds kept free between the end of a model call and the end of the lease.
+    private const int ModelTimeoutMarginSeconds = 5;
     private const int MaxSummaryLength = CareerInputValidator.MaxSummary;
 
     private readonly ApplicationDbContext _db;
@@ -46,6 +48,11 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
 
     public async Task<bool> RunOnceAsync(string workerId, CancellationToken ct = default)
     {
+        if (await ExpireAbandonedQuestionAsync(ct))
+        {
+            return true;
+        }
+
         // With no model nothing can run; leave runs queued rather than failing them.
         if (_model == null)
         {
@@ -67,9 +74,10 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         for (var attempt = 0; attempt < MaxClaimTries; attempt++)
         {
             var now = Now();
+            // LeaseExpiresAt doubles as "not before" on a queued run waiting out a retry backoff.
             var run = await _db.CareerAgentRuns
-                .Where(r => r.Status == CareerRunStatus.Queued
-                    || (r.Status == CareerRunStatus.Working && (r.LeaseExpiresAt == null || r.LeaseExpiresAt < now)))
+                .Where(r => (r.Status == CareerRunStatus.Queued || r.Status == CareerRunStatus.Working)
+                    && (r.LeaseExpiresAt == null || r.LeaseExpiresAt < now))
                 .OrderBy(r => r.CreatedAt)
                 .FirstOrDefaultAsync(ct);
             if (run == null)
@@ -109,6 +117,29 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             _db.ChangeTracker.Clear();
         }
         return (null, false);
+    }
+
+    /// <summary>Fails one run whose question went unanswered too long, releasing its unit.</summary>
+    private async Task<bool> ExpireAbandonedQuestionAsync(CancellationToken ct)
+    {
+        var cutoff = Now().AddHours(-_options.QuestionExpiryHours);
+        var run = await _db.CareerAgentRuns
+            .Where(r => r.Status == CareerRunStatus.NeedsInput && r.UpdatedAt < cutoff)
+            .OrderBy(r => r.UpdatedAt)
+            .FirstOrDefaultAsync(ct);
+        if (run == null)
+        {
+            return false;
+        }
+
+        var expired = await FinishAsync(run, CareerRunStatus.Failed, CareerAgentErrorCodes.QuestionExpired, ct);
+        _db.ChangeTracker.Clear();
+        if (expired)
+        {
+            _logger.LogInformation("Career run {RunId} expired waiting for an answer", run.Id);
+        }
+        // A lost race (answered or cancelled meanwhile) is still progress: look again next loop.
+        return true;
     }
 
     // ---- Execute ---------------------------------------------------------------
@@ -195,7 +226,8 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         var saved = steps.FirstOrDefault(s => s.Name == CareerStepNames.DraftSummary);
         if (saved != null)
         {
-            return JsonDocument.Parse(saved.OutputJson!).RootElement.GetProperty("text").GetString();
+            using var savedOutput = JsonDocument.Parse(saved.OutputJson!);
+            return savedOutput.RootElement.GetProperty("text").GetString();
         }
 
         if (!await CanStartStepAsync(run, steps, ct))
@@ -212,10 +244,31 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         var request = new CareerModelRequest(
             run.Task, ToFacts(await LoadProfileAsync(run, ct)), await LoadGoalAsync(run, ct), AllowedTools, run.Answer);
 
+        // Record the call (fenced) before asking the provider: if this worker then crashes,
+        // is cancelled or loses its lease, the started call still counts against the
+        // allowance. Saving also renews the lease for the call.
+        run.ModelCalled = true;
+        run.LeaseExpiresAt = Now().AddSeconds(_options.LeaseSeconds);
+        run.UpdatedAt = Now();
+        if (!await SaveAsync(run, ct))
+        {
+            return null;
+        }
+
         CareerModelResult result;
+        // The call must finish well inside the lease, or another worker could claim the run
+        // and ask the provider a second time.
+        using var timeout = new CancellationTokenSource(ModelTimeout, _clock);
+        using var callToken = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
         try
         {
-            result = await model.CompleteAsync(request, ct);
+            result = await model.CompleteAsync(request, callToken.Token);
+        }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            _logger.LogWarning("Career run {RunId} model call timed out", run.Id);
+            await RetryOrFailModelAsync(run, ct);
+            return null;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -225,7 +278,6 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             return null;
         }
 
-        run.ModelCalled = true;
         run.CostCents += result.CostCents;
 
         if (result.ToolCall != null)
@@ -282,10 +334,11 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             return;
         }
 
-        // Back to the queue with the lease released; the next claim tries again.
+        // Back to the queue with the lease released. LeaseExpiresAt holds the run back until
+        // the backoff passes, so a provider outage does not burn every attempt at once.
         run.Status = CareerRunStatus.Queued;
         run.LeaseOwner = null;
-        run.LeaseExpiresAt = null;
+        run.LeaseExpiresAt = Now().AddSeconds(_options.RetryBackoffSeconds * run.Attempts);
         run.UpdatedAt = Now();
         await SaveAsync(run, ct);
     }
@@ -341,12 +394,19 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
 
     private DateTime Now() => _clock.GetUtcNow().UtcDateTime;
 
-    /// <summary>True when another worker claimed the run or the user cancelled since our claim.</summary>
+    private TimeSpan ModelTimeout => TimeSpan.FromSeconds(Math.Max(1, _options.LeaseSeconds - ModelTimeoutMarginSeconds));
+
+    /// <summary>
+    /// True when another worker claimed the run, another writer finished it, or the user
+    /// cancelled since we loaded it. Compares with the token we hold (the loaded value),
+    /// not a token this save is about to bump.
+    /// </summary>
     private async Task<bool> LostFenceAsync(CareerAgentRun run, CancellationToken ct)
     {
+        var held = _db.Entry(run).Property(r => r.FencingToken).OriginalValue;
         var current = await _db.CareerAgentRuns.AsNoTracking()
             .Where(r => r.Id == run.Id).Select(r => (long?)r.FencingToken).FirstOrDefaultAsync(ct);
-        return current != run.FencingToken;
+        return current != held;
     }
 
     /// <summary>Adds a step (unsaved) and moves the run's checkpoint and lease along with it.</summary>
@@ -392,6 +452,9 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
     private async Task<bool> FinishAsync(CareerAgentRun run, CareerRunStatus status, string? errorCode, CancellationToken ct)
     {
         var now = Now();
+        // Every terminal write moves the fence, so a worker still holding the old token
+        // (for example one whose lease expired mid-call) can never write over this ending.
+        run.FencingToken++;
         run.Status = status;
         run.ErrorCode = errorCode;
         run.LeaseOwner = null;

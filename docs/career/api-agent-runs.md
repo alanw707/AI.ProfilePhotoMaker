@@ -19,7 +19,7 @@ Same envelope, auth, flag (403 `CareerWorkspaceDisabled`) and error shape as `ap
   "question": null,                         // when needs_input: { "id": "audience", "text": "Who should this summary speak to?", "maxLength": 200 }
   "proposalId": null,                       // set when completed
   "profileChanged": false,                  // true when the profile moved past pinnedProfileVersion
-  "errorCode": null,                        // failed: CareerStepLimit | CareerTimeLimit | CareerRetryLimit | CareerCostLimit | CareerToolNotAllowed | CareerModelFailed
+  "errorCode": null,                        // failed: CareerStepLimit | CareerTimeLimit | CareerRetryLimit | CareerCostLimit | CareerToolNotAllowed | CareerModelFailed | CareerQuestionExpired
   "allowance": { "used": 1, "reserved": 0, "limit": 20, "periodStart": "2026-10-01T00:00:00Z" }
 }
 ```
@@ -36,7 +36,9 @@ Step labels: `read_profile` "Read your confirmed profile", `read_goal` "Read you
 | POST | `/api/career/runs/{id}/answers` body `{ "questionId": "audience", "answer": "…" }` | 202 run (back to `queued`) | 400 `ValidationError`, 404, 409 `CareerRunNotWaiting` |
 | POST | `/api/career/runs/{id}/cancel` | 200 run (idempotent; finished runs unchanged) | 404 |
 
-Reads never touch the allowance. Polling clients should wait 1.5–2 s between status reads and back off on errors.
+Any write may also answer 503 `CareerRunBusy` with `Retry-After: 1` when it keeps losing a race under heavy contention; retry with the same `Idempotency-Key`.
+
+Reads never touch the allowance. A run uses at most one unit: it is spent once a model call has started (even if the call failed or the run was cancelled during it) and released if the run ends before any call. A question left unanswered for 72 hours fails the run with `CareerQuestionExpired` and releases the unit. Polling clients should wait 1.5–2 s between status reads and back off on errors.
 
 ## Proposal
 

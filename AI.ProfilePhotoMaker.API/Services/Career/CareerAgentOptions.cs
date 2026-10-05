@@ -15,4 +15,10 @@ public sealed class CareerAgentOptions
     public int MonthlyRunAllowance { get; set; } = 20;
     public bool WorkerEnabled { get; set; } = true;
     public int PollSeconds { get; set; } = 2;
+
+    /// <summary>Wait before a failed model call is tried again; multiplied by the attempt number.</summary>
+    public int RetryBackoffSeconds { get; set; } = 5;
+
+    /// <summary>A question nobody answers within this time fails the run and releases its unit.</summary>
+    public int QuestionExpiryHours { get; set; } = 72;
 }

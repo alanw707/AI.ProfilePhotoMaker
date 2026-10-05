@@ -6,6 +6,7 @@ import {
   CareerSummaryComponent,
   START_KEY_STORAGE,
   backoffDelay,
+  latestRun,
 } from './career-summary.component';
 
 const allowance = { used: 1, reserved: 0, limit: 20, periodStart: '2026-10-01T00:00:00Z' };
@@ -56,5 +57,40 @@ describe('CareerSummaryComponent', () => {
     fixture.componentInstance.start();
     expect(sessionStorage.getItem(START_KEY_STORAGE)).toBeNull();
     expect(fixture.componentInstance.error()).toBe('You have used all drafts for this month.');
+  });
+
+  it('keeps the newer run when a slow poll returns an older state', () => {
+    const answered = {
+      ...queuedRun,
+      status: 'queued',
+      updatedAt: '2026-10-04T12:00:05Z',
+    } as CareerRunDto;
+    const stalePoll = {
+      ...queuedRun,
+      status: 'needs_input',
+      updatedAt: '2026-10-04T12:00:01Z',
+    } as CareerRunDto;
+    const laterPoll = {
+      ...queuedRun,
+      status: 'working',
+      updatedAt: '2026-10-04T12:00:07Z',
+    } as CareerRunDto;
+    expect(latestRun(answered, stalePoll)).toBe(answered);
+    expect(latestRun(answered, laterPoll)).toBe(laterPoll);
+    expect(latestRun(null, stalePoll)).toBe(stalePoll);
+    expect(latestRun({ ...answered, id: 'other' } as CareerRunDto, stalePoll)).toBe(stalePoll);
+  });
+
+  it('explains an expired question', () => {
+    const fixture = TestBed.createComponent(CareerSummaryComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.run.set({
+      ...queuedRun,
+      status: 'failed',
+      errorCode: 'CareerQuestionExpired',
+    } as CareerRunDto);
+    expect(fixture.componentInstance.failureText()).toBe(
+      'The question went unanswered for too long, so the draft stopped.'
+    );
   });
 });

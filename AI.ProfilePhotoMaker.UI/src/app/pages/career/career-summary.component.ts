@@ -43,6 +43,7 @@ const ERROR_COPY: Record<string, string> = {
   CareerCostLimit: 'The draft would have cost more than allowed, so it stopped.',
   CareerToolNotAllowed: 'The assistant tried something it is not allowed to do, so it stopped.',
   CareerModelFailed: 'The drafting service could not produce a draft.',
+  CareerQuestionExpired: 'The question went unanswered for too long, so the draft stopped.',
 };
 const FALLBACK_ERROR = 'The draft could not be finished.';
 const ACTIVE: CareerRunStatus[] = ['queued', 'working', 'needs_input'];
@@ -51,6 +52,17 @@ const FATAL_KINDS: CareerApiError['kind'][] = ['notFound', 'unauthorized', 'disa
 export function isActive(status: CareerRunStatus) {
   return ACTIVE.includes(status);
 }
+/**
+ * A poll sent before an answer or cancel can arrive after it. Keep whichever state of
+ * the same run the server wrote last, so an old "needs your answer" never comes back.
+ */
+export function latestRun(current: CareerRunDto | null, incoming: CareerRunDto): CareerRunDto {
+  if (!current || current.id !== incoming.id) {
+    return incoming;
+  }
+  return Date.parse(incoming.updatedAt) < Date.parse(current.updatedAt) ? current : incoming;
+}
+
 export function backoffDelay(attempt: number) {
   return Math.min(POLL_INTERVAL_MS * 2 ** attempt, MAX_BACKOFF_MS);
 }
@@ -113,7 +125,8 @@ export class CareerSummaryComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
-        next: run => {
+        next: polled => {
+          const run = latestRun(this.run(), polled);
           this.run.set(run);
           this.loadingRun.set(false);
           if (!isActive(run.status)) {
