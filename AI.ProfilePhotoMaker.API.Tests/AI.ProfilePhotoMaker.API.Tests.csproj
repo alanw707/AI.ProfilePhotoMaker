@@ -38,6 +38,10 @@
     <ProjectReference Include="..\AI.ProfilePhotoMaker.API\AI.ProfilePhotoMaker.API.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Services/Career/PayEvidenceFixtures/pay-evidence-fixtures.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- Exclude performance test files with NBomber V4 API incompatibilities -->
   <ItemGroup>
     <Compile Remove="Performance\LoadTestingScenarios.cs" />
