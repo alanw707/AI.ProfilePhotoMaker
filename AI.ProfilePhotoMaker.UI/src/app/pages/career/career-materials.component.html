@@ -2,11 +2,42 @@
   <div class="career-sheet">
     <p><a routerLink="/app/career">Back to career workspace</a></p>
     <h1>Career materials</h1>
-    <p>Resume drafts and exports arrive in a later release.</p>
+    <p>Your resume and summary drafts live here. Open one to edit it or download a file.</p>
 
     @if (goalChanged()) {
       <p class="caution" role="status">Your career goal changed while you were in the photo workspace.</p>
     }
+
+    <section aria-labelledby="drafts-heading" data-materials>
+      <h2 id="drafts-heading">Your drafts</h2>
+      <div class="actions">
+        <a class="primary" routerLink="/app/career/resume">Draft my resume</a>
+        <button type="button" class="secondary" (click)="draftSummary()" [disabled]="drafting()">
+          Draft my summary
+        </button>
+      </div>
+      @if (materialsError()) {
+        <p class="caution" role="alert" data-materials-error>{{ materialsError() }}</p>
+      }
+      @if (materialsLoading()) {
+        <p role="status">Loading your drafts…</p>
+      } @else if (!materials().length) {
+        <p class="muted">No drafts yet.</p>
+      } @else {
+        <ul class="version-list" aria-label="Your drafts">
+          @for (m of materials(); track m.id) {
+            <li [attr.data-material]="m.id">
+              <a [routerLink]="openPath(m)" [queryParams]="{ material: m.id }">{{ m.title }}</a>
+              <span>· {{ kindText(m) }} · {{ updatedText(m) }}</span>
+              @if (m.stale) {
+                <strong class="stale-badge" data-stale>Out of date</strong>
+              }
+            </li>
+          }
+        </ul>
+      }
+      <p class="muted">Files you download are free and do not use your drafting allowance.</p>
+    </section>
 
     <section aria-labelledby="photo-heading">
       <h2 id="photo-heading">Profile photo (optional)</h2>

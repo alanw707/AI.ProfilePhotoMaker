@@ -1,0 +1,78 @@
+<div class="career-page export-wrap">
+  <section class="export-panel" aria-labelledby="export-heading" data-export-panel>
+    <h2 id="export-heading">Download a file</h2>
+    <p class="muted">Exports are free and do not use your drafting allowance.</p>
+    <p class="muted">Check the file before sending; we do not promise how applicant tracking systems read it.</p>
+
+    <div class="resume-line">
+      <label for="export-version">Version to download</label>
+      <select id="export-version" (change)="setVersion($any($event.target).value)">
+        <option value="current" [selected]="version() === null">Current version ({{ currentVersion() }})</option>
+        @for (v of versions(); track v.number) {
+          @if (v.number !== currentVersion()) {
+            <option [value]="v.number" [selected]="version() === v.number">Version {{ v.number }}</option>
+          }
+        }
+      </select>
+    </div>
+
+    <fieldset>
+      <legend>File type</legend>
+      <label class="check">
+        <input
+          type="radio"
+          name="export-format"
+          value="pdf"
+          [checked]="format() === 'pdf'"
+          (change)="setFormat('pdf')" />
+        PDF
+      </label>
+      <label class="check">
+        <input
+          type="radio"
+          name="export-format"
+          value="docx"
+          [checked]="format() === 'docx'"
+          (change)="setFormat('docx')" />
+        Word
+      </label>
+    </fieldset>
+
+    @if (showPhotoOption()) {
+      <label class="check" data-photo-option>
+        <input type="checkbox" [checked]="withPhoto()" (change)="withPhoto.set($any($event.target).checked)" />
+        Make a separate PDF with my photo
+      </label>
+    }
+    <p class="muted">Your file has no photo unless you ask for the separate photo PDF.</p>
+
+    <div class="actions">
+      <button type="button" class="primary" (click)="download()" [disabled]="busy()">Download</button>
+    </div>
+    <p role="status" aria-live="polite" data-export-status>{{ status() }}</p>
+    @if (error()) {
+      <p class="caution" role="alert" data-export-error>{{ error() }}</p>
+    }
+
+    <h3 id="recent-exports-heading">Recent files</h3>
+    @if (!recent().length) {
+      <p class="muted">No recent files.</p>
+    } @else {
+      <ul class="version-list" aria-labelledby="recent-exports-heading">
+        @for (e of recent(); track e.id) {
+          <li [attr.data-export]="e.id">
+            <span>{{ formatText(e) }} · Version {{ e.version }} · {{ expiry(e) }}</span>
+            <button
+              type="button"
+              class="secondary"
+              [attr.aria-label]="'Download again: ' + formatText(e) + ', version ' + e.version"
+              [disabled]="busy()"
+              (click)="again(e)">
+              Download again
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>
