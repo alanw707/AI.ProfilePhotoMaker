@@ -6,6 +6,7 @@ import { MarketingHeaderComponent } from '../../shared/marketing-header/marketin
 import { CreditPackagesComponent } from '../../components/credit-packages/credit-packages.component';
 import { NotificationService } from '../../services/notification.service';
 import { LoggingService } from '../../services/logging.service';
+import { workspaceReturnAfterPurchase } from './purchase-return';
 import { NavigationService } from '../../services/navigation.service';
 
 @Component({
@@ -178,13 +179,12 @@ export class PremiumComponent implements OnInit, OnDestroy {
       'Your profile photo package is ready. Start from the workspace to score, generate, and export your best shot.'
     );
 
-    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-    const outcomePackage = this.route.snapshot.queryParamMap.get('outcomePackage');
-    if (returnUrl?.startsWith('/app/enhance') && outcomePackage) {
-      const [path, query = ''] = returnUrl.split('?');
-      const params = new URLSearchParams(query);
-      params.set('upgraded', outcomePackage);
-      this.router.navigate([path], { queryParams: Object.fromEntries(params.entries()) });
+    const workspaceReturn = workspaceReturnAfterPurchase(
+      this.route.snapshot.queryParamMap.get('returnUrl'),
+      this.route.snapshot.queryParamMap.get('outcomePackage')
+    );
+    if (workspaceReturn) {
+      this.router.navigate([workspaceReturn.path], { queryParams: workspaceReturn.queryParams });
       return;
     }
 

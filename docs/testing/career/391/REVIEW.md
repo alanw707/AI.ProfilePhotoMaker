@@ -35,4 +35,15 @@ LocalDev cannot produce finished photos (dummy provider keys), so only the popul
 | 6 | Pre-existing, P3 | axe `label` on the workspace's hidden file input; `color-contrast` on the login page legal link. | Present on the base branch with and without the banner; out of scope, not introduced here. |
 | 7 | Note | In screenshot 04 the workspace says "This photo is no longer available to refine" because image 42 is a mock id that does not exist in LocalDev. | Expected for the mocked review. |
 
+## /code-review (Standards + Spec, PR #403)
+
+| # | Axis | Severity | Finding | Status |
+|---|---|---|---|---|
+| R1 | Standards | P2 | Two first-time selects could race on the unique owner index and return 500. | Fixed: lost race (`IsLostRace`) retries as an update; `CareerPhotoSelectionRaceTests`. |
+| R2 | Spec | P2 | Export/retention for `CareerPhotoSelection` not stated. | Owner cascade + deletion coverage confirmed; career export does not exist yet and is owned by #392 (recorded in ADR 0008). |
+| R3 | Spec | P2 | No test proved career params survive the pricing round trip. | Extracted `workspaceReturnAfterPurchase` from the pricing page (behaviour unchanged) with a Karma spec covering career params and off-site return URLs. |
+| R4 | Spec | P2 | `refineImageId` is dropped across checkout (pre-existing workspace behaviour). | Out of scope for this slice (workspace checkout-return must stay unchanged); tracked in #404. Career back link survives, so the user can return and pick "Improve" again. |
+| R5 | Spec | P3 | Goal lookup unordered. | Not a bug: goals are unique per owner (unique index). |
+| R6 | Standards | P3 | Magic strings, `ToLower()` in LINQ, `AlreadyExists` reused for 409, unused `profile`/`home` keys. | Accepted judgement calls: match existing repo habits; keys are documented allowlist entries. |
+
 Open P0/P1: **none**.

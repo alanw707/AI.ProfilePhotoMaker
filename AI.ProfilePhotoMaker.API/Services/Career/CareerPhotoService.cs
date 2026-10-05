@@ -119,6 +119,24 @@ public sealed class CareerPhotoService : ICareerPhotoService
             .Select(g => (Guid?)g.Id)
             .FirstOrDefaultAsync(ct);
 
+        CareerPhotoSelection selection;
+        try
+        {
+            selection = await UpsertSelectionAsync(ownerId, image.Id, goalId, ct);
+        }
+        catch (DbUpdateException ex) when (CareerProfileService.IsLostRace(ex))
+        {
+            // Another first-time choice created this owner's row (unique owner index).
+            // Choosing is idempotent, so apply this choice to the winner's row.
+            _db.ChangeTracker.Clear();
+            selection = await UpsertSelectionAsync(ownerId, image.Id, goalId, ct);
+        }
+
+        return CareerOutcome<CareerPhotoSelectionDto>.Ok(new CareerPhotoSelectionDto(selection.ProcessedImageId, selection.CareerGoalId, selection.SelectedAt));
+    }
+
+    private async Task<CareerPhotoSelection> UpsertSelectionAsync(string ownerId, int imageId, Guid? goalId, CancellationToken ct)
+    {
         var now = _time.GetUtcNow().UtcDateTime;
         var selection = await _db.CareerPhotoSelections.FirstOrDefaultAsync(s => s.OwnerId == ownerId, ct);
         if (selection == null)
@@ -127,13 +145,12 @@ public sealed class CareerPhotoService : ICareerPhotoService
             _db.CareerPhotoSelections.Add(selection);
         }
 
-        selection.ProcessedImageId = image.Id;
+        selection.ProcessedImageId = imageId;
         selection.CareerGoalId = goalId;
         selection.SelectedAt = now;
         selection.UpdatedAt = now;
         await _db.SaveChangesAsync(ct);
-
-        return CareerOutcome<CareerPhotoSelectionDto>.Ok(new CareerPhotoSelectionDto(selection.ProcessedImageId, selection.CareerGoalId, selection.SelectedAt));
+        return selection;
     }
 
     public async Task<CareerOutcome<bool>> ClearAsync(string ownerId, CancellationToken ct = default)
