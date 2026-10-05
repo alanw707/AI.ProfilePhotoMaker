@@ -66,6 +66,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Models.Career.CareerAllowance> CareerAllowances { get; set; }
     public virtual DbSet<Models.Career.CareerOccupationMatch> CareerOccupationMatches { get; set; }
     public virtual DbSet<Models.Career.CareerMarketBrief> CareerMarketBriefs { get; set; }
+    public virtual DbSet<Models.Career.CareerPayAnalysis> CareerPayAnalyses { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -322,6 +323,26 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         brief.HasIndex(b => b.RunId).IsUnique();
         brief.HasIndex(b => new { b.OwnerId, b.CreatedAt });
         brief.HasOne<ApplicationUser>().WithMany().HasForeignKey(b => b.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        var pay = builder.Entity<Models.Career.CareerPayAnalysis>();
+        pay.ToTable("CareerPayAnalyses");
+        pay.Property(p => p.OwnerId).HasMaxLength(450).IsRequired();
+        pay.Property(p => p.OccupationCode).HasMaxLength(10).IsRequired();
+        pay.Property(p => p.OccupationTitle).HasMaxLength(200).IsRequired();
+        pay.Property(p => p.AreaCode).HasMaxLength(20);
+        pay.Property(p => p.AreaTitle).HasMaxLength(200);
+        pay.Property(p => p.AreaResolution).HasMaxLength(20).IsRequired();
+        pay.Property(p => p.LocationInput).HasMaxLength(120);
+        pay.Property(p => p.OewsRelease).HasMaxLength(20);
+        pay.Property(p => p.OewsSnapshotSha256).HasMaxLength(64).IsRequired();
+        pay.Property(p => p.ProjectionsRelease).HasMaxLength(20);
+        pay.Property(p => p.RuleVersion).HasMaxLength(40).IsRequired();
+        pay.Property(p => p.ObservationSourceId).HasMaxLength(100);
+        pay.Property(p => p.InputHash).HasMaxLength(64).IsRequired();
+        pay.Property(p => p.Status).HasMaxLength(16).IsRequired();
+        pay.HasIndex(p => p.RunId).IsUnique();
+        pay.HasIndex(p => new { p.OwnerId, p.CreatedAt });
+        pay.HasOne<ApplicationUser>().WithMany().HasForeignKey(p => p.OwnerId).OnDelete(DeleteBehavior.Cascade);
     }
 
     private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)

@@ -34,14 +34,16 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
     private readonly ILogger<CareerAgentRunner> _logger;
     private readonly IOccupationReference? _reference;
     private readonly IMarketReference? _market;
+    private readonly IPayObservationSource _paySource;
 
     public CareerAgentRunner(
         ApplicationDbContext db, ICareerTextModel? model, IOptions<CareerAgentOptions> options,
         TimeProvider clock, ILogger<CareerAgentRunner> logger, IOccupationReference? reference = null,
-        IMarketReference? market = null)
+        IMarketReference? market = null, IPayObservationSource? paySource = null)
     {
         _reference = reference;
         _market = market;
+        _paySource = paySource ?? new NoQualifiedPayObservationSource();
         _db = db;
         _model = model;
         _options = options.Value;
@@ -71,6 +73,10 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         {
             await ExecuteMarketBriefAsync(run, ct);
         }
+        else if (run.Task == CareerAgentTasks.PayAnalysis)
+        {
+            await ExecutePayAnalysisAsync(run, ct);
+        }
         else
         {
             await ExecuteAsync(run, _model!, ct);
@@ -90,7 +96,7 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             var run = await _db.CareerAgentRuns
                 .Where(r => (r.Status == CareerRunStatus.Queued || r.Status == CareerRunStatus.Working)
                     && (r.LeaseExpiresAt == null || r.LeaseExpiresAt < now)
-                    && (modelAvailable || r.Task == CareerAgentTasks.OccupationMatch || r.Task == CareerAgentTasks.MarketBrief))
+                    && (modelAvailable || r.Task == CareerAgentTasks.OccupationMatch || r.Task == CareerAgentTasks.MarketBrief || r.Task == CareerAgentTasks.PayAnalysis))
                 .OrderBy(r => r.CreatedAt)
                 .FirstOrDefaultAsync(ct);
             if (run == null)
@@ -347,6 +353,66 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
     }
 
     // ---- Market brief (ADR 0011) -----------------------------------------------
+
+    private async Task ExecutePayAnalysisAsync(CareerAgentRun run, CancellationToken ct)
+    {
+        var steps = await LoadStepsAsync(run, ct);
+        var goal = await _db.CareerGoalVersions.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.OwnerId == run.OwnerId && v.VersionNumber == run.PinnedGoalVersion, ct);
+        if (goal?.OccupationCode == null || goal.OccupationTitle == null)
+        {
+            await FinishAsync(run, CareerRunStatus.Failed, CareerOccupationErrorCodes.OccupationRequired, ct);
+            return;
+        }
+        if (_market?.Oews == null && _market?.Projections == null)
+        {
+            await FinishAsync(run, CareerRunStatus.Failed, CareerAgentErrorCodes.ReferenceUnavailable, ct);
+            return;
+        }
+        foreach (var name in new[] { CareerStepNames.ReadGoal, CareerStepNames.ReadBenchmark,
+                     CareerStepNames.EvaluateCohort, CareerStepNames.BuildScenario })
+        {
+            if (steps.Any(s => s.Name == name)) continue;
+            if (!await CanStartStepAsync(run, steps, ct) ||
+                !await SaveStepAsync(run, steps, CareerStepKinds.Tool, name, "{}", ct)) return;
+        }
+        if (!await CanStartStepAsync(run, steps, ct)) return;
+        var location = MarketBriefBuilder.ResolveLocation(goal.TargetLocation, _market!);
+        IReadOnlyList<PayObservation> rows;
+        var sourceFailed = false;
+        try { rows = _paySource.ObservationsFor(goal.OccupationCode, location.Local?.Code ?? "99"); }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Pay observation source failed for run {RunId}", run.Id);
+            rows = Array.Empty<PayObservation>();
+            sourceFailed = true;
+        }
+        var asOf = Now();
+        var input = new PayAnalysisInput(run.PinnedProfileVersion!.Value, run.PinnedGoalVersion!.Value,
+            goal.OccupationCode, goal.OccupationTitle, goal.TargetLocation, goal.DesiredPayMin ?? goal.DesiredPayMax,
+            location.Local?.Code, location.Local?.Title, location.Resolution,
+            _market!.Oews?.Source.ReferencePeriod, EmbeddedMarketReference.ExpectedSha256,
+            _market.Projections?.Source.ReferencePeriod, PayEvidenceRules.RuleVersion, _paySource.SourceId, rows, asOf);
+        var content = PayAnalysisBuilder.Build(input, _market, sourceFailed);
+        var row = new CareerPayAnalysis
+        {
+            Id = Guid.NewGuid(), OwnerId = run.OwnerId, RunId = run.Id,
+            PinnedProfileVersion = input.ProfileVersion, PinnedGoalVersion = input.GoalVersion,
+            OccupationCode = input.OccupationCode, OccupationTitle = input.OccupationTitle,
+            AreaCode = input.AreaCode, AreaTitle = input.AreaTitle, AreaResolution = input.AreaResolution,
+            LocationInput = input.LocationText, RequestedAnnual = input.RequestedAnnual,
+            OewsRelease = input.OewsRelease, OewsSnapshotSha256 = input.OewsSnapshotSha256,
+            ProjectionsRelease = input.ProjectionsRelease, RuleVersion = input.RuleVersion,
+            ObservationSourceId = input.ObservationSourceId, ObservationCount = rows.Count,
+            InputHash = content.InputHash, InputJson = PayAnalysisBuilder.CanonicalInputJson(input), Status = content.Status,
+            SectionsJson = JsonSerializer.Serialize(PayAnalysisBuilder.AsList(content.Sections), MarketBriefJson.Options),
+            QualificationJson = JsonSerializer.Serialize(content.Qualification, MarketBriefJson.Options),
+            SourcesJson = JsonSerializer.Serialize(content.Sources, MarketBriefJson.Options), CreatedAt = asOf
+        };
+        _db.CareerPayAnalyses.Add(row);
+        AddStep(run, steps, CareerStepKinds.Save, CareerStepNames.SaveAnalysis, JsonSerializer.Serialize(new { payAnalysisId = row.Id }));
+        await FinishAsync(run, CareerRunStatus.Completed, null, ct);
+    }
 
     private sealed record WagesStepOutput(MarketLocationDto Location, MarketSectionDto Wages, MarketSectionDto Employment);
 

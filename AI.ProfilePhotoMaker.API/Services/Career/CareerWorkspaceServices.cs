@@ -97,7 +97,8 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         typeof(CareerAgentStep),
         typeof(CareerAllowance),
         typeof(CareerOccupationMatch),
-        typeof(CareerMarketBrief)
+        typeof(CareerMarketBrief),
+        typeof(CareerPayAnalysis)
     };
 
     private readonly ApplicationDbContext _db;
@@ -120,6 +121,7 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         _db.CareerAllowances.RemoveRange(await _db.CareerAllowances.Where(a => a.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerOccupationMatches.RemoveRange(await _db.CareerOccupationMatches.Where(m => m.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerMarketBriefs.RemoveRange(await _db.CareerMarketBriefs.Where(b => b.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerPayAnalyses.RemoveRange(await _db.CareerPayAnalyses.Where(b => b.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerProfileProposalItems.RemoveRange(await _db.CareerProfileProposalItems.Where(i => i.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerProfileProposals.RemoveRange(await _db.CareerProfileProposals.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
 
@@ -173,7 +175,8 @@ public static class CareerWorkspaceServiceCollectionExtensions
             sp.GetRequiredService<TimeProvider>(),
             sp.GetRequiredService<ILogger<CareerAgentRunner>>(),
             sp.GetService<IOccupationReference>(),
-            sp.GetService<IMarketReference>()));
+            sp.GetService<IMarketReference>(),
+            sp.GetRequiredService<IPayObservationSource>()));
 
         // Occupation matches (#381). The reference is a singleton so the snapshot is parsed and
         // indexed once; tests replace it to cover an unavailable snapshot.
@@ -188,6 +191,8 @@ public static class CareerWorkspaceServiceCollectionExtensions
             new EmbeddedMarketReference(EmbeddedMarketReference.OpenEmbeddedSnapshot, EmbeddedMarketReference.ExpectedSha256,
                 sp.GetRequiredService<ILoggerFactory>().CreateLogger<EmbeddedMarketReference>()));
         services.AddScoped<ICareerMarketService, CareerMarketService>();
+        services.TryAddSingleton<IPayObservationSource, NoQualifiedPayObservationSource>();
+        services.AddScoped<ICareerPayService, CareerPayService>();
         return services;
     }
 }
