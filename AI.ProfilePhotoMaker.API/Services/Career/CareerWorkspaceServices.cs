@@ -71,92 +71,6 @@ public sealed class RequireCareerWorkspaceFilter : IResourceFilter
     }
 }
 
-/// <summary>
-/// Removes an owner's private career data. Every private career entity must be
-/// listed in <see cref="CoveredEntityTypes"/> and deleted here; a test compares
-/// this list with the EF model so new entities cannot be forgotten. #392 wires
-/// this to user-facing export/deletion controls.
-/// </summary>
-public interface ICareerPrivateDataService
-{
-    Task DeleteAllForOwnerAsync(string ownerId, CancellationToken ct = default);
-}
-
-public sealed class CareerPrivateDataService : ICareerPrivateDataService
-{
-    public static readonly IReadOnlySet<Type> CoveredEntityTypes = new HashSet<Type>
-    {
-        typeof(CareerProfile),
-        typeof(CareerProfileVersion),
-        typeof(CareerGoal),
-        typeof(CareerGoalVersion),
-        typeof(ResumeDocument),
-        typeof(CareerProfileProposal),
-        typeof(CareerProfileProposalItem),
-        typeof(CareerPhotoSelection),
-        typeof(CareerAgentRun),
-        typeof(CareerAgentStep),
-        typeof(CareerAllowance),
-        typeof(CareerOccupationMatch),
-        typeof(CareerMarketBrief),
-        typeof(CareerPayAnalysis),
-        typeof(CareerRoadmap),
-        typeof(CareerRoadmapTaskProgress),
-        typeof(CareerRoadmapReplan),
-        typeof(CareerMaterial),
-        typeof(CareerMaterialVersion),
-        typeof(CareerMaterialProposal),
-        typeof(CareerExport)
-    };
-
-    private readonly ApplicationDbContext _db;
-    private readonly IStorageService _storage;
-
-    public CareerPrivateDataService(ApplicationDbContext db, IStorageService storage)
-    {
-        _db = db;
-        _storage = storage;
-    }
-
-    public async Task DeleteAllForOwnerAsync(string ownerId, CancellationToken ct = default)
-    {
-        // Versions are removed explicitly rather than relying on cascades, so the
-        // behaviour is the same on providers that do not enforce foreign keys.
-        _db.CareerProfileVersions.RemoveRange(await _db.CareerProfileVersions.Where(v => v.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerGoalVersions.RemoveRange(await _db.CareerGoalVersions.Where(v => v.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerAgentSteps.RemoveRange(await _db.CareerAgentSteps.Where(s => s.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerAgentRuns.RemoveRange(await _db.CareerAgentRuns.Where(r => r.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerAllowances.RemoveRange(await _db.CareerAllowances.Where(a => a.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerOccupationMatches.RemoveRange(await _db.CareerOccupationMatches.Where(m => m.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerMarketBriefs.RemoveRange(await _db.CareerMarketBriefs.Where(b => b.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerPayAnalyses.RemoveRange(await _db.CareerPayAnalyses.Where(b => b.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerRoadmapTaskProgress.RemoveRange(await _db.CareerRoadmapTaskProgress.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerExports.RemoveRange(await _db.CareerExports.Where(e => e.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerMaterialProposals.RemoveRange(await _db.CareerMaterialProposals.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerMaterialVersions.RemoveRange(await _db.CareerMaterialVersions.Where(v => v.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerMaterials.RemoveRange(await _db.CareerMaterials.Where(m => m.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerRoadmapReplans.RemoveRange(await _db.CareerRoadmapReplans.Where(r => r.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerRoadmaps.RemoveRange(await _db.CareerRoadmaps.Where(r => r.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerProfileProposalItems.RemoveRange(await _db.CareerProfileProposalItems.Where(i => i.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerProfileProposals.RemoveRange(await _db.CareerProfileProposals.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
-
-        // Raw files go first: a row without its file is recoverable, a file without its row is not.
-        var resumes = await _db.CareerResumeDocuments.Where(d => d.OwnerId == ownerId).ToListAsync(ct);
-        foreach (var resume in resumes)
-        {
-            await _storage.DeleteImageAsync(resume.StorageKey);
-        }
-        _db.CareerResumeDocuments.RemoveRange(resumes);
-
-        // Only the choice is removed; the photo itself belongs to the photo workspace.
-        _db.CareerPhotoSelections.RemoveRange(await _db.CareerPhotoSelections.Where(s => s.OwnerId == ownerId).ToListAsync(ct));
-
-        _db.CareerProfiles.RemoveRange(await _db.CareerProfiles.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
-        _db.CareerGoals.RemoveRange(await _db.CareerGoals.Where(g => g.OwnerId == ownerId).ToListAsync(ct));
-        await _db.SaveChangesAsync(ct);
-    }
-}
-
 public static class CareerWorkspaceServiceCollectionExtensions
 {
     /// <summary>Registers career workspace services. Used by Program.cs and the test host.</summary>
@@ -167,6 +81,12 @@ public static class CareerWorkspaceServiceCollectionExtensions
         services.AddScoped<RequireCareerWorkspaceFilter>();
         services.AddScoped<ICareerProfileService, CareerProfileService>();
         services.AddScoped<ICareerPrivateDataService, CareerPrivateDataService>();
+
+        // Privacy (#392, ADR 0020). The startup replay is Program.cs-only so the test host never runs it.
+        services.AddOptions<CareerPrivacyOptions>().BindConfiguration(CareerPrivacyOptions.SectionName);
+        services.AddScoped<ICareerPrivacyExporter, CareerPrivacyExporter>();
+        services.AddScoped<ICareerPrivacyService, CareerPrivacyService>();
+        services.AddScoped<ICareerTombstoneReplayer, CareerTombstoneReplayer>();
         services.AddScoped<ICareerPhotoService, CareerPhotoService>();
 
         // Resume import (#379). The scanner is deliberately NOT registered here: only

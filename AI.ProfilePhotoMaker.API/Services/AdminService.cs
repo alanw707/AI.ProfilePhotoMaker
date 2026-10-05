@@ -22,6 +22,7 @@ public class AdminService : IAdminService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IStorageService _storageService;
     private readonly ILogger<AdminService> _logger;
+    private readonly AI.ProfilePhotoMaker.API.Services.Career.ICareerPrivateDataService? _careerData;
 
     public AdminService(
         ApplicationDbContext context,
@@ -29,8 +30,10 @@ public class AdminService : IAdminService
         ICreditPackageService creditPackageService,
         UserManager<ApplicationUser> userManager,
         IStorageService storageService,
-        ILogger<AdminService> logger)
+        ILogger<AdminService> logger,
+        AI.ProfilePhotoMaker.API.Services.Career.ICareerPrivateDataService? careerData = null)
     {
+        _careerData = careerData;
         _context = context;
         _userProfileRepository = userProfileRepository;
         _creditPackageService = creditPackageService;
@@ -520,6 +523,21 @@ public class AdminService : IAdminService
         if (adminUsers.Count == 1 && adminUsers.Any(a => a.Id == userId))
         {
             return (false, "Cannot delete the last admin user");
+        }
+
+        // Career data first, with a tombstone (ADR 0020). It cannot share the transaction below because blob
+        // deletes are not transactional, so a failure here simply stops the deletion before anything is removed.
+        if (_careerData != null)
+        {
+            try
+            {
+                await _careerData.DeleteAllForOwnerAsync(userId);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogError(ex, "Career data purge failed; deletion aborted for user {UserId}", LoggingSanitizer.SanitizeId(userId));
+                return (false, "Failed to delete the user's career data");
+            }
         }
 
         var strategy = _context.Database.CreateExecutionStrategy();

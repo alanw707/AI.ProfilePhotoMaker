@@ -1214,6 +1214,16 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             return false;
         }
 
+        // A career_profile deletion newer than this run's start means the user deleted their data while
+        // the worker was busy: the result is dropped, nothing may be written back (ADR 0020).
+        var started = run.StartedAt ?? run.CreatedAt;
+        if (await _db.CareerTombstones.AsNoTracking().AnyAsync(
+                t => t.OwnerId == run.OwnerId && t.Scope == CareerDeletionScopes.CareerProfile && t.CreatedAt > started, ct))
+        {
+            _logger.LogInformation("Career run {RunId} write discarded: career data was deleted since the run started", run.Id);
+            return false;
+        }
+
         for (var attempt = 0; attempt < MaxSaveAttempts; attempt++)
         {
             try
