@@ -1,0 +1,138 @@
+{
+  "results": [
+    {
+      "label": "01-import-empty @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-import-empty @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-import-empty @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-consent-error @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-consent-error @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-consent-error @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "focus after processing",
+      "focused": "Review suggestions"
+    },
+    {
+      "label": "03-review @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-review @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-review @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "suggestions",
+      "count": 10,
+      "checkedByDefault": -1
+    },
+    {
+      "label": "after accept",
+      "text": "Back to career workspace\nYour professional profile\n\nOnly facts you enter and confirm are saved. Resume suggestions are added only when you accept them.\n\nImport from a resume\n\nProfile updated from your resume\n\nProfessional facts\n\nFrom your resume · confirmed Oct 4, 2026 · Version 2\n\nCurrent title\nInd"
+    },
+    {
+      "label": "04-profile-after-accept @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Profile - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "04-profile-after-accept @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Profile - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "04-profile-after-accept @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Profile - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05-unreadable-paste-fallback @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05-unreadable-paste-fallback @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05-unreadable-paste-fallback @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    }
+  ],
+  "errors": []
+}
