@@ -4,7 +4,7 @@ Simulated review on LocalDev API (in-memory DB, fake text model) + `npm run dev:
 Run: `AXE_PATH=/tmp/axe/node_modules/axe-core/axe.min.js PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium node tests/ux/career-journey-review.mjs ../docs/testing/career/393` -> 96 checks, 14/14 next-step steps ok, 0 page errors, 0 dialogs. Raw data: `checks.json`.
 
 ## Gates
-Placeholder: build/test/lint gates are run by the coordinator (not run in this review).
+After all fixes: API `dotnet test` (excl. Performance) 1276 passed, 1 skipped, 0 failed; Release `-warnaserror` clean; no migration. UI lint 0 errors; Karma 706; `build:mvp-v1` succeeds; Playwright journey + roadmap + pay 26 passed (0 axe violations at 1280/390/320). Independent review: openai-codex/gpt-5.5 (spec + standards).
 
 ## Steps
 | Step | nextAction | Page landed | Result | Screenshot |
@@ -38,6 +38,6 @@ Other checks: photo section renders without purchase (Continue without a photo +
 | SPEC-3 | P2 | Stale notices linked to the bare page | fixed: link carries the artifact's query param; Playwright + spec |
 | TEST-1 | P2 | Review script exited 0 on failed checks | fixed: exits 1 on step failures, failed checks, page errors, dialogs, axe violations |
 | TEST-2 | P2 | Sparse setup failure was silently skipped | fixed: recorded as a failure |
-| TEST-3 | P2 | Test coverage for the fixes above | fixed: API, unit and Playwright assertions added |
+| TEST-3 | P3 | Mocked "Try again" test did not assert recovery context | fixed: Playwright asserts the run id, the failed state with retry, and no POST from home |
 
 Open P0/P1: **none**
