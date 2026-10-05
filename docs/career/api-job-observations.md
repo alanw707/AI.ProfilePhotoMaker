@@ -46,6 +46,7 @@ Same envelope, auth, flag (403 `CareerWorkspaceDisabled`) and error shape as `ap
 ```
 
 - `pay.status`: `available | not_available | top_coded`; `pay.unit` is `usd_per_year` or `usd_per_hour` and `basis` follows the provider's rate interval (annual or hourly), converted to nothing — displayed as published, with the basis stated. An expired posting's pay is not returned as current: the observation is marked `expired: true` and excluded from the default list.
+- `remoteEligibility` is what the provider states: USAJOBS gives an indicator, so it yields `eligible` or `unknown` and never `ineligible` (a location that does not match your area is excluded as `otherLocationExcluded` instead). Remote-eligible postings are not location-filtered, because remote work is not tied to the listed office.
 - `remoteEligibility`: `unknown` observations are never returned when `eligibleOnly=true` (counted in `counts.remoteUnknownExcluded`); `remote=eligible` returns only `eligible`, and `remote=unknown` only `unknown`.
 - `closesOn` in the past marks the observation `expired: true`; the default list excludes it and counts it. `q` filters on title/organization substrings (case-insensitive). `area` defaults to the goal's preferred area, else the goal's location text.
 - Bounded: one provider page, at most 25 observations returned, `truncated: true` when the cap applies.
