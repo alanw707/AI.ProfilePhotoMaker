@@ -488,14 +488,20 @@ button:disabled {
     border-top: 1px solid #d1d8d4;
     padding: 10px 0;
   }
+  // A right-hand drawer: full height, scrolls inside, never pinned under the page header.
   .source-drawer {
-    max-width: min(560px, calc(100vw - 24px));
-    width: 100%;
-    max-height: 90vh;
+    position: fixed;
+    inset: 0 0 0 auto;
+    margin: 0;
+    width: min(480px, 100vw);
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
     overflow: auto;
-    border: 1px solid #d1d8d4;
-    border-radius: 12px;
-    padding: 20px;
+    border: 0;
+    border-left: 1px solid #d1d8d4;
+    border-radius: 0;
+    padding: 24px 20px;
     color: #1b2c31;
     background: #fffefa;
   }

@@ -1,0 +1,234 @@
+{
+  "results": [
+    {
+      "label": "start without occupation",
+      "status": 409,
+      "code": "CareerOccupationRequired"
+    },
+    {
+      "label": "occupation confirmed",
+      "candidates": [
+        "15-1252.00",
+        "15-1299.08",
+        "15-1299.02",
+        "15-1242.00"
+      ],
+      "confirm": 200
+    },
+    {
+      "label": "01-start @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-start @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-start @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "brief vs snapshot",
+      "status": "complete",
+      "location": {
+        "input": "Denver, CO",
+        "resolution": "metro",
+        "local": {
+          "code": "19740",
+          "title": "Denver-Aurora-Centennial, CO",
+          "type": "metro"
+        }
+      },
+      "checked": 28,
+      "mismatches": [],
+      "domFigures": 34,
+      "sections": [
+        "wages:complete",
+        "employment:complete",
+        "outlook:complete",
+        "alternatives:complete"
+      ],
+      "alternatives": [
+        "15-1299.08",
+        "15-1299.02",
+        "15-1242.00"
+      ],
+      "sources": [
+        "oews 2025-05 2026-05-15",
+        "projections 2025-2035 2026-08-27"
+      ],
+      "nextAction": {
+        "label": "Check your target occupation",
+        "route": "/app/career/occupation"
+      },
+      "allowance": {
+        "used": 0,
+        "reserved": 0,
+        "limit": 20,
+        "periodStart": "2026-10-01T00:00:00Z"
+      },
+      "spot": {
+        "nationalMedian": "$135,980",
+        "denverMedian": "$137,610",
+        "difference": "+$1,630"
+      }
+    },
+    {
+      "label": "02-brief @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-brief @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-brief @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "source drawer",
+      "sources": 1,
+      "citation": true,
+      "box": {
+        "x": 800,
+        "y": 0,
+        "width": 480,
+        "height": 900
+      }
+    },
+    {
+      "label": "03-source-drawer @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-source-drawer @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-source-drawer @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "drawer closed",
+      "open": 0
+    },
+    {
+      "label": "cross-user",
+      "status": 404,
+      "bConfirm": 200
+    },
+    {
+      "label": "stale after profile change",
+      "stale": true,
+      "reasons": [
+        "profile_changed"
+      ],
+      "sectionsUnchanged": true,
+      "banner": 1
+    },
+    {
+      "label": "04-stale @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "04-stale @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "04-stale @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "unresolved location",
+      "resolution": "unresolved",
+      "sections": [
+        "wages:unavailable:location_unresolved",
+        "employment:unavailable:location_unresolved",
+        "outlook:complete:null",
+        "alternatives:complete:null"
+      ],
+      "nextAction": {
+        "label": "Add a city and state to your goal",
+        "route": "/app/career/setup"
+      },
+      "couldNotPlace": 1
+    },
+    {
+      "label": "05-unresolved @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05-unresolved @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05-unresolved @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "expired session",
+      "url": "/auth/login?message=Please log in to access this feature&returnUrl=/app/career/market"
+    }
+  ],
+  "errors": []
+}
