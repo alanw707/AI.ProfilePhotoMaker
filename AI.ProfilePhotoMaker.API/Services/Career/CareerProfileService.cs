@@ -334,6 +334,8 @@ public sealed class CareerProfileService : ICareerProfileService
 
         var profileVersion = await ProfileVersionNumberAsync(ownerId, ct);
         var next = NewGoalVersion(goal, goal.ActiveVersionNumber + 1, facts, profileVersion, Now());
+        // A manual edit keeps the occupation the user confirmed (ADR 0010).
+        CarryOccupation(await ActiveGoalVersionAsync(goal, ct), next);
         return await AppendGoalVersionAsync(goal, next, profileVersion, ct);
     }
 
@@ -380,6 +382,8 @@ public sealed class CareerProfileService : ICareerProfileService
         var profileVersion = await ProfileVersionNumberAsync(ownerId, ct);
         var next = NewGoalVersion(goal, goal.ActiveVersionNumber + 1, facts, profileVersion, Now());
         next.RestoredFromVersion = source.VersionNumber;
+        // The restored version brings its own occupation (or none) back with it.
+        CarryOccupation(source, next);
         return await AppendGoalVersionAsync(goal, next, profileVersion, ct);
     }
 
@@ -493,6 +497,14 @@ public sealed class CareerProfileService : ICareerProfileService
         CreatedAt = now
     };
 
+    internal static void CarryOccupation(CareerGoalVersion from, CareerGoalVersion to)
+    {
+        to.OccupationCode = from.OccupationCode;
+        to.OccupationTitle = from.OccupationTitle;
+        to.OccupationReferenceRelease = from.OccupationReferenceRelease;
+        to.OccupationMatchId = from.OccupationMatchId;
+    }
+
     private static CareerGoalVersion NewGoalVersion(CareerGoal goal, int number, ValidGoalFacts facts, int? profileVersion, DateTime now) => new()
     {
         Id = Guid.NewGuid(),
@@ -531,12 +543,18 @@ public sealed class CareerProfileService : ICareerProfileService
         profile.Id, active.VersionNumber, ProfileEtag(active.VersionNumber), ToFacts(active),
         ToProvenance(active.Source, active.ConfirmedAt, active.RestoredFromVersion, active.SourceProposalId), profile.CreatedAt, profile.UpdatedAt);
 
-    private static CareerGoalDto ToDto(CareerGoal goal, CareerGoalVersion active, int? currentProfileVersion) => new(
+    internal static CareerGoalDto ToDto(CareerGoal goal, CareerGoalVersion active, int? currentProfileVersion) => new(
         goal.Id, active.VersionNumber, GoalEtag(active.VersionNumber),
         ToGoalFacts(active),
         active.BasedOnProfileVersion,
         IsGoalStale(active.BasedOnProfileVersion, currentProfileVersion),
-        ToProvenance(active.Source, active.ConfirmedAt, active.RestoredFromVersion), goal.CreatedAt, goal.UpdatedAt);
+        ToProvenance(active.Source, active.ConfirmedAt, active.RestoredFromVersion), goal.CreatedAt, goal.UpdatedAt,
+        ToOccupation(active));
+
+    private static CareerGoalOccupationDto? ToOccupation(CareerGoalVersion v) =>
+        v.OccupationCode == null
+            ? null
+            : new CareerGoalOccupationDto(v.OccupationCode, v.OccupationTitle ?? string.Empty, v.OccupationReferenceRelease ?? string.Empty, v.OccupationMatchId);
 
     private static CareerOutcome<T> ProfileNotFound<T>() =>
         CareerOutcome<T>.NotFound(CareerErrorCodes.ProfileNotFound, "No career profile has been saved yet.");

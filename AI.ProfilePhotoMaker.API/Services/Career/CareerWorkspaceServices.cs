@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace AI.ProfilePhotoMaker.API.Services.Career;
 
@@ -94,7 +95,8 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         typeof(CareerPhotoSelection),
         typeof(CareerAgentRun),
         typeof(CareerAgentStep),
-        typeof(CareerAllowance)
+        typeof(CareerAllowance),
+        typeof(CareerOccupationMatch)
     };
 
     private readonly ApplicationDbContext _db;
@@ -115,6 +117,7 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         _db.CareerAgentSteps.RemoveRange(await _db.CareerAgentSteps.Where(s => s.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerAgentRuns.RemoveRange(await _db.CareerAgentRuns.Where(r => r.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerAllowances.RemoveRange(await _db.CareerAllowances.Where(a => a.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerOccupationMatches.RemoveRange(await _db.CareerOccupationMatches.Where(m => m.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerProfileProposalItems.RemoveRange(await _db.CareerProfileProposalItems.Where(i => i.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerProfileProposals.RemoveRange(await _db.CareerProfileProposals.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
 
@@ -160,7 +163,21 @@ public static class CareerWorkspaceServiceCollectionExtensions
         // worker is Program.cs-only too, so the test host drives the runner directly.
         services.AddOptions<CareerAgentOptions>().BindConfiguration(CareerAgentOptions.SectionName);
         services.AddScoped<ICareerAgentRunService, CareerAgentRunService>();
-        services.AddScoped<ICareerAgentRunner, CareerAgentRunner>();
+        // Built by hand because the model is optional: occupation matching runs without one.
+        services.AddScoped<ICareerAgentRunner>(sp => new CareerAgentRunner(
+            sp.GetRequiredService<ApplicationDbContext>(),
+            sp.GetService<ICareerTextModel>(),
+            sp.GetRequiredService<IOptions<CareerAgentOptions>>(),
+            sp.GetRequiredService<TimeProvider>(),
+            sp.GetRequiredService<ILogger<CareerAgentRunner>>(),
+            sp.GetService<IOccupationReference>()));
+
+        // Occupation matches (#381). The reference is a singleton so the snapshot is parsed and
+        // indexed once; tests replace it to cover an unavailable snapshot.
+        services.TryAddSingleton<IOccupationReference>(sp =>
+            new EmbeddedOccupationReference(EmbeddedOccupationReference.OpenEmbeddedSnapshot, EmbeddedOccupationReference.ExpectedSha256,
+                sp.GetRequiredService<ILoggerFactory>().CreateLogger<EmbeddedOccupationReference>()));
+        services.AddScoped<ICareerOccupationService, CareerOccupationService>();
         return services;
     }
 }

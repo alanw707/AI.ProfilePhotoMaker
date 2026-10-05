@@ -43,9 +43,16 @@ export interface CareerGoalDto {
   goal: GoalFacts;
   basedOnProfileVersion: number | null;
   isStale: boolean;
+  occupation?: GoalOccupation | null;
   provenance: Provenance;
   createdAt: string;
   updatedAt: string;
+}
+export interface GoalOccupation {
+  code: string;
+  title: string;
+  referenceRelease: string;
+  matchId: string;
 }
 export interface ProfileVersion {
   version: number;
@@ -158,11 +165,18 @@ export interface CareerRunStep {
   status: string;
   completedAt: string | null;
 }
+export interface CareerRunChoice {
+  value: string;
+  label: string;
+}
 export interface CareerRunQuestion {
   id: string;
   text: string;
   maxLength: number;
+  /** Present when the answer must be one of a fixed list. */
+  choices?: CareerRunChoice[];
 }
+export type CareerRunTask = 'profile_summary' | 'occupation_match';
 export interface CareerRunAllowance {
   used: number;
   reserved: number;
@@ -171,7 +185,7 @@ export interface CareerRunAllowance {
 }
 export interface CareerRunDto {
   id: string;
-  task: 'profile_summary';
+  task: CareerRunTask;
   status: CareerRunStatus;
   createdAt: string;
   updatedAt: string;
@@ -181,6 +195,7 @@ export interface CareerRunDto {
   steps: CareerRunStep[];
   question: CareerRunQuestion | null;
   proposalId: string | null;
+  occupationMatchId?: string | null;
   profileChanged: boolean;
   errorCode: string | null;
   allowance: CareerRunAllowance;
@@ -188,6 +203,58 @@ export interface CareerRunDto {
 export interface CareerRunList {
   runs: CareerRunDto[];
   allowance: CareerRunAllowance;
+}
+export type OccupationMatchStatus = 'proposed' | 'confirmed' | 'dismissed' | 'unsupported';
+export type OccupationStrength = 'strong' | 'moderate' | 'weak';
+export interface OccupationReference {
+  name: string;
+  release: string;
+  releaseDate: string;
+  taxonomy: string;
+  license: string;
+  licenseUrl: string;
+  url: string;
+  attribution: string;
+}
+export interface OccupationReferenceInfo extends OccupationReference {
+  occupationCount: number;
+}
+export interface OccupationEvidence {
+  kind: 'duty' | 'skill';
+  profileField: string;
+  profileIndex: number;
+  profileText: string;
+  referenceKind: string;
+  referenceId: string | null;
+  referenceText: string;
+}
+export interface OccupationCandidate {
+  code: string;
+  title: string;
+  description: string;
+  strength: OccupationStrength;
+  evidence: OccupationEvidence[];
+  titleMatched: boolean;
+  missingEvidence: string[];
+  knownGaps: string[];
+  unsupportedSkills: string[];
+}
+export interface OccupationMatchDto {
+  id: string;
+  runId: string;
+  status: OccupationMatchStatus;
+  pinnedProfileVersion: number;
+  pinnedGoalVersion: number | null;
+  profileChanged: boolean;
+  reference: OccupationReference;
+  matcherVersion: string;
+  candidates: OccupationCandidate[];
+  clarification: { question: string; answer: string } | null;
+  guidance: string | null;
+  confirmedCode: string | null;
+  confirmedIntoGoalVersion: number | null;
+  createdAt: string;
+  decidedAt: string | null;
 }
 export interface CareerApiError {
   /** Server error code (for example CareerRunNotWaiting), when one was sent. */
@@ -210,6 +277,9 @@ export interface CareerApiError {
     | 'profileRequired'
     | 'idempotencyMismatch'
     | 'notWaiting'
+    | 'matchStale'
+    | 'notConfirmable'
+    | 'goalRequired'
     | 'unknown';
   message: string;
   fieldErrors?: Record<string, string>;
@@ -305,6 +375,10 @@ export class CareerProfileService {
       CareerIdempotencyMismatch: 'idempotencyMismatch',
       CareerProfileRequired: 'profileRequired',
       CareerRunNotWaiting: 'notWaiting',
+      CareerMatchStale: 'matchStale',
+      CareerMatchNotConfirmable: 'notConfirmable',
+      CareerGoalRequired: 'goalRequired',
+      CareerReferenceUnavailable: 'unavailable',
     };
     const kind = codeKinds[payload?.code ?? ''] ?? kinds[error.status] ?? 'unknown';
     return {
@@ -432,15 +506,10 @@ export class CareerProfileService {
       .pipe(catchError(error => throwError(() => this.mapError(error))));
   }
 
-  createRun(idempotencyKey: string) {
-    return this.request<CareerRunDto>(
-      'POST',
-      'runs',
-      { task: 'profile_summary' },
-      undefined,
-      false,
-      { 'Idempotency-Key': idempotencyKey }
-    );
+  createRun(idempotencyKey: string, task: CareerRunTask = 'profile_summary') {
+    return this.request<CareerRunDto>('POST', 'runs', { task }, undefined, false, {
+      'Idempotency-Key': idempotencyKey,
+    });
   }
   getRun(id: string) {
     return this.request<CareerRunDto>('GET', `runs/${encodeURIComponent(id)}`);
@@ -456,5 +525,29 @@ export class CareerProfileService {
   }
   cancelRun(id: string) {
     return this.request<CareerRunDto>('POST', `runs/${encodeURIComponent(id)}/cancel`);
+  }
+
+  getOccupationMatch(id: string) {
+    return this.request<OccupationMatchDto>('GET', `occupation-matches/${encodeURIComponent(id)}`);
+  }
+  /** Saves the chosen occupation into the goal; needs the goal ETag from getGoal(). */
+  confirmOccupationMatch(id: string, occupationCode: string, goalEtag: string) {
+    return this.request<CareerGoalDto>(
+      'POST',
+      `occupation-matches/${encodeURIComponent(id)}/confirm`,
+      { occupationCode },
+      'goal',
+      false,
+      { 'If-Match': goalEtag }
+    );
+  }
+  dismissOccupationMatch(id: string) {
+    return this.request<OccupationMatchDto>(
+      'POST',
+      `occupation-matches/${encodeURIComponent(id)}/dismiss`
+    );
+  }
+  getOccupationReference() {
+    return this.request<OccupationReferenceInfo>('GET', 'occupations/reference');
   }
 }

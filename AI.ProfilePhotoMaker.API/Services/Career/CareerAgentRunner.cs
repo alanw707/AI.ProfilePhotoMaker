@@ -32,11 +32,13 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
     private readonly CareerAgentOptions _options;
     private readonly TimeProvider _clock;
     private readonly ILogger<CareerAgentRunner> _logger;
+    private readonly IOccupationReference? _reference;
 
     public CareerAgentRunner(
         ApplicationDbContext db, ICareerTextModel? model, IOptions<CareerAgentOptions> options,
-        TimeProvider clock, ILogger<CareerAgentRunner> logger)
+        TimeProvider clock, ILogger<CareerAgentRunner> logger, IOccupationReference? reference = null)
     {
+        _reference = reference;
         _db = db;
         _model = model;
         _options = options.Value;
@@ -51,16 +53,20 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             return true;
         }
 
-        // With no model nothing can run; leave runs queued rather than failing them.
-        if (_model == null)
-        {
-            return false;
-        }
-
+        // With no model a profile summary cannot run: leave it queued rather than failing it.
+        // Occupation matching never calls a model, so it still runs.
         var (run, worked) = await ClaimAsync(workerId, ct);
-        if (run != null)
+        if (run == null)
         {
-            await ExecuteAsync(run, _model, ct);
+            return worked;
+        }
+        if (run.Task == CareerAgentTasks.OccupationMatch)
+        {
+            await ExecuteOccupationMatchAsync(run, ct);
+        }
+        else
+        {
+            await ExecuteAsync(run, _model!, ct);
         }
         return worked;
     }
@@ -69,13 +75,15 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
 
     private async Task<(CareerAgentRun? Run, bool Worked)> ClaimAsync(string workerId, CancellationToken ct)
     {
+        var modelAvailable = _model != null;
         for (var attempt = 0; attempt < MaxClaimTries; attempt++)
         {
             var now = Now();
             // LeaseExpiresAt doubles as "not before" on a queued run waiting out a retry backoff.
             var run = await _db.CareerAgentRuns
                 .Where(r => (r.Status == CareerRunStatus.Queued || r.Status == CareerRunStatus.Working)
-                    && (r.LeaseExpiresAt == null || r.LeaseExpiresAt < now))
+                    && (r.LeaseExpiresAt == null || r.LeaseExpiresAt < now)
+                    && (modelAvailable || r.Task == CareerAgentTasks.OccupationMatch))
                 .OrderBy(r => r.CreatedAt)
                 .FirstOrDefaultAsync(ct);
             if (run == null)
@@ -144,36 +152,10 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
 
     private async Task ExecuteAsync(CareerAgentRun run, ICareerTextModel model, CancellationToken ct)
     {
-        var steps = await _db.CareerAgentSteps.AsNoTracking()
-            .Where(s => s.RunId == run.Id).OrderBy(s => s.Ordinal).ToListAsync(ct);
-        bool Done(string name) => steps.Any(s => s.Name == name);
-
-        if (!Done(CareerStepNames.ReadProfile))
+        var steps = await LoadStepsAsync(run, ct);
+        if (!await ReadFactsAsync(run, steps, ct))
         {
-            if (!await CanStartStepAsync(run, steps, ct))
-            {
-                return;
-            }
-            // Tools read only this owner's data at the versions the run pinned.
-            var profile = await LoadProfileAsync(run, ct);
-            if (!await SaveStepAsync(run, steps, CareerStepKinds.Tool, CareerStepNames.ReadProfile,
-                    JsonSerializer.Serialize(new { version = run.PinnedProfileVersion, title = profile.CurrentTitle }), ct))
-            {
-                return;
-            }
-        }
-
-        if (!Done(CareerStepNames.ReadGoal))
-        {
-            if (!await CanStartStepAsync(run, steps, ct))
-            {
-                return;
-            }
-            if (!await SaveStepAsync(run, steps, CareerStepKinds.Tool, CareerStepNames.ReadGoal,
-                    JsonSerializer.Serialize(new { version = run.PinnedGoalVersion }), ct))
-            {
-                return;
-            }
+            return;
         }
 
         if (run.PinnedGoalVersion == null && run.Answer == null)
@@ -195,6 +177,168 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
         await SaveProposalAsync(run, steps, text, ct);
     }
 
+    private async Task<List<CareerAgentStep>> LoadStepsAsync(CareerAgentRun run, CancellationToken ct) =>
+        await _db.CareerAgentSteps.AsNoTracking().Where(s => s.RunId == run.Id).OrderBy(s => s.Ordinal).ToListAsync(ct);
+
+    /// <summary>The two read tools every task starts with. False when the run stopped (ceiling or lost fence).</summary>
+    private async Task<bool> ReadFactsAsync(CareerAgentRun run, List<CareerAgentStep> steps, CancellationToken ct)
+    {
+        bool Done(string name) => steps.Any(s => s.Name == name);
+
+        if (!Done(CareerStepNames.ReadProfile))
+        {
+            if (!await CanStartStepAsync(run, steps, ct))
+            {
+                return false;
+            }
+            // Tools read only this owner's data at the versions the run pinned.
+            var profile = await LoadProfileAsync(run, ct);
+            if (!await SaveStepAsync(run, steps, CareerStepKinds.Tool, CareerStepNames.ReadProfile,
+                    JsonSerializer.Serialize(new { version = run.PinnedProfileVersion, title = profile.CurrentTitle }), ct))
+            {
+                return false;
+            }
+        }
+
+        if (!Done(CareerStepNames.ReadGoal))
+        {
+            if (!await CanStartStepAsync(run, steps, ct))
+            {
+                return false;
+            }
+            if (!await SaveStepAsync(run, steps, CareerStepKinds.Tool, CareerStepNames.ReadGoal,
+                    JsonSerializer.Serialize(new { version = run.PinnedGoalVersion }), ct))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // ---- Occupation match (ADR 0010) -------------------------------------------
+
+    private const int MaxOccupationChoices = 3;
+
+    /// <summary>
+    /// Plan: read profile, read goal, match (a deterministic tool; the result is saved as a step),
+    /// ask which occupation when the result is ambiguous, then save the match. No model call is
+    /// made, so <c>ModelCalled</c> stays false and the allowance unit is released at the end.
+    /// </summary>
+    private async Task ExecuteOccupationMatchAsync(CareerAgentRun run, CancellationToken ct)
+    {
+        var steps = await LoadStepsAsync(run, ct);
+        if (!await ReadFactsAsync(run, steps, ct))
+        {
+            return;
+        }
+
+        var reference = _reference?.Data;
+        if (reference == null)
+        {
+            _logger.LogWarning("Career run {RunId} failed: occupation reference unavailable", run.Id);
+            await FinishAsync(run, CareerRunStatus.Failed, CareerAgentErrorCodes.ReferenceUnavailable, ct);
+            return;
+        }
+
+        OccupationMatchResult result;
+        var matched = steps.FirstOrDefault(s => s.Name == CareerStepNames.MatchOccupations);
+        if (matched != null)
+        {
+            // A saved result is replayed, so a resumed run answers the question about the same candidates.
+            result = JsonSerializer.Deserialize<OccupationMatchResult>(matched.OutputJson!, OccupationMatchJson.Options)!;
+        }
+        else
+        {
+            if (!await CanStartStepAsync(run, steps, ct))
+            {
+                return;
+            }
+            var profile = await LoadProfileAsync(run, ct);
+            result = OccupationMatcher.Match(
+                reference, new OccupationMatchInput(profile.CurrentTitle, profile.Industry, profile.Summary, profile.Skills, profile.Highlights));
+            if (!await SaveStepAsync(run, steps, CareerStepKinds.Tool, CareerStepNames.MatchOccupations,
+                    JsonSerializer.Serialize(result, OccupationMatchJson.Options), ct))
+            {
+                return;
+            }
+        }
+
+        var asked = steps.Any(s => s.Name == CareerStepNames.AskOccupation);
+        if (result.Ambiguous && !asked)
+        {
+            await AskOccupationAsync(run, steps, result, ct);
+            return;
+        }
+
+        if (!await CanStartStepAsync(run, steps, ct))
+        {
+            return;
+        }
+        await SaveMatchAsync(run, steps, reference, result, asked ? run.Answer : null, ct);
+    }
+
+    private async Task AskOccupationAsync(CareerAgentRun run, List<CareerAgentStep> steps, OccupationMatchResult result, CancellationToken ct)
+    {
+        if (!await CanStartStepAsync(run, steps, ct))
+        {
+            return;
+        }
+
+        var choices = OccupationMatcher.ClarificationChoices(result, MaxOccupationChoices)
+            .Select(c => new CareerRunChoiceDto(c.Code, c.Title))
+            .Append(new CareerRunChoiceDto(CareerAgentRunService.NoOccupationChoice, "None of these"))
+            .ToList();
+        // The choices are saved with the step, so the answer is checked against what was offered.
+        await AskAsync(run, steps, CareerStepNames.AskOccupation, CareerAgentRunService.OccupationQuestionId,
+            CareerAgentRunService.OccupationQuestionText,
+            JsonSerializer.Serialize(new { questionId = CareerAgentRunService.OccupationQuestionId, choices }, OccupationMatchJson.Options), ct);
+    }
+
+    private async Task SaveMatchAsync(
+        CareerAgentRun run, List<CareerAgentStep> steps, OccupationReferenceData reference,
+        OccupationMatchResult result, string? answer, CancellationToken ct)
+    {
+        var candidates = result.Candidates;
+        var status = result.Status == OccupationMatcher.Candidates ? CareerMatchStatuses.Proposed : CareerMatchStatuses.Unsupported;
+        if (answer == CareerAgentRunService.NoOccupationChoice)
+        {
+            // "None of these" never invents a candidate: the result becomes unsupported.
+            candidates = Array.Empty<OccupationCandidate>();
+            status = CareerMatchStatuses.Unsupported;
+        }
+        else if (answer != null && candidates.FirstOrDefault(c => c.Code == answer) is { } chosen)
+        {
+            candidates = candidates.Where(c => c.Code == chosen.Code).Concat(candidates.Where(c => c.Code != chosen.Code)).ToList();
+        }
+
+        var match = new CareerOccupationMatch
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = run.OwnerId,
+            RunId = run.Id,
+            PinnedProfileVersion = run.PinnedProfileVersion!.Value,
+            PinnedGoalVersion = run.PinnedGoalVersion,
+            ReferenceRelease = reference.Source.Release,
+            MatcherVersion = result.MatcherVersion,
+            Status = status,
+            ResultJson = JsonSerializer.Serialize(
+                new StoredOccupationResult(candidates, status == CareerMatchStatuses.Unsupported ? OccupationMatcher.UnsupportedGuidance : null),
+                OccupationMatchJson.Options),
+            ClarificationJson = answer == null
+                ? null
+                : JsonSerializer.Serialize(new CareerMatchClarificationDto(CareerAgentRunService.OccupationQuestionText, answer), OccupationMatchJson.Options),
+            CreatedAt = Now()
+        };
+        // Saved in the same fenced write that completes the run, so a lost lease leaves no match behind.
+        _db.CareerOccupationMatches.Add(match);
+        AddStep(run, steps, CareerStepKinds.Save, CareerStepNames.SaveMatch, JsonSerializer.Serialize(new { matchId = match.Id }));
+
+        if (await FinishAsync(run, CareerRunStatus.Completed, null, ct))
+        {
+            _logger.LogInformation("Career run {RunId} completed with occupation match {MatchId}", run.Id, match.Id);
+        }
+    }
+
     private async Task AskAudienceAsync(CareerAgentRun run, List<CareerAgentStep> steps, CancellationToken ct)
     {
         if (!await CanStartStepAsync(run, steps, ct))
@@ -202,11 +346,19 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             return;
         }
 
-        AddStep(run, steps, CareerStepKinds.Question, CareerStepNames.AskAudience,
-            JsonSerializer.Serialize(new { questionId = CareerAgentRunService.AudienceQuestionId }));
+        await AskAsync(run, steps, CareerStepNames.AskAudience, CareerAgentRunService.AudienceQuestionId,
+            CareerAgentRunService.AudienceQuestionText,
+            JsonSerializer.Serialize(new { questionId = CareerAgentRunService.AudienceQuestionId }), ct);
+    }
+
+    /// <summary>Records the question step and parks the run in needs_input, holding no lease.</summary>
+    private async Task AskAsync(
+        CareerAgentRun run, List<CareerAgentStep> steps, string stepName, string questionId, string text, string outputJson, CancellationToken ct)
+    {
+        AddStep(run, steps, CareerStepKinds.Question, stepName, outputJson);
         run.Status = CareerRunStatus.NeedsInput;
-        run.QuestionId = CareerAgentRunService.AudienceQuestionId;
-        run.QuestionText = CareerAgentRunService.AudienceQuestionText;
+        run.QuestionId = questionId;
+        run.QuestionText = text;
         // Waiting for a person holds no lease.
         run.LeaseOwner = null;
         run.LeaseExpiresAt = null;

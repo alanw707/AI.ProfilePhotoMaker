@@ -2,19 +2,7 @@ import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angula
 import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import {
-  EMPTY,
-  defer,
-  map,
-  distinctUntilChanged,
-  repeat,
-  retry,
-  switchMap,
-  takeWhile,
-  tap,
-  throwError,
-  timer,
-} from 'rxjs';
+import { EMPTY, map, distinctUntilChanged, switchMap, tap } from 'rxjs';
 import {
   CareerApiError,
   CareerProfileService,
@@ -22,10 +10,16 @@ import {
   CareerRunDto,
   CareerRunStatus,
 } from '../../services/career-profile.service';
+import {
+  clearStartKey,
+  isActive,
+  latestRun,
+  pollRun,
+  releaseStartKey,
+  startKey,
+} from './career-run';
 
 export const START_KEY_STORAGE = 'career-summary-start-key';
-export const POLL_INTERVAL_MS = 2000;
-export const MAX_BACKOFF_MS = 15000;
 const SUMMARY_PATH = '/app/career/summary';
 
 const STATUS_LABELS: Record<CareerRunStatus, string> = {
@@ -46,26 +40,6 @@ const ERROR_COPY: Record<string, string> = {
   CareerQuestionExpired: 'The question went unanswered for too long, so the draft stopped.',
 };
 const FALLBACK_ERROR = 'The draft could not be finished.';
-const ACTIVE: CareerRunStatus[] = ['queued', 'working', 'needs_input'];
-const FATAL_KINDS: CareerApiError['kind'][] = ['notFound', 'unauthorized', 'disabled'];
-
-export function isActive(status: CareerRunStatus) {
-  return ACTIVE.includes(status);
-}
-/**
- * A poll sent before an answer or cancel can arrive after it. Keep whichever state of
- * the same run the server wrote last, so an old "needs your answer" never comes back.
- */
-export function latestRun(current: CareerRunDto | null, incoming: CareerRunDto): CareerRunDto {
-  if (!current || current.id !== incoming.id) {
-    return incoming;
-  }
-  return Date.parse(incoming.updatedAt) < Date.parse(current.updatedAt) ? current : incoming;
-}
-
-export function backoffDelay(attempt: number) {
-  return Math.min(POLL_INTERVAL_MS * 2 ** attempt, MAX_BACKOFF_MS);
-}
 
 @Component({
   standalone: true,
@@ -121,7 +95,9 @@ export class CareerSummaryComponent implements OnInit {
             this.clearError();
           }
         }),
-        switchMap(id => (id ? this.poll(id) : EMPTY)),
+        switchMap(id =>
+          id ? pollRun(this.api, id, lost => this.connectionLost.set(lost)) : EMPTY
+        ),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
@@ -147,20 +123,16 @@ export class CareerSummaryComponent implements OnInit {
     }
     this.clearError();
     this.starting.set(true);
-    this.api.createRun(this.startKey()).subscribe({
+    this.api.createRun(startKey(START_KEY_STORAGE)).subscribe({
       next: run => {
         this.starting.set(false);
-        sessionStorage.removeItem(START_KEY_STORAGE);
+        clearStartKey(START_KEY_STORAGE);
         this.run.set(run);
         this.router.navigate([], { relativeTo: this.route, queryParams: { run: run.id } });
       },
       error: (e: CareerApiError) => {
         this.starting.set(false);
-        // Only a lost connection may be retried with the same key; every other
-        // answer means the next click is a new request.
-        if (e.kind !== 'unknown') {
-          sessionStorage.removeItem(START_KEY_STORAGE);
-        }
+        releaseStartKey(START_KEY_STORAGE, e);
         this.handle(e);
       },
     });
@@ -215,38 +187,10 @@ export class CareerSummaryComponent implements OnInit {
     return STATUS_LABELS[status];
   }
 
-  /** One key per user intent; survives a retry after a network error. */
-  private startKey(): string {
-    let key = sessionStorage.getItem(START_KEY_STORAGE);
-    if (!key) {
-      key = crypto.randomUUID();
-      sessionStorage.setItem(START_KEY_STORAGE, key);
-    }
-    return key;
-  }
-
-  private poll(id: string) {
-    return defer(() => this.api.getRun(id)).pipe(
-      retry({
-        resetOnSuccess: true,
-        delay: (e: CareerApiError, attempt) => {
-          if (FATAL_KINDS.includes(e.kind)) {
-            return throwError(() => e);
-          }
-          this.connectionLost.set(true);
-          return timer(backoffDelay(attempt - 1));
-        },
-      }),
-      tap(() => this.connectionLost.set(false)),
-      repeat({ delay: POLL_INTERVAL_MS }),
-      takeWhile(run => isActive(run.status), true)
-    );
-  }
-
   private loadRuns() {
     this.api.listRuns().subscribe({
       next: list => {
-        this.runs.set(list.runs);
+        this.runs.set(list.runs.filter(r => r.task !== 'occupation_match'));
         this.allowance.set(list.allowance);
       },
       error: e => this.handle(e),

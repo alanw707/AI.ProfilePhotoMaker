@@ -14,6 +14,7 @@ public enum CareerRunStatus
 public static class CareerAgentTasks
 {
     public const string ProfileSummary = "profile_summary";
+    public const string OccupationMatch = "occupation_match";
 }
 
 public static class CareerStepKinds
@@ -31,6 +32,9 @@ public static class CareerStepNames
     public const string AskAudience = "ask_audience";
     public const string DraftSummary = "draft_summary";
     public const string SaveProposal = "save_proposal";
+    public const string MatchOccupations = "match_occupations";
+    public const string AskOccupation = "ask_occupation";
+    public const string SaveMatch = "save_match";
 }
 
 /// <summary>

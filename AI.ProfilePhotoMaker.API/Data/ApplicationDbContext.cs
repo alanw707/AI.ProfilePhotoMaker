@@ -64,6 +64,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Models.Career.CareerAgentRun> CareerAgentRuns { get; set; }
     public virtual DbSet<Models.Career.CareerAgentStep> CareerAgentSteps { get; set; }
     public virtual DbSet<Models.Career.CareerAllowance> CareerAllowances { get; set; }
+    public virtual DbSet<Models.Career.CareerOccupationMatch> CareerOccupationMatches { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -211,6 +212,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         goalVersion.Property(v => v.TargetLocation).HasMaxLength(120);
         goalVersion.Property(v => v.WorkArrangement).HasMaxLength(20);
         goalVersion.Property(v => v.Source).HasMaxLength(32).IsRequired();
+        goalVersion.Property(v => v.OccupationCode).HasMaxLength(10);
+        goalVersion.Property(v => v.OccupationTitle).HasMaxLength(200);
+        goalVersion.Property(v => v.OccupationReferenceRelease).HasMaxLength(20);
 
         // Resume import (#379, ADR 0007). Documents and proposals reference each other
         // by plain id only, so deleting either never needs a cascade across the pair.
@@ -291,6 +295,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         allowance.Property(a => a.Version).IsConcurrencyToken();
         allowance.HasIndex(a => new { a.OwnerId, a.PeriodStart }).IsUnique();
         allowance.HasOne<ApplicationUser>().WithMany().HasForeignKey(a => a.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        // Occupation matches (#381, ADR 0010). One per run; cascade from the user.
+        var match = builder.Entity<Models.Career.CareerOccupationMatch>();
+        match.ToTable("CareerOccupationMatches");
+        match.Property(m => m.OwnerId).HasMaxLength(450).IsRequired();
+        match.Property(m => m.ReferenceRelease).HasMaxLength(20).IsRequired();
+        match.Property(m => m.MatcherVersion).HasMaxLength(40).IsRequired();
+        // A match is decided once: a dismiss and a confirm that both read "proposed" cannot both win.
+        match.Property(m => m.Status).HasMaxLength(16).IsRequired().IsConcurrencyToken();
+        match.Property(m => m.ConfirmedCode).HasMaxLength(10);
+        match.HasIndex(m => m.RunId).IsUnique();
+        match.HasIndex(m => new { m.OwnerId, m.CreatedAt });
+        match.HasOne<ApplicationUser>().WithMany().HasForeignKey(m => m.OwnerId).OnDelete(DeleteBehavior.Cascade);
     }
 
     private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)

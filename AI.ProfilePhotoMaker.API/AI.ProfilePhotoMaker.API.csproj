@@ -46,6 +46,8 @@
 
   <ItemGroup>
     <Content Include="content\blog\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <!-- O*NET occupation snapshot (ADR 0010); the loader verifies its SHA-256. -->
+    <EmbeddedResource Include="Data\Reference\onet-snapshot.json.gz" LogicalName="onet-snapshot.json.gz" />
   </ItemGroup>
 
 </Project>
