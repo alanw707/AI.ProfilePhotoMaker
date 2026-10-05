@@ -62,6 +62,9 @@ public sealed record CareerGoalFactsDto(
 /// <summary>The confirmed O*NET occupation on a goal (ADR 0010).</summary>
 public sealed record CareerGoalOccupationDto(string Code, string Title, string ReferenceRelease, Guid? MatchId);
 
+/// <summary>The place saved from the market comparison (ADR 0014).</summary>
+public sealed record CareerGoalPreferredAreaDto(string Code, string Title, string Level);
+
 public sealed record CareerGoalDto(
     Guid Id,
     int Version,
@@ -72,7 +75,8 @@ public sealed record CareerGoalDto(
     CareerProvenanceDto Provenance,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    CareerGoalOccupationDto? Occupation = null);
+    CareerGoalOccupationDto? Occupation = null,
+    CareerGoalPreferredAreaDto? PreferredArea = null);
 
 public sealed record CareerGoalVersionSummaryDto(int Version, DateTime CreatedAt, string TargetRole, bool IsActive);
 

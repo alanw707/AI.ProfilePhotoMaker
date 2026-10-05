@@ -44,9 +44,16 @@ export interface CareerGoalDto {
   basedOnProfileVersion: number | null;
   isStale: boolean;
   occupation?: GoalOccupation | null;
+  preferredArea?: PreferredArea | null;
   provenance: Provenance;
   createdAt: string;
   updatedAt: string;
+}
+export type MarketLevel = 'national' | 'state' | 'metro';
+export interface PreferredArea {
+  code: string;
+  title: string;
+  level: MarketLevel;
 }
 export interface GoalOccupation {
   code: string;
@@ -350,6 +357,54 @@ export interface MarketBriefDto {
   sources: MarketSource[];
   createdAt: string;
 }
+export interface MarketMetric {
+  key: string;
+  label: string;
+  unit: MarketFigureUnit;
+  measure: string;
+  supported: boolean;
+  /** Machine reason when unsupported (for example national_only_source). */
+  reason: string | null;
+  geographyLevels: MarketLevel[];
+}
+export interface MarketComparisonArea {
+  areaCode: string;
+  areaTitle: string;
+  type: MarketLevel;
+  value: number | null;
+  status: MarketFigureStatus;
+  rank: number | null;
+  rankedOf: number;
+  selected: boolean;
+  shareOfNationalEmployment?: number | null;
+}
+export interface MarketComparison {
+  occupation: { code: string; title: string; publishedCode: string; mapping: string };
+  metric: Omit<MarketMetric, 'geographyLevels'>;
+  level: Exclude<MarketLevel, 'national'>;
+  national: {
+    areaCode: string;
+    areaTitle: string;
+    value: number | null;
+    status: MarketFigureStatus;
+  };
+  reference: {
+    release: string;
+    publishedOn: string;
+    coverage: string;
+    definitionsUrl: string;
+    citation: string;
+  };
+  areas: MarketComparisonArea[];
+  selectionLimit: number;
+  truncated: boolean;
+}
+export interface MarketComparisonQuery {
+  metric: string;
+  level: string;
+  areas?: string[];
+  q?: string;
+}
 export interface MarketReferenceInfo {
   sources: MarketSource[];
   areaCount: number;
@@ -482,6 +537,8 @@ export interface CareerApiError {
     | 'notConfirmable'
     | 'goalRequired'
     | 'occupationRequired'
+    | 'metricUnsupported'
+    | 'areaNotFound'
     | 'unknown';
   message: string;
   fieldErrors?: Record<string, string>;
@@ -581,6 +638,8 @@ export class CareerProfileService {
       CareerMatchNotConfirmable: 'notConfirmable',
       CareerGoalRequired: 'goalRequired',
       CareerOccupationRequired: 'occupationRequired',
+      CareerMetricUnsupported: 'metricUnsupported',
+      CareerAreaNotFound: 'areaNotFound',
       CareerReferenceUnavailable: 'unavailable',
     };
     const kind = codeKinds[payload?.code ?? ''] ?? kinds[error.status] ?? 'unknown';
@@ -778,5 +837,30 @@ export class CareerProfileService {
   }
   getMarketReference() {
     return this.request<MarketReferenceInfo>('GET', 'market/reference');
+  }
+
+  getMarketMetrics() {
+    return this.request<{ metrics: MarketMetric[] }>('GET', 'markets/metrics');
+  }
+  compareMarkets(query: MarketComparisonQuery) {
+    const params = new URLSearchParams({ metric: query.metric, level: query.level });
+    if (query.areas?.length) {
+      params.set('areas', query.areas.join(','));
+    }
+    if (query.q) {
+      params.set('q', query.q);
+    }
+    return this.request<MarketComparison>('GET', `markets/compare?${params.toString()}`);
+  }
+  /** Saves the area as the goal's location; needs the goal ETag from getGoal(). */
+  saveMarketPreference(preference: { areaCode: string; level: MarketLevel }, goalEtag: string) {
+    return this.request<CareerGoalDto>(
+      'POST',
+      'markets/preference',
+      { ...preference, confirmed: true },
+      'goal',
+      false,
+      { 'If-Match': goalEtag }
+    );
   }
 }

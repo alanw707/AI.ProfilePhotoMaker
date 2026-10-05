@@ -167,6 +167,18 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         operations.OfType<DropColumnOperation>().Should().BeEmpty();
     }
 
+    [Fact]
+    public void ThePreferredAreaMigrationOnlyAddsThreeNullableGoalVersionColumns()
+    {
+        var operations = new AddCareerPreferredArea().UpOperations;
+
+        AssertAdditive(operations, allowAddColumn: true);
+        var added = operations.OfType<AddColumnOperation>().ToList();
+        added.Should().OnlyContain(c => c.Table == "CareerGoalVersions" && c.IsNullable);
+        added.Select(c => c.Name).Should().BeEquivalentTo("PreferredAreaCode", "PreferredAreaTitle", "PreferredAreaLevel");
+        operations.Should().HaveCount(3);
+    }
+
     private static void AssertAdditive(IReadOnlyList<MigrationOperation> operations, bool allowAddColumn)
     {
         operations.Should().NotBeEmpty();

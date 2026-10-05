@@ -1,0 +1,197 @@
+{
+  "results": [
+    {
+      "label": "compare without occupation",
+      "status": 409,
+      "code": "CareerOccupationRequired"
+    },
+    {
+      "label": "01-states @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Compare U.S. Markets - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-states @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Compare U.S. Markets - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-states @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Compare U.S. Markets - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "states payload",
+      "areas": 51,
+      "national": {
+        "areaCode": "99",
+        "areaTitle": "U.S.",
+        "value": 135980,
+        "status": "available"
+      },
+      "colorado": {
+        "value": 138390,
+        "rank": 8,
+        "share": 2.6
+      },
+      "valueChecked": 50,
+      "mismatches": [],
+      "parity": {
+        "cells": 51,
+        "rows": 51,
+        "diffs": []
+      },
+      "nonAvailable": 1,
+      "reference": "2025-05 2026-05-15",
+      "truncated": false
+    },
+    {
+      "label": "metrics",
+      "keys": [
+        "median_wage",
+        "employment",
+        "location_quotient",
+        "share_of_national_employment",
+        "projected_change:unsupported"
+      ],
+      "unsupportedReason": "national_only_source",
+      "disabled": [
+        "projected_change"
+      ],
+      "disabledReason": "Only national projections are published, so this metric is not available per market.",
+      "describedbyWired": true
+    },
+    {
+      "label": "missing cells",
+      "patterns": 2,
+      "legendText": "Median annual wage by state Unit: U.S. dollars per year. Measure: BLS OEWS median annual wage. Reference period: May 2025, published 15 May 2026.  U.S. (national): $135,980 Highest fifth of ranked are"
+    },
+    {
+      "label": "metro coverage",
+      "areas": 393,
+      "alaska": 2,
+      "hawaii": 2,
+      "hawaiiTitles": [
+        "Kahului-Wailuku, HI",
+        "Urban Honolulu, HI"
+      ],
+      "nonMetroIncluded": 0
+    },
+    {
+      "label": "filters and keyboard",
+      "filtered": 1,
+      "afterReload": 1,
+      "searchValue": "colo",
+      "selectedAfterKeyboard": 1,
+      "urlHasFilters": true
+    },
+    {
+      "label": "02-filtered @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Compare U.S. Markets - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-filtered @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Compare U.S. Markets - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-filtered @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Compare U.S. Markets - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "save preference",
+      "confirmVisible": true,
+      "versionBefore": 2,
+      "versionAfter": 3,
+      "preferredArea": {
+        "code": "08",
+        "title": "Colorado",
+        "level": "state"
+      },
+      "savedText": true
+    },
+    {
+      "label": "03-saved @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Compare U.S. Markets - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-saved @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Compare U.S. Markets - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-saved @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Compare U.S. Markets - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "mobile",
+      "tiles": 0,
+      "listItems": 51,
+      "listValues": [
+        "06=174410",
+        "53=166540"
+      ],
+      "tableBehindDetails": true,
+      "searchVisible": true,
+      "overflow": 0
+    },
+    {
+      "label": "mobile-list",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Compare U.S. Markets - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "mobile 320",
+      "listItems": 51,
+      "tiles": 0,
+      "overflow": 0
+    },
+    {
+      "label": "dates and codes",
+      "isoDates": [],
+      "hasReadableDate": true,
+      "hasReadablePeriod": true,
+      "mentionsNeutralPhrase": true,
+      "showsBareCode": false
+    },
+    {
+      "label": "expired session",
+      "url": "/auth/login?message=Please log in to access this feature&returnUrl=/app/career/markets"
+    }
+  ],
+  "errors": []
+}

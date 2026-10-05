@@ -55,6 +55,14 @@ public class CareerGoalVersion
     public string? OccupationReferenceRelease { get; set; }
     public Guid? OccupationMatchId { get; set; }
 
+    /// <summary>
+    /// The place the user explicitly saved from the market comparison (ADR 0014), carried forward by
+    /// later edits and restores. All three are set together, or all null.
+    /// </summary>
+    public string? PreferredAreaCode { get; set; }
+    public string? PreferredAreaTitle { get; set; }
+    public string? PreferredAreaLevel { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public CareerGoal? CareerGoal { get; set; }

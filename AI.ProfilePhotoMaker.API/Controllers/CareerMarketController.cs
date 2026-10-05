@@ -15,11 +15,28 @@ namespace AI.ProfilePhotoMaker.API.Controllers;
 public sealed class CareerMarketController : CareerControllerBase
 {
     private readonly ICareerMarketService _market;
+    private readonly ICareerMarketComparisonService _comparison;
 
-    public CareerMarketController(ICareerMarketService market, ILogger<CareerMarketController> logger) : base(logger)
+    public CareerMarketController(
+        ICareerMarketService market, ICareerMarketComparisonService comparison, ILogger<CareerMarketController> logger) : base(logger)
     {
         _market = market;
+        _comparison = comparison;
     }
+
+    /// <summary>Market comparison (ticket #385). Contract: docs/career/api-market-comparison.md; design: ADR 0014.</summary>
+    [HttpGet("markets/metrics")]
+    public async Task<IActionResult> Metrics() =>
+        await Respond(owner => Task.FromResult(_comparison.GetMetrics()));
+
+    [HttpGet("markets/compare")]
+    public async Task<IActionResult> Compare(
+        [FromQuery] string? metric, [FromQuery] string? level, [FromQuery] string? areas, [FromQuery] string? q, CancellationToken ct) =>
+        await Respond(owner => _comparison.CompareAsync(owner, metric, level, areas, q, ct));
+
+    [HttpPost("markets/preference")]
+    public async Task<IActionResult> SavePreference([FromBody] MarketPreferenceRequest? request, CancellationToken ct) =>
+        await Respond(owner => _comparison.SavePreferenceAsync(owner, request ?? new MarketPreferenceRequest(), ReadIfMatch("goal"), ct), g => g.Etag);
 
     [HttpGet("market-briefs")]
     public async Task<IActionResult> List(CancellationToken ct) =>
