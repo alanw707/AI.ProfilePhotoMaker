@@ -1,8 +1,13 @@
 <main class="career-page">
   <div class="career-sheet">
     <a routerLink="/app/career">Back to career workspace</a>
-    <h1>Import from a resume</h1>
-    <p>Upload a PDF or DOCX and we will suggest profile facts for you to review. You choose what is added.</p>
+    @if (isAgentDraft()) {
+      <h1>Review your drafted summary</h1>
+      <p>Nothing changes on your profile until you add it.</p>
+    } @else {
+      <h1>Import from a resume</h1>
+      <p>Upload a PDF or DOCX and we will suggest profile facts for you to review. You choose what is added.</p>
+    }
 
     @if (error()) {
       <div data-error-summary tabindex="-1" role="alert" class="career-error-summary">
@@ -183,7 +188,9 @@
           {{
             proposal()!.source === 'pasted'
               ? 'These suggestions come from the text you pasted.'
-              : 'These suggestions come from your resume.'
+              : proposal()!.source === 'agent'
+                ? 'This draft was written by the assistant from your profile and goal.'
+                : 'These suggestions come from your resume.'
           }}
           Check each one you want to add.
         </p>

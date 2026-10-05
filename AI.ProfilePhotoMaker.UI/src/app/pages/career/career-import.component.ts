@@ -10,7 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   CareerApiError,
   CareerProfileProposalDto,
@@ -63,6 +63,7 @@ type Phase = 'idle' | 'uploading';
 export class CareerImportComponent implements OnInit, OnDestroy {
   private api = inject(CareerProfileService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private injector = inject(Injector);
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private timers: ReturnType<typeof setTimeout>[] = [];
@@ -95,6 +96,8 @@ export class CareerImportComponent implements OnInit, OnDestroy {
     })).filter(g => g.items.length > 0);
   });
   selectedCount = computed(() => this.selected().size);
+  /** An assistant draft opened from the summary page is not a resume import. */
+  isAgentDraft = computed(() => this.proposal()?.source === 'agent');
   showPaste = computed(() => {
     const result = this.result();
     return !this.proposal() && !!result && result.state !== 'ready';
@@ -104,6 +107,10 @@ export class CareerImportComponent implements OnInit, OnDestroy {
     // Loads the current profile so its ETag is known before accepting.
     this.api.getProfile().subscribe({ error: e => this.redirectIfDisabled(e) });
     this.loadResumes();
+    const proposalId = this.route.snapshot.queryParamMap.get('proposal');
+    if (proposalId) {
+      this.openProposal(proposalId);
+    }
   }
   ngOnDestroy() {
     this.clearTimers();

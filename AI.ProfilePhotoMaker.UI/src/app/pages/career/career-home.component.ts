@@ -58,6 +58,9 @@ import {
         <a routerLink="/app/career/import">Import from a resume</a>
       </p>
       <p>
+        <a routerLink="/app/career/summary">Draft a profile summary</a>
+      </p>
+      <p>
         <a routerLink="/app/career/materials">Materials and photo</a>
       </p>
       @if (error()) {

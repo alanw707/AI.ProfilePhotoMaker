@@ -1,0 +1,109 @@
+<main class="career-page career-summary">
+  <div class="career-sheet">
+    <p><a routerLink="/app/career">Back to career workspace</a></p>
+    <h1>Draft a profile summary</h1>
+    <p>
+      The assistant reads your confirmed profile and goal, drafts a summary and saves it for your review. Nothing
+      changes on your profile until you accept.
+    </p>
+
+    @if (draftsLeft() !== null) {
+      <p class="muted" data-allowance>{{ draftsLeft() }} of {{ allowance()!.limit }} drafts left this month</p>
+    }
+
+    @if (error()) {
+      <div role="alert" class="caution" data-error>
+        <p>{{ error() }}</p>
+        @if (errorKind() === 'profileRequired') {
+          <a routerLink="/app/career/profile">Confirm your profile first</a>
+        }
+      </div>
+    }
+
+    @if (connectionLost()) {
+      <p class="caution" role="status" aria-live="polite" data-connection>Connection lost. Retrying…</p>
+    }
+
+    @if (run(); as r) {
+      <section aria-labelledby="run-heading" class="run-area">
+        <h2 id="run-heading">Draft status</h2>
+        <p class="status" role="status" aria-live="polite" data-run-status>{{ statusText() }}</p>
+
+        @if (r.steps.length) {
+          <ol class="run-steps" aria-label="Completed steps">
+            @for (step of r.steps; track step.ordinal) {
+              <li>{{ step.label }}</li>
+            }
+          </ol>
+        }
+
+        @if (r.status === 'needs_input' && r.question; as q) {
+          <form class="field" (submit)="$event.preventDefault(); sendAnswer()">
+            <label for="run-answer">{{ q.text }}</label>
+            <textarea
+              id="run-answer"
+              rows="3"
+              [attr.maxlength]="q.maxLength"
+              [value]="answer()"
+              (input)="answer.set($any($event.target).value)"></textarea>
+            <div class="actions">
+              <button type="submit" class="primary" [disabled]="sending() || !answer().trim()">Send answer</button>
+            </div>
+          </form>
+        }
+
+        @if (r.status === 'completed') {
+          @if (r.profileChanged) {
+            <p class="caution" data-profile-changed>
+              Your profile changed after this draft started. Review it carefully or start a new draft.
+            </p>
+          }
+          @if (r.proposalId) {
+            <p>
+              <a class="primary" [routerLink]="'/app/career/import'" [queryParams]="{ proposal: r.proposalId }">
+                Review the draft
+              </a>
+            </p>
+          }
+        }
+
+        @if (r.status === 'cancelled') {
+          <p>Stopped. Nothing was changed on your profile.</p>
+        }
+
+        @if (r.status === 'failed') {
+          <p role="alert">{{ failureText() }} Nothing was changed on your profile.</p>
+        }
+
+        <div class="actions">
+          @if (active()) {
+            <button type="button" class="secondary" (click)="cancel()" [disabled]="cancelling()">Cancel</button>
+          } @else {
+            <button type="button" class="secondary" (click)="newDraft()">Start a new draft</button>
+          }
+        </div>
+      </section>
+    } @else if (loadingRun()) {
+      <p role="status">Loading your draft…</p>
+    } @else {
+      <div class="actions">
+        <button type="button" class="primary" (click)="start()" [disabled]="starting()">Start draft</button>
+      </div>
+    }
+
+    @if (runs().length) {
+      <section aria-labelledby="recent-heading">
+        <h2 id="recent-heading">Recent drafts</h2>
+        <ul class="history">
+          @for (item of runs(); track item.id) {
+            <li>
+              <a [routerLink]="[]" [queryParams]="{ run: item.id }">
+                {{ statusLabel(item.status) }} · {{ item.createdAt | date: 'medium' }}
+              </a>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+</main>

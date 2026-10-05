@@ -87,7 +87,8 @@ public enum CareerOutcomeKind
     TooLarge,
     Unsupported,
     Rejected,
-    Unavailable
+    Unavailable,
+    QuotaExceeded
 }
 
 /// <summary>
@@ -138,6 +139,16 @@ public sealed record CareerOutcome<T>(
     public static CareerOutcome<T> ScannerUnavailable(int retryAfterSeconds) =>
         new(CareerOutcomeKind.Unavailable, ErrorCode: CareerErrorCodes.ScannerUnavailable,
             Message: "Resume import is temporarily unavailable. Try again shortly.", RetryAfterSeconds: retryAfterSeconds);
+
+    public static CareerOutcome<T> ModelUnavailable() =>
+        new(CareerOutcomeKind.Unavailable, ErrorCode: CareerAgentErrorCodes.ModelUnavailable,
+            Message: "The career assistant is not available yet.");
+
+    public static CareerOutcome<T> Busy(string code, string message, int retryAfterSeconds) =>
+        new(CareerOutcomeKind.Unavailable, ErrorCode: code, Message: message, RetryAfterSeconds: retryAfterSeconds);
+
+    public static CareerOutcome<T> QuotaExceeded(string code, string message) =>
+        new(CareerOutcomeKind.QuotaExceeded, ErrorCode: code, Message: message);
 
     public static CareerOutcome<T> AlreadyExists(string code, string message) =>
         new(CareerOutcomeKind.AlreadyExists, ErrorCode: code, Message: message);
