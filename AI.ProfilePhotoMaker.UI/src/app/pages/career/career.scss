@@ -402,3 +402,43 @@ button:disabled {
     margin: 20px 0;
   }
 }
+
+.career-page {
+  .candidate {
+    border-top: 1px solid #d1d8d4;
+    padding: 12px 0;
+  }
+  .candidate:first-of-type {
+    border-top: 0;
+  }
+  .choice {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    min-height: 44px;
+  }
+  .choice input[type="radio"] {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    margin: 0;
+  }
+  .strength {
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  .evidence {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+  }
+  .evidence li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 0;
+  }
+  .attribution {
+    margin-top: 20px;
+  }
+}

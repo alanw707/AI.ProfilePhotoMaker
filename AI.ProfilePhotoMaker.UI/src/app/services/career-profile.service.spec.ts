@@ -299,6 +299,11 @@ describe('CareerProfileService', () => {
       [404, 'CareerRunNotFound', 'notFound'],
       [401, 'Unauthorized', 'unauthorized'],
       [403, 'CareerWorkspaceDisabled', 'disabled'],
+      [409, 'CareerMatchStale', 'matchStale'],
+      [409, 'CareerMatchNotConfirmable', 'notConfirmable'],
+      [409, 'CareerGoalRequired', 'goalRequired'],
+      [412, 'CareerVersionConflict', 'conflict'],
+      [503, 'CareerReferenceUnavailable', 'unavailable'],
     ];
     for (const [status, code, kind] of cases) {
       it(`maps ${status} ${code} to ${kind}`, () => {
@@ -310,5 +315,52 @@ describe('CareerProfileService', () => {
         expect(caught?.code).toBe(code);
       });
     }
+  });
+  describe('occupation matches', () => {
+    it('starts an occupation_match run', () => {
+      service.createRun('k', 'occupation_match').subscribe();
+      const req = http.expectOne('/api/career/runs');
+      expect(req.request.body).toEqual({ task: 'occupation_match' });
+      req.flush({ success: true, data: { id: 'r1' } });
+    });
+    it('reads a match and the reference', () => {
+      service.getOccupationMatch('m 1').subscribe(m => expect(m.id).toBe('m 1'));
+      http
+        .expectOne('/api/career/occupation-matches/m%201')
+        .flush({ success: true, data: { id: 'm 1' } });
+      service.getOccupationReference().subscribe(r => expect(r.occupationCount).toBe(900));
+      http
+        .expectOne('/api/career/occupations/reference')
+        .flush({ success: true, data: { occupationCount: 900 } });
+    });
+    it('confirms with the given If-Match and a code body', () => {
+      service.confirmOccupationMatch('m1', '15-1252.00', '"goal-v2"').subscribe();
+      const req = http.expectOne('/api/career/occupation-matches/m1/confirm');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.headers.get('If-Match')).toBe('"goal-v2"');
+      expect(req.request.body).toEqual({ occupationCode: '15-1252.00' });
+      req.flush({ success: true, data: { etag: '"goal-v3"' } }, { headers: { ETag: '"goal-v3"' } });
+    });
+    it('dismisses a match', () => {
+      service.dismissOccupationMatch('m1').subscribe();
+      const req = http.expectOne('/api/career/occupation-matches/m1/dismiss');
+      expect(req.request.method).toBe('POST');
+      req.flush({ success: true, data: { id: 'm1', status: 'dismissed' } });
+    });
+    it('maps confirm failures', () => {
+      const kinds: string[] = [];
+      for (const [status, code] of [
+        [412, 'CareerVersionConflict'],
+        [409, 'CareerMatchStale'],
+      ] as const) {
+        service
+          .confirmOccupationMatch('m1', 'x', '"g"')
+          .subscribe({ error: e => kinds.push(e.kind) });
+        http
+          .expectOne('/api/career/occupation-matches/m1/confirm')
+          .flush({ success: false, error: { code } }, { status, statusText: code });
+      }
+      expect(kinds).toEqual(['conflict', 'matchStale']);
+    });
   });
 });

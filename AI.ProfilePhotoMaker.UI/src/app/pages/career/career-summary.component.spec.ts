@@ -2,12 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { CareerProfileService, CareerRunDto } from '../../services/career-profile.service';
-import {
-  CareerSummaryComponent,
-  START_KEY_STORAGE,
-  backoffDelay,
-  latestRun,
-} from './career-summary.component';
+import { CareerSummaryComponent, START_KEY_STORAGE } from './career-summary.component';
+import { backoffDelay, latestRun } from './career-run';
 
 const allowance = { used: 1, reserved: 0, limit: 20, periodStart: '2026-10-01T00:00:00Z' };
 const queuedRun = { id: 'r1', status: 'queued', steps: [], allowance } as unknown as CareerRunDto;
