@@ -757,3 +757,89 @@ button:disabled {
     }
   }
 }
+
+// Open postings (#386): filters, honest coverage, and a card list that reflows to one column.
+.career-page.career-jobs {
+  .career-sheet.wide {
+    max-width: 1100px;
+  }
+  .job-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    gap: 12px 16px;
+    align-items: end;
+  }
+  .job-filters h2,
+  .job-filters .choice,
+  .job-filters button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .job-filters input[type="text"],
+  .job-filters input[type="search"],
+  .job-filters select {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid #5d7075;
+    border-radius: 8px;
+    font: inherit;
+    color: #1b2c31;
+    background: #fff;
+  }
+  .choice label {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    min-height: 44px;
+  }
+  .choice input {
+    width: 20px;
+    height: 20px;
+  }
+  .job-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 16px;
+  }
+  .job-card {
+    min-width: 0;
+    border: 1px solid #d1d8d4;
+    border-radius: 10px;
+    padding: 16px;
+    background: #fff;
+  }
+  .job-card p {
+    margin: 0 0 8px;
+  }
+  .job-card dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 12px;
+    margin: 0 0 8px;
+  }
+  .job-card dt {
+    font-weight: 700;
+  }
+  .job-card dd {
+    margin: 0;
+    min-width: 0;
+  }
+  .job-location {
+    display: block;
+  }
+  section.caution {
+    border: 0;
+  }
+}
+@media (max-width: 719.98px) {
+  .career-page.career-jobs .job-list {
+    grid-template-columns: 1fr;
+  }
+  .career-page.career-jobs .job-card dl {
+    grid-template-columns: 1fr;
+  }
+}
