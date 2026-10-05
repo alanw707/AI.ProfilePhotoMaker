@@ -28,7 +28,7 @@ Other checks: photo section renders without purchase (Continue without a photo +
 ## Findings
 | id | sev | finding | status |
 |---|---|---|---|
-| F1 | P3 | At 390/320 the pay-table "Source" buttons wrap mid-word ("Sourc e") in narrow columns (S2b-sparse-pay-mobile-390.png) | open, reported |
+| F1 | P3 | At 390/320 the pay-table "Source" buttons wrap mid-word ("Sourc e") in narrow columns (S2b-sparse-pay-mobile-390.png) | fixed: `.source-link` no longer breaks mid-word |
 | F2 | P3 | nextAction stays `export_material` after files were downloaded (journey has no export signal); harmless, Next step still valid | open, reported |
 | F3 | P3 | Sparse pay scenario says unavailable when the goal has no requested pay; wording does not say why | open, reported |
 | F4 | info | Probe errors fixed in script only (profile needs real duties for a match; roadmap opened by id) - not app bugs | closed |
