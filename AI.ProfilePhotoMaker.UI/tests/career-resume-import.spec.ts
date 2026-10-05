@@ -205,6 +205,7 @@ test('upload PDF, review, accept 2 of 3 and see provenance', async ({ page }) =>
   await upload(page);
   await expect(page.getByRole('heading', { name: 'Review suggestions' })).toBeFocused();
   expect(backend.uploadBody()).toContain('name="consent"');
+  expect(backend.uploadBody()).toContain('resume-notice-2026-10-04');
   expect(backend.uploadBody()).toContain('name="file"');
   for (const name of ['Senior Operations Lead', 'Process improvement', 'Improved things'])
     await expect(page.getByLabel(name)).not.toBeChecked();

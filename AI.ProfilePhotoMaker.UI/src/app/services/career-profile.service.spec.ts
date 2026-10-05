@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { CareerProfileService, CareerApiError } from './career-profile.service';
+import { RESUME_CONSENT_VERSION, CareerProfileService, CareerApiError } from './career-profile.service';
 
 describe('CareerProfileService', () => {
   let service: CareerProfileService;
@@ -98,6 +98,7 @@ describe('CareerProfileService', () => {
       expect(form instanceof FormData).toBeTrue();
       expect((form.get('file') as File).name).toBe('resume.pdf');
       expect(form.get('consent')).toBe('true');
+      expect(form.get('consentVersion')).toBe(RESUME_CONSENT_VERSION);
       req.flush({ success: true, data: { id: 'r1', state: 'ready' } });
     });
     it('maps 413 to tooLarge', () => {

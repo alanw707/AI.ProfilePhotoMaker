@@ -150,6 +150,12 @@ interface Envelope<T> {
   };
 }
 
+/**
+ * Version of the resume consent notice shown on the import page. The server rejects
+ * uploads that agreed to a different version, so change both together.
+ */
+export const RESUME_CONSENT_VERSION = 'resume-notice-2026-10-04';
+
 @Injectable({ providedIn: 'root' })
 export class CareerProfileService {
   private readonly http = inject(HttpClient);
@@ -276,6 +282,7 @@ export class CareerProfileService {
     const form = new FormData();
     form.append('file', file, file.name);
     form.append('consent', String(consent));
+    form.append('consentVersion', RESUME_CONSENT_VERSION);
     return this.request<ResumeDocumentDto>('POST', 'resumes', form);
   }
   listResumes() {
