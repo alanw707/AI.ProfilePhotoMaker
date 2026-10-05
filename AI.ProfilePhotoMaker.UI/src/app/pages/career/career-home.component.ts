@@ -44,6 +44,9 @@ import {
         <section aria-labelledby="goal-heading">
           <h2 id="goal-heading">Your goal</h2>
           <p>{{ g.goal.targetRole }}</p>
+          @if (g.occupation; as o) {
+            <p data-occupation>Occupation: {{ o.title }} ({{ o.code }})</p>
+          }
           @if (g.isStale) {
             <p class="caution">
               Needs review · Your profile changed since you confirmed this goal.
@@ -59,6 +62,9 @@ import {
       </p>
       <p>
         <a routerLink="/app/career/summary">Draft a profile summary</a>
+      </p>
+      <p>
+        <a routerLink="/app/career/occupation">Confirm your occupation</a>
       </p>
       <p>
         <a routerLink="/app/career/materials">Materials and photo</a>
