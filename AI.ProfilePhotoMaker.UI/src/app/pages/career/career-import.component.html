@@ -183,7 +183,9 @@
           {{
             proposal()!.source === 'pasted'
               ? 'These suggestions come from the text you pasted.'
-              : 'These suggestions come from your resume.'
+              : proposal()!.source === 'agent'
+                ? 'This draft was written by the assistant from your profile and goal.'
+                : 'These suggestions come from your resume.'
           }}
           Check each one you want to add.
         </p>

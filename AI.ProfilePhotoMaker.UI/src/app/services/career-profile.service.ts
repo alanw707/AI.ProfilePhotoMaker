@@ -108,7 +108,7 @@ export interface ProposalItem {
 }
 export interface CareerProfileProposalDto {
   id: string;
-  source: 'resume' | 'pasted';
+  source: 'resume' | 'pasted' | 'agent';
   resumeId: string | null;
   baseProfileVersion: number | null;
   status: 'pending' | 'accepted' | 'dismissed';
@@ -143,7 +143,55 @@ export interface CareerPhotoSelection {
   careerGoalId: string | null;
   selectedAt: string;
 }
+export type CareerRunStatus =
+  | 'queued'
+  | 'working'
+  | 'needs_input'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+export interface CareerRunStep {
+  ordinal: number;
+  kind: string;
+  name: string;
+  label: string;
+  status: string;
+  completedAt: string | null;
+}
+export interface CareerRunQuestion {
+  id: string;
+  text: string;
+  maxLength: number;
+}
+export interface CareerRunAllowance {
+  used: number;
+  reserved: number;
+  limit: number;
+  periodStart: string;
+}
+export interface CareerRunDto {
+  id: string;
+  task: 'profile_summary';
+  status: CareerRunStatus;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  pinnedProfileVersion: number | null;
+  pinnedGoalVersion: number | null;
+  steps: CareerRunStep[];
+  question: CareerRunQuestion | null;
+  proposalId: string | null;
+  profileChanged: boolean;
+  errorCode: string | null;
+  allowance: CareerRunAllowance;
+}
+export interface CareerRunList {
+  runs: CareerRunDto[];
+  allowance: CareerRunAllowance;
+}
 export interface CareerApiError {
+  /** Server error code (for example CareerRunNotWaiting), when one was sent. */
+  code?: string;
   kind:
     | 'tooLarge'
     | 'unsupported'
@@ -157,6 +205,11 @@ export interface CareerApiError {
     | 'unauthorized'
     | 'alreadyExists'
     | 'preview'
+    | 'allowance'
+    | 'unavailable'
+    | 'profileRequired'
+    | 'idempotencyMismatch'
+    | 'notWaiting'
     | 'unknown';
   message: string;
   fieldErrors?: Record<string, string>;
@@ -199,10 +252,13 @@ export class CareerProfileService {
     path: string,
     body?: unknown,
     resource?: 'profile' | 'goal',
-    match = false
+    match = false,
+    extraHeaders: Record<string, string> = {}
   ): Observable<T> {
     const etag = resource === 'profile' ? this.profileEtag : this.goalEtag;
-    const headers = match && etag ? new HttpHeaders({ 'If-Match': etag }) : new HttpHeaders();
+    const headers = new HttpHeaders(
+      match && etag ? { ...extraHeaders, 'If-Match': etag } : extraHeaders
+    );
     return this.http
       .request<Envelope<T>>(method, this.url(path), { body, headers, observe: 'response' })
       .pipe(
@@ -242,10 +298,18 @@ export class CareerProfileService {
       503: 'scannerUnavailable',
     };
     const retryHeader = Number(error.headers?.get('Retry-After'));
-    const kind =
-      payload?.code === 'CareerPhotoIsPreview' ? 'preview' : (kinds[error.status] ?? 'unknown');
+    const codeKinds: Record<string, CareerApiError['kind']> = {
+      CareerPhotoIsPreview: 'preview',
+      CareerAllowanceExhausted: 'allowance',
+      CareerModelUnavailable: 'unavailable',
+      CareerIdempotencyMismatch: 'idempotencyMismatch',
+      CareerProfileRequired: 'profileRequired',
+      CareerRunNotWaiting: 'notWaiting',
+    };
+    const kind = codeKinds[payload?.code ?? ''] ?? kinds[error.status] ?? 'unknown';
     return {
       kind,
+      code: payload?.code,
       message: payload?.message ?? 'Unable to complete the request.',
       fieldErrors: payload?.fieldErrors,
       currentVersion: payload?.currentVersion,
@@ -366,5 +430,31 @@ export class CareerProfileService {
     return this.http
       .delete(this.url('photos/selection'))
       .pipe(catchError(error => throwError(() => this.mapError(error))));
+  }
+
+  createRun(idempotencyKey: string) {
+    return this.request<CareerRunDto>(
+      'POST',
+      'runs',
+      { task: 'profile_summary' },
+      undefined,
+      false,
+      { 'Idempotency-Key': idempotencyKey }
+    );
+  }
+  getRun(id: string) {
+    return this.request<CareerRunDto>('GET', `runs/${encodeURIComponent(id)}`);
+  }
+  listRuns() {
+    return this.request<CareerRunList>('GET', 'runs');
+  }
+  answerRun(id: string, questionId: string, answer: string) {
+    return this.request<CareerRunDto>('POST', `runs/${encodeURIComponent(id)}/answers`, {
+      questionId,
+      answer,
+    });
+  }
+  cancelRun(id: string) {
+    return this.request<CareerRunDto>('POST', `runs/${encodeURIComponent(id)}/cancel`);
   }
 }

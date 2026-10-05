@@ -262,4 +262,53 @@ describe('CareerProfileService', () => {
       expect(kinds).toEqual(['unauthorized', 'unauthorized']);
     });
   });
+  describe('agent runs', () => {
+    const run = { id: 'r1', status: 'queued', steps: [] };
+    const err = (status: number, code: string) => ({
+      status,
+      body: { success: false, error: { code, message: code } },
+    });
+    it('creates a run with the Idempotency-Key header and task body', () => {
+      service.createRun('key-1').subscribe(r => expect(r.id).toBe('r1'));
+      const req = http.expectOne('/api/career/runs');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.headers.get('Idempotency-Key')).toBe('key-1');
+      expect(req.request.body).toEqual({ task: 'profile_summary' });
+      req.flush({ success: true, data: run });
+    });
+    it('reads, lists, answers and cancels runs', () => {
+      service.getRun('r 1').subscribe();
+      http.expectOne('/api/career/runs/r%201').flush({ success: true, data: run });
+      service.listRuns().subscribe(l => expect(l.runs.length).toBe(1));
+      http.expectOne('/api/career/runs').flush({ success: true, data: { runs: [run] } });
+      service.answerRun('r1', 'audience', 'Recruiters').subscribe();
+      const answer = http.expectOne('/api/career/runs/r1/answers');
+      expect(answer.request.body).toEqual({ questionId: 'audience', answer: 'Recruiters' });
+      answer.flush({ success: true, data: run });
+      service.cancelRun('r1').subscribe();
+      const cancel = http.expectOne('/api/career/runs/r1/cancel');
+      expect(cancel.request.method).toBe('POST');
+      cancel.flush({ success: true, data: run });
+    });
+    const cases: [number, string, string][] = [
+      [429, 'CareerAllowanceExhausted', 'allowance'],
+      [503, 'CareerModelUnavailable', 'unavailable'],
+      [409, 'CareerIdempotencyMismatch', 'idempotencyMismatch'],
+      [409, 'CareerProfileRequired', 'profileRequired'],
+      [409, 'CareerRunNotWaiting', 'notWaiting'],
+      [404, 'CareerRunNotFound', 'notFound'],
+      [401, 'Unauthorized', 'unauthorized'],
+      [403, 'CareerWorkspaceDisabled', 'disabled'],
+    ];
+    for (const [status, code, kind] of cases) {
+      it(`maps ${status} ${code} to ${kind}`, () => {
+        let caught: CareerApiError | undefined;
+        service.createRun('k').subscribe({ error: e => (caught = e) });
+        const e = err(status, code);
+        http.expectOne('/api/career/runs').flush(e.body, { status, statusText: code });
+        expect(caught?.kind).toBe(kind as CareerApiError['kind']);
+        expect(caught?.code).toBe(code);
+      });
+    }
+  });
 });
