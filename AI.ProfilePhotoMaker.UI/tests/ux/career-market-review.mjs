@@ -141,10 +141,33 @@ for (const [k, e] of [['employment2025', proj.employment2025Thousands], ['employ
   checked++; if (outlook[k] !== e) mismatches.push(`outlook ${k} ${outlook[k]} != ${e}`);
 }
 const domFigures = await page.locator('[data-figure]').count();
+
+// Related occupations: each item's figures must match the snapshot row of the code it was
+// published under, and any shared/broad mapping must be disclosed next to the item.
+const alternatives = brief.sections.find(s => s.key === 'alternatives');
+const altChecks = { checked: 0, mismatches: [], notes: [], asOf: null };
+for (const item of alternatives.items ?? []) {
+  const published = snapshot.crosswalk.oews[item.code];
+  for (const f of item.figures) {
+    altChecks.checked++;
+    const expected = f.key === 'medianAnnual'
+      ? raw('99', published.code, 'A_MEDIAN')
+      : snapshot.projections[snapshot.crosswalk.projections[item.code]?.code ?? '']?.changePercent;
+    if (f.value !== expected) altChecks.mismatches.push(`${item.code} ${f.key} ${f.value} != ${expected}`);
+  }
+  if (published.match !== 'exact') {
+    const note = await page.locator(`[data-figure^="alternatives:${item.code}"]`).first().locator('xpath=ancestor::li[1]').innerText();
+    if (!note.includes(published.code)) altChecks.mismatches.push(`${item.code} missing mapping note for ${published.code}`);
+    altChecks.notes.push(`${item.code}->${published.code} (${published.match})`);
+  }
+}
+altChecks.asOf = await page.locator('[data-section="alternatives"] [data-as-of]').innerText().catch(() => null);
+const asOfLines = await page.locator('[data-section] [data-as-of]').count();
 results.push({ label: 'brief vs snapshot', status: brief.status, location: brief.location, checked, mismatches, domFigures,
   sections: brief.sections.map(s => `${s.key}:${s.status}`), alternatives: brief.sections.find(s => s.key === 'alternatives').items?.map(i => i.code),
   sources: brief.sources.map(s => `${s.id} ${s.referencePeriod} ${s.publishedOn}`), nextAction: brief.nextAction,
   allowance: runs.allowance,
+  altChecks, asOfLines,
   spot: { nationalMedian: await page.locator('[data-figure="wages:medianAnnual:99"]').innerText(),
     denverMedian: await page.locator('[data-figure="wages:medianAnnual:19740"]').innerText(),
     difference: await page.locator('[data-figure="wages:medianDifferenceAnnual:19740"]').innerText().catch(() => null) } });

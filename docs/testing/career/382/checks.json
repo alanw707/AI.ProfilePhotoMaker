@@ -79,6 +79,16 @@
         "limit": 20,
         "periodStart": "2026-10-01T00:00:00Z"
       },
+      "altChecks": {
+        "checked": 6,
+        "mismatches": [],
+        "notes": [
+          "15-1299.08->15-1299 (shared)",
+          "15-1299.02->15-1299 (shared)"
+        ],
+        "asOf": "As of May 2025 (published 2026-05-15). Coverage: Nonfarm establishments in all 50 states and DC; national, state and metropolitan area cross-industry estimates. Not a count of open jobs. As of 2025-2035 (published 2026-08-27). Coverage: National only. Projected employment and average annual openings from growth and replacement needs; not current vacancies."
+      },
+      "asOfLines": 4,
       "spot": {
         "nationalMedian": "$135,980 ",
         "denverMedian": "$137,610 ",

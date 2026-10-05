@@ -42,8 +42,17 @@ API fixtures (`MarketBriefBuilderTests`, `MarketReferenceTests`, `MarketAreaReso
 | R8 | Standards | P3 | Rapid brief switching could show an older response. | Fixed: brief loading uses `switchMap`. |
 | R9 | Standards | P3 | Corrupt stored JSON → 500; replayed null step stalls until lease expiry; first snapshot load on a request thread; free runs still need allowance headroom. | Accepted for this slice (rows written only by the runner; consistent with occupation_match). |
 | R10 | Spec | P3 | Export of briefs. | Owned by #392. |
-| R11 | Both | P1 | Shared published SOC estimates were marked exact and undisclosed (including related occupations); related occupations lacked their own as-of/coverage line. | Fixed: deterministic shared crosswalk, published code/title mapping notes for primary and related occupations, and related as-of/coverage from both item sources; automated tests added. Live-review rerun and screenshot refresh follow branch merge. |
+| R11 | Both | P1 | (auditor) Shared published SOC estimates were marked exact and undisclosed, including related occupations; the Related occupations section had no as-of/coverage line. | Fixed: crosswalk gains a `shared` type for every O*NET code whose published SOC estimate covers other O*NET occupations (178 in each source, verified: no code missing or wrongly marked); mapping notes name the published code and title in the main sections and beside each related occupation; related as-of/coverage cites both item sources. Builder and Playwright tests cover 15-1299.08. |
 
-Live review rerun after the fixes: 28 figures checked, 0 mismatches; 0 overflow / axe / page errors.
+## Live-review rerun after R11 (same script, real stack)
+
+| Check | Result |
+|---|---|
+| Primary wages/employment figures vs the raw snapshot | 28 checked, 0 mismatches |
+| Related-occupation figures vs the snapshot row of the code they were published under | 6 checked, 0 mismatches |
+| Shared-mapping disclosure beside related occupations | 15-1299.08 and 15-1299.02 both name 15-1299; exact mappings show no note |
+| Sections with an "As of … Coverage" line | 4 of 4 (Related occupations now included) |
+| Screenshots | `docs/testing/career/382` refreshed at desktop 1280, mobile 390 and 320 |
+| Overflow / axe WCAG 2.2 AA / page errors | 0 / 0 / 0 |
 
 Open P0/P1: **none**.
