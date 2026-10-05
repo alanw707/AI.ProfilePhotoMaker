@@ -19,6 +19,14 @@ describe('CareerProfileService', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  it('reads the journey with a single GET and no body', () => {
+    let out: any;
+    service.getJourney().subscribe(j => (out = j));
+    const req = http.expectOne('/api/career/journey');
+    expect(req.request.method).toBe('GET');
+    req.flush({ success: true, data: { nextAction: { key: 'set_goal' } } });
+    expect(out.nextAction.key).toBe('set_goal');
+  });
   it('creates without If-Match and updates with the response ETag', () => {
     service.saveProfile(facts).subscribe();
     const create = http.expectOne('/api/career/profile');
