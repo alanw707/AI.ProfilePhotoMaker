@@ -21,6 +21,17 @@ public class MarketAreaResolverTests
     [InlineData("Portland, Maine", "metro", "38860", "Portland-South Portland, ME")]
     [InlineData("Winston-Salem, NC", "metro", "49180", "Winston-Salem, NC")]
     [InlineData("Washington, DC", "metro", "47900", "Washington-Arlington-Alexandria, DC-VA-MD-WV")]
+    // Common spellings that differ from the BLS title (review R2).
+    [InlineData("Washington, D.C.", "metro", "47900", "Washington-Arlington-Alexandria, DC-VA-MD-WV")]
+    [InlineData("New York City, NY", "metro", "35620", "New York-Newark-Jersey City, NY-NJ")]
+    [InlineData("Louisville, KY", "metro", "31140", "Louisville/Jefferson County, KY-IN")]
+    [InlineData("Saint Louis, MO", "metro", "41180", "St. Louis, MO-IL")]
+    [InlineData("St Louis, MO", "metro", "41180", "St. Louis, MO-IL")]
+    [InlineData("Saint Paul, MN", "metro", "33460", "Minneapolis-St. Paul-Bloomington, MN-WI")]
+    [InlineData("Nashville, TN", "metro", "34980", "Nashville-Davidson--Murfreesboro--Franklin, TN")]
+    [InlineData("Murfreesboro, TN", "metro", "34980", "Nashville-Davidson--Murfreesboro--Franklin, TN")]
+    [InlineData("Honolulu, HI", "metro", "46520", "Urban Honolulu, HI")]
+    [InlineData("Boise, ID", "metro", "14260", "Boise City, ID")]
     public void CityAndStateResolveToTheMetroThatListsThem(string input, string resolution, string code, string title)
     {
         var location = MarketAreaResolver.Resolve(input, Areas);

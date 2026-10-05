@@ -74,7 +74,12 @@ public sealed class OewsData
     internal const double EmploymentNotAvailable = -2;
     internal const double TopCoded = -3;
 
-    internal const int FieldCount = 12;
+    // The 13th packed cell is the pay basis: which wages BLS publishes for the occupation.
+    internal const int FieldCount = 13;
+    internal const int PayBasisField = 12;
+    internal const double BothBases = 0;
+    internal const double AnnualOnly = 1;
+    internal const double HourlyOnly = 2;
 
     private readonly Dictionary<string, MarketArea> _areas;
     private readonly Dictionary<string, AreaRows> _rows;
@@ -119,20 +124,24 @@ public sealed class OewsData
             return null;
         }
 
-        var v = area.Values.AsSpan(index * FieldCount, FieldCount);
+        var v = new ArraySegment<double>(area.Values, index * FieldCount, FieldCount);
+        // Wages BLS does not publish for this occupation are "not published", not "too few responses".
+        var annualOnly = v[PayBasisField] == AnnualOnly;
+        var hourlyOnly = v[PayBasisField] == HourlyOnly;
+        MarketValue Annual(int field) => hourlyOnly ? MarketValue.NotPublished : Cell(v[field], field);
         return new MarketWageRow(
             Employment: Cell(v[0], 0),
             EmploymentPrse: Cell(v[1], 1),
             JobsPer1000: Cell(v[2], 2),
             LocationQuotient: Cell(v[3], 3),
-            MeanAnnual: Cell(v[4], 4),
+            MeanAnnual: Annual(4),
             MeanPrse: Cell(v[5], 5),
-            Pct10Annual: Cell(v[6], 6),
-            Pct25Annual: Cell(v[7], 7),
-            MedianAnnual: Cell(v[8], 8),
-            Pct75Annual: Cell(v[9], 9),
-            Pct90Annual: Cell(v[10], 10),
-            MedianHourly: Cell(v[11], 11));
+            Pct10Annual: Annual(6),
+            Pct25Annual: Annual(7),
+            MedianAnnual: Annual(8),
+            Pct75Annual: Annual(9),
+            Pct90Annual: Annual(10),
+            MedianHourly: annualOnly ? MarketValue.NotPublished : Cell(v[11], 11));
     }
 
     private MarketValue Cell(double raw, int field)
@@ -336,7 +345,9 @@ public sealed class EmbeddedMarketReference : IMarketReference
         // Columns are read by name, so a reordered snapshot still maps correctly.
         var fields = sourceBlock.GetProperty("fields").EnumerateArray().Select(f => f.GetString()!).ToList();
         var columns = WageFields.Select(name => fields.IndexOf(name)).ToArray();
-        if (columns.Any(c => c < 0))
+        var annualColumn = fields.IndexOf("ANNUAL");
+        var hourlyColumn = fields.IndexOf("HOURLY");
+        if (columns.Any(c => c < 0) || annualColumn < 0 || hourlyColumn < 0)
         {
             throw new InvalidOperationException("A wage column is missing.");
         }
@@ -373,6 +384,9 @@ public sealed class EmbeddedMarketReference : IMarketReference
                 {
                     values.Add(PackCell(row.Value[columns[f]]));
                 }
+                values.Add(row.Value[annualColumn].ValueKind == JsonValueKind.True ? OewsData.AnnualOnly
+                    : row.Value[hourlyColumn].ValueKind == JsonValueKind.True ? OewsData.HourlyOnly
+                    : OewsData.BothBases);
             }
             rows[area.Name] = new OewsData.AreaRows(socs.ToArray(), values.ToArray());
         }

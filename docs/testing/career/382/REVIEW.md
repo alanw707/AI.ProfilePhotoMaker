@@ -28,4 +28,21 @@ API fixtures (`MarketBriefBuilderTests`, `MarketReferenceTests`, `MarketAreaReso
 |---|---|---|---|
 | 1 | P2 | Source drawer rendered as a box pinned to the top-left corner (a global reset removed the dialog's auto margin), covering the page header. | Fixed: full-height right-hand drawer that scrolls inside; review asserts its position and citation. |
 
+## /code-review (Standards + Spec)
+
+| # | Axis | Severity | Finding | Status |
+|---|---|---|---|---|
+| R1 | Spec | P1 | "Render Analytics and report detail": no Analytics surface named. | Fixed: `/app/career/market` is the analytics view (alias `/app/career/analytics`, home link "Analytics: market brief"); recent briefs + national/local comparison; ADR 0011 records that multi-market comparison is #385. Playwright covers the alias. |
+| R2 | Standards | P2 | Annual-only / hourly-only occupations showed the missing wage as "too few survey responses". | Fixed: pay basis packed from the snapshot; wages outside it are `not_published`. Tests on teachers (25-2021) and actors (27-2011). |
+| R3 | Standards | P2 | Common city spellings (New York City, Louisville, Saint Louis, Honolulu, Boise, D.C.) fell back to state. | Fixed: city normalisation; 10 new resolver cases. |
+| R4 | Spec | P2 | As-of date and coverage only inside the drawer; state fallback not labelled. | Fixed: each section shows "As of … (published …). Coverage: …"; local column reads "<state>, state figures" on fallback. |
+| R5 | Spec | P2 | Retention not stated to the user. | Fixed: retention note under the brief. |
+| R6 | Spec | P2 | A fully failed run had no recovery action. | Fixed: "Try again" on a failed run (Playwright). |
+| R7 | Both | P3 | dataStale copy hard-coded "a year and a half" despite the setting. | Fixed: neutral copy. |
+| R8 | Standards | P3 | Rapid brief switching could show an older response. | Fixed: brief loading uses `switchMap`. |
+| R9 | Standards | P3 | Corrupt stored JSON → 500; replayed null step stalls until lease expiry; first snapshot load on a request thread; free runs still need allowance headroom. | Accepted for this slice (rows written only by the runner; consistent with occupation_match). |
+| R10 | Spec | P3 | Export of briefs. | Owned by #392. |
+
+Live review rerun after the fixes: 28 figures checked, 0 mismatches; 0 overflow / axe / page errors.
+
 Open P0/P1: **none**.

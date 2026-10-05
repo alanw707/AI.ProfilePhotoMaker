@@ -80,9 +80,9 @@
         "periodStart": "2026-10-01T00:00:00Z"
       },
       "spot": {
-        "nationalMedian": "$135,980",
-        "denverMedian": "$137,610",
-        "difference": "+$1,630"
+        "nationalMedian": "$135,980 ",
+        "denverMedian": "$137,610 ",
+        "difference": "+$1,630 "
       }
     },
     {

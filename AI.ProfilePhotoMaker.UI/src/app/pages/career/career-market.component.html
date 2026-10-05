@@ -39,6 +39,9 @@
           }
           @if (r.status === 'failed') {
             <p role="alert">We could not build your market brief. Nothing was saved.</p>
+            <div class="actions">
+              <button type="button" class="primary" (click)="start()" [disabled]="starting()">Try again</button>
+            </div>
           }
           <div class="actions">
             @if (active()) {
@@ -76,13 +79,15 @@
 
         @if (b.stale) {
           <div class="caution" role="status" data-stale>
-            <p>Your goal or profile changed after this brief. It is kept as it was; build a new one for current inputs.</p>
+            <p>
+              Your goal or profile changed after this brief. It is kept as it was; build a new one for current inputs.
+            </p>
             <button type="button" class="primary" (click)="start()" [disabled]="starting()">Build a new brief</button>
           </div>
         }
         @if (b.dataStale) {
           <p class="caution" role="status" data-data-stale>
-            Some of the official data is more than a year and a half old. Newer releases may exist.
+            Some of the official data is older than our freshness limit. Newer releases may exist.
           </p>
         }
         @if (b.status === 'partial') {
@@ -96,6 +101,9 @@
           <section [attr.aria-labelledby]="'section-' + section.key" [attr.data-section]="section.key">
             <h2 [id]="'section-' + section.key">{{ section.title }}</h2>
             <p class="muted">{{ section.note }}</p>
+            @if (section.figures.length) {
+              <p class="muted" data-as-of>{{ asOfText(section) }}</p>
+            }
 
             @if (section.status !== 'complete') {
               <p data-section-reason>{{ reasonText(section) }}</p>
@@ -113,7 +121,7 @@
                       <th scope="col">Measure</th>
                       <th scope="col">National ({{ t.nationalTitle }})</th>
                       @if (t.localTitle) {
-                        <th scope="col">Local ({{ t.localTitle }})</th>
+                        <th scope="col">Local ({{ localHeading(t.localTitle) }})</th>
                       }
                     </tr>
                   </thead>
@@ -123,14 +131,18 @@
                         <th scope="row">{{ row.label }}</th>
                         <td>
                           @if (row.national; as f) {
-                            <span [attr.data-figure]="section.key + ':' + f.key + ':' + f.areaCode">{{ figureText(f) }}</span>
+                            <span [attr.data-figure]="section.key + ':' + f.key + ':' + f.areaCode">
+                              {{ figureText(f) }}
+                            </span>
                             <button type="button" class="source-link" (click)="showSource(f.sourceId)">Source</button>
                           }
                         </td>
                         @if (t.localTitle) {
                           <td>
                             @if (row.local; as f) {
-                              <span [attr.data-figure]="section.key + ':' + f.key + ':' + f.areaCode">{{ figureText(f) }}</span>
+                              <span [attr.data-figure]="section.key + ':' + f.key + ':' + f.areaCode">
+                                {{ figureText(f) }}
+                              </span>
                               <button type="button" class="source-link" (click)="showSource(f.sourceId)">Source</button>
                             }
                           </td>
@@ -164,9 +176,9 @@
                       @for (f of item.figures; track f.key + f.areaCode) {
                         <dt>{{ f.label }}</dt>
                         <dd>
-                          <span [attr.data-figure]="section.key + ':' + item.code + ':' + f.key + ':' + f.areaCode">{{
-                            figureText(f)
-                          }}</span>
+                          <span [attr.data-figure]="section.key + ':' + item.code + ':' + f.key + ':' + f.areaCode">
+                            {{ figureText(f) }}
+                          </span>
                           <button type="button" class="source-link" (click)="showSource(f.sourceId)">Source</button>
                         </dd>
                       }
@@ -179,8 +191,14 @@
         }
 
         @if (b.nextAction; as next) {
-          <p data-next-action><a [routerLink]="next.route">{{ next.label }}</a></p>
+          <p data-next-action>
+            <a [routerLink]="next.route">{{ next.label }}</a>
+          </p>
         }
+        <p class="muted" data-retention>
+          Briefs are kept with your career data while your account exists. A newer profile or goal never changes a saved
+          brief.
+        </p>
       </article>
     }
 
@@ -210,10 +228,22 @@
       <section [attr.data-source]="s.id">
         <h3>{{ s.name }}</h3>
         <p>{{ s.publisher }} · Reference period {{ s.referencePeriod }} · Published {{ s.publishedOn }}</p>
-        <p><strong>Definition.</strong> {{ s.definition }}</p>
-        <p><strong>Coverage.</strong> {{ s.coverage }}</p>
-        <p><strong>License.</strong> {{ s.license }}</p>
-        <p><strong>Citation.</strong> {{ s.citation }}</p>
+        <p>
+          <strong>Definition.</strong>
+          {{ s.definition }}
+        </p>
+        <p>
+          <strong>Coverage.</strong>
+          {{ s.coverage }}
+        </p>
+        <p>
+          <strong>License.</strong>
+          {{ s.license }}
+        </p>
+        <p>
+          <strong>Citation.</strong>
+          {{ s.citation }}
+        </p>
         <p>
           <a [href]="s.url" target="_blank" rel="noopener noreferrer">Data source</a>
           ·

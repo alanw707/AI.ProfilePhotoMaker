@@ -220,6 +220,7 @@ interface Options {
   brief?: MarketBriefDto;
   goal?: unknown;
   startFailure?: { status: number; code: string };
+  runFails?: boolean;
 }
 
 async function mockBackend(page: Page, options: Options = {}) {
@@ -272,6 +273,8 @@ async function mockBackend(page: Page, options: Options = {}) {
       state.gets++;
       if (state.gets === 1) return send(runDto('queued', 0));
       if (state.gets === 2) return send(runDto('working', 2));
+      if (options.runFails)
+        return send(runDto('failed', 1, { errorCode: 'CareerReferenceUnavailable' }));
       return send(runDto('completed', 5, { marketBriefId: BRIEF_ID }));
     }
     if (url.startsWith('/api/career/')) return send([]);
@@ -462,8 +465,64 @@ test('the career home links to the market brief', async ({ page }) => {
   await page.goto('/app/career?e2eAuthBypass=1');
   const cookies = page.getByRole('button', { name: 'Reject Non-Essential' });
   if (await cookies.isVisible()) await cookies.click();
-  await expect(page.getByRole('link', { name: 'Market brief' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Analytics: market brief' })).toHaveAttribute(
     'href',
     '/app/career/market'
+  );
+});
+
+test('the analytics route opens the market brief', async ({ page }) => {
+  await mockBackend(page);
+  await page.goto('/app/career/analytics?e2eAuthBypass=1');
+  await expect(page).toHaveURL(/\/app\/career\/market/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Career market brief' })).toBeVisible();
+});
+
+test('a failed run offers to try again', async ({ page }) => {
+  const state = await mockBackend(page, { runFails: true });
+  await open(page, `&run=${RUN_ID}`);
+  await expect(page.getByRole('alert')).toContainText('We could not build your market brief');
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect.poll(() => state.startBody).toEqual({ task: 'market_brief' });
+});
+
+test('each section states its as-of date and coverage, and the brief its retention', async ({
+  page,
+}) => {
+  await mockBackend(page);
+  await open(page, `&brief=${BRIEF_ID}`);
+  await expect(page.locator('[data-section="wages"] [data-as-of]')).toHaveText(
+    'As of May 2025 (published 2026-05-15). Coverage: ' + sources[0].coverage
+  );
+  await expect(page.locator('[data-section="outlook"] [data-as-of]')).toContainText(
+    'As of 2025-2035 (published 2026-08-27).'
+  );
+  await expect(page.locator('[data-retention]')).toHaveText(
+    'Briefs are kept with your career data while your account exists. A newer profile or goal never changes a saved brief.'
+  );
+});
+
+test('state figures are labelled as a state fallback', async ({ page }) => {
+  const co = { areaCode: '08', areaTitle: 'Colorado' };
+  const stateWages: MarketSection = {
+    ...wages,
+    figures: [
+      fig('medianAnnual', 'Median annual wage', 135980, 'usd_per_year', NAT),
+      fig('medianAnnual', 'Median annual wage', 138390, 'usd_per_year', co),
+    ],
+  };
+  await mockBackend(page, {
+    brief: briefDto({
+      location: {
+        input: 'Boulder, CO',
+        resolution: 'state',
+        local: { code: '08', title: 'Colorado', type: 'state' },
+      },
+      sections: [stateWages, employment, outlook, alternatives],
+    }),
+  });
+  await open(page, `&brief=${BRIEF_ID}`);
+  await expect(page.locator('[data-section="wages"] thead')).toContainText(
+    'Local (Colorado, state figures)'
   );
 });

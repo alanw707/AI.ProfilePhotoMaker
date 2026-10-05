@@ -11,7 +11,8 @@ public static class MarketResolutions
 /// <summary>
 /// Turns the goal's free-text location into a BLS area (ADR 0011): "City, ST" to the metro that
 /// lists that city and state (else the state), a state code or name to the state, "remote" or blank
-/// to national only. Anything else is unresolved; nothing is guessed.
+/// to national only. City names are compared after <see cref="NormalizeCity"/>. Anything else is
+/// unresolved; nothing is guessed.
 /// </summary>
 public static class MarketAreaResolver
 {
@@ -32,7 +33,7 @@ public static class MarketAreaResolver
         }
 
         var city = text[..comma].Trim();
-        var state = FindState(text[(comma + 1)..].Trim(), states);
+        var state = FindState(text[(comma + 1)..].Replace(".", string.Empty).Trim(), states);
         if (city.Length == 0 || state == null)
         {
             return Unresolved(text);
@@ -44,7 +45,7 @@ public static class MarketAreaResolver
     }
 
     private static MarketArea? FindState(string text, IReadOnlyList<MarketArea> states) =>
-        states.FirstOrDefault(s => s.State.Equals(text, StringComparison.OrdinalIgnoreCase))
+        states.FirstOrDefault(s => s.State.Equals(text.Replace(".", string.Empty), StringComparison.OrdinalIgnoreCase))
         ?? states.FirstOrDefault(s => s.Title.Equals(text, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
@@ -56,6 +57,7 @@ public static class MarketAreaResolver
     {
         MarketArea? best = null;
         var bestRank = int.MaxValue;
+        var wanted = NormalizeCity(city);
         foreach (var metro in areas.Where(a => a.Type == "metro"))
         {
             var comma = metro.Title.LastIndexOf(',');
@@ -70,10 +72,11 @@ public static class MarketAreaResolver
             }
 
             var cityPart = metro.Title[..comma];
-            var cities = cityPart.Split('-', StringSplitOptions.TrimEntries);
-            var rank = cityPart.Equals(city, StringComparison.OrdinalIgnoreCase)
+            var cities = cityPart.Split(new[] { '-', '/' }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Select(NormalizeCity).ToArray();
+            var rank = NormalizeCity(cityPart) == wanted
                 ? 0
-                : Array.FindIndex(cities, c => c.Equals(city, StringComparison.OrdinalIgnoreCase)) is var i and >= 0 ? i + 1 : -1;
+                : Array.IndexOf(cities, wanted) is var i and >= 0 ? i + 1 : -1;
             if (rank >= 0 && (rank < bestRank || (rank == bestRank && string.CompareOrdinal(metro.Code, best!.Code) < 0)))
             {
                 best = metro;
@@ -81,6 +84,28 @@ public static class MarketAreaResolver
             }
         }
         return best;
+    }
+
+    /// <summary>
+    /// Compares city names the way people write them: case and dots ignored, "Saint" as "St",
+    /// and a trailing "City" or leading "Urban" dropped ("New York City" = "New York",
+    /// "Boise" = "Boise City", "Honolulu" = "Urban Honolulu"). Applied to both sides.
+    /// </summary>
+    internal static string NormalizeCity(string name)
+    {
+        var words = name.ToLowerInvariant().Replace(".", " ")
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => w == "saint" ? "st" : w)
+            .ToList();
+        if (words.Count > 1 && words[^1] == "city")
+        {
+            words.RemoveAt(words.Count - 1);
+        }
+        if (words.Count > 1 && words[0] == "urban")
+        {
+            words.RemoveAt(0);
+        }
+        return string.Join(' ', words);
     }
 
     private static MarketLocationDto Local(string input, string resolution, MarketArea area) =>

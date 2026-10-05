@@ -326,4 +326,27 @@ public class MarketBriefBuilderTests
         Number(Figure(Section(brief, "outlook"), "changePercent")).Should().Be(10.2);
         brief.NextAction.Route.Should().Be("/app/career/occupation");
     }
+
+    // ---- Pay basis (review R1) -------------------------------------------------
+
+    [Fact]
+    public void AnAnnualOnlyOccupationHasNoHourlyWageRatherThanTooFewResponses()
+    {
+        // Elementary teachers: BLS publishes annual wages only.
+        var row = new EmbeddedMarketReference().Oews!.Wage("99", "25-2021")!;
+
+        row.MedianAnnual.Status.Should().Be(MarketValueStatus.Available);
+        row.MedianHourly.Status.Should().Be(MarketValueStatus.NotPublished);
+    }
+
+    [Fact]
+    public void AnHourlyOnlyOccupationHasNoAnnualWagesRatherThanTooFewResponses()
+    {
+        // Actors: BLS publishes hourly wages only.
+        var row = new EmbeddedMarketReference().Oews!.Wage("99", "27-2011")!;
+
+        row.MedianHourly.Number.Should().Be(29.05);
+        new[] { row.MeanAnnual, row.Pct10Annual, row.Pct25Annual, row.MedianAnnual, row.Pct75Annual, row.Pct90Annual }
+            .Select(v => v.Status).Should().OnlyContain(s => s == MarketValueStatus.NotPublished);
+    }
 }

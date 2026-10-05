@@ -49,6 +49,27 @@ const REASON_COPY: Record<string, string> = {
   CareerReferenceUnavailable: 'This data source could not be loaded.',
 };
 
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+/** "2025-05" reads "May 2025"; other periods ("2025-2035") stay as published. */
+export function periodText(period: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(period);
+  return match ? `${MONTHS[Number(match[2]) - 1]} ${match[1]}` : period;
+}
+
 @Component({
   standalone: true,
   selector: 'app-career-market',
@@ -105,17 +126,27 @@ export class CareerMarketComponent implements OnInit {
       next: goal => this.occupationMissing.set(!goal.occupation),
       error: (e: CareerApiError) => this.handle(e),
     });
+    // switchMap: opening another brief drops a slower response for the previous one.
     this.route.queryParamMap
       .pipe(
         map(params => params.get('brief')),
         distinctUntilChanged(),
+        tap(id => {
+          this.brief.set(null);
+          this.loadingBrief.set(!!id);
+        }),
+        switchMap(id => (id ? this.api.getMarketBrief(id) : EMPTY)),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(id => {
-        this.brief.set(null);
-        if (id) {
-          this.loadBrief(id);
-        }
+      .subscribe({
+        next: brief => {
+          this.loadingBrief.set(false);
+          this.brief.set(brief);
+        },
+        error: (e: CareerApiError) => {
+          this.loadingBrief.set(false);
+          this.handle(e);
+        },
       });
     this.route.queryParamMap
       .pipe(
@@ -223,6 +254,23 @@ export class CareerMarketComponent implements OnInit {
     return comparisonRows(section.figures);
   }
 
+  /** Local column heading; state figures are named as a fallback from the city. */
+  localHeading(title: string) {
+    return this.brief()?.location.resolution === 'state' ? `${title}, state figures` : title;
+  }
+
+  /** "As of …" for the sources a section's figures come from, with their coverage limits. */
+  asOfText(section: MarketSection) {
+    const ids = [...new Set(section.figures.map(f => f.sourceId))];
+    const sources = this.brief()?.sources.filter(s => ids.includes(s.id)) ?? [];
+    return sources
+      .map(
+        s =>
+          `As of ${periodText(s.referencePeriod)} (published ${s.publishedOn}). Coverage: ${s.coverage}`
+      )
+      .join(' ');
+  }
+
   reasonText(section: MarketSection) {
     return REASON_COPY[section.reason ?? ''] ?? 'This section is not available.';
   }
@@ -233,20 +281,6 @@ export class CareerMarketComponent implements OnInit {
     if (dialog && !dialog.open) {
       dialog.showModal();
     }
-  }
-
-  private loadBrief(id: string) {
-    this.loadingBrief.set(true);
-    this.api.getMarketBrief(id).subscribe({
-      next: brief => {
-        this.loadingBrief.set(false);
-        this.brief.set(brief);
-      },
-      error: (e: CareerApiError) => {
-        this.loadingBrief.set(false);
-        this.handle(e);
-      },
-    });
   }
 
   private loadRecent() {
