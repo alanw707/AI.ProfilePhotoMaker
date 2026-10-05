@@ -511,4 +511,44 @@ describe('CareerProfileService', () => {
       ]);
     });
   });
+  describe('job observations', () => {
+    it('sends only the filters that are set', () => {
+      service
+        .getJobObservations({ area: 'Denver, CO', eligibleOnly: true, remote: 'unknown', q: 'it' })
+        .subscribe(r => expect(r.truncated).toBeFalse());
+      http
+        .expectOne(
+          '/api/career/jobs/observations?area=Denver%2C+CO&eligibleOnly=true&remote=unknown&q=it'
+        )
+        .flush({ success: true, data: { truncated: false } });
+      service.getJobObservations({ remote: 'all', eligibleOnly: false }).subscribe();
+      http.expectOne('/api/career/jobs/observations').flush({ success: true, data: {} });
+    });
+    it('reads the source reference', () => {
+      service.getJobSource().subscribe(r => expect(r.name).toBe('USAJOBS'));
+      http.expectOne('/api/career/jobs/source').flush({ success: true, data: { name: 'USAJOBS' } });
+    });
+    it('maps errors like the other career reads', () => {
+      const kinds: string[] = [];
+      for (const [status, code] of [
+        [403, 'CareerWorkspaceDisabled'],
+        [401, ''],
+        [409, 'CareerOccupationRequired'],
+        [503, 'X'],
+      ] as const) {
+        service
+          .getJobObservations()
+          .subscribe({ error: (e: CareerApiError) => kinds.push(e.kind) });
+        http
+          .expectOne('/api/career/jobs/observations')
+          .flush({ success: false, error: { code, message: 'm' } }, { status, statusText: 'x' });
+      }
+      expect(kinds).toEqual([
+        'disabled',
+        'unauthorized',
+        'occupationRequired',
+        'scannerUnavailable',
+      ]);
+    });
+  });
 });

@@ -1,0 +1,137 @@
+{
+  "results": [
+    {
+      "label": "source endpoint (no key)",
+      "status": 200,
+      "configured": false,
+      "name": "USAJOBS",
+      "coverage": "U.S. federal agencies only; not the private-sector market.",
+      "attributionPresent": true,
+      "observationsStatus": 200,
+      "available": false,
+      "reason": "source_not_configured",
+      "listEmpty": true,
+      "sourceUrl": "https://www.usajobs.gov/"
+    },
+    {
+      "label": "observations with goal",
+      "available": false,
+      "reason": "source_not_configured",
+      "area": {
+        "input": "Denver, CO",
+        "resolution": "metro",
+        "code": "19740",
+        "title": "Denver-Aurora-Centennial, CO"
+      },
+      "counts": {
+        "matched": 0,
+        "shown": 0,
+        "duplicateIds": 0,
+        "duplicateReposts": 0,
+        "expired": 0,
+        "remoteUnknownExcluded": 0,
+        "otherLocationExcluded": 0
+      },
+      "stale": false,
+      "note": "Postings are observations, not employment totals or an outlook: a list of open federal job",
+      "unknownAreaStatus": 200
+    },
+    {
+      "label": "01-unavailable @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Open Job Observations - AI Profile Photo Maker",
+      "text": "Back to career workspace\n\nOpen postings\n\nThese are postings observed from one source, USAJOBS. They are not employment totals, not an outlook and not a count of all vacancies. U.S. federal agencies only; not the private-sector market. USAJOBS (opens in a new tab) . Job postings from USAJOBS (U.S. Office of Personnel Management). Displayed values are unchanged.\n\nFilter postings\nArea\nSearch title or",
+      "axe": []
+    },
+    {
+      "label": "01-unavailable @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Open Job Observations - AI Profile Photo Maker",
+      "text": "Back to career workspace\n\nOpen postings\n\nThese are postings observed from one source, USAJOBS. They are not employment totals, not an outlook and not a count of all vacancies. U.S. federal agencies only; not the private-sector market. USAJOBS (opens in a new tab) . Job postings from USAJOBS (U.S. Office of Personnel Management). Displayed values are unchanged.\n\nFilter postings\nArea\nSearch title or",
+      "axe": []
+    },
+    {
+      "label": "01-unavailable @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Open Job Observations - AI Profile Photo Maker",
+      "text": "Back to career workspace\n\nOpen postings\n\nThese are postings observed from one source, USAJOBS. They are not employment totals, not an outlook and not a count of all vacancies. U.S. federal agencies only; not the private-sector market. USAJOBS (opens in a new tab) . Job postings from USAJOBS (U.S. Office of Personnel Management). Displayed values are unchanged.\n\nFilter postings\nArea\nSearch title or",
+      "axe": []
+    },
+    {
+      "label": "unavailable state",
+      "explainsConfigured": true,
+      "namesSource": true,
+      "attribution": true,
+      "benchmarkLinks": 2,
+      "noBareEmptyList": 0,
+      "statesNotTotals": true
+    },
+    {
+      "label": "filters persist",
+      "filterState": {
+        "area": "Denver, CO",
+        "eligible": true,
+        "remote": "unknown",
+        "q": "software"
+      },
+      "afterReload": {
+        "area": "Denver, CO",
+        "q": "software"
+      },
+      "url": "/app/career/jobs?area=Denver,%20CO&eligibleOnly=true&remote=unknown&q=software"
+    },
+    {
+      "label": "02-filters @desktop",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Open Job Observations - AI Profile Photo Maker",
+      "text": "Back to career workspace\n\nOpen postings\n\nThese are postings observed from one source, USAJOBS. They are not employment totals, not an outlook and not a count of all vacancies. U.S. federal agencies only; not the private-sector market. USAJOBS (opens in a new tab) . Job postings from USAJOBS (U.S. Office of Personnel Management). Displayed values are unchanged.\n\nFilter postings\nArea\nSearch title or",
+      "axe": []
+    },
+    {
+      "label": "02-filters @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Open Job Observations - AI Profile Photo Maker",
+      "text": "Back to career workspace\n\nOpen postings\n\nThese are postings observed from one source, USAJOBS. They are not employment totals, not an outlook and not a count of all vacancies. U.S. federal agencies only; not the private-sector market. USAJOBS (opens in a new tab) . Job postings from USAJOBS (U.S. Office of Personnel Management). Displayed values are unchanged.\n\nFilter postings\nArea\nSearch title or",
+      "axe": []
+    },
+    {
+      "label": "02-filters @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "h1": 1,
+      "title": "Open Job Observations - AI Profile Photo Maker",
+      "text": "Back to career workspace\n\nOpen postings\n\nThese are postings observed from one source, USAJOBS. They are not employment totals, not an outlook and not a count of all vacancies. U.S. federal agencies only; not the private-sector market. USAJOBS (opens in a new tab) . Job postings from USAJOBS (U.S. Office of Personnel Management). Displayed values are unchanged.\n\nFilter postings\nArea\nSearch title or",
+      "axe": []
+    },
+    {
+      "label": "benchmark pages unaffected",
+      "brief": {
+        "ok": true,
+        "hasError": false
+      },
+      "pay": {
+        "ok": true,
+        "hasError": false
+      },
+      "compare": {
+        "ok": true,
+        "hasError": false
+      }
+    },
+    {
+      "label": "expired session",
+      "url": "/auth/login?message=Please log in to access this feature&returnUrl=/app/career/jobs"
+    }
+  ],
+  "errors": []
+}

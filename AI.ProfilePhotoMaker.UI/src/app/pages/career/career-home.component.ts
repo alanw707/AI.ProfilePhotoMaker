@@ -76,6 +76,9 @@ import {
         <a routerLink="/app/career/pay">Pay analysis</a>
       </p>
       <p>
+        <a routerLink="/app/career/jobs">Open postings</a>
+      </p>
+      <p>
         <a routerLink="/app/career/materials">Materials and photo</a>
       </p>
       @if (error()) {

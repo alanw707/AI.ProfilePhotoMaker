@@ -1,0 +1,162 @@
+<main class="career-page career-jobs">
+  <div class="career-sheet wide">
+    <p><a routerLink="/app/career">Back to career workspace</a></p>
+    <h1>Open postings</h1>
+    <p data-intro>
+      These are postings observed from one source{{ coverage() ? ', ' + coverage()!.sourceName : '' }}. They are not
+      employment totals, not an outlook and not a count of all vacancies.
+      @if (coverage(); as c) {
+        {{ c.coverage }}
+        <a [href]="c.sourceUrl" target="_blank" rel="noopener noreferrer">{{ c.sourceName }} (opens in a new tab)</a>
+        .
+        <span data-attribution>{{ c.attribution }}</span>
+      }
+    </p>
+
+    @if (occupationMissing()) {
+      <div class="caution" role="status" data-occupation-required>
+        <p>Confirm your occupation first.</p>
+        <a routerLink="/app/career/occupation">Confirm your occupation</a>
+      </div>
+    }
+    @if (error()) {
+      <p role="alert" class="caution" data-error>{{ error() }}</p>
+    }
+
+    @if (!occupationMissing()) {
+      <section aria-labelledby="filters-heading" class="job-filters">
+        <h2 id="filters-heading">Filter postings</h2>
+        <div class="field">
+          <label for="job-area">Area</label>
+          <input
+            id="job-area"
+            type="text"
+            autocomplete="off"
+            [value]="area()"
+            [placeholder]="goal()?.preferredArea?.title ?? goal()?.goal?.targetLocation ?? 'City, state or metro'"
+            (input)="onArea($any($event.target).value)" />
+        </div>
+        <div class="field">
+          <label for="job-search">Search title or organization</label>
+          <input id="job-search" type="search" [value]="q()" (input)="onSearch($any($event.target).value)" />
+        </div>
+        <div class="field">
+          <label for="job-remote">Remote work</label>
+          <select id="job-remote" [value]="remote()" (change)="setRemote($any($event.target).value)">
+            <option value="all" [selected]="remote() === 'all'">All postings</option>
+            <option value="eligible" [selected]="remote() === 'eligible'">Remote stated by the posting</option>
+            <option value="ineligible" [selected]="remote() === 'ineligible'">Posting states no remote work</option>
+            <option value="unknown" [selected]="remote() === 'unknown'">Remote not stated</option>
+          </select>
+        </div>
+        <div class="choice">
+          <label>
+            <input type="checkbox" [checked]="eligibleOnly()" (change)="setEligibleOnly($any($event.target).checked)" />
+            Only postings that state remote work
+          </label>
+        </div>
+        <button type="button" class="secondary" [disabled]="!hasFilters()" (click)="clear()">Clear</button>
+      </section>
+
+      @if (loading()) {
+        <p role="status">Loading postings…</p>
+      } @else if (result(); as r) {
+        @if (staleText()) {
+          <p class="caution" role="status" data-stale>{{ staleText() }}</p>
+        }
+        @if (!r.coverage.available) {
+          <section aria-labelledby="unavailable-heading" class="caution" data-unavailable>
+            <h2 id="unavailable-heading">Open postings are unavailable</h2>
+            <p data-reason>{{ unavailableText() }}</p>
+            <p>
+              Source: {{ r.coverage.sourceName }}. {{ r.coverage.coverage }} {{ r.coverage.attribution }}
+              <a [href]="r.coverage.sourceUrl" target="_blank" rel="noopener noreferrer">
+                {{ r.coverage.sourceName }} (opens in a new tab)
+              </a>
+            </p>
+            <p>
+              The wage benchmark, pay analysis and market comparison pages still work:
+              <a routerLink="/app/career/market">wage benchmark</a>
+              ,
+              <a routerLink="/app/career/pay">pay analysis</a>
+              ,
+              <a routerLink="/app/career/markets">market comparison</a>
+              .
+            </p>
+          </section>
+        } @else {
+          <section aria-labelledby="counts-heading" data-counts>
+            <h2 id="counts-heading">What this list covers</h2>
+            <p>
+              {{ r.coverage.counts.matched }} matched, {{ r.coverage.counts.shown }} shown.
+              @if (r.truncated) {
+                Showing the first {{ r.coverage.counts.shown }} only; the source reports more.
+              }
+              @if (r.coverage.postedFrom && r.coverage.postedTo) {
+                Posted {{ dateText(r.coverage.postedFrom) }} to {{ dateText(r.coverage.postedTo) }}.
+              }
+            </p>
+            @if (exclusions().length) {
+              <ul>
+                @for (line of exclusions(); track line) {
+                  <li>{{ line }}</li>
+                }
+              </ul>
+            }
+            <p class="muted">{{ r.note }}</p>
+          </section>
+
+          @if (r.observations.length) {
+            <section aria-labelledby="list-heading">
+              <h2 id="list-heading">Postings</h2>
+              <ul class="job-list">
+                @for (o of r.observations; track trackObservation(o)) {
+                  <li class="job-card" data-observation>
+                    <h3 data-title>{{ o.title }}</h3>
+                    <p class="muted" data-organization>{{ o.organization }}</p>
+                    <dl>
+                      <dt>Location</dt>
+                      <dd data-locations>
+                        @for (l of locations(o); track $index) {
+                          <span class="job-location">{{ l.text }}{{ l.yours ? ' (matches your area)' : '' }}</span>
+                        }
+                      </dd>
+                      <dt>Pay</dt>
+                      <dd data-pay>{{ payText(o) }}</dd>
+                      @if (o.postedOn) {
+                        <dt>Posted</dt>
+                        <dd>{{ dateText(o.postedOn) }}</dd>
+                      }
+                      @if (o.closesOn) {
+                        <dt>Closes</dt>
+                        <dd>{{ dateText(o.closesOn) }}</dd>
+                      }
+                      <dt>Remote work</dt>
+                      <dd data-remote [attr.data-status]="o.remoteEligibility">{{ remoteText(o) }}</dd>
+                      @if (o.series || o.grade) {
+                        <dt>Series and grade</dt>
+                        <dd>{{ seriesGrade(o) }}</dd>
+                      }
+                    </dl>
+                    @if (o.sourceUrl) {
+                      <a [href]="o.sourceUrl" target="_blank" rel="noopener noreferrer">
+                        View original posting
+                        <span class="visually-hidden">for {{ o.title }} (opens in a new tab)</span>
+                      </a>
+                    }
+                  </li>
+                }
+              </ul>
+            </section>
+          } @else {
+            <section aria-labelledby="empty-heading" data-empty>
+              <h2 id="empty-heading">No open postings matched</h2>
+              <p>Nothing matched these filters: {{ filterText() }}.</p>
+              <p>Try widening the area, or clear the remote filter.</p>
+            </section>
+          }
+        }
+      }
+    }
+  </div>
+</main>
