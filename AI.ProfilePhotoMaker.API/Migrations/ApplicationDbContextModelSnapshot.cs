@@ -533,6 +533,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");

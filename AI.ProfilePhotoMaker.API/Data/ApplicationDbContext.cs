@@ -302,7 +302,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         match.Property(m => m.OwnerId).HasMaxLength(450).IsRequired();
         match.Property(m => m.ReferenceRelease).HasMaxLength(20).IsRequired();
         match.Property(m => m.MatcherVersion).HasMaxLength(40).IsRequired();
-        match.Property(m => m.Status).HasMaxLength(16).IsRequired();
+        // A match is decided once: a dismiss and a confirm that both read "proposed" cannot both win.
+        match.Property(m => m.Status).HasMaxLength(16).IsRequired().IsConcurrencyToken();
         match.Property(m => m.ConfirmedCode).HasMaxLength(10);
         match.HasIndex(m => m.RunId).IsUnique();
         match.HasIndex(m => new { m.OwnerId, m.CreatedAt });

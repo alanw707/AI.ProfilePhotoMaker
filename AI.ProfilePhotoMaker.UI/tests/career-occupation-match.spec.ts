@@ -244,6 +244,9 @@ test('shows intro, polls real steps and shows evidence with attribution', async 
   await expect(first.getByRole('heading', { name: 'Your skills not used here' })).toBeVisible();
   await expect(page.getByText('Limited evidence')).toBeVisible();
   await expect(page.locator('[data-attribution]')).toContainText('U.S. Department of Labor');
+  await expect(page.locator('[data-retention]')).toHaveText(
+    'Matches are kept with your career data while your account exists. Dismissing a match does not change your goal.'
+  );
   await expect(page.getByRole('link', { name: 'O*NET 30.0 Database' })).toHaveAttribute(
     'href',
     reference.url

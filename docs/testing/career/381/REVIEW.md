@@ -28,4 +28,17 @@ API fixtures (`OccupationMatcherTests`, `CareerOccupationMatchApiTests`) cover t
 | 1 | P1 | Contradictory duties did not pause the run when one family filled the top two places (LPN then RN), so different careers could be mixed. | Fixed: ambiguity also compares the best rival family and duties it alone explains; choices are the leader of each family. Matcher version `duty-overlap-2`; regression test from the live profile. |
 | 2 | P3 | Candidate code ran into the title ("Software Developers(15-1252.00)"). | Fixed. |
 
+## /code-review (Standards + Spec)
+
+| # | Axis | Severity | Finding | Status |
+|---|---|---|---|---|
+| R1 | Standards | P2 | A dismiss racing a confirm could mark a confirmed match `dismissed`. | Fixed: match `Status` is a concurrency token; a losing dismiss re-reads and answers 409. `CareerOccupationDecisionRaceTests`. |
+| R2 | Spec | P2 | Snapshot licence and taxonomy were not validated on load. | Fixed: only `CC BY 4.0` + `O*NET-SOC 2019` with attribution, source URL and licence URL load; 6-row rejection test. |
+| R3 | Spec | P2 | Retention not stated to the user. | Fixed: retention note under the matches (Playwright assertion); ADR 0010 updated. |
+| R4 | Spec | P2 | Confirm check order (409 before 428) not documented. | Documented in the API contract. |
+| R5 | Standards | P3 | Step output duplicates profile text from evidence. | Accepted: same owner, same deletion cascade and retention as the match. |
+| R6 | Standards | P3 | Corrupt stored JSON would surface as 500; summary sentence split on `.`. | Accepted for this slice (rows are written only by the runner; split only lowers recall). |
+| R7 | Spec | P3 | Export not yet available. | Owned by #392. |
+| R8 | Standards | P3 | Runner growing; confirm duplicates goal-version copying; status strings. | Accepted judgement calls. |
+
 Open P0/P1: **none**.

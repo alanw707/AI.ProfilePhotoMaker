@@ -134,11 +134,25 @@ public sealed class EmbeddedOccupationReference : IOccupationReference
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    // Licences checked to allow commercial reuse with attribution (ADR 0010).
+    private static readonly HashSet<string> AcceptedLicenses = new(StringComparer.Ordinal) { "CC BY 4.0" };
+
+    // Taxonomies whose codes follow the validated ^dd-dddd.dd$ pattern.
+    private static readonly HashSet<string> AcceptedTaxonomies = new(StringComparer.Ordinal) { "O*NET-SOC 2019" };
+
     private static OccupationReferenceData? Build(SnapshotFile file)
     {
         var s = file.Source;
         if (s == null || file.Occupations == null || file.Occupations.Count == 0
             || string.IsNullOrWhiteSpace(s.Name) || string.IsNullOrWhiteSpace(s.Release))
+        {
+            return null;
+        }
+        // Only a source whose licence permits reuse with attribution, in the taxonomy the codes
+        // are validated against, may back matches; the attribution must be there to show.
+        if (s.License is not { } license || !AcceptedLicenses.Contains(license)
+            || s.Taxonomy is not { } taxonomy || !AcceptedTaxonomies.Contains(taxonomy)
+            || string.IsNullOrWhiteSpace(s.Attribution) || string.IsNullOrWhiteSpace(s.LicenseUrl) || string.IsNullOrWhiteSpace(s.Url))
         {
             return null;
         }

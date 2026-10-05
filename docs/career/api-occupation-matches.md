@@ -70,6 +70,8 @@ Candidates: at most 5. No percentages, no completeness score.
 | 412 | `CareerVersionConflict` | stale `If-Match` |
 | 428 | `CareerPreconditionRequired` | no `If-Match` |
 
+Checks run in this order and the first failure answers: 404 (ownership), 400 (code format), 409 `CareerGoalRequired`, 409 `CareerMatchNotConfirmable`, 409 `CareerMatchStale`, 428, 412. So repeating a confirm, or confirming a stale match, says why it cannot be confirmed even without `If-Match`. A confirm that loses a race to another goal write answers 412; a dismiss that loses to a confirm answers 409 `CareerMatchNotConfirmable` (the match status is a concurrency token).
+
 `POST /api/career/occupation-matches/{id}/dismiss` → 200 match (idempotent; a confirmed match cannot be dismissed → 409 `CareerMatchNotConfirmable`).
 
 ## Goal DTO addition

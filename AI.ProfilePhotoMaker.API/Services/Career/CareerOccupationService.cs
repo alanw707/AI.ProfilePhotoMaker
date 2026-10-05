@@ -46,24 +46,39 @@ public sealed class CareerOccupationService : ICareerOccupationService
 
     public async Task<CareerOutcome<CareerOccupationMatchDto>> DismissAsync(string ownerId, Guid id, CancellationToken ct = default)
     {
-        var match = await _db.CareerOccupationMatches.FirstOrDefaultAsync(m => m.Id == id && m.OwnerId == ownerId, ct);
-        if (match == null)
+        // Two passes at most: a lost race re-reads the decision that won.
+        for (var attempt = 0; attempt < 2; attempt++)
         {
-            return MatchNotFound<CareerOccupationMatchDto>();
-        }
-        if (match.Status == CareerMatchStatuses.Confirmed)
-        {
-            return NotConfirmable<CareerOccupationMatchDto>("This match was already confirmed into your goal.");
-        }
+            var match = await _db.CareerOccupationMatches.FirstOrDefaultAsync(m => m.Id == id && m.OwnerId == ownerId, ct);
+            if (match == null)
+            {
+                return MatchNotFound<CareerOccupationMatchDto>();
+            }
+            if (match.Status == CareerMatchStatuses.Confirmed)
+            {
+                return NotConfirmable<CareerOccupationMatchDto>("This match was already confirmed into your goal.");
+            }
 
-        // Dismissing twice, or an unsupported result, changes nothing.
-        if (match.Status == CareerMatchStatuses.Proposed)
-        {
+            // Dismissing twice, or an unsupported result, changes nothing.
+            if (match.Status != CareerMatchStatuses.Proposed)
+            {
+                return await ToOutcomeAsync(match, ct);
+            }
+
             match.Status = CareerMatchStatuses.Dismissed;
             match.DecidedAt = Now();
-            await _db.SaveChangesAsync(ct);
+            try
+            {
+                await _db.SaveChangesAsync(ct);
+                return await ToOutcomeAsync(match, ct);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // A confirm (or another dismiss) decided the match first; answer from what won.
+                _db.ChangeTracker.Clear();
+            }
         }
-        return await ToOutcomeAsync(match, ct);
+        return CareerOutcome<CareerOccupationMatchDto>.Busy("CareerRunBusy", "Too many requests at once. Try again shortly.", 1);
     }
 
     public async Task<CareerOutcome<CareerGoalDto>> ConfirmAsync(
