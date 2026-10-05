@@ -2,7 +2,8 @@ import { existsSync } from 'node:fs';
 import { test, expect, Page } from '@playwright/test';
 
 const AXE_PATH = process.env.AXE_PATH ?? '/tmp/axe/node_modules/axe-core/axe.min.js';
-const FORBIDDEN = /unlimited|guarantee[ds]?\b|all live jobs/i;
+const FORBIDDEN =
+  /unlimited|guarantee|all live jobs|live vacancies|comprehensive (live )?(jobs|vacancies)/i;
 
 async function open(page: Page, careerWorkspace: boolean) {
   await page.route('**/api/config/client', route =>
@@ -107,3 +108,12 @@ for (const [w, h] of [
       );
   });
 }
+
+test('flag-on 404 page does not show the career entry', async ({ page }) => {
+  await page.route('**/api/config/client', route =>
+    route.fulfill({ json: { success: true, data: { features: { careerWorkspace: true } } } })
+  );
+  await page.goto('/404');
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('[data-career-entry]')).toHaveCount(0);
+});

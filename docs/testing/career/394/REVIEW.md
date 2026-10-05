@@ -20,4 +20,15 @@ Publication waits for the release gate. SEO canonical and sitemap checks are pla
 | 1 | The existing landing page has axe violations outside this ticket: testimonial `aria-label` on stars (aria-prohibited-attr) and some colour-contrast items. | P2 | Left as is, since the flag-off DOM must stay unchanged. Axe is scoped to the new section. |
 | 2 | The page's "guarantee" copy is existing marketing text. Forbidden-word checks cover the career section only. | P3 | Out of scope. |
 
+
+## Independent review (openai-codex/gpt-5.5)
+| id | sev | finding | status |
+|---|---|---|---|
+| R1 | P2 | Career entry also rendered on the flag-on /404 page | fixed: gated with `!showNotFound`; Playwright test |
+| R2 | P3 | Flag-off baseline is a CSR comparison, not a stored pre-change snapshot | accepted: landing HTML diff is additions-only inside the flag block |
+| R3 | P3 | Forbidden-claims regex missed guaranteed pay / live vacancies | fixed: regex widened |
+| R4 | P3 | No test of the async config load path | accepted: APP_INITIALIZER blocks bootstrap |
+
+Gates after fixes: lint 0 errors; Karma 708; build:mvp-v1 succeeds; Playwright homepage 7 passed.
+
 Open P0/P1: **none**
