@@ -75,6 +75,7 @@ public abstract class CareerControllerBase : BaseController
             CareerOutcomeKind.Unsupported => StatusCodes.Status415UnsupportedMediaType,
             CareerOutcomeKind.Rejected => StatusCodes.Status422UnprocessableEntity,
             CareerOutcomeKind.Unavailable => StatusCodes.Status503ServiceUnavailable,
+            CareerOutcomeKind.QuotaExceeded => StatusCodes.Status429TooManyRequests,
             _ => StatusCodes.Status500InternalServerError
         };
 

@@ -236,6 +236,18 @@ if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Lo
     builder.Services.AddSingleton<AI.ProfilePhotoMaker.API.Services.Career.IMalwareScanner, AI.ProfilePhotoMaker.API.Services.Career.NoThreatsScanner>();
 }
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.Career.CareerResumePurgeBackgroundService>();
+// Same rule for the agent's text model: the deterministic fake never reaches production, and
+// until an owner registers a real adapter, starting a run answers 503 CareerModelUnavailable.
+if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("LocalDev") || builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddSingleton<AI.ProfilePhotoMaker.API.Services.Career.ICareerTextModel, AI.ProfilePhotoMaker.API.Services.Career.FakeCareerTextModel>();
+}
+// Tests drive the runner directly, so the polling worker is off in Testing.
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.PostConfigure<AI.ProfilePhotoMaker.API.Services.Career.CareerAgentOptions>(o => o.WorkerEnabled = false);
+}
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.Career.CareerAgentWorker>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ImageProcessing.IProfilePhotoScoreService, AI.ProfilePhotoMaker.API.Services.ImageProcessing.ProfilePhotoScoreService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ImageProcessing.IPlatformExportService, AI.ProfilePhotoMaker.API.Services.ImageProcessing.PlatformExportService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();

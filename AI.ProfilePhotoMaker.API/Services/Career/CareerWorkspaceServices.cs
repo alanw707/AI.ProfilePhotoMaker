@@ -91,7 +91,10 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         typeof(ResumeDocument),
         typeof(CareerProfileProposal),
         typeof(CareerProfileProposalItem),
-        typeof(CareerPhotoSelection)
+        typeof(CareerPhotoSelection),
+        typeof(CareerAgentRun),
+        typeof(CareerAgentStep),
+        typeof(CareerAllowance)
     };
 
     private readonly ApplicationDbContext _db;
@@ -109,6 +112,9 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         // behaviour is the same on providers that do not enforce foreign keys.
         _db.CareerProfileVersions.RemoveRange(await _db.CareerProfileVersions.Where(v => v.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerGoalVersions.RemoveRange(await _db.CareerGoalVersions.Where(v => v.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerAgentSteps.RemoveRange(await _db.CareerAgentSteps.Where(s => s.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerAgentRuns.RemoveRange(await _db.CareerAgentRuns.Where(r => r.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerAllowances.RemoveRange(await _db.CareerAllowances.Where(a => a.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerProfileProposalItems.RemoveRange(await _db.CareerProfileProposalItems.Where(i => i.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerProfileProposals.RemoveRange(await _db.CareerProfileProposals.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
 
@@ -148,6 +154,13 @@ public static class CareerWorkspaceServiceCollectionExtensions
         services.TryAddSingleton<IResumeParser, DependencyFreeResumeParser>();
         services.AddScoped<IResumeImportService, ResumeImportService>();
         services.AddScoped<ICareerProposalService, CareerProposalService>();
+
+        // Agent runtime (#380). No ICareerTextModel is registered here: Program.cs adds the
+        // fake outside production, so with none registered runs fail closed (503). The
+        // worker is Program.cs-only too, so the test host drives the runner directly.
+        services.AddOptions<CareerAgentOptions>().BindConfiguration(CareerAgentOptions.SectionName);
+        services.AddScoped<ICareerAgentRunService, CareerAgentRunService>();
+        services.AddScoped<ICareerAgentRunner, CareerAgentRunner>();
         return services;
     }
 }

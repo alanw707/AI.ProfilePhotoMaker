@@ -27,6 +27,7 @@ public static class ProposalSources
 {
     public const string Resume = "resume";
     public const string Pasted = "pasted";
+    public const string Agent = "agent";
 }
 
 public static class ProposalFlags

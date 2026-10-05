@@ -44,6 +44,11 @@ public class CareerWorkspaceFlagOffTests : IClassFixture<CustomWebApplicationFac
         { "GET", "/api/career/photos" },
         { "PUT", "/api/career/photos/selection" },
         { "DELETE", "/api/career/photos/selection" },
+        { "POST", "/api/career/runs" },
+        { "GET", "/api/career/runs" },
+        { "GET", $"/api/career/runs/{Guid.Empty}" },
+        { "POST", $"/api/career/runs/{Guid.Empty}/answers" },
+        { "POST", $"/api/career/runs/{Guid.Empty}/cancel" },
     };
 
     [Theory]

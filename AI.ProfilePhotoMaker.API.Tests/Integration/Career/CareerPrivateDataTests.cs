@@ -76,7 +76,8 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
     private static readonly string[] CareerTables =
     {
         "CareerProfiles", "CareerProfileVersions", "CareerGoals", "CareerGoalVersions",
-        "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems", "CareerPhotoSelections"
+        "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems", "CareerPhotoSelections",
+        "CareerAgentRuns", "CareerAgentSteps", "CareerAllowances"
     };
 
     [Fact]
@@ -103,6 +104,20 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         AssertAdditive(operations, allowAddColumn: false);
         operations.OfType<CreateTableOperation>().Select(o => o.Name).Should().Equal("CareerPhotoSelections");
         operations.OfType<CreateIndexOperation>().Should().OnlyContain(i => i.Table == "CareerPhotoSelections");
+    }
+
+    [Fact]
+    public void AgentRuntimeMigrationIsAdditiveOnly()
+    {
+        var operations = new AddCareerAgentRuntime().UpOperations;
+
+        AssertAdditive(operations, allowAddColumn: false);
+        operations.OfType<CreateTableOperation>().Select(o => o.Name).Should()
+            .BeEquivalentTo(new[] { "CareerAgentRuns", "CareerAgentSteps", "CareerAllowances" });
+        operations.OfType<CreateIndexOperation>().Should()
+            .Contain(i => i.Table == "CareerAgentRuns" && i.IsUnique && i.Columns.SequenceEqual(new[] { "OwnerId", "IdempotencyKey" }));
+        operations.OfType<CreateIndexOperation>().Should()
+            .Contain(i => i.Table == "CareerAllowances" && i.IsUnique && i.Columns.SequenceEqual(new[] { "OwnerId", "PeriodStart" }));
     }
 
     private static void AssertAdditive(IReadOnlyList<MigrationOperation> operations, bool allowAddColumn)

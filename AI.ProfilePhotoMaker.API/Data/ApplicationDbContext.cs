@@ -61,6 +61,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Models.Career.CareerProfileProposal> CareerProfileProposals { get; set; }
     public virtual DbSet<Models.Career.CareerProfileProposalItem> CareerProfileProposalItems { get; set; }
     public virtual DbSet<Models.Career.CareerPhotoSelection> CareerPhotoSelections { get; set; }
+    public virtual DbSet<Models.Career.CareerAgentRun> CareerAgentRuns { get; set; }
+    public virtual DbSet<Models.Career.CareerAgentStep> CareerAgentSteps { get; set; }
+    public virtual DbSet<Models.Career.CareerAllowance> CareerAllowances { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -250,6 +253,44 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         photoSelection.Property(s => s.OwnerId).HasMaxLength(450).IsRequired();
         photoSelection.HasIndex(s => s.OwnerId).IsUnique();
         photoSelection.HasOne<ApplicationUser>().WithMany().HasForeignKey(s => s.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        // Agent runtime (#380, ADR 0009). Runs, steps and allowances cascade from the user.
+        var run = builder.Entity<Models.Career.CareerAgentRun>();
+        run.ToTable("CareerAgentRuns");
+        run.Property(r => r.OwnerId).HasMaxLength(450).IsRequired();
+        run.Property(r => r.Task).HasMaxLength(40).IsRequired();
+        run.Property(r => r.Status).HasConversion<string>().HasMaxLength(16);
+        run.Property(r => r.IdempotencyKey).HasMaxLength(100).IsRequired();
+        run.Property(r => r.RequestHash).HasMaxLength(64).IsRequired();
+        run.Property(r => r.CheckpointJson).HasMaxLength(2000);
+        run.Property(r => r.QuestionId).HasMaxLength(40);
+        run.Property(r => r.QuestionText).HasMaxLength(200);
+        run.Property(r => r.Answer).HasMaxLength(200);
+        run.Property(r => r.LeaseOwner).HasMaxLength(100);
+        run.Property(r => r.ErrorCode).HasMaxLength(40);
+        run.Property(r => r.FencingToken).IsConcurrencyToken();
+        run.HasIndex(r => new { r.OwnerId, r.IdempotencyKey }).IsUnique();
+        run.HasIndex(r => new { r.OwnerId, r.CreatedAt });
+        run.HasIndex(r => new { r.Status, r.LeaseExpiresAt });
+        run.HasOne<ApplicationUser>().WithMany().HasForeignKey(r => r.OwnerId).OnDelete(DeleteBehavior.Cascade);
+        run.HasMany(r => r.Steps).WithOne(s => s.Run!).HasForeignKey(s => s.RunId).OnDelete(DeleteBehavior.Cascade);
+
+        var step = builder.Entity<Models.Career.CareerAgentStep>();
+        step.ToTable("CareerAgentSteps");
+        step.Property(s => s.OwnerId).HasMaxLength(450).IsRequired();
+        step.Property(s => s.OperationId).HasMaxLength(80).IsRequired();
+        step.Property(s => s.Kind).HasMaxLength(16).IsRequired();
+        step.Property(s => s.Name).HasMaxLength(40).IsRequired();
+        step.Property(s => s.Status).HasMaxLength(16).IsRequired();
+        step.HasIndex(s => s.OperationId).IsUnique();
+        step.HasIndex(s => s.OwnerId);
+
+        var allowance = builder.Entity<Models.Career.CareerAllowance>();
+        allowance.ToTable("CareerAllowances");
+        allowance.Property(a => a.OwnerId).HasMaxLength(450).IsRequired();
+        allowance.Property(a => a.Version).IsConcurrencyToken();
+        allowance.HasIndex(a => new { a.OwnerId, a.PeriodStart }).IsUnique();
+        allowance.HasOne<ApplicationUser>().WithMany().HasForeignKey(a => a.OwnerId).OnDelete(DeleteBehavior.Cascade);
     }
 
     private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)
