@@ -96,7 +96,8 @@ public enum CareerOutcomeKind
     Unsupported,
     Rejected,
     Unavailable,
-    QuotaExceeded
+    QuotaExceeded,
+    Gone
 }
 
 /// <summary>
@@ -161,6 +162,9 @@ public sealed record CareerOutcome<T>(
 
     public static CareerOutcome<T> QuotaExceeded(string code, string message) =>
         new(CareerOutcomeKind.QuotaExceeded, ErrorCode: code, Message: message);
+
+    public static CareerOutcome<T> Gone(string code, string message) =>
+        new(CareerOutcomeKind.Gone, ErrorCode: code, Message: message);
 
     public static CareerOutcome<T> AlreadyExists(string code, string message) =>
         new(CareerOutcomeKind.AlreadyExists, ErrorCode: code, Message: message);

@@ -73,6 +73,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Models.Career.CareerMaterial> CareerMaterials { get; set; }
     public virtual DbSet<Models.Career.CareerMaterialVersion> CareerMaterialVersions { get; set; }
     public virtual DbSet<Models.Career.CareerMaterialProposal> CareerMaterialProposals { get; set; }
+    public virtual DbSet<Models.Career.CareerExport> CareerExports { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -420,6 +421,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         materialProposal.HasIndex(p => p.RunId).IsUnique();
         materialProposal.HasIndex(p => new { p.OwnerId, p.MaterialId });
         materialProposal.HasOne<ApplicationUser>().WithMany().HasForeignKey(p => p.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        // Summaries and exports (#390, ADR 0019). Exports are short-lived; owner cascade plus explicit removal.
+        var export = builder.Entity<Models.Career.CareerExport>();
+        export.ToTable("CareerExports");
+        export.Property(e => e.OwnerId).HasMaxLength(450).IsRequired();
+        export.Property(e => e.Format).HasMaxLength(8).IsRequired();
+        export.Property(e => e.FileName).HasMaxLength(200).IsRequired();
+        export.Property(e => e.Content).IsRequired();
+        export.HasIndex(e => new { e.OwnerId, e.MaterialId, e.CreatedAt });
+        export.HasIndex(e => e.ExpiresAt);
+        export.HasOne<ApplicationUser>().WithMany().HasForeignKey(e => e.OwnerId).OnDelete(DeleteBehavior.Cascade);
     }
 
     private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)

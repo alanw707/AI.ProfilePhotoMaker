@@ -3,6 +3,9 @@ namespace AI.ProfilePhotoMaker.API.Models.Career;
 public static class CareerMaterialKinds
 {
     public const string Resume = "resume";
+    public const string Summary = "summary";
+
+    public static bool IsKnown(string? kind) => kind is Resume or Summary;
 }
 
 public static class CareerMaterialProposalStatuses
@@ -83,4 +86,26 @@ public class CareerMaterialProposal
     /// <summary>The fresh draft (sections, questions) and its pins, used when changes are applied.</summary>
     public string ProposedJson { get; set; } = "{}";
     public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>
+/// A rendered PDF or DOCX of one material version (ADR 0019). Short-lived and private: the bytes are removed when
+/// <see cref="ExpiresAt"/> passes (on read) and with the owner's data.
+/// </summary>
+public class CareerExport
+{
+    public const int MaxBytes = 2 * 1024 * 1024;
+
+    public Guid Id { get; set; }
+    public string OwnerId { get; set; } = "";
+    public Guid MaterialId { get; set; }
+    public int Version { get; set; }
+
+    /// <summary>pdf | docx.</summary>
+    public string Format { get; set; } = "pdf";
+    public bool IncludesPhoto { get; set; }
+    public string FileName { get; set; } = "";
+    public byte[] Content { get; set; } = Array.Empty<byte>();
+    public DateTime CreatedAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
 }

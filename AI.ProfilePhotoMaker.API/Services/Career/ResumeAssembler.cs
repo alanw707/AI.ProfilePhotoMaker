@@ -108,11 +108,11 @@ public static class ResumeAssembler
     /// Compares a fresh draft with the current lines. Human lines are never listed, so a proposal can never
     /// change or remove what the user wrote.
     /// </summary>
-    public static IReadOnlyList<ResumeChange> Diff(IReadOnlyList<ResumeSection> current, IReadOnlyList<ResumeSection> proposed)
+    public static IReadOnlyList<ResumeChange> Diff(IReadOnlyList<ResumeSection> current, IReadOnlyList<ResumeSection> proposed, IReadOnlyList<string>? sectionKeys = null)
     {
         var changes = new List<ResumeChange>();
         var humanIds = current.SelectMany(s => s.Lines).Where(l => l.Origin == ResumeOrigins.Human).Select(l => l.Id).ToHashSet(StringComparer.Ordinal);
-        foreach (var key in ResumeSectionKeys.All)
+        foreach (var key in sectionKeys ?? ResumeSectionKeys.All)
         {
             var have = (current.FirstOrDefault(s => s.Key == key)?.Lines ?? Array.Empty<ResumeLine>()).ToDictionary(l => l.Id, StringComparer.Ordinal);
             var want = proposed.FirstOrDefault(s => s.Key == key)?.Lines ?? Array.Empty<ResumeLine>();
