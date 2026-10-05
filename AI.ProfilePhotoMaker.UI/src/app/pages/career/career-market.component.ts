@@ -262,7 +262,7 @@ export class CareerMarketComponent implements OnInit {
 
   // The saved brief's item DTO includes note; the shared client interface predates this field.
   itemNote(item: MarketAlternative): string | null {
-    return (item as MarketAlternative & { note?: string | null }).note ?? null;
+    return item.note ?? null;
   }
 
   /** "As of …" for the sources a section's figures come from, with their coverage limits. */

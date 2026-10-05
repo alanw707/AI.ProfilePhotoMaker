@@ -379,4 +379,45 @@ public class MarketBriefBuilderTests
         new[] { row.MeanAnnual, row.Pct10Annual, row.Pct25Annual, row.MedianAnnual, row.Pct75Annual, row.Pct90Annual }
             .Select(v => v.Status).Should().OnlyContain(s => s == MarketValueStatus.NotPublished);
     }
+
+    [Fact]
+    public void ARelatedOccupationDisclosesEverySourceMappingItShows()
+    {
+        // No shipped release maps the two sources differently today, but the item shows a figure
+        // from each, so a future release that does must disclose both.
+        var reference = new MixedMappingReference();
+        var section = MarketBriefBuilder.BuildAlternatives(
+            new[] { new MarketAlternative("15-1299.08", "Computer Systems Engineers/Architects") }, reference);
+
+        var note = section.Items.Single().Note!;
+        note.Should().Contain("15-1299 Computer Occupations, All Other");
+        note.Should().Contain("15-1290");
+        note.Should().Contain("one estimate").And.Contain("broader group");
+    }
+
+    /// <summary>The real reference with one code's projections mapping forced to a broad group,
+    /// so the item must disclose a different mapping per source.</summary>
+    private sealed class MixedMappingReference : IMarketReference
+    {
+        private readonly IMarketReference _real = new EmbeddedMarketReference();
+
+        public OewsData? Oews => _real.Oews;
+
+        public ProjectionsData? Projections
+        {
+            get
+            {
+                var real = _real.Projections!;
+                var rows = new Dictionary<string, MarketProjectionRow>(StringComparer.Ordinal)
+                {
+                    ["15-1290"] = real.Row("15-1299")! with { Title = "Computer Occupations, All Other" }
+                };
+                var crosswalk = new Dictionary<string, MarketCrosswalkEntry>(StringComparer.Ordinal)
+                {
+                    ["15-1299.08"] = new MarketCrosswalkEntry("15-1290", "broad")
+                };
+                return new ProjectionsData(real.Source, rows, crosswalk);
+            }
+        }
+    }
 }

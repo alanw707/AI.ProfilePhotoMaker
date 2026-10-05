@@ -276,11 +276,23 @@ public static class MarketBriefBuilder
         var wage = wageMapping == null ? null : oews.Wage(national.Code, wageMapping.Code)?.MedianAnnual;
         var projectionMapping = projections.Crosswalk(alternative.Code);
         var change = projectionMapping == null ? null : projections.Row(projectionMapping.Code)?.ChangePercent;
-        var mappingNote = wageMapping is { Match: not "exact" }
-            ? MappingNote(wageMapping, oews.OccupationTitle(wageMapping.Code))
-            : projectionMapping is { Match: not "exact" }
-                ? MappingNote(projectionMapping, projections.OccupationTitle(projectionMapping.Code))
-                : null;
+        // Both figures are shown, so every mapping behind them is disclosed: one sentence per
+        // published code, in figure order. The two sources can title the same code differently,
+        // which is not a different mapping.
+        var mappingNotes = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (mapping, title) in new[]
+                 {
+                     (wageMapping, wageMapping == null ? null : oews.OccupationTitle(wageMapping.Code)),
+                     (projectionMapping, projectionMapping == null ? null : projections.OccupationTitle(projectionMapping.Code))
+                 })
+        {
+            if (mapping is { Match: not "exact" } && seen.Add(mapping.Code))
+            {
+                mappingNotes.Add(MappingNote(mapping, title));
+            }
+        }
+        var mappingNote = mappingNotes.Count == 0 ? null : string.Concat(mappingNotes);
 
         return new MarketItemDto(alternative.Code, alternative.Title, new[]
         {

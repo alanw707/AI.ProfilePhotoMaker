@@ -55,4 +55,12 @@ API fixtures (`MarketBriefBuilderTests`, `MarketReferenceTests`, `MarketAreaReso
 | Screenshots | `docs/testing/career/382` refreshed at desktop 1280, mobile 390 and 320 |
 | Overflow / axe WCAG 2.2 AA / page errors | 0 / 0 / 0 |
 
+## /code-review of the R11 fix (focused, PR #409)
+
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| R12 | P2 | A related occupation showed figures from both sources but could disclose only one mapping (wage note preferred), so a future release mapping the sources differently would under-disclose. | Fixed: one disclosure per distinct published code, in figure order; test with a synthetic mixed mapping (`MixedMappingReference`). |
+| R13 | P3 | The client `MarketAlternative` type lacked `note`; the component used a cast. | Fixed: `note: string \| null` on the interface, cast removed. |
+| R14 | P3 | ADR said the loader verifies "the presence of both sources" while it validates each independently. | Fixed: ADR wording corrected. |
+
 Open P0/P1: **none**.
