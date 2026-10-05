@@ -176,7 +176,11 @@ export interface CareerRunQuestion {
   /** Present when the answer must be one of a fixed list. */
   choices?: CareerRunChoice[];
 }
-export type CareerRunTask = 'profile_summary' | 'occupation_match' | 'market_brief';
+export type CareerRunTask =
+  | 'profile_summary'
+  | 'occupation_match'
+  | 'market_brief'
+  | 'pay_analysis';
 export interface CareerRunAllowance {
   used: number;
   reserved: number;
@@ -197,6 +201,7 @@ export interface CareerRunDto {
   proposalId: string | null;
   occupationMatchId?: string | null;
   marketBriefId?: string | null;
+  payAnalysisId?: string | null;
   profileChanged: boolean;
   errorCode: string | null;
   allowance: CareerRunAllowance;
@@ -349,6 +354,108 @@ export interface MarketReferenceInfo {
   sources: MarketSource[];
   areaCount: number;
   occupationCount: number;
+}
+export interface PayBenchmarkSection {
+  key: 'benchmark';
+  title: string;
+  status: 'complete' | 'unavailable' | 'failed';
+  reason: string | null;
+  label: string;
+  note: string;
+  figures: MarketFigure[];
+}
+export interface PayCohort {
+  included: number;
+  excluded: number;
+  employers: number;
+  largestEmployerShare: number;
+  concentrated: boolean;
+  sensitive: boolean;
+  exclusionReasons: Record<string, number>;
+}
+export interface PayPersonalizedSection {
+  key: 'personalized';
+  title: string;
+  status: 'complete' | 'unavailable' | 'insufficient_evidence' | 'failed';
+  reason: string | null;
+  interval: { low: number; high: number; unit: string; definition: string } | null;
+  cohort: PayCohort;
+  note: string;
+}
+export interface PayScenarioSection {
+  key: 'scenario';
+  title: string;
+  status: 'complete' | 'unavailable';
+  requestedAnnual: number | null;
+  benchmarkMedianAnnual: number | null;
+  gapAnnual: number | null;
+  gapPercent: number | null;
+  benchmarkAreaCode?: string | null;
+  benchmarkAreaTitle?: string | null;
+  requestedPaySource?: string | null;
+  note: string;
+}
+export type PaySection = PayBenchmarkSection | PayPersonalizedSection | PayScenarioSection;
+export interface PayGate {
+  gateId: string;
+  requirement: string;
+  status: string;
+  evidence: string;
+}
+export interface PayQualification {
+  personalizedAllowed: boolean;
+  blockedReasons?: string[];
+  gates: PayGate[];
+}
+export interface PayAnalysisSummary {
+  id: string;
+  occupationCode: string;
+  occupationTitle: string;
+  areaTitle: string | null;
+  status: 'complete' | 'partial';
+  personalizedAvailable: boolean;
+  stale: boolean;
+  createdAt: string;
+}
+export interface PayAnalysisDto {
+  id: string;
+  runId: string;
+  status: 'complete' | 'partial';
+  occupation: {
+    code: string;
+    title: string;
+    publishedCode: string;
+    mapping: 'exact' | 'broad' | 'shared';
+  };
+  location: {
+    input: string | null;
+    resolution: 'metro' | 'state' | 'national_only' | 'unresolved';
+    local: { code: string; title: string; type: string } | null;
+  };
+  pinned: {
+    profileVersion: number;
+    goalVersion: number;
+    oewsRelease: string;
+    oewsSnapshotSha256: string;
+    projectionsRelease: string;
+    ruleVersion: string;
+    observationSourceId: string | null;
+  };
+  inputHash: string;
+  stale: boolean;
+  staleReasons: string[];
+  sections: PaySection[];
+  blockedReasons: string[];
+  qualification: PayQualification;
+  sources: MarketSource[];
+  createdAt: string;
+}
+export interface PayRecomputeResult {
+  matches: boolean;
+  inputHash: string;
+  storedInputHash: string;
+  differences: string[];
+  sections: PaySection[];
 }
 export interface CareerApiError {
   /** Server error code (for example CareerRunNotWaiting), when one was sent. */
@@ -645,6 +752,22 @@ export class CareerProfileService {
   }
   getOccupationReference() {
     return this.request<OccupationReferenceInfo>('GET', 'occupations/reference');
+  }
+
+  listPayAnalyses() {
+    return this.request<{ analyses: PayAnalysisSummary[] }>('GET', 'pay-analyses');
+  }
+  getPayAnalysis(id: string) {
+    return this.request<PayAnalysisDto>('GET', `pay-analyses/${encodeURIComponent(id)}`);
+  }
+  recomputePayAnalysis(id: string) {
+    return this.request<PayRecomputeResult>(
+      'POST',
+      `pay-analyses/${encodeURIComponent(id)}/recompute`
+    );
+  }
+  getPayQualification() {
+    return this.request<PayQualification>('GET', 'pay/qualification');
   }
 
   listMarketBriefs() {

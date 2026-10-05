@@ -1,5 +1,6 @@
 namespace AI.ProfilePhotoMaker.API.Services.Career;
 
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<PayGateStatus>))]
 public enum PayGateStatus { Passed, Failed, Unverified }
 
 public sealed record PayGateRow(string GateId, string Requirement, PayGateStatus Status, string Evidence);

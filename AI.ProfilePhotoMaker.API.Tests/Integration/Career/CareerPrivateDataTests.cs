@@ -77,7 +77,7 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
     {
         "CareerProfiles", "CareerProfileVersions", "CareerGoals", "CareerGoalVersions",
         "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems", "CareerPhotoSelections",
-        "CareerAgentRuns", "CareerAgentSteps", "CareerAllowances", "CareerOccupationMatches", "CareerMarketBriefs"
+        "CareerAgentRuns", "CareerAgentSteps", "CareerAllowances", "CareerOccupationMatches", "CareerMarketBriefs", "CareerPayAnalyses"
     };
 
     [Fact]
@@ -144,6 +144,16 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         operations.OfType<CreateTableOperation>().Select(o => o.Name).Should().Equal("CareerMarketBriefs");
         operations.OfType<CreateIndexOperation>().Should()
             .Contain(i => i.Table == "CareerMarketBriefs" && i.IsUnique && i.Columns.SequenceEqual(new[] { "RunId" }));
+    }
+
+    [Fact]
+    public void PayAnalysisMigrationOnlyAddsATableAndItsIndexes()
+    {
+        var operations = new AddCareerPayAnalyses().UpOperations;
+        AssertAdditive(operations, allowAddColumn: false);
+        operations.OfType<CreateTableOperation>().Select(o => o.Name).Should().Equal("CareerPayAnalyses");
+        operations.OfType<CreateIndexOperation>().Should()
+            .Contain(i => i.Table == "CareerPayAnalyses" && i.IsUnique && i.Columns.SequenceEqual(new[] { "RunId" }));
     }
 
     private static void AssertAdditive(IReadOnlyList<MigrationOperation> operations, bool allowAddColumn)

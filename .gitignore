@@ -154,7 +154,9 @@ AI.ProfilePhotoMaker.API/tests/playwright/results/
 **/*-validation-report.md
 **/*-test-report.md
 claude-*.md
+# Stray debugging reports, but not intentional documentation: ADRs and contracts live in docs/.
 *-analysis.md
+!docs/**/*-analysis.md
 .serena/
 
 # General build results

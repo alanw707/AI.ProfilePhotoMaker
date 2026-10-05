@@ -514,6 +514,20 @@ button:disabled {
     margin: 0 0 16px;
   }
 }
+.career-page.career-pay {
+  [data-section="personalized"] {
+    border-left: 3px solid #8d7040;
+  }
+  [data-section="scenario"] {
+    border-left: 3px solid #557487;
+  }
+  [data-input-hash],
+  [data-gates] li,
+  [data-recompute] {
+    overflow-wrap: anywhere;
+  }
+}
+
 .career-page .market-items {
   list-style: none;
   padding: 0;

@@ -35,7 +35,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
 
     // A lost race is retried a few times; more than that means heavy contention.
     private const int MaxCommitAttempts = 5;
-    private const string TaskError = "Choose a task the assistant can do: profile_summary, occupation_match or market_brief.";
+    private const string TaskError = "Choose a task the assistant can do: profile_summary, occupation_match, market_brief or pay_analysis.";
 
     private static readonly IReadOnlyDictionary<string, string> StepLabels = new Dictionary<string, string>
     {
@@ -50,7 +50,11 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
         [CareerStepNames.LookUpWages] = "Looked up wages and employment",
         [CareerStepNames.LookUpOutlook] = "Looked up the job outlook",
         [CareerStepNames.CompareAlternatives] = "Compared related occupations",
-        [CareerStepNames.SaveBrief] = "Saved your market brief"
+        [CareerStepNames.SaveBrief] = "Saved your market brief",
+        [CareerStepNames.ReadBenchmark] = "Looked up the occupational benchmark",
+        [CareerStepNames.EvaluateCohort] = "Evaluated advertised-pay observations",
+        [CareerStepNames.BuildScenario] = "Compared your requested pay",
+        [CareerStepNames.SaveAnalysis] = "Saved your pay analysis"
     };
 
     private readonly ApplicationDbContext _db;
@@ -126,7 +130,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
                 return CareerOutcome<CareerAgentRunDto>.ReferenceUnavailable();
             }
 
-            if (task == CareerAgentTasks.MarketBrief && _market?.Oews == null && _market?.Projections == null)
+            if ((task is CareerAgentTasks.MarketBrief or CareerAgentTasks.PayAnalysis) && _market?.Oews == null && _market?.Projections == null)
             {
                 return CareerOutcome<CareerAgentRunDto>.ReferenceUnavailable();
             }
@@ -140,12 +144,14 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             }
             var goalVersion = await _db.CareerGoals.AsNoTracking()
                 .Where(g => g.OwnerId == ownerId).Select(g => (int?)g.ActiveVersionNumber).FirstOrDefaultAsync(ct);
-            if (task == CareerAgentTasks.MarketBrief
+            if ((task is CareerAgentTasks.MarketBrief or CareerAgentTasks.PayAnalysis)
                 && (goalVersion == null || !await _db.CareerGoalVersions.AsNoTracking().AnyAsync(
                     v => v.OwnerId == ownerId && v.VersionNumber == goalVersion && v.OccupationCode != null, ct)))
             {
                 return CareerOutcome<CareerAgentRunDto>.AlreadyExists(
-                    CareerOccupationErrorCodes.OccupationRequired, "Confirm your target occupation before asking for a market brief.");
+                    CareerOccupationErrorCodes.OccupationRequired, task == CareerAgentTasks.PayAnalysis
+                        ? "Confirm your target occupation before asking for a pay analysis."
+                        : "Confirm your target occupation before asking for a market brief.");
             }
 
             var now = Now();
@@ -227,10 +233,15 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             .Where(b => b.OwnerId == ownerId && runIds.Contains(b.RunId))
             .ToDictionaryAsync(b => b.RunId, b => b.Id, ct);
 
+        var payIds = await _db.CareerPayAnalyses.AsNoTracking()
+            .Where(b => b.OwnerId == ownerId && runIds.Contains(b.RunId))
+            .ToDictionaryAsync(b => b.RunId, b => b.Id, ct);
+
         var dtos = runs.Select(run => ToDto(
             run, stepsByRun[run.Id], currentProfile, allowance,
             matchIds.TryGetValue(run.Id, out var matchId) ? matchId : null,
-            briefIds.TryGetValue(run.Id, out var briefId) ? briefId : null)).ToList();
+            briefIds.TryGetValue(run.Id, out var briefId) ? briefId : null,
+            payIds.TryGetValue(run.Id, out var payId) ? payId : null)).ToList();
         return CareerOutcome<CareerRunListDto>.Ok(new CareerRunListDto(dtos, allowance));
     }
 
@@ -362,7 +373,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
 
     private DateTime Now() => _clock.GetUtcNow().UtcDateTime;
 
-    private static bool IsKnownTask(string? task) => task is CareerAgentTasks.ProfileSummary or CareerAgentTasks.OccupationMatch or CareerAgentTasks.MarketBrief;
+    private static bool IsKnownTask(string? task) => task is CareerAgentTasks.ProfileSummary or CareerAgentTasks.OccupationMatch or CareerAgentTasks.MarketBrief or CareerAgentTasks.PayAnalysis;
 
     /// <summary>The offered choices, saved with the question step so the answer can be checked against them.</summary>
     internal static IReadOnlyList<CareerRunChoiceDto>? ChoicesFrom(IEnumerable<CareerAgentStep> steps)
@@ -406,7 +417,9 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             .Where(m => m.RunId == run.Id && m.OwnerId == run.OwnerId).Select(m => (Guid?)m.Id).FirstOrDefaultAsync(ct);
         var briefId = await _db.CareerMarketBriefs.AsNoTracking()
             .Where(b => b.RunId == run.Id && b.OwnerId == run.OwnerId).Select(b => (Guid?)b.Id).FirstOrDefaultAsync(ct);
-        return ToDto(run, steps, await CurrentProfileVersionAsync(run.OwnerId, ct), await AllowanceDtoAsync(run.OwnerId, ct), matchId, briefId);
+        var payId = await _db.CareerPayAnalyses.AsNoTracking()
+            .Where(b => b.RunId == run.Id && b.OwnerId == run.OwnerId).Select(b => (Guid?)b.Id).FirstOrDefaultAsync(ct);
+        return ToDto(run, steps, await CurrentProfileVersionAsync(run.OwnerId, ct), await AllowanceDtoAsync(run.OwnerId, ct), matchId, briefId, payId);
     }
 
     private async Task<int?> CurrentProfileVersionAsync(string ownerId, CancellationToken ct) =>
@@ -415,7 +428,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
 
     private static CareerAgentRunDto ToDto(
         CareerAgentRun run, IEnumerable<CareerAgentStep> steps, int? currentProfile, CareerAllowanceDto allowance, Guid? occupationMatchId,
-        Guid? marketBriefId)
+        Guid? marketBriefId, Guid? payAnalysisId)
     {
         var stepList = steps.ToList();
         return new CareerAgentRunDto(
@@ -441,7 +454,8 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             marketBriefId,
             ProfileChanged: run.PinnedProfileVersion != null && currentProfile != run.PinnedProfileVersion,
             run.ErrorCode,
-            allowance);
+            allowance,
+            payAnalysisId);
     }
 
     private static DateTime Utc(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);

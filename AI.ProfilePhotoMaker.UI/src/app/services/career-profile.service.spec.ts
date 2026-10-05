@@ -364,6 +364,54 @@ describe('CareerProfileService', () => {
       expect(kinds).toEqual(['conflict', 'matchStale']);
     });
   });
+  describe('pay analyses', () => {
+    it('starts a pay_analysis run with a key and reads its result id', () => {
+      service
+        .createRun('pay-key', 'pay_analysis')
+        .subscribe(r => expect(r.payAnalysisId).toBe('a1'));
+      const req = http.expectOne('/api/career/runs');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.headers.get('Idempotency-Key')).toBe('pay-key');
+      expect(req.request.body).toEqual({ task: 'pay_analysis' });
+      req.flush({ success: true, data: { id: 'r1', payAnalysisId: 'a1' } });
+    });
+    it('lists, reads, recomputes and gets qualification', () => {
+      service.listPayAnalyses().subscribe(r => expect(r.analyses[0].id).toBe('a1'));
+      http
+        .expectOne('/api/career/pay-analyses')
+        .flush({ success: true, data: { analyses: [{ id: 'a1' }] } });
+      service.getPayAnalysis('a 1').subscribe(r => expect(r.inputHash).toBe('hash'));
+      http
+        .expectOne('/api/career/pay-analyses/a%201')
+        .flush({ success: true, data: { inputHash: 'hash' } });
+      service.recomputePayAnalysis('a 1').subscribe(r => expect(r.matches).toBeTrue());
+      const recompute = http.expectOne('/api/career/pay-analyses/a%201/recompute');
+      expect(recompute.request.method).toBe('POST');
+      recompute.flush({ success: true, data: { matches: true, differences: [] } });
+      service.getPayQualification().subscribe(r => expect(r.personalizedAllowed).toBeFalse());
+      http
+        .expectOne('/api/career/pay/qualification')
+        .flush({ success: true, data: { personalizedAllowed: false, gates: [] } });
+    });
+    it('maps pay errors through the shared error mapper', () => {
+      const kinds: string[] = [];
+      service.getPayAnalysis('x').subscribe({ error: (e: CareerApiError) => kinds.push(e.kind) });
+      http
+        .expectOne('/api/career/pay-analyses/x')
+        .flush(
+          { success: false, error: { code: 'CareerPayAnalysisNotFound' } },
+          { status: 404, statusText: 'Not Found' }
+        );
+      service.getPayQualification().subscribe({ error: (e: CareerApiError) => kinds.push(e.kind) });
+      http
+        .expectOne('/api/career/pay/qualification')
+        .flush(
+          { success: false, error: { code: 'CareerWorkspaceDisabled' } },
+          { status: 403, statusText: 'Forbidden' }
+        );
+      expect(kinds).toEqual(['notFound', 'disabled']);
+    });
+  });
   describe('market briefs', () => {
     it('starts a market_brief run', () => {
       service.createRun('k', 'market_brief').subscribe();
