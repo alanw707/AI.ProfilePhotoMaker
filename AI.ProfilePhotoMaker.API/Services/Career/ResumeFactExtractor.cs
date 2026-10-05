@@ -292,18 +292,18 @@ public static partial class ResumeFactExtractor
 
     private static string Truncate(string text, int max) => text.Length <= max ? text : text[..max].TrimEnd();
 
-    [GeneratedRegex(@"^[A-Z][A-Za-z.' \-]{1,40}, [A-Z]{2}(?: \d{5})?$")]
+    [GeneratedRegex(@"^[A-Z][A-Za-z.' \-]{1,40}, [A-Z]{2}(?: \d{5})?$", RegexOptions.None, DependencyFreeResumeParser.MatchTimeoutMs)]
     private static partial Regex LocationPattern();
 
-    [GeneratedRegex(@"(?<s>(?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2})\s*(?:-|–|—|to)\s*(?<e>(?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}|Present|Current)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<s>(?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2})\s*(?:-|–|—|to)\s*(?<e>(?:[A-Za-z]{3,9}\.?\s+)?(?:19|20)\d{2}|Present|Current)", RegexOptions.IgnoreCase, DependencyFreeResumeParser.MatchTimeoutMs)]
     private static partial Regex DateRangePattern();
 
-    [GeneratedRegex(@"(?:-|–|—|to)\s*(?:present|current)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?:-|–|—|to)\s*(?:present|current)\b", RegexOptions.IgnoreCase, DependencyFreeResumeParser.MatchTimeoutMs)]
     private static partial Regex CurrentJobPattern();
 
-    [GeneratedRegex(@"(?:19|20)\d{2}")]
+    [GeneratedRegex(@"(?:19|20)\d{2}", RegexOptions.None, DependencyFreeResumeParser.MatchTimeoutMs)]
     private static partial Regex YearPattern();
 
-    [GeneratedRegex(@"\s+")]
+    [GeneratedRegex(@"\s+", RegexOptions.None, DependencyFreeResumeParser.MatchTimeoutMs)]
     private static partial Regex WhitespacePattern();
 }

@@ -65,6 +65,9 @@ public class ResumeDocument
     public Guid? ProposalId { get; set; }
 
     public DateTime ConsentedAt { get; set; }
+
+    /// <summary>The notice text version the user agreed to (Career:ResumeConsentVersion).</summary>
+    public string ConsentVersion { get; set; } = string.Empty;
     public DateTime UploadedAt { get; set; }
 
     /// <summary>When the raw file is purged.</summary>

@@ -30,6 +30,9 @@ public static partial class ResumeFileInspector
     public const long MaxZipExpandedBytes = 50L * 1024 * 1024;
     public const int MaxZipRatio = 100;
 
+    /// <summary>Most XML read out of word/document.xml, whatever the archive headers claim.</summary>
+    public const int MaxDocumentXmlBytes = 5 * 1024 * 1024;
+
     /// <summary>Ratio checks ignore small entries, where a high ratio is normal and harmless.</summary>
     private const long RatioCheckFloorBytes = 1024 * 1024;
 
@@ -60,15 +63,23 @@ public static partial class ResumeFileInspector
 
     private static ResumeInspection InspectPdf(byte[] bytes)
     {
-        if (EncryptPattern().IsMatch(Encoding.Latin1.GetString(bytes)))
+        try
         {
-            return ResumeInspection.Unsupported("Password-protected PDFs are not supported. Remove the password and upload again.");
-        }
+            if (EncryptPattern().IsMatch(Encoding.Latin1.GetString(bytes)))
+            {
+                return ResumeInspection.Unsupported("Password-protected PDFs are not supported. Remove the password and upload again.");
+            }
 
-        var pages = DependencyFreeResumeParser.CountPdfPages(bytes);
-        return pages > MaxPages
-            ? ResumeInspection.TooLarge($"The document has more than {MaxPages} pages.")
-            : ResumeInspection.Accept(ResumeFormat.Pdf, Math.Max(pages, 1));
+            var pages = DependencyFreeResumeParser.CountPdfPages(bytes);
+            return pages > MaxPages
+                ? ResumeInspection.TooLarge($"The document has more than {MaxPages} pages.")
+                : ResumeInspection.Accept(ResumeFormat.Pdf, Math.Max(pages, 1));
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            // A file that defeats a simple scan is not a normal resume.
+            return ResumeInspection.Unsupported("This PDF could not be checked.");
+        }
     }
 
     private static ResumeInspection InspectDocx(byte[] bytes)
@@ -92,19 +103,44 @@ public static partial class ResumeFileInspector
                 }
             }
 
-            return archive.GetEntry("word/document.xml") == null
-                ? ResumeInspection.Unsupported("This is not a Word document.")
-                : ResumeInspection.Accept(ResumeFormat.Docx, 1);
+            var document = archive.GetEntry("word/document.xml");
+            if (document == null)
+            {
+                return ResumeInspection.Unsupported("This is not a Word document.");
+            }
+
+            // Declared sizes come from the file itself, so measure what really inflates.
+            return InflatesWithinLimit(document)
+                ? ResumeInspection.Accept(ResumeFormat.Docx, 1)
+                : ResumeInspection.Unsupported("The archive expands to an unsafe size.");
         }
-        catch (InvalidDataException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // Corrupt or hostile archives throw many exception types; all mean "not a DOCX".
             return ResumeInspection.Unsupported("This is not a valid DOCX file.");
         }
+    }
+
+    private static bool InflatesWithinLimit(ZipArchiveEntry entry)
+    {
+        using var stream = entry.Open();
+        var buffer = new byte[81920];
+        long total = 0;
+        int read;
+        while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            total += read;
+            if (total > MaxDocumentXmlBytes)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static bool StartsWith(byte[] bytes, params byte[] prefix) =>
         bytes.Length >= prefix.Length && bytes.AsSpan(0, prefix.Length).SequenceEqual(prefix);
 
-    [GeneratedRegex(@"/Encrypt\b")]
+    [GeneratedRegex(@"/Encrypt\b", RegexOptions.None, DependencyFreeResumeParser.MatchTimeoutMs)]
     private static partial Regex EncryptPattern();
 }

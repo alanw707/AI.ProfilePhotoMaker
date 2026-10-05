@@ -26,3 +26,20 @@ Flags: the "Helped with vendor onboarding" bullet is flagged `ambiguous`; two ov
 - Rules assume English headings (Summary, Experience, Skills) and `City, ST` locations; industry is never extracted.
 - A title is only found as a Title Case line ending in a role word near the top, or the role of a job that runs to "Present".
 - Extraction quality on real resumes is unmeasured; run a licensed parser against a consented sample before any quality claim.
+
+## Limits and configuration
+
+| Limit / key | Value | Effect when exceeded |
+|---|---|---|
+| File size | 10 MiB | 413 `CareerResumeTooLarge` |
+| Pages | 25 (26 is rejected) | 413 |
+| Extracted text | 100,000 chars (parsing stops shortly past it) | 413 |
+| PDF objects | 5,000 (`DependencyFreeResumeParser.MaxObjects`) | `failed` / `ParserError` |
+| Decoded Flate bytes | 20 MiB total per parse, across all streams (`MaxDecompressedBytes`) | `failed` / `ParserError` |
+| DOCX `word/document.xml` | 5 MiB actually inflated, whatever the headers say | 415 at upload |
+| Regex time limit | 250 ms each (`MatchTimeoutMs`) | `failed` / `ParserError` (415 in the pre-check) |
+| `Career:ExtractionTimeoutSeconds` | default 15 | `failed` / `ExtractionTimeout`; cancellation reaches the parser |
+| `Career:ResumeRetentionDays` | default 30 | raw file and row purged at expiry |
+| `Career:ResumeConsentVersion` | default `resume-notice-2026-10-04` | upload with another `consentVersion` is 400 |
+
+Each stream is decoded and its text extracted once, however many pages reference it. Failed and unreadable uploads delete the raw file at once.

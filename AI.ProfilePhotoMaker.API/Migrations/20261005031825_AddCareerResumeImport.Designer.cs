@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AI.ProfilePhotoMaker.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261005030749_AddCareerResumeImport")]
+    [Migration("20261005031825_AddCareerResumeImport")]
     partial class AddCareerResumeImport
     {
         /// <inheritdoc />
@@ -477,6 +477,11 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ConsentVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime>("ConsentedAt")
                         .HasColumnType("datetime2");

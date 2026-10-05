@@ -4,12 +4,12 @@ Same envelope, auth, flag (403 `CareerWorkspaceDisabled`) and error shape as `ap
 
 ## Upload
 
-`POST /api/career/resumes` — `multipart/form-data` with `file` (PDF or DOCX) and `consent=true`.
+`POST /api/career/resumes` — `multipart/form-data` with `file` (PDF or DOCX), `consent=true` and `consentVersion` (must equal the server's current notice version, `resume-notice-2026-10-04` unless `Career:ResumeConsentVersion` says otherwise).
 
 | Status | Code | When |
 |---|---|---|
-| 201 | — | stored and processed; body is `ResumeDocumentDto` (state may be `ready`, `unreadable` or `failed`) |
-| 400 | `ValidationError` (`fieldErrors.consent` / `fieldErrors.file`) | consent missing, no file |
+| 201 | — | stored and processed; body is `ResumeDocumentDto` (state may be `ready`, `unreadable` or `failed`; an unexpected processing error is `failed`/`ParserError`, never a 500) |
+| 400 | `ValidationError` (`fieldErrors.consent` / `fieldErrors.file`) | consent missing, `consentVersion` missing or not the current one (`consent`: "The notice changed; read it again."), no file |
 | 413 | `CareerResumeTooLarge` | over 10 MiB, 25 pages or 100,000 characters |
 | 415 | `CareerResumeUnsupported` | not a real PDF/DOCX, legacy `.doc`, encrypted file, or unsafe archive (`detail` says which) |
 | 422 | `CareerResumeRejected` | the scanner found a threat (file deleted) |
@@ -23,11 +23,12 @@ Same envelope, auth, flag (403 `CareerWorkspaceDisabled`) and error shape as `ap
   "state": "ready",                // ready | unreadable | failed
   "failureCode": null,             // ExtractionTimeout | ParserError when failed
   "proposalId": "guid",            // null unless ready
+  "consentVersion": "resume-notice-2026-10-04",
   "uploadedAt": "...", "expiresAt": "..."   // raw file auto-deleted at expiresAt
 }
 ```
 
-`GET /api/career/resumes` → list (newest first, max 20). `GET /api/career/resumes/{id}` → one. `GET /api/career/resumes/{id}/file` → the original bytes (owner only, `Content-Disposition: attachment`). `DELETE /api/career/resumes/{id}` → 204; removes the raw file, metadata and any pending proposal from it.
+`GET /api/career/resumes` → list (newest first, max 20). `GET /api/career/resumes/{id}` → one. `GET /api/career/resumes/{id}/file` → the original bytes (owner only, `Content-Disposition: attachment`). The raw file is deleted for `failed` and `unreadable` resumes (and after expiry); those answer 404 `CareerResumeFileGone`, and the UI should offer the paste fallback. `DELETE /api/career/resumes/{id}` → 204; removes the raw file, metadata and any pending proposal from it.
 
 ## Proposals
 

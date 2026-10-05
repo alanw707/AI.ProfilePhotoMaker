@@ -221,6 +221,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         resume.Property(d => d.Sha256).HasMaxLength(64).IsRequired();
         resume.Property(d => d.State).HasConversion<string>().HasMaxLength(20);
         resume.Property(d => d.FailureCode).HasMaxLength(40);
+        resume.Property(d => d.ConsentVersion).HasMaxLength(64).IsRequired();
         resume.HasOne<ApplicationUser>().WithMany().HasForeignKey(d => d.OwnerId).OnDelete(DeleteBehavior.Cascade);
 
         var proposal = builder.Entity<Models.Career.CareerProfileProposal>();

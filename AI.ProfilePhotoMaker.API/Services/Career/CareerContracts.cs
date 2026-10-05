@@ -154,6 +154,7 @@ public static class CareerErrorCodes
     public const string VersionNotFound = "CareerVersionNotFound";
     public const string GoalAlreadyExists = "CareerGoalAlreadyExists";
     public const string ResumeNotFound = "CareerResumeNotFound";
+    public const string ResumeFileGone = "CareerResumeFileGone";
     public const string ProposalNotFound = "CareerProposalNotFound";
     public const string ProposalAlreadyDecided = "CareerProposalAlreadyDecided";
     public const string ResumeTooLarge = "CareerResumeTooLarge";
@@ -173,6 +174,7 @@ public sealed record ResumeDocumentDto(
     string State,
     string? FailureCode,
     Guid? ProposalId,
+    string ConsentVersion,
     DateTime UploadedAt,
     DateTime ExpiresAt);
 

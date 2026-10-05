@@ -32,23 +32,26 @@ public sealed class CareerResumeController : CareerControllerBase
     // Without an explicit list, ASP.NET infers multipart-only and answers 415 at routing,
     // before the feature-flag filter can answer 403 CareerWorkspaceDisabled.
     [Consumes("multipart/form-data", "application/json")]
-    public async Task<IActionResult> Upload(IFormFile? file, [FromForm] string? consent, CancellationToken ct)
+    public async Task<IActionResult> Upload(
+        IFormFile? file, [FromForm] string? consent, [FromForm] string? consentVersion, CancellationToken ct)
     {
-        // Read at most one byte past the limit: enough for the service to answer 413
-        // without buffering an arbitrarily large body.
+        // Read at most one byte past the limit, into one exact-size array: enough for
+        // the service to answer 413 without buffering an arbitrarily large body.
         byte[]? bytes = null;
         if (file != null)
         {
+            var length = (int)Math.Min(file.Length, ResumeFileInspector.MaxBytes + 1);
+            bytes = new byte[length];
             await using var stream = file.OpenReadStream();
-            using var buffer = new MemoryStream();
-            await stream.CopyToAsync(buffer, ct);
-            bytes = buffer.Length > ResumeFileInspector.MaxBytes
-                ? buffer.ToArray().AsSpan(0, (int)ResumeFileInspector.MaxBytes + 1).ToArray()
-                : buffer.ToArray();
+            var read = await stream.ReadAtLeastAsync(bytes, length, throwOnEndOfStream: false, ct);
+            if (read < length)
+            {
+                Array.Resize(ref bytes, read);
+            }
         }
 
         var consented = bool.TryParse(consent, out var value) && value;
-        return await Respond(owner => _resumes.UploadAsync(owner, bytes, file?.FileName, consented, ct));
+        return await Respond(owner => _resumes.UploadAsync(owner, bytes, file?.FileName, consented, consentVersion, ct));
     }
 
     [HttpGet("resumes")]

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using AI.ProfilePhotoMaker.API.Data;
@@ -9,7 +10,7 @@ namespace AI.ProfilePhotoMaker.API.Services.Career;
 
 public interface IResumeImportService
 {
-    Task<CareerOutcome<ResumeDocumentDto>> UploadAsync(string ownerId, byte[]? content, string? fileName, bool consent, CancellationToken ct = default);
+    Task<CareerOutcome<ResumeDocumentDto>> UploadAsync(string ownerId, byte[]? content, string? fileName, bool consent, string? consentVersion, CancellationToken ct = default);
     Task<CareerOutcome<IReadOnlyList<ResumeDocumentDto>>> ListAsync(string ownerId, CancellationToken ct = default);
     Task<CareerOutcome<ResumeDocumentDto>> GetAsync(string ownerId, Guid id, CancellationToken ct = default);
     Task<CareerOutcome<ResumeFileResult>> GetFileAsync(string ownerId, Guid id, CancellationToken ct = default);
@@ -31,6 +32,10 @@ public sealed class ResumeImportService : IResumeImportService
     public const int ScannerRetryAfterSeconds = 60;
     public const string RetentionConfigKey = "Career:ResumeRetentionDays";
     public const string TimeoutConfigKey = "Career:ExtractionTimeoutSeconds";
+    public const string ConsentVersionConfigKey = "Career:ResumeConsentVersion";
+
+    /// <summary>The notice the UI shows next to the consent box; bump it when the wording changes.</summary>
+    public const string DefaultConsentVersion = "resume-notice-2026-10-04";
     private const int DefaultRetentionDays = 30;
     private const double DefaultTimeoutSeconds = 15;
     private const int PurgeBatch = 200;
@@ -63,12 +68,17 @@ public sealed class ResumeImportService : IResumeImportService
     }
 
     public async Task<CareerOutcome<ResumeDocumentDto>> UploadAsync(
-        string ownerId, byte[]? content, string? fileName, bool consent, CancellationToken ct = default)
+        string ownerId, byte[]? content, string? fileName, bool consent, string? consentVersion, CancellationToken ct = default)
     {
         var errors = new Dictionary<string, string>();
         if (!consent)
         {
             errors["consent"] = "Confirm that you agree to us processing this file.";
+        }
+        else if (!string.Equals(consentVersion, CurrentConsentVersion(), StringComparison.Ordinal))
+        {
+            // The user agreed to older wording; make them read the current notice.
+            errors["consent"] = "The notice changed; read it again.";
         }
         if (content == null || content.Length == 0)
         {
@@ -110,19 +120,29 @@ public sealed class ResumeImportService : IResumeImportService
             PageCount = inspection.PageCount,
             State = ResumeState.Quarantined,
             ConsentedAt = now,
+            ConsentVersion = CurrentConsentVersion(),
             UploadedAt = now,
             ExpiresAt = now.AddDays(RetentionDays()),
             CreatedAt = now
         };
 
-        // The row is saved before scanning so a crash cannot leave an unowned raw
-        // file: the purge job finds it by expiry.
-        using (var stream = new MemoryStream(bytes, writable: false))
-        {
-            await _storage.SaveImageToPathAsync(stream, document.StorageKey);
-        }
+        // Row first, blob second: a crash between them leaves a row the purge job
+        // clears by expiry, never an unowned blob nothing can find.
         _db.CareerResumeDocuments.Add(document);
         await _db.SaveChangesAsync(ct);
+
+        try
+        {
+            using var stream = new MemoryStream(bytes, writable: false);
+            await _storage.SaveImageToPathAsync(stream, document.StorageKey);
+        }
+        catch
+        {
+            // Without a blob the row would point at nothing.
+            _db.CareerResumeDocuments.Remove(document);
+            await _db.SaveChangesAsync(CancellationToken.None);
+            throw;
+        }
 
         var scan = await ScanAsync(document, bytes, ct);
         if (scan != MalwareScanResult.Clean)
@@ -133,6 +153,31 @@ public sealed class ResumeImportService : IResumeImportService
                 : CareerOutcome<ResumeDocumentDto>.ScannerUnavailable(ScannerRetryAfterSeconds);
         }
 
+        try
+        {
+            return await ProcessScannedAsync(document, bytes, format, now, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            _db.ChangeTracker.Clear();
+            await DiscardAsync(document);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // A parser or extractor bug is the file's failure, not a 500. Exception text
+            // can quote document content, so only the type is logged.
+            _logger.LogWarning("Resume {ResumeId} failed after scanning ({Code}, {ExceptionType})",
+                document.Id, ResumeFailureCodes.ParserError, ex.GetType().Name);
+            _db.ChangeTracker.Clear();
+            _db.CareerResumeDocuments.Update(document);
+            return await FinishAsync(document, ResumeState.Failed, ResumeFailureCodes.ParserError, ct);
+        }
+    }
+
+    private async Task<CareerOutcome<ResumeDocumentDto>> ProcessScannedAsync(
+        ResumeDocument document, byte[] bytes, ResumeFormat format, DateTime now, CancellationToken ct)
+    {
         document.State = ResumeState.Extracting;
         var (parsed, failureCode) = await ParseAsync(document, bytes, format, ct);
         if (parsed == null)
@@ -161,7 +206,7 @@ public sealed class ResumeImportService : IResumeImportService
         }
 
         var items = ResumeFactExtractor.Extract(parsed.Pages, pasted: false, now);
-        var proposal = await ProposalStore.AddAsync(_db, ownerId, ProposalSources.Resume, document.Id, items, now, ct);
+        var proposal = await ProposalStore.AddAsync(_db, document.OwnerId, ProposalSources.Resume, document.Id, items, now, ct);
         document.ProposalId = proposal.Id;
         return await FinishAsync(document, ResumeState.Ready, null, ct);
     }
@@ -185,10 +230,18 @@ public sealed class ResumeImportService : IResumeImportService
     public async Task<CareerOutcome<ResumeFileResult>> GetFileAsync(string ownerId, Guid id, CancellationToken ct = default)
     {
         var row = await FindAsync(ownerId, id, ct);
-        var stream = row == null ? null : await _storage.GetImageAsync(row.StorageKey);
-        if (row == null || stream == null)
+        if (row == null)
         {
             return NotFound<ResumeFileResult>();
+        }
+
+        // Failed and unreadable uploads have their raw file deleted (ADR 0007).
+        var stream = row.State is ResumeState.Failed or ResumeState.Unreadable
+            ? null
+            : await _storage.GetImageAsync(row.StorageKey);
+        if (stream == null)
+        {
+            return CareerOutcome<ResumeFileResult>.NotFound(CareerErrorCodes.ResumeFileGone, "The original file is no longer stored.");
         }
 
         var contentType = row.Format == "pdf"
@@ -230,7 +283,9 @@ public sealed class ResumeImportService : IResumeImportService
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // Keep the row so the next run retries the raw file.
+                // Keep the row so the next run retries the raw file. Drop whatever this
+                // row left tracked so it cannot fail the saves of the rows after it.
+                _db.ChangeTracker.Clear();
                 _logger.LogWarning(ex, "Could not purge expired resume {ResumeId}", row.Id);
             }
         }
@@ -279,7 +334,7 @@ public sealed class ResumeImportService : IResumeImportService
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            await DiscardAsync(document);
+            // UploadAsync discards the document.
             throw;
         }
         catch (Exception ex) when (ex is TimeoutException or OperationCanceledException)
@@ -301,6 +356,22 @@ public sealed class ResumeImportService : IResumeImportService
     {
         document.State = state;
         document.FailureCode = failureCode;
+
+        // Failed and unreadable files have nothing worth keeping: the user gets the
+        // paste fallback, so the raw file goes now instead of at expiry.
+        if (state is ResumeState.Failed or ResumeState.Unreadable)
+        {
+            try
+            {
+                await _storage.DeleteImageAsync(document.StorageKey);
+            }
+            catch (Exception ex)
+            {
+                // The row stays, so the purge job retries by expiry.
+                _logger.LogError(ex, "Could not delete raw file of {State} resume {ResumeId}", state, document.Id);
+            }
+        }
+
         await _db.SaveChangesAsync(ct);
         _logger.LogInformation("Resume {ResumeId} finished as {State} {FailureCode}", document.Id, state, failureCode);
         return CareerOutcome<ResumeDocumentDto>.Created(ToDto(document));
@@ -356,6 +427,9 @@ public sealed class ResumeImportService : IResumeImportService
 
     private DateTime Now() => _clock.GetUtcNow().UtcDateTime;
 
+    private string CurrentConsentVersion() =>
+        _configuration[ConsentVersionConfigKey] is { Length: > 0 } configured ? configured : DefaultConsentVersion;
+
     private int RetentionDays() => Math.Max(1, _configuration.GetValue<int?>(RetentionConfigKey) ?? DefaultRetentionDays);
 
     private Task<ResumeDocument?> FindAsync(string ownerId, Guid id, CancellationToken ct) =>
@@ -364,7 +438,13 @@ public sealed class ResumeImportService : IResumeImportService
     private static CareerOutcome<T> NotFound<T>() =>
         CareerOutcome<T>.NotFound(CareerErrorCodes.ResumeNotFound, "That resume was not found.");
 
-    /// <summary>Keeps a readable display name: no path, no control characters, at most 200 characters.</summary>
+    private const int MaxFileNameLength = 200;
+
+    /// <summary>
+    /// Keeps a readable display name: no path, no control or format characters (such
+    /// as the right-to-left override U+202E that disguises extensions), at most 200
+    /// characters, extension kept, no split surrogate pair.
+    /// </summary>
     internal static string SanitiseFileName(string? name, ResumeFormat format)
     {
         var fallback = format == ResumeFormat.Pdf ? "resume.pdf" : "resume.docx";
@@ -374,21 +454,31 @@ public sealed class ResumeImportService : IResumeImportService
         var builder = new StringBuilder();
         foreach (var c in leaf)
         {
-            if (!char.IsControl(c) && c != '"' && c != '<' && c != '>' && c != '|' && c != ':' && c != '*' && c != '?')
+            var category = char.GetUnicodeCategory(c);
+            if (category is not (UnicodeCategory.Control or UnicodeCategory.Format)
+                && c != '"' && c != '<' && c != '>' && c != '|' && c != ':' && c != '*' && c != '?')
             {
                 builder.Append(c);
             }
         }
 
         var clean = builder.ToString().Trim();
-        if (clean.Length > 200)
+        if (clean.Length > MaxFileNameLength)
         {
-            clean = clean[..200];
+            // Cut the stem, not the extension, so the file still looks like what it is.
+            var dot = clean.LastIndexOf('.');
+            var extension = dot > 0 && clean.Length - dot <= 10 ? clean[dot..] : string.Empty;
+            var stemLength = MaxFileNameLength - extension.Length;
+            if (char.IsHighSurrogate(clean[stemLength - 1]))
+            {
+                stemLength--;
+            }
+            clean = clean[..stemLength] + extension;
         }
         return clean.Length == 0 ? fallback : clean;
     }
 
     private static ResumeDocumentDto ToDto(ResumeDocument d) => new(
-        d.Id, d.FileName, d.Format, d.SizeBytes, d.PageCount, d.State.ToString().ToLowerInvariant(), d.FailureCode, d.ProposalId,
+        d.Id, d.FileName, d.Format, d.SizeBytes, d.PageCount, d.State.ToString().ToLowerInvariant(), d.FailureCode, d.ProposalId, d.ConsentVersion,
         DateTime.SpecifyKind(d.UploadedAt, DateTimeKind.Utc), DateTime.SpecifyKind(d.ExpiresAt, DateTimeKind.Utc));
 }

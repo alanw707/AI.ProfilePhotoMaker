@@ -58,6 +58,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     FailureCode = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: true),
                     ProposalId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     ConsentedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ConsentVersion = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     UploadedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)

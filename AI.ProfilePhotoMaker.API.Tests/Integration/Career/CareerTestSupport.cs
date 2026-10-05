@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using AI.ProfilePhotoMaker.API.Services.Career;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
@@ -86,7 +87,8 @@ public sealed class CareerClient
 
     /// <summary>Multipart upload to POST /api/career/resumes.</summary>
     public Task<HttpResponseMessage> UploadResumeAsync(
-        byte[]? bytes, string fileName = "resume.pdf", string? consent = "true")
+        byte[]? bytes, string fileName = "resume.pdf", string? consent = "true",
+        string? consentVersion = ResumeImportService.DefaultConsentVersion)
     {
         var form = new MultipartFormDataContent();
         if (bytes != null)
@@ -98,6 +100,10 @@ public sealed class CareerClient
         if (consent != null)
         {
             form.Add(new StringContent(consent), "consent");
+        }
+        if (consentVersion != null)
+        {
+            form.Add(new StringContent(consentVersion), "consentVersion");
         }
         return _http.PostAsync("/api/career/resumes", form);
     }

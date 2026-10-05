@@ -18,8 +18,18 @@ public sealed class InMemoryStorage : IStorageService
     public int Count => _files.Count;
     public bool Contains(string key) => _files.ContainsKey(key);
 
+    /// <summary>Makes every save throw, as an unreachable blob store would.</summary>
+    public bool FailSaves { get; set; }
+
+    /// <summary>The next N deletes throw; later ones work.</summary>
+    public int FailNextDeletes { get; set; }
+
     public Task<string> SaveImageToPathAsync(Stream imageStream, string storagePath)
     {
+        if (FailSaves)
+        {
+            throw new IOException("blob store unavailable");
+        }
         using var copy = new MemoryStream();
         imageStream.CopyTo(copy);
         _files[storagePath] = copy.ToArray();
@@ -29,7 +39,15 @@ public sealed class InMemoryStorage : IStorageService
     public Task<Stream?> GetImageAsync(string storagePath) =>
         Task.FromResult<Stream?>(_files.TryGetValue(storagePath, out var bytes) ? new MemoryStream(bytes) : null);
 
-    public Task<bool> DeleteImageAsync(string storagePath) => Task.FromResult(_files.TryRemove(storagePath, out _));
+    public Task<bool> DeleteImageAsync(string storagePath)
+    {
+        if (FailNextDeletes > 0)
+        {
+            FailNextDeletes--;
+            throw new IOException("blob store unavailable");
+        }
+        return Task.FromResult(_files.TryRemove(storagePath, out _));
+    }
     public Task<bool> ExistsAsync(string storagePath) => Task.FromResult(_files.ContainsKey(storagePath));
 
     public Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId, string folderType = "generated") =>
@@ -70,6 +88,20 @@ public sealed class SlowParser : IResumeParser
         await Task.Delay(TimeSpan.FromSeconds(30), ct);
         return new ResumeParseResult(1, new[] { "never" });
     }
+}
+
+/// <summary>An arbitrary parser bug: not a timeout, not a cancellation.</summary>
+public sealed class ThrowingParser : IResumeParser
+{
+    public Task<ResumeParseResult> ParseAsync(byte[] content, ResumeFormat format, CancellationToken ct = default) =>
+        throw new InvalidOperationException("parser bug");
+}
+
+/// <summary>Returns a result whose pages are null, so the code after parsing fails.</summary>
+public sealed class BrokenResultParser : IResumeParser
+{
+    public Task<ResumeParseResult> ParseAsync(byte[] content, ResumeFormat format, CancellationToken ct = default) =>
+        Task.FromResult(new ResumeParseResult(1, null!));
 }
 
 public sealed class CapturingLoggerProvider : ILoggerProvider

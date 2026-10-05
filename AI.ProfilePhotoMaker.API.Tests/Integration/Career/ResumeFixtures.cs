@@ -69,6 +69,12 @@ public static class ResumeFixtures
             objects.Add(StreamObject(content, flate));
         }
 
+        return Assemble(objects, encrypted);
+    }
+
+    /// <summary>Writes numbered objects (object 1 is the first) with an xref table.</summary>
+    public static byte[] Assemble(List<byte[]> objects, bool encrypted = false)
+    {
         using var output = new MemoryStream();
         Write(output, "%PDF-1.4\n");
         var offsets = new List<long>();
@@ -89,6 +95,83 @@ public static class ResumeFixtures
         var encrypt = encrypted ? " /Encrypt 99 0 R" : string.Empty;
         Write(output, $"trailer\n<< /Size {objects.Count + 1} /Root 1 0 R{encrypt} >>\nstartxref\n{xref}\n%%EOF\n");
         return output.ToArray();
+    }
+
+    /// <summary>A Flate stream object holding <paramref name="raw"/>.</summary>
+    public static byte[] FlateStream(byte[] raw) => StreamObject(Encoding.Latin1.GetString(raw), flate: true);
+
+    /// <summary>
+    /// Pages whose /Contents arrays reference the same streams over and over, the
+    /// shape of a decode-amplification attack. Objects: 1 catalog, 2 pages, 3 font,
+    /// 4..(3+streams) shared streams, then one page object per page.
+    /// </summary>
+    public static byte[] PdfWithSharedStreams(int pages, int referencesPerPage, params byte[][] sharedStreams)
+    {
+        var objects = new List<byte[]>
+        {
+            Latin1("<< /Type /Catalog /Pages 2 0 R >>"),
+            Latin1("<< /Type /Pages /Kids [] /Count " + pages + " >>"),
+            Latin1("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+        };
+        objects.AddRange(sharedStreams);
+        for (var p = 0; p < pages; p++)
+        {
+            var refs = string.Join(" ", Enumerable.Range(0, referencesPerPage)
+                .Select(r => $"{4 + r % sharedStreams.Length} 0 R"));
+            objects.Add(Latin1($"<< /Type /Page /Parent 2 0 R /Contents [{refs}] >>"));
+        }
+        return Assemble(objects);
+    }
+
+    /// <summary>Content-stream source for one line of text, repeated to the requested size.</summary>
+    public static byte[] RepeatedTextContent(int approximateChars)
+    {
+        var text = new StringBuilder("BT /F1 12 Tf\n");
+        while (text.Length < approximateChars)
+        {
+            text.Append("(Operations lead for regional clinic scheduling) Tj\n0 -14 Td\n");
+        }
+        text.Append("ET");
+        return Latin1(text.ToString());
+    }
+
+    /// <summary>A header with no body repeated until the file is about this big.</summary>
+    public static byte[] ObjectFloodPdf(int bytes)
+    {
+        var header = Latin1("%PDF-1.4\n");
+        var unit = Latin1("1 0 obj ");
+        var result = new byte[bytes];
+        header.CopyTo(result, 0);
+        for (var i = header.Length; i + unit.Length <= bytes; i += unit.Length)
+        {
+            unit.CopyTo(result, i);
+        }
+        return result;
+    }
+
+    /// <summary>Object numbers and references too long for an int.</summary>
+    public static byte[] HugeNumberPdf() => Latin1(
+        "%PDF-1.4\n"
+        + "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
+        + "99999999999999999999999 0 obj\n<< /Type /Page /Contents 99999999999999999999999 0 R >>\nendobj\n"
+        + "2 0 obj\n<< /Type /Page /Contents 99999999999999999999 0 R >>\nendobj\n"
+        + "%%EOF\n");
+
+    /// <summary>A DOCX whose document.xml inflates far past what its headers declare.</summary>
+    public static byte[] DocxWithUnderstatedSize()
+    {
+        var zip = ZipBombDocx();
+        // Central directory (PK 01 02) holds the uncompressed size at +24, the local
+        // header (PK 03 04) at +22. Declare 1,000 bytes in both.
+        PatchSize(zip, new byte[] { 0x50, 0x4B, 0x01, 0x02 }, 24);
+        PatchSize(zip, new byte[] { 0x50, 0x4B, 0x03, 0x04 }, 22);
+        return zip;
+    }
+
+    private static void PatchSize(byte[] zip, byte[] signature, int offset)
+    {
+        var at = zip.AsSpan().IndexOf(signature);
+        BitConverter.GetBytes(1000).CopyTo(zip, at + offset);
     }
 
     public static byte[] Pdf(params string[] firstPageLines) => Pdf(new[] { firstPageLines });

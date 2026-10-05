@@ -475,6 +475,11 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ConsentVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTime>("ConsentedAt")
                         .HasColumnType("datetime2");
 
