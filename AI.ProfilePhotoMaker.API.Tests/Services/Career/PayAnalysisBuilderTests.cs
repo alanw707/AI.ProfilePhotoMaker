@@ -149,6 +149,8 @@ public class PayAnalysisBuilderTests
         Assert.NotEqual(hash, PayAnalysisBuilder.Hash(input with { LocationText = "Boulder, CO" }));
         Assert.NotEqual(hash, PayAnalysisBuilder.Hash(input with { RequestedAnnual = 160000 }));
         Assert.NotEqual(hash, PayAnalysisBuilder.Hash(input with { ObservationSourceId = "other-source" }));
+        // The pay source changes the scenario section, so it is part of the canonical document too.
+        Assert.NotEqual(hash, PayAnalysisBuilder.Hash(input with { RequestedPaySource = "desiredPayMax" }));
         // Pinned versions do not change a figure, so they are metadata, not hash inputs.
         Assert.Equal(hash, PayAnalysisBuilder.Hash(input with { ProfileVersion = 9, GoalVersion = 8 }));
         // The digest covers content, not just the count.
@@ -164,6 +166,18 @@ public class PayAnalysisBuilderTests
         var result = PayAnalysisBuilder.Build(Input(rows), Reference, qualification: Authorized());
 
         Assert.Equal(12, result.Sections.Personalized.Cohort.Included);
+    }
+
+    [Fact]
+    public void ThePaySourceIsRecordedSoThePageCanSayWhereTheTargetCameFrom()
+    {
+        // The runner records which end of the goal's desired pay it compared against; the builder
+        // reports it verbatim, and recompute reproduces it because the row stores it.
+        var scenario = PayAnalysisBuilder.Build(
+            Input(Fixture(12)) with { RequestedPaySource = "desiredPayMax" }, Reference).Sections.Scenario;
+
+        Assert.Equal("desiredPayMax", scenario.RequestedPaySource);
+        Assert.Null(PayAnalysisBuilder.Build(Input(Fixture(12)), Reference).Sections.Scenario.RequestedPaySource);
     }
 
     [Fact]

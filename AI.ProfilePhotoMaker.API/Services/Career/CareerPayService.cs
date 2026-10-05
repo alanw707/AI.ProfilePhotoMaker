@@ -99,7 +99,7 @@ public sealed class CareerPayService : ICareerPayService
         var input = new PayAnalysisInput(a.PinnedProfileVersion, a.PinnedGoalVersion, a.OccupationCode,
             a.OccupationTitle, a.LocationInput, a.RequestedAnnual, a.AreaCode, a.AreaTitle, a.AreaResolution,
             a.OewsRelease, a.OewsSnapshotSha256, a.ProjectionsRelease, a.RuleVersion, _source.SourceId,
-            rows, DateTime.SpecifyKind(a.CreatedAt, DateTimeKind.Utc));
+            rows, DateTime.SpecifyKind(a.CreatedAt, DateTimeKind.Utc), a.RequestedPaySource);
         var built = PayAnalysisBuilder.Build(input, _reference, sourceFailed);
         var sections = PayAnalysisBuilder.AsList(built.Sections);
         var json = JsonSerializer.Serialize(sections, MarketBriefJson.Options);

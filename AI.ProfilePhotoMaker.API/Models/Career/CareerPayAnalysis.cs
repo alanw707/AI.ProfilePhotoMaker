@@ -15,6 +15,9 @@ public class CareerPayAnalysis
     public string AreaResolution { get; set; } = "";
     public string? LocationInput { get; set; }
     public int? RequestedAnnual { get; set; }
+
+    /// <summary>Which end of the goal's desired pay was compared against: desiredPayMin or desiredPayMax.</summary>
+    public string? RequestedPaySource { get; set; }
     public string? OewsRelease { get; set; }
     public string OewsSnapshotSha256 { get; set; } = "";
     public string? ProjectionsRelease { get; set; }

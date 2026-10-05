@@ -58,6 +58,12 @@
         "percent": 9
       },
       "scenarioCheck": true,
+      "scenarioArea": {
+        "code": "19740",
+        "title": "Denver-Aurora-Centennial, CO",
+        "requestedPaySource": "desiredPayMin"
+      },
+      "scenarioCardNamesArea": true,
       "dollarSignsInPersonalizedCard": 0,
       "allowance": {
         "used": 0,
@@ -65,7 +71,7 @@
         "limit": 20,
         "periodStart": "2026-10-01T00:00:00Z"
       },
-      "inputHash": "65b4256eadbb",
+      "inputHash": "a065d0c5fc72",
       "stale": false,
       "sources": [
         "oews 2025-05",
@@ -102,7 +108,7 @@
       "matches": true,
       "hashEqual": true,
       "differences": [],
-      "pageText": "Reproduced exactly (input hash 65b4256eadbb)"
+      "pageText": "Reproduced exactly (input hash a065d0c5fc72)"
     },
     {
       "label": "03-recompute @desktop",

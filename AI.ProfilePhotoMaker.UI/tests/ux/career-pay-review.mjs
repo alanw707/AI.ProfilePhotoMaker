@@ -131,6 +131,8 @@ results.push({
   gateCount: analysis.qualification.gates.length,
   scenario: { requested: scenario.requestedAnnual, median: scenario.benchmarkMedianAnnual, gap: scenario.gapAnnual, percent: scenario.gapPercent },
   scenarioCheck: scenario.gapAnnual === scenario.requestedAnnual - median && scenario.gapPercent === Math.round((scenario.gapAnnual / median) * 1000) / 10,
+  scenarioArea: { code: scenario.benchmarkAreaCode, title: scenario.benchmarkAreaTitle, requestedPaySource: scenario.requestedPaySource },
+  scenarioCardNamesArea: (await page.locator('[data-section="scenario"]').innerText()).includes(scenario.benchmarkAreaTitle ?? 'U.S.'),
   dollarSignsInPersonalizedCard: (personalizedCard.match(/\$/g) ?? []).length,
   allowance: runs.allowance, inputHash: analysis.inputHash?.slice(0, 12),
   stale: analysis.stale, sources: analysis.sources.map(s => `${s.id} ${s.referencePeriod}`),

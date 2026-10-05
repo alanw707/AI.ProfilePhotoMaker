@@ -388,11 +388,15 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             sourceFailed = true;
         }
         var asOf = Now();
+        // Record which end of the goal's desired pay the scenario compares against, so the stored
+        // row and a recompute agree and the page can say where the target came from.
+        var paySource = goal.DesiredPayMin.HasValue ? "desiredPayMin" : goal.DesiredPayMax.HasValue ? "desiredPayMax" : null;
         var input = new PayAnalysisInput(run.PinnedProfileVersion!.Value, run.PinnedGoalVersion!.Value,
             goal.OccupationCode, goal.OccupationTitle, goal.TargetLocation, goal.DesiredPayMin ?? goal.DesiredPayMax,
             location.Local?.Code, location.Local?.Title, location.Resolution,
             _market!.Oews?.Source.ReferencePeriod, EmbeddedMarketReference.ExpectedSha256,
-            _market.Projections?.Source.ReferencePeriod, PayEvidenceRules.RuleVersion, _paySource.SourceId, rows, asOf);
+            _market.Projections?.Source.ReferencePeriod, PayEvidenceRules.RuleVersion, _paySource.SourceId, rows, asOf,
+            paySource);
         var content = PayAnalysisBuilder.Build(input, _market, sourceFailed);
         var row = new CareerPayAnalysis
         {
@@ -400,7 +404,7 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             PinnedProfileVersion = input.ProfileVersion, PinnedGoalVersion = input.GoalVersion,
             OccupationCode = input.OccupationCode, OccupationTitle = input.OccupationTitle,
             AreaCode = input.AreaCode, AreaTitle = input.AreaTitle, AreaResolution = input.AreaResolution,
-            LocationInput = input.LocationText, RequestedAnnual = input.RequestedAnnual,
+            LocationInput = input.LocationText, RequestedAnnual = input.RequestedAnnual, RequestedPaySource = input.RequestedPaySource,
             OewsRelease = input.OewsRelease, OewsSnapshotSha256 = input.OewsSnapshotSha256,
             ProjectionsRelease = input.ProjectionsRelease, RuleVersion = input.RuleVersion,
             ObservationSourceId = input.ObservationSourceId, ObservationCount = rows.Count,

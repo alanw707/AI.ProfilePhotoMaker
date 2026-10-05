@@ -333,6 +333,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         pay.Property(p => p.AreaTitle).HasMaxLength(200);
         pay.Property(p => p.AreaResolution).HasMaxLength(20).IsRequired();
         pay.Property(p => p.LocationInput).HasMaxLength(120);
+        pay.Property(p => p.RequestedPaySource).HasMaxLength(20);
         pay.Property(p => p.OewsRelease).HasMaxLength(20);
         pay.Property(p => p.OewsSnapshotSha256).HasMaxLength(64).IsRequired();
         pay.Property(p => p.ProjectionsRelease).HasMaxLength(20);
