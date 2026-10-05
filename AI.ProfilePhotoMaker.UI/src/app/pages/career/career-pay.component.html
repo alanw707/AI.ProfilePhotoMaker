@@ -94,7 +94,7 @@
           @if (benchmark(); as b) {
             <p>{{ b.label }}. {{ b.note }}</p>
             @if (b.status !== 'complete') {
-              <p data-section-reason>Benchmark unavailable: {{ b.reason ?? 'source unavailable' }}</p>
+              <p data-section-reason>Benchmark unavailable. {{ reasonText(b.reason ?? 'source_unavailable') }}</p>
             }
             @if (b.figures.length) {
               <p class="muted" data-as-of>{{ asOfText(b) }}</p>
@@ -151,12 +151,16 @@
             @if (p.status === 'complete' && p.interval; as interval) {
               <p>
                 Observed advertised-pay interval: {{ dollars(interval.low) }}–{{ dollars(interval.high) }}
-                {{ interval.unit }}. {{ interval.definition }}
+                {{ intervalUnit(interval.unit) }}. {{ interval.definition }}
               </p>
             } @else if (p.status === 'insufficient_evidence') {
               <p>
-                Insufficient evidence: at least 10 independent observations from 5 employers are required. No interval
-                is shown.
+                Insufficient evidence: there are not yet enough independent observations from enough employers. No
+                interval is shown.
+              </p>
+            } @else if (p.status === 'failed') {
+              <p data-section-reason>
+                Advertised pay could not be evaluated. {{ reasonText(p.reason ?? 'CareerPaySourceUnavailable') }}
               </p>
             } @else {
               <p>
@@ -164,17 +168,23 @@
                 advertised pay.
               </p>
             }
-            @if (p.status !== 'unavailable') {
+            @if (p.status !== 'complete' && p.status !== 'failed' && p.reason) {
+              <p data-section-reason>{{ reasonText(p.reason) }}</p>
+            }
+            @if (p.status !== 'unavailable' && p.status !== 'failed') {
               <p>
                 Included {{ p.cohort.included }}; excluded {{ p.cohort.excluded }}; employers {{ p.cohort.employers }}.
               </p>
-              <p>
-                Largest employer share: {{ p.cohort.largestEmployerShare }}; concentrated:
-                {{ p.cohort.concentrated ? 'yes' : 'no' }}; sensitive: {{ p.cohort.sensitive ? 'yes' : 'no' }}.
-              </p>
+              <p>Largest employer: {{ sharePercent(p.cohort.largestEmployerShare) }} of observations.</p>
+              @if (p.cohort.concentrated) {
+                <p>One employer supplies more than 40% of these observations.</p>
+              }
+              @if (p.cohort.sensitive) {
+                <p>The range moves by more than 10% when the largest employer is removed.</p>
+              }
               <ul>
-                @for (reason of exclusions(p); track reason[0]) {
-                  <li>{{ reason[0] }}: {{ reason[1] }}</li>
+                @for (reason of exclusions(p); track reason.code) {
+                  <li>{{ reason.text }}</li>
                 }
               </ul>
             }
@@ -183,7 +193,7 @@
             <h3>Qualification gates</h3>
             <ul data-gates>
               @for (gate of q.gates; track gate.gateId) {
-                <li>{{ gate.gateId }} · {{ gate.requirement }} · {{ gate.status }}</li>
+                <li>{{ gate.gateId }} · {{ gate.requirement }} · {{ gateStatus(gate.status) }}</li>
               }
             </ul>
           }
@@ -201,11 +211,14 @@
               <dl class="market-list">
                 <dt>Requested pay</dt>
                 <dd>{{ dollars(s.requestedAnnual) }}</dd>
-                <dt>Benchmark median</dt>
+                <dt>Benchmark median ({{ areaLabel(s) }})</dt>
                 <dd>{{ dollars(s.benchmarkMedianAnnual) }}</dd>
                 <dt>Gap</dt>
                 <dd>{{ dollars(s.gapAnnual) }} ({{ s.gapPercent }}%)</dd>
               </dl>
+              @if (paySource(s); as source) {
+                <p data-pay-source>Requested pay comes from {{ source }}.</p>
+              }
               <p>{{ s.note || 'Your target is a preference, not evidence about what employers pay.' }}</p>
             } @else {
               <p>Scenario unavailable: requested pay or benchmark median is not available.</p>

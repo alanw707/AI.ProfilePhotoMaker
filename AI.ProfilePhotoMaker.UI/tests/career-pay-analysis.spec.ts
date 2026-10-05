@@ -112,6 +112,9 @@ const analysis: PayAnalysisDto = {
       benchmarkMedianAnnual: 135980,
       gapAnnual: 14020,
       gapPercent: 10.3,
+      benchmarkAreaCode: '19740',
+      benchmarkAreaTitle: 'Denver-Aurora-Centennial, CO',
+      requestedPaySource: 'minimum',
       note: 'Your target is a preference, not evidence about what employers pay.',
     },
   ],
@@ -139,9 +142,39 @@ const labels = [
   'Compared your requested pay',
   'Saved your pay analysis',
 ];
+const insufficient = {
+  ...analysis,
+  sections: analysis.sections.map(s =>
+    s.key === 'personalized'
+      ? {
+          ...s,
+          status: 'insufficient_evidence' as const,
+          reason: 'insufficient_observations',
+          cohort: {
+            included: 4,
+            excluded: 6,
+            employers: 2,
+            largestEmployerShare: 0.42,
+            concentrated: true,
+            sensitive: true,
+            exclusionReasons: {
+              'duplicate requisition': 2,
+              'different geography': 3,
+              'work-location ineligible': 1,
+            },
+          },
+        }
+      : s
+  ),
+} as PayAnalysisDto;
 async function mock(
   page: Page,
-  options: { stale?: boolean; divergent?: boolean; missing?: boolean } = {}
+  options: {
+    stale?: boolean;
+    divergent?: boolean;
+    missing?: boolean;
+    insufficient?: boolean;
+  } = {}
 ) {
   let polls = 0;
   let startBody: unknown;
@@ -184,7 +217,10 @@ async function mock(
         sections: [],
       });
     if (path === '/api/career/pay-analyses/pay-1')
-      return send({ ...analysis, stale: options.stale ?? false });
+      return send({
+        ...(options.insufficient ? insufficient : analysis),
+        stale: options.stale ?? false,
+      });
     if (path === '/api/career/runs' && route.request().method() === 'POST') {
       startBody = route.request().postDataJSON();
       return send({ id: 'run-1', status: 'queued', steps: [] });
@@ -233,6 +269,46 @@ test('start, real steps, saved figures, gates and scenario', async ({ page }) =>
   await expect(page.locator('[data-section="scenario"]')).toContainText('$14,020 (10.3%)');
   await expect(page.locator('[data-section="scenario"]')).toContainText('preference, not evidence');
   await expect(page.getByText('Recent analyses')).toBeVisible();
+});
+test('no machine code leaks to the page', async ({ page }) => {
+  await mock(page, { insufficient: true });
+  await open(page, '&analysis=pay-1');
+  const body = page.locator('[data-analysis]');
+  await expect(body).toContainText('42.0% of observations');
+  const text = (await body.innerText()).replace(/\s+/g, ' ');
+  for (const code of [
+    'provider_rights_unverified',
+    'insufficient_observations',
+    'insufficient_employers',
+    'source_unavailable',
+    'location_unresolved',
+    'not_published',
+    'work-location',
+    'duplicate requisition',
+    'different geography',
+    'Unverified',
+    'Passed',
+  ])
+    expect(text).not.toContain(code);
+  expect(text).not.toContain('0.42');
+  expect(text).not.toContain('USD /');
+  const personalized = page.locator('[data-section="personalized"]');
+  await expect(personalized).toContainText('2 excluded for a duplicate posting');
+  await expect(personalized).toContainText('3 excluded for a different location');
+  await expect(personalized).toContainText('1 excluded for not open where you are');
+  await expect(personalized).toContainText('Not enough independent current observations yet.');
+  await expect(personalized).toContainText(
+    'One employer supplies more than 40% of these observations.'
+  );
+  await expect(personalized).toContainText(
+    'The range moves by more than 10% when the largest employer is removed.'
+  );
+  await expect(page.locator('[data-gates] li')).toHaveCount(8);
+  await expect(page.locator('[data-gates]')).toContainText('Not yet verified');
+  await expect(page.locator('[data-gates]')).not.toContainText('Failed');
+  const scenario = page.locator('[data-section="scenario"]');
+  await expect(scenario).toContainText('Benchmark median (Denver-Aurora-Centennial, CO)');
+  await expect(scenario).toContainText("your goal's minimum desired pay");
 });
 test('recompute reports agreement and divergence without altering stored figures', async ({
   page,

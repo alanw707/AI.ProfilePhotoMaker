@@ -35,6 +35,45 @@ import {
 import { comparisonRows, formatFigure } from './market-format';
 import { periodText } from './career-market.component';
 
+const EXCLUSION_COPY: Record<string, string> = {
+  'different occupation family': 'a different occupation',
+  'different geography': 'a different location',
+  'different or unknown level': 'a different or unstated level',
+  'different or unknown employment type': 'a different or unstated employment type',
+  'duplicate requisition': 'a duplicate posting',
+  'missing identity or matching field': 'missing employer, role or location',
+  'not employer-disclosed pay': 'pay not disclosed by the employer',
+  'unknown or non-USD currency': 'a non-USD currency',
+  'unknown pay basis or annual hours': 'an unclear pay basis',
+  'outside 90-day lookback': 'posted more than 90 days ago',
+  'work-location ineligible': 'not open where you are',
+  'work-location eligibility unknown': 'unclear whether it is open where you are',
+  'invalid pay range': 'an invalid pay range',
+};
+const REASON_COPY: Record<string, string> = {
+  source_unavailable: 'The published data could not be loaded.',
+  location_unresolved: 'Add a city and state to your goal to see local figures.',
+  not_published: 'BLS does not publish this measure for this occupation.',
+  provider_rights_unverified: 'No qualified source yet.',
+  insufficient_observations: 'Not enough independent current observations yet.',
+  insufficient_employers: 'Not enough independent current observations yet.',
+  CareerPaySourceUnavailable:
+    'The advertised-pay source is temporarily unavailable; the benchmark is unaffected.',
+};
+const GATE_STATUS_COPY: Record<string, string> = {
+  Passed: 'Met',
+  Unverified: 'Not yet verified',
+  Failed: 'Not met',
+};
+const plain = (code: string) => {
+  const text = code
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .trim()
+    .toLowerCase();
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) + '.' : 'This is not available.';
+};
+
 const PATH = '/app/career/pay';
 const START_KEY = 'career-pay-start-key';
 
@@ -219,7 +258,32 @@ export class CareerPayComponent implements OnInit {
     }).format(value);
   }
   exclusions(section: PayPersonalizedSection) {
-    return Object.entries(section.cohort.exclusionReasons);
+    return Object.entries(section.cohort.exclusionReasons).map(([code, count]) => ({
+      code,
+      text: `${count} excluded for ${EXCLUSION_COPY[code] ?? plain(code).replace(/\.$/, '').toLowerCase()}`,
+    }));
+  }
+  reasonText(reason: string | null | undefined) {
+    return reason ? (REASON_COPY[reason] ?? plain(reason)) : '';
+  }
+  gateStatus(status: string) {
+    return GATE_STATUS_COPY[status] ?? status;
+  }
+  sharePercent(share: number) {
+    return `${(share * 100).toFixed(1)}%`;
+  }
+  intervalUnit(unit: string) {
+    return /year/i.test(unit) ? 'per year' : /hour/i.test(unit) ? 'per hour' : '';
+  }
+  areaLabel(s: PayScenarioSection) {
+    return s.benchmarkAreaTitle || s.benchmarkAreaCode || 'U.S.';
+  }
+  paySource(s: PayScenarioSection) {
+    const code = (s.requestedPaySource ?? '').toLowerCase();
+    if (code.includes('min')) {
+      return "your goal's minimum desired pay";
+    }
+    return code.includes('max') ? "your goal's maximum desired pay" : '';
   }
   private openDrawer(sources: MarketSource[]) {
     this.drawerSources.set(sources);

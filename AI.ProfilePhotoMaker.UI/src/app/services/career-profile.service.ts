@@ -376,7 +376,7 @@ export interface PayCohort {
 export interface PayPersonalizedSection {
   key: 'personalized';
   title: string;
-  status: 'complete' | 'unavailable' | 'insufficient_evidence';
+  status: 'complete' | 'unavailable' | 'insufficient_evidence' | 'failed';
   reason: string | null;
   interval: { low: number; high: number; unit: string; definition: string } | null;
   cohort: PayCohort;
@@ -390,6 +390,9 @@ export interface PayScenarioSection {
   benchmarkMedianAnnual: number | null;
   gapAnnual: number | null;
   gapPercent: number | null;
+  benchmarkAreaCode?: string | null;
+  benchmarkAreaTitle?: string | null;
+  requestedPaySource?: string | null;
   note: string;
 }
 export type PaySection = PayBenchmarkSection | PayPersonalizedSection | PayScenarioSection;
