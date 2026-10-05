@@ -78,7 +78,7 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         "CareerProfiles", "CareerProfileVersions", "CareerGoals", "CareerGoalVersions",
         "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems", "CareerPhotoSelections",
         "CareerAgentRuns", "CareerAgentSteps", "CareerAllowances", "CareerOccupationMatches", "CareerMarketBriefs", "CareerPayAnalyses", "CareerRoadmaps",
-        "CareerRoadmapTaskProgress", "CareerRoadmapReplans"
+        "CareerRoadmapTaskProgress", "CareerRoadmapReplans", "CareerMaterials", "CareerMaterialVersions", "CareerMaterialProposals"
     };
 
     [Fact]
@@ -178,6 +178,51 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         added.Should().OnlyContain(c => c.Table == "CareerGoalVersions" && c.IsNullable);
         added.Select(c => c.Name).Should().BeEquivalentTo("PreferredAreaCode", "PreferredAreaTitle", "PreferredAreaLevel");
         operations.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void MaterialsMigrationOnlyAddsTablesIndexesAndOneNullableRunColumn()
+    {
+        var operations = new AddCareerMaterials().UpOperations;
+
+        AssertAdditive(operations, allowAddColumn: true);
+        operations.OfType<CreateTableOperation>().Select(o => o.Name).Should()
+            .BeEquivalentTo(new[] { "CareerMaterials", "CareerMaterialVersions", "CareerMaterialProposals" });
+        var added = operations.OfType<AddColumnOperation>().Should().ContainSingle().Subject;
+        (added.Table, added.Name, added.IsNullable).Should().Be(("CareerAgentRuns", "MaterialId", true));
+        operations.OfType<CreateIndexOperation>().Should()
+            .Contain(i => i.Table == "CareerMaterialVersions" && i.IsUnique && i.Columns.SequenceEqual(new[] { "MaterialId", "Number" }));
+        operations.OfType<DropTableOperation>().Should().BeEmpty();
+        operations.OfType<DropColumnOperation>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DeleteAllForOwnerRemovesResumesVersionsAndProposalsOfThatOwnerOnly()
+    {
+        var alice = new CareerClient(_factory);
+        var bob = new CareerClient(_factory);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            foreach (var owner in new[] { alice.UserId, bob.UserId })
+            {
+                var material = new CareerMaterial { Id = Guid.NewGuid(), OwnerId = owner, Title = "Resume", CurrentVersion = 1, OccupationCode = "15-1252.00", PinnedProfileVersion = 1, PinnedGoalVersion = 1 };
+                db.CareerMaterials.Add(material);
+                db.CareerMaterialVersions.Add(new CareerMaterialVersion { Id = Guid.NewGuid(), MaterialId = material.Id, OwnerId = owner, Number = 1, OccupationCode = "15-1252.00", PinnedProfileVersion = 1, PinnedGoalVersion = 1 });
+                db.CareerMaterialProposals.Add(new CareerMaterialProposal { Id = Guid.NewGuid(), OwnerId = owner, MaterialId = material.Id, RunId = Guid.NewGuid(), BaseVersion = 1 });
+            }
+            await db.SaveChangesAsync();
+            await scope.ServiceProvider.GetRequiredService<ICareerPrivateDataService>().DeleteAllForOwnerAsync(alice.UserId);
+        }
+
+        using var check = _factory.Services.CreateScope();
+        var verify = check.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        (await verify.CareerMaterials.CountAsync(m => m.OwnerId == alice.UserId)).Should().Be(0);
+        (await verify.CareerMaterialVersions.CountAsync(m => m.OwnerId == alice.UserId)).Should().Be(0);
+        (await verify.CareerMaterialProposals.CountAsync(m => m.OwnerId == alice.UserId)).Should().Be(0);
+        (await verify.CareerMaterials.CountAsync(m => m.OwnerId == bob.UserId)).Should().Be(1);
+        (await verify.CareerMaterialVersions.CountAsync(m => m.OwnerId == bob.UserId)).Should().Be(1);
+        (await verify.CareerMaterialProposals.CountAsync(m => m.OwnerId == bob.UserId)).Should().Be(1);
     }
 
     [Fact]

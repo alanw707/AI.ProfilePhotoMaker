@@ -70,6 +70,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Models.Career.CareerRoadmap> CareerRoadmaps { get; set; }
     public virtual DbSet<Models.Career.CareerRoadmapTaskProgress> CareerRoadmapTaskProgress { get; set; }
     public virtual DbSet<Models.Career.CareerRoadmapReplan> CareerRoadmapReplans { get; set; }
+    public virtual DbSet<Models.Career.CareerMaterial> CareerMaterials { get; set; }
+    public virtual DbSet<Models.Career.CareerMaterialVersion> CareerMaterialVersions { get; set; }
+    public virtual DbSet<Models.Career.CareerMaterialProposal> CareerMaterialProposals { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -386,6 +389,37 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         replan.HasIndex(r => new { r.OwnerId, r.CreatedAt });
         replan.HasIndex(r => r.RoadmapId);
         replan.HasOne<ApplicationUser>().WithMany().HasForeignKey(r => r.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        // Targeted resumes (#389, ADR 0018). Owner cascade; rows are also removed explicitly by CareerPrivateDataService.
+        var material = builder.Entity<Models.Career.CareerMaterial>();
+        material.ToTable("CareerMaterials");
+        material.Property(m => m.OwnerId).HasMaxLength(450).IsRequired();
+        material.Property(m => m.Kind).HasMaxLength(16).IsRequired();
+        material.Property(m => m.Title).HasMaxLength(200).IsRequired();
+        material.Property(m => m.Status).HasMaxLength(16).IsRequired();
+        material.Property(m => m.OccupationCode).HasMaxLength(10).IsRequired();
+        material.Property(m => m.CurrentVersion).IsConcurrencyToken();
+        material.HasIndex(m => m.RunId).IsUnique();
+        material.HasIndex(m => new { m.OwnerId, m.Kind, m.UpdatedAt });
+        material.HasOne<ApplicationUser>().WithMany().HasForeignKey(m => m.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        var materialVersion = builder.Entity<Models.Career.CareerMaterialVersion>();
+        materialVersion.ToTable("CareerMaterialVersions");
+        materialVersion.Property(v => v.OwnerId).HasMaxLength(450).IsRequired();
+        materialVersion.Property(v => v.ContactJson).HasMaxLength(200).IsRequired();
+        materialVersion.Property(v => v.OccupationCode).HasMaxLength(10).IsRequired();
+        materialVersion.Property(v => v.Author).HasMaxLength(16).IsRequired();
+        materialVersion.HasIndex(v => new { v.MaterialId, v.Number }).IsUnique();
+        materialVersion.HasIndex(v => v.OwnerId);
+        materialVersion.HasOne<ApplicationUser>().WithMany().HasForeignKey(v => v.OwnerId).OnDelete(DeleteBehavior.Cascade);
+
+        var materialProposal = builder.Entity<Models.Career.CareerMaterialProposal>();
+        materialProposal.ToTable("CareerMaterialProposals");
+        materialProposal.Property(p => p.OwnerId).HasMaxLength(450).IsRequired();
+        materialProposal.Property(p => p.Status).HasMaxLength(16).IsRequired().IsConcurrencyToken();
+        materialProposal.HasIndex(p => p.RunId).IsUnique();
+        materialProposal.HasIndex(p => new { p.OwnerId, p.MaterialId });
+        materialProposal.HasOne<ApplicationUser>().WithMany().HasForeignKey(p => p.OwnerId).OnDelete(DeleteBehavior.Cascade);
     }
 
     private void ConfigureHeadshotGenerationOperations(ModelBuilder builder)

@@ -35,7 +35,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
 
     // A lost race is retried a few times; more than that means heavy contention.
     private const int MaxCommitAttempts = 5;
-    private const string TaskError = "Choose a task the assistant can do: profile_summary, occupation_match, market_brief, pay_analysis or roadmap.";
+    private const string TaskError = "Choose a task the assistant can do: profile_summary, occupation_match, market_brief, pay_analysis, roadmap or targeted_resume.";
 
     private static readonly IReadOnlyDictionary<string, string> StepLabels = new Dictionary<string, string>
     {
@@ -58,7 +58,10 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
         [CareerStepNames.ReadEvidence] = "Read your market and pay evidence",
         [CareerStepNames.BuildOptions] = "Compared possible paths",
         [CareerStepNames.PlanTasks] = "Planned tasks around your available time",
-        [CareerStepNames.SaveRoadmap] = "Saved your roadmap"
+        [CareerStepNames.SaveRoadmap] = "Saved your roadmap",
+        [CareerStepNames.SelectFacts] = "Chose the facts that fit your target",
+        [CareerStepNames.DraftResume] = "Drafted your resume",
+        [CareerStepNames.SaveResume] = "Saved your draft"
     };
 
     private readonly ApplicationDbContext _db;
@@ -104,7 +107,9 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             return CareerOutcome<CareerAgentRunDto>.Invalid(errors);
         }
 
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"task={task}"))).ToLowerInvariant();
+        var materialId = task == CareerAgentTasks.TargetedResume ? request.MaterialId : null;
+        var hashInput = materialId == null ? $"task={task}" : $"task={task}&material={materialId}";
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(hashInput))).ToLowerInvariant();
 
         for (var attempt = 0; attempt < MaxCommitAttempts; attempt++)
         {
@@ -129,7 +134,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             {
                 return CareerOutcome<CareerAgentRunDto>.ModelUnavailable();
             }
-            if (task == CareerAgentTasks.OccupationMatch && _reference?.Data == null)
+            if (task is CareerAgentTasks.OccupationMatch or CareerAgentTasks.TargetedResume && _reference?.Data == null)
             {
                 return CareerOutcome<CareerAgentRunDto>.ReferenceUnavailable();
             }
@@ -148,7 +153,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             }
             var goalVersion = await _db.CareerGoals.AsNoTracking()
                 .Where(g => g.OwnerId == ownerId).Select(g => (int?)g.ActiveVersionNumber).FirstOrDefaultAsync(ct);
-            if ((task is CareerAgentTasks.MarketBrief or CareerAgentTasks.PayAnalysis or CareerAgentTasks.Roadmap)
+            if ((task is CareerAgentTasks.MarketBrief or CareerAgentTasks.PayAnalysis or CareerAgentTasks.Roadmap or CareerAgentTasks.TargetedResume)
                 && (goalVersion == null || !await _db.CareerGoalVersions.AsNoTracking().AnyAsync(
                     v => v.OwnerId == ownerId && v.VersionNumber == goalVersion && v.OccupationCode != null, ct)))
             {
@@ -157,7 +162,13 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
                         ? "Confirm your target occupation before asking for a pay analysis."
                         : task == CareerAgentTasks.Roadmap
                             ? "Confirm your target occupation before asking for a roadmap."
-                            : "Confirm your target occupation before asking for a market brief.");
+                            : task == CareerAgentTasks.TargetedResume
+                                ? "Confirm your target occupation before asking for a targeted resume."
+                                : "Confirm your target occupation before asking for a market brief.");
+            }
+            if (materialId != null && !await _db.CareerMaterials.AsNoTracking().AnyAsync(m => m.Id == materialId && m.OwnerId == ownerId, ct))
+            {
+                return CareerOutcome<CareerAgentRunDto>.NotFound(ResumeErrorCodes.MaterialNotFound, "That resume was not found.");
             }
 
             var now = Now();
@@ -187,6 +198,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
                 RequestHash = hash,
                 PinnedProfileVersion = profileVersion,
                 PinnedGoalVersion = goalVersion,
+                MaterialId = materialId,
                 CreatedAt = now,
                 UpdatedAt = now
             };
@@ -247,12 +259,21 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             .Where(b => b.OwnerId == ownerId && b.RunId != null && runIds.Contains(b.RunId.Value))
             .ToDictionaryAsync(b => b.RunId!.Value, b => b.Id, ct);
 
+        var materialIds = await _db.CareerMaterials.AsNoTracking()
+            .Where(m => m.OwnerId == ownerId && m.RunId != null && runIds.Contains(m.RunId.Value))
+            .ToDictionaryAsync(m => m.RunId!.Value, m => m.Id, ct);
+        var resumeProposals = await _db.CareerMaterialProposals.AsNoTracking()
+            .Where(p => p.OwnerId == ownerId && runIds.Contains(p.RunId))
+            .ToDictionaryAsync(p => p.RunId, p => (p.Id, p.MaterialId), ct);
+
         var dtos = runs.Select(run => ToDto(
             run, stepsByRun[run.Id], currentProfile, allowance,
             matchIds.TryGetValue(run.Id, out var matchId) ? matchId : null,
             briefIds.TryGetValue(run.Id, out var briefId) ? briefId : null,
             payIds.TryGetValue(run.Id, out var payId) ? payId : null,
-            roadmapIds.TryGetValue(run.Id, out var roadmapId) ? roadmapId : null)).ToList();
+            roadmapIds.TryGetValue(run.Id, out var roadmapId) ? roadmapId : null,
+            materialIds.TryGetValue(run.Id, out var materialId) ? materialId : run.MaterialId,
+            resumeProposals.TryGetValue(run.Id, out var resumeProposal) ? resumeProposal.Id : null)).ToList();
         return CareerOutcome<CareerRunListDto>.Ok(new CareerRunListDto(dtos, allowance));
     }
 
@@ -384,7 +405,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
 
     private DateTime Now() => _clock.GetUtcNow().UtcDateTime;
 
-    private static bool IsKnownTask(string? task) => task is CareerAgentTasks.ProfileSummary or CareerAgentTasks.OccupationMatch or CareerAgentTasks.MarketBrief or CareerAgentTasks.PayAnalysis or CareerAgentTasks.Roadmap;
+    private static bool IsKnownTask(string? task) => task is CareerAgentTasks.ProfileSummary or CareerAgentTasks.OccupationMatch or CareerAgentTasks.MarketBrief or CareerAgentTasks.PayAnalysis or CareerAgentTasks.Roadmap or CareerAgentTasks.TargetedResume;
 
     /// <summary>The offered choices, saved with the question step so the answer can be checked against them.</summary>
     internal static IReadOnlyList<CareerRunChoiceDto>? ChoicesFrom(IEnumerable<CareerAgentStep> steps)
@@ -432,7 +453,13 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             .Where(b => b.RunId == run.Id && b.OwnerId == run.OwnerId).Select(b => (Guid?)b.Id).FirstOrDefaultAsync(ct);
         var roadmapId = await _db.CareerRoadmaps.AsNoTracking()
             .Where(b => b.RunId == run.Id && b.OwnerId == run.OwnerId).Select(b => (Guid?)b.Id).FirstOrDefaultAsync(ct);
-        return ToDto(run, steps, await CurrentProfileVersionAsync(run.OwnerId, ct), await AllowanceDtoAsync(run.OwnerId, ct), matchId, briefId, payId, roadmapId);
+        var materialId = run.Task != CareerAgentTasks.TargetedResume ? null
+            : run.MaterialId ?? await _db.CareerMaterials.AsNoTracking()
+                .Where(m => m.RunId == run.Id && m.OwnerId == run.OwnerId).Select(m => (Guid?)m.Id).FirstOrDefaultAsync(ct);
+        var resumeProposalId = run.Task != CareerAgentTasks.TargetedResume ? null
+            : await _db.CareerMaterialProposals.AsNoTracking()
+                .Where(p => p.RunId == run.Id && p.OwnerId == run.OwnerId).Select(p => (Guid?)p.Id).FirstOrDefaultAsync(ct);
+        return ToDto(run, steps, await CurrentProfileVersionAsync(run.OwnerId, ct), await AllowanceDtoAsync(run.OwnerId, ct), matchId, briefId, payId, roadmapId, materialId, resumeProposalId);
     }
 
     private async Task<int?> CurrentProfileVersionAsync(string ownerId, CancellationToken ct) =>
@@ -441,7 +468,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
 
     private static CareerAgentRunDto ToDto(
         CareerAgentRun run, IEnumerable<CareerAgentStep> steps, int? currentProfile, CareerAllowanceDto allowance, Guid? occupationMatchId,
-        Guid? marketBriefId, Guid? payAnalysisId, Guid? roadmapId = null)
+        Guid? marketBriefId, Guid? payAnalysisId, Guid? roadmapId = null, Guid? materialId = null, Guid? resumeProposalId = null)
     {
         var stepList = steps.ToList();
         return new CareerAgentRunDto(
@@ -462,14 +489,15 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
                     run.Task == CareerAgentTasks.OccupationMatch ? MaxOccupationAnswerLength : MaxAnswerLength,
                     run.Task == CareerAgentTasks.OccupationMatch ? ChoicesFrom(stepList) : null)
                 : null,
-            run.ProposalId,
+            run.ProposalId ?? resumeProposalId,
             occupationMatchId,
             marketBriefId,
             ProfileChanged: run.PinnedProfileVersion != null && currentProfile != run.PinnedProfileVersion,
             run.ErrorCode,
             allowance,
             payAnalysisId,
-            roadmapId);
+            roadmapId,
+            materialId);
     }
 
     private static DateTime Utc(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
