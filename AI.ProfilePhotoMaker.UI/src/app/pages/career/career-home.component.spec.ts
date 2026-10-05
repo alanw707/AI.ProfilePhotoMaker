@@ -1,12 +1,19 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
-import { CareerJourneyDto, CareerProfileService } from '../../services/career-profile.service';
+import { of, throwError } from 'rxjs';
+import {
+  CareerAllowanceDto,
+  CareerJourneyDto,
+  CareerProfileService,
+} from '../../services/career-profile.service';
 import { CareerHomeComponent } from './career-home.component';
 
 describe('CareerHomeComponent', () => {
-  function render(j: Partial<CareerJourneyDto>) {
-    const api = jasmine.createSpyObj<CareerProfileService>('api', ['getJourney']);
+  function render(j: Partial<CareerJourneyDto>, allowance?: CareerAllowanceDto) {
+    const api = jasmine.createSpyObj<CareerProfileService>('api', ['getJourney', 'getAllowance']);
+    api.getAllowance.and.returnValue(
+      allowance ? of(allowance) : throwError(() => ({ kind: 'unknown', message: 'x' }))
+    );
     api.getJourney.and.returnValue(
       of({
         profile: null,
@@ -25,6 +32,33 @@ describe('CareerHomeComponent', () => {
     f.detectChanges();
     return f.nativeElement as HTMLElement;
   }
+  it('shows remaining, in progress and a readable reset date', () => {
+    const el = render(
+      {},
+      {
+        policyVersion: 'v1',
+        limit: 20,
+        used: 5,
+        reserved: 2,
+        remaining: 13,
+        resetsAt: '2026-11-01T00:00:00Z',
+      }
+    );
+    const text = el.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toContain('13 of 20 drafts left');
+    expect(text).toContain('2 in progress');
+    expect(text).toContain('Resets on November 1, 2026.');
+    expect(text).not.toContain('2026-11-01T');
+    expect(el.querySelector('[data-allowance-used]')).toBeNull();
+  });
+  it('keeps edit and export links when the allowance is used up', () => {
+    const el = render(
+      {},
+      { policyVersion: 'v1', limit: 5, used: 5, reserved: 0, remaining: 0, resetsAt: '2026-11-01Z' }
+    );
+    expect(el.querySelector('[data-allowance-used]')?.textContent).toContain('exportable');
+    expect(el.querySelectorAll('[data-allowance-used] a').length).toBe(2);
+  });
   it('prompts for a goal and shows the allowlisted next step', () => {
     const el = render({ nextAction: { key: 'set_goal', route: '/evil' } });
     expect(el.textContent).toContain('not set a goal');

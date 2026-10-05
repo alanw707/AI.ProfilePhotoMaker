@@ -81,6 +81,7 @@ public sealed class CareerExportService : ICareerExportService
 
     public async Task<CareerOutcome<CareerExportDto>> CreateAsync(string ownerId, Guid materialId, CreateExportRequest request, CancellationToken ct = default)
     {
+        var startedAt = System.Diagnostics.Stopwatch.GetTimestamp();
         var material = await _db.CareerMaterials.AsNoTracking().FirstOrDefaultAsync(m => m.Id == materialId && m.OwnerId == ownerId, ct);
         if (material == null)
         {
@@ -158,6 +159,9 @@ public sealed class CareerExportService : ICareerExportService
             ExpiresAt = now + Lifetime
         };
         _db.CareerExports.Add(row);
+        _db.CareerUsageEvents.Add(CareerUsage.Event(
+            ownerId, null, CareerUsageActions.Export, CareerUsageOutcomes.Ok, now,
+            (int)System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds));
         await _db.SaveChangesAsync(ct);
         return CareerOutcome<CareerExportDto>.Created(ToDto(row));
     }

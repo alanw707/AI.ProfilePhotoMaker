@@ -30,6 +30,7 @@ import {
   pollRun,
   releaseStartKey,
   startKey,
+  runErrorMessage,
 } from './career-run';
 import { comparisonRows, formatFigure } from './market-format';
 
@@ -326,7 +327,7 @@ export class CareerMarketComponent implements OnInit {
         this.error.set('The market data is not available right now. Try again later.');
         return;
       default:
-        this.error.set(e.message || 'Something went wrong. Try again.');
+        this.error.set(runErrorMessage(e));
     }
   }
 }

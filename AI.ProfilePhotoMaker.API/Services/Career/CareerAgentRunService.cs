@@ -10,6 +10,7 @@ namespace AI.ProfilePhotoMaker.API.Services.Career;
 public interface ICareerAgentRunService
 {
     Task<CareerOutcome<CareerAgentRunDto>> CreateAsync(string ownerId, CreateCareerRunRequest request, string? idempotencyKey, CancellationToken ct = default);
+    Task<CareerOutcome<CareerAllowanceView>> GetAllowanceAsync(string ownerId, CancellationToken ct = default);
     Task<CareerOutcome<CareerAgentRunDto>> GetAsync(string ownerId, Guid id, CancellationToken ct = default);
     Task<CareerOutcome<CareerRunListDto>> ListAsync(string ownerId, CancellationToken ct = default);
     Task<CareerOutcome<CareerAgentRunDto>> AnswerAsync(string ownerId, Guid id, AnswerCareerRunRequest request, CancellationToken ct = default);
@@ -72,14 +73,18 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
     private readonly ICareerTextModel? _model;
     private readonly IOccupationReference? _reference;
     private readonly IMarketReference? _market;
+    private readonly ICareerOperatorControls? _controls;
+    private readonly CareerUsagePolicy _usage;
 
     // The model is optional: with none registered, a profile summary fails closed (503).
     // Occupation matching needs no model, only the verified O*NET snapshot; market briefs only the BLS snapshot.
     public CareerAgentRunService(
         ApplicationDbContext db, IOptions<CareerAgentOptions> options, TimeProvider clock,
         ILogger<CareerAgentRunService> logger, ICareerTextModel? model = null, IOccupationReference? reference = null,
-        IMarketReference? market = null)
+        IMarketReference? market = null, ICareerOperatorControls? controls = null, IOptions<CareerUsagePolicy>? usage = null)
     {
+        _controls = controls;
+        _usage = usage?.Value ?? new CareerUsagePolicy();
         _market = market;
         _db = db;
         _options = options.Value;
@@ -131,6 +136,12 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
                 return CareerOutcome<CareerAgentRunDto>.Invalid(new Dictionary<string, string> { ["task"] = TaskError });
             }
 
+            // Kill switch: only creating a run is blocked; replays above and every read/edit/export are not.
+            if (_controls != null && (await _controls.GetAsync(ct)).GenerationDisabled)
+            {
+                return CareerUsage.Paused<CareerAgentRunDto>();
+            }
+
             if (task == CareerAgentTasks.ProfileSummary && _model == null)
             {
                 return CareerOutcome<CareerAgentRunDto>.ModelUnavailable();
@@ -175,13 +186,27 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
 
             var now = Now();
             var period = CareerAllowanceStore.PeriodStart(now);
+            // Tracked and bumped: every create contends for this one row, so the global checks below
+            // (queue depth, cost) are serialized across users. A loser retries from the top.
+            var guard = await _db.CareerOperatorStates.FirstOrDefaultAsync(s => s.Id == CareerOperatorState.SingletonId, ct);
+            var guardCreated = guard == null;
+            if (guard == null)
+            {
+                guard = new CareerOperatorState();
+                _db.CareerOperatorStates.Add(guard);
+            }
+            guard.GuardVersion++;
             // Tracked before the run is added: the allowance is the row a racing create contends for.
             var allowance = await _db.CareerAllowances.FirstOrDefaultAsync(a => a.OwnerId == ownerId && a.PeriodStart == period, ct);
             var committed = (allowance?.Reserved ?? 0) + (allowance?.Used ?? 0);
-            if (committed >= _options.MonthlyRunAllowance)
+            if (committed >= Limit)
             {
                 return CareerOutcome<CareerAgentRunDto>.QuotaExceeded(
                     CareerAgentErrorCodes.AllowanceExhausted, "You have used this month's assistant runs.");
+            }
+            if (await CheckLimitsAsync(ownerId, task!, now, period, ct) is { } limited)
+            {
+                return limited;
             }
             if (allowance == null)
             {
@@ -212,7 +237,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
                 _logger.LogInformation("Career run {RunId} queued", run.Id);
                 return CareerOutcome<CareerAgentRunDto>.Ok(await ToDtoAsync(run, ct));
             }
-            catch (DbUpdateException ex) when (CareerProfileService.IsLostRace(ex))
+            catch (DbUpdateException ex) when (guardCreated || CareerProfileService.IsLostRace(ex))
             {
                 // Another request took the key (unique index) or the allowance row moved.
                 // Start over: the loop returns the winner's run, or re-checks the allowance.
@@ -221,6 +246,65 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
         }
 
         return CareerOutcome<CareerAgentRunDto>.Busy("CareerRunBusy", "Too many requests at once. Try again shortly.", 1);
+    }
+
+    private int Limit => _usage.MonthlyRunAllowance ?? _options.MonthlyRunAllowance;
+
+    /// <summary>
+    /// Rate, concurrency, backpressure and cost caps (ADR 0022). Runs inside the allowance-row race, so two
+    /// creates for one user cannot both pass the concurrency check: one loses the row and re-checks.
+    /// </summary>
+    private async Task<CareerOutcome<CareerAgentRunDto>?> CheckLimitsAsync(string ownerId, string task, DateTime now, DateTime period, CancellationToken ct)
+    {
+        var windowStart = now.AddMinutes(-1);
+        var recent = await _db.CareerAgentRuns.AsNoTracking()
+            .Where(r => r.OwnerId == ownerId && r.CreatedAt > windowStart).Select(r => r.CreatedAt).ToListAsync(ct);
+        if (recent.Count >= _usage.PerMinuteRunLimit)
+        {
+            var wait = (int)Math.Ceiling((recent.Min().AddMinutes(1) - now).TotalSeconds);
+            return CareerOutcome<CareerAgentRunDto>.RateLimited(
+                CareerAgentErrorCodes.RateLimited, "You are starting runs too quickly. Try again shortly.", Math.Max(1, wait));
+        }
+
+        var active = await _db.CareerAgentRuns.AsNoTracking().CountAsync(
+            r => r.OwnerId == ownerId && (r.Status == CareerRunStatus.Queued || r.Status == CareerRunStatus.Working), ct);
+        if (active >= _usage.MaxConcurrentRunsPerUser)
+        {
+            return CareerOutcome<CareerAgentRunDto>.RateLimited(
+                CareerAgentErrorCodes.ConcurrencyLimit, "Wait for your current runs to finish before starting another.", 10);
+        }
+
+        if (await _db.CareerAgentRuns.AsNoTracking().CountAsync(r => r.Status == CareerRunStatus.Queued, ct) >= _usage.MaxQueuedRunsGlobal)
+        {
+            return CareerOutcome<CareerAgentRunDto>.Busy(CareerAgentErrorCodes.Busy, "The career assistant is busy. Try again shortly.", 30);
+        }
+
+        var estimateCents = _usage.TaskCostEstimatesUsd.TryGetValue(task, out var usd) ? usd * 100m : 0m;
+        var userCents = await _db.CareerUsageEvents.AsNoTracking()
+            .Where(e => e.OwnerId == ownerId && e.CreatedAt >= period).SumAsync(e => (int?)e.CostCents, ct) ?? 0;
+        if (userCents + estimateCents > _usage.PerUserMonthlyModelCostCapUsd * 100m)
+        {
+            return CareerOutcome<CareerAgentRunDto>.QuotaExceeded(
+                CareerAgentErrorCodes.UserCostCapReached, "You have reached this month's assistant usage limit.");
+        }
+        var globalCents = await _db.CareerUsageEvents.AsNoTracking()
+            .Where(e => e.CreatedAt >= period).SumAsync(e => (long?)e.CostCents, ct) ?? 0;
+        if (globalCents + estimateCents > _usage.MonthlyModelCostCapUsd * 100m)
+        {
+            return CareerOutcome<CareerAgentRunDto>.Busy(
+                CareerAgentErrorCodes.CostCapReached, "The career assistant has reached its monthly capacity.", (int)(NextPeriod(period) - now).TotalSeconds);
+        }
+        return null;
+    }
+
+    public static DateTime NextPeriod(DateTime periodStart) => periodStart.AddMonths(1);
+
+    public async Task<CareerOutcome<CareerAllowanceView>> GetAllowanceAsync(string ownerId, CancellationToken ct = default)
+    {
+        var dto = await AllowanceDtoAsync(ownerId, ct);
+        return CareerOutcome<CareerAllowanceView>.Ok(new CareerAllowanceView(
+            _usage.PolicyVersion, dto.Limit, dto.Used, dto.Reserved, Math.Max(0, dto.Limit - dto.Used - dto.Reserved),
+            DateTime.SpecifyKind(NextPeriod(dto.PeriodStart), DateTimeKind.Utc)));
     }
 
     public async Task<CareerOutcome<CareerAgentRunDto>> GetAsync(string ownerId, Guid id, CancellationToken ct = default)
@@ -440,7 +524,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
     {
         var period = CareerAllowanceStore.PeriodStart(Now());
         var allowance = await _db.CareerAllowances.AsNoTracking().FirstOrDefaultAsync(a => a.OwnerId == ownerId && a.PeriodStart == period, ct);
-        return new CareerAllowanceDto(allowance?.Used ?? 0, allowance?.Reserved ?? 0, _options.MonthlyRunAllowance, period);
+        return new CareerAllowanceDto(allowance?.Used ?? 0, allowance?.Reserved ?? 0, Limit, period);
     }
 
     private async Task<CareerAgentRunDto> ToDtoAsync(CareerAgentRun run, CancellationToken ct)

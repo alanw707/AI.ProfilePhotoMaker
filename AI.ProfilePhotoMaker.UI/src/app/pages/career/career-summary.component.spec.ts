@@ -6,13 +6,27 @@ import { CareerSummaryComponent, START_KEY_STORAGE } from './career-summary.comp
 import { backoffDelay, latestRun } from './career-run';
 
 const allowance = { used: 1, reserved: 0, limit: 20, periodStart: '2026-10-01T00:00:00Z' };
+const allowanceView = {
+  policyVersion: 'v1',
+  limit: 20,
+  used: 1,
+  reserved: 0,
+  remaining: 19,
+  resetsAt: '2026-11-01T00:00:00Z',
+};
 const queuedRun = { id: 'r1', status: 'queued', steps: [], allowance } as unknown as CareerRunDto;
 
 describe('CareerSummaryComponent', () => {
   let api: jasmine.SpyObj<CareerProfileService>;
   beforeEach(() => {
     sessionStorage.clear();
-    api = jasmine.createSpyObj('CareerProfileService', ['createRun', 'getRun', 'listRuns']);
+    api = jasmine.createSpyObj('CareerProfileService', [
+      'createRun',
+      'getRun',
+      'listRuns',
+      'getAllowance',
+    ]);
+    api.getAllowance.and.returnValue(of(allowanceView));
     api.listRuns.and.returnValue(of({ runs: [], allowance }));
     TestBed.configureTestingModule({
       providers: [provideRouter([]), { provide: CareerProfileService, useValue: api }],
@@ -26,6 +40,18 @@ describe('CareerSummaryComponent', () => {
   it('shows the drafts left this month', () => {
     const fixture = TestBed.createComponent(CareerSummaryComponent);
     fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-allowance]').textContent).toContain(
+      '19 of 20 drafts left this month'
+    );
+  });
+
+  it('reads the allowance from GET /allowance, not from the legacy run DTO', () => {
+    api.listRuns.and.returnValue(
+      of({ runs: [], allowance: { ...allowance, used: 20, limit: 20 } })
+    );
+    const fixture = TestBed.createComponent(CareerSummaryComponent);
+    fixture.detectChanges();
+    expect(api.getAllowance).toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('[data-allowance]').textContent).toContain(
       '19 of 20 drafts left this month'
     );

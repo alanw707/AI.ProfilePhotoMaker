@@ -32,7 +32,7 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         var careerEntities = db.Model.GetEntityTypes()
             .Select(t => t.ClrType)
             .Where(t => t.Namespace == typeof(CareerProfile).Namespace)
-            .Where(t => !CareerPrivacyCoverageTests.AuditRecordTypes.Contains(t))
+            .Where(t => !CareerPrivacyCoverageTests.AuditRecordTypes.Contains(t) && !CareerPrivacyCoverageTests.OperatorStateTypes.Contains(t))
             .ToHashSet();
 
         careerEntities.Should().NotBeEmpty();
@@ -80,8 +80,18 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems", "CareerPhotoSelections",
         "CareerAgentRuns", "CareerAgentSteps", "CareerAllowances", "CareerOccupationMatches", "CareerMarketBriefs", "CareerPayAnalyses", "CareerRoadmaps",
         "CareerRoadmapTaskProgress", "CareerRoadmapReplans", "CareerMaterials", "CareerMaterialVersions", "CareerMaterialProposals", "CareerExports",
-        "CareerDeletionRequests", "CareerTombstones"
+        "CareerDeletionRequests", "CareerTombstones", "CareerUsageEvents", "CareerOperatorStates"
     };
+
+    [Fact]
+    public void UsageControlsMigrationIsAdditiveOnly()
+    {
+        var operations = new AddCareerUsageControls().UpOperations;
+
+        AssertAdditive(operations, allowAddColumn: false);
+        operations.OfType<CreateTableOperation>().Select(o => o.Name).Should()
+            .BeEquivalentTo(new[] { "CareerUsageEvents", "CareerOperatorStates" });
+    }
 
     [Fact]
     public void CareerMigrationIsAdditiveOnly()

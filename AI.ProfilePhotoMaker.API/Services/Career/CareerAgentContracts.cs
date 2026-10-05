@@ -28,6 +28,9 @@ public sealed record CareerRunQuestionDto(
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     IReadOnlyList<CareerRunChoiceDto>? Choices = null);
 
+/// <summary>GET /api/career/allowance (ADR 0022): <c>resetsAt</c> is the first instant of the next UTC month.</summary>
+public sealed record CareerAllowanceView(string PolicyVersion, int Limit, int Used, int Reserved, int Remaining, DateTime ResetsAt);
+
 public sealed record CareerAllowanceDto(int Used, int Reserved, int Limit, DateTime PeriodStart);
 
 public sealed record CareerAgentRunDto(
@@ -61,6 +64,13 @@ public static class CareerAgentErrorCodes
     public const string ProfileRequired = "CareerProfileRequired";
     public const string AllowanceExhausted = "CareerAllowanceExhausted";
     public const string ModelUnavailable = "CareerModelUnavailable";
+    public const string GenerationPaused = "CareerGenerationPaused";
+    public const string Busy = "CareerBusy";
+    public const string RateLimited = "CareerRateLimited";
+    public const string ConcurrencyLimit = "CareerConcurrencyLimit";
+    public const string CostCapReached = "CareerCostCapReached";
+    public const string UserCostCapReached = "CareerUserCostCapReached";
+    public const string Abandoned = "CareerRunAbandoned";
     public const string ReferenceUnavailable = "CareerReferenceUnavailable";
 
     // Failure codes stored on a failed run.

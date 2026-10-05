@@ -4,6 +4,7 @@ import {
   CareerProfileService,
   CareerRunDto,
   CareerRunStatus,
+  PLAIN_503,
 } from '../../services/career-profile.service';
 
 /** Shared by every page that starts a run and follows it to the end. */
@@ -79,4 +80,9 @@ export function releaseStartKey(storageKey: string, error: CareerApiError) {
   if (error.kind !== 'unknown') {
     clearStartKey(storageKey);
   }
+}
+
+/** Message for a failed run start; 503 codes get plain copy, never machine codes. */
+export function runErrorMessage(e: CareerApiError): string {
+  return PLAIN_503[e.kind] ?? (e.message || 'Something went wrong. Try again.');
 }

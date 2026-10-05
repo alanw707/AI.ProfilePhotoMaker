@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import {
+  CareerAllowanceDto,
   CareerApiError,
   CareerJourneyDto,
   CareerProfileService,
@@ -72,6 +73,26 @@ const PAGES: { label: string; path: string }[] = [
     <div class="career-sheet">
       <h1>Career workspace</h1>
       <p>Your goal, next step and latest work in one place. You enter and confirm every detail.</p>
+      @if (allowance(); as a) {
+        <section aria-labelledby="allowance-heading" data-allowance>
+          <h2 id="allowance-heading">Drafting allowance</h2>
+          <p data-allowance-count>
+            {{ a.remaining }} of {{ a.limit }} drafts left this month
+            @if (a.reserved > 0) {
+              · <span data-allowance-reserved>{{ a.reserved }} in progress</span>
+            }
+          </p>
+          <p data-allowance-reset>Resets on {{ a.resetsAt | date: 'longDate' : 'UTC' }}.</p>
+          @if (a.remaining <= 0) {
+            <p data-allowance-used>
+              You have used this month's drafts. Your saved work stays readable, editable and
+              exportable:
+              <a routerLink="/app/career/profile">edit your profile</a>,
+              <a routerLink="/app/career/materials">export your materials</a>.
+            </p>
+          }
+        </section>
+      }
       @if (journey(); as j) {
         <section aria-labelledby="goal-heading">
           <h2 id="goal-heading">Your goal</h2>
@@ -154,9 +175,12 @@ export class CareerHomeComponent implements OnInit {
   private router = inject(Router);
   pages = PAGES;
   journey = signal<CareerJourneyDto | null>(null);
+  allowance = signal<CareerAllowanceDto | null>(null);
   loading = signal(true);
   error = signal('');
   ngOnInit() {
+    // The indicator is optional: if it fails, the rest of the page still works.
+    this.api.getAllowance().subscribe({ next: a => this.allowance.set(a), error: () => undefined });
     this.api.getJourney().subscribe({
       next: j => {
         this.journey.set(j);

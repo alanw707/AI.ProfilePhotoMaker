@@ -131,37 +131,45 @@ export const routes: Routes = [
       {
         path: 'career',
         canActivate: [careerWorkspaceGuard],
-        loadComponent: () => import('./pages/career/career-home.component').then(m => m.CareerHomeComponent),
+        loadComponent: () =>
+          import('./pages/career/career-home.component').then(m => m.CareerHomeComponent),
         title: 'Career Workspace - AI Profile Photo Maker',
       },
       {
         path: 'career/setup',
         canActivate: [careerWorkspaceGuard],
-        loadComponent: () => import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
+        loadComponent: () =>
+          import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
         title: 'Set Up Your Career Workspace - AI Profile Photo Maker',
       },
       {
         path: 'career/profile',
         canActivate: [careerWorkspaceGuard],
-        loadComponent: () => import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
+        loadComponent: () =>
+          import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
         title: 'Career Profile - AI Profile Photo Maker',
       },
       {
         path: 'career/import',
         canActivate: [careerWorkspaceGuard],
-        loadComponent: () => import('./pages/career/career-import.component').then(m => m.CareerImportComponent),
+        loadComponent: () =>
+          import('./pages/career/career-import.component').then(m => m.CareerImportComponent),
         title: 'Import Your Resume - AI Profile Photo Maker',
       },
       {
         path: 'career/summary',
         canActivate: [careerWorkspaceGuard],
-        loadComponent: () => import('./pages/career/career-summary.component').then(m => m.CareerSummaryComponent),
+        loadComponent: () =>
+          import('./pages/career/career-summary.component').then(m => m.CareerSummaryComponent),
         title: 'Profile Summary Draft - AI Profile Photo Maker',
       },
       {
         path: 'career/occupation',
         canActivate: [careerWorkspaceGuard],
-        loadComponent: () => import('./pages/career/career-occupation.component').then(m => m.CareerOccupationComponent),
+        loadComponent: () =>
+          import('./pages/career/career-occupation.component').then(
+            m => m.CareerOccupationComponent
+          ),
         title: 'Confirm Your Occupation - AI Profile Photo Maker',
       },
       {
@@ -174,7 +182,8 @@ export const routes: Routes = [
       {
         path: 'career/market',
         canActivate: [careerWorkspaceGuard],
-        loadComponent: () => import('./pages/career/career-market.component').then(m => m.CareerMarketComponent),
+        loadComponent: () =>
+          import('./pages/career/career-market.component').then(m => m.CareerMarketComponent),
         title: 'Career Market Brief - AI Profile Photo Maker',
       },
       {
@@ -223,7 +232,8 @@ export const routes: Routes = [
       {
         path: 'career/materials',
         canActivate: [careerWorkspaceGuard],
-        loadComponent: () => import('./pages/career/career-materials.component').then(m => m.CareerMaterialsComponent),
+        loadComponent: () =>
+          import('./pages/career/career-materials.component').then(m => m.CareerMaterialsComponent),
         title: 'Career Materials - AI Profile Photo Maker',
       },
       {
@@ -699,6 +709,14 @@ export const routes: Routes = [
             m => m.AdminCampaignsComponent
           ),
         title: 'Email Campaigns',
+      },
+      {
+        path: 'career-usage',
+        loadComponent: () =>
+          import('./admin/admin-career-usage/admin-career-usage.component').then(
+            m => m.AdminCareerUsageComponent
+          ),
+        title: 'Career usage',
       },
     ],
   },

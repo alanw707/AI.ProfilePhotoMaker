@@ -14,8 +14,11 @@ namespace AI.ProfilePhotoMaker.API.Tests.Integration.Career;
 /// </summary>
 public class CareerPrivacyCoverageTests : IClassFixture<CareerPrivacyFactory>
 {
+    /// <summary>Operator state (kill switches) has no owner and is not user data, so it is explicitly outside the private-data lists.</summary>
+    public static readonly IReadOnlySet<Type> OperatorStateTypes = new HashSet<Type> { typeof(CareerOperatorState) };
+
     /// <summary>
-    /// The only Career* entities that are not covered private data. Both are audit records of the deletion
+    /// The only other Career* entities that are not covered private data. Both are audit records of the deletion
     /// itself: they must survive the purge they record (a tombstone that deleted itself could not block a
     /// restored backup), and the export lists them separately under auditRecords.
     /// </summary>
@@ -48,10 +51,11 @@ public class CareerPrivacyCoverageTests : IClassFixture<CareerPrivacyFactory>
             .ToList();
 
         contextEntities.Should().NotBeEmpty();
-        contextEntities.Concat(modelEntities).Distinct().Where(t => !AuditRecordTypes.Contains(t)).Should()
+        contextEntities.Concat(modelEntities).Distinct().Where(t => !AuditRecordTypes.Contains(t) && !OperatorStateTypes.Contains(t)).Should()
             .BeSubsetOf(CareerPrivateDataService.CoveredEntityTypes, "a new private career entity must be added to CoveredEntityTypes");
         CareerPrivateDataService.CoveredEntityTypes.Should().BeSubsetOf(contextEntities);
-        AuditRecordTypes.Should().OnlyContain(t => !CareerPrivateDataService.CoveredEntityTypes.Contains(t));
+        AuditRecordTypes.Concat(OperatorStateTypes).Should().OnlyContain(t => !CareerPrivateDataService.CoveredEntityTypes.Contains(t));
+        CareerPrivateDataService.CoveredEntityTypes.Should().Contain(typeof(CareerUsageEvent));
     }
 
     [Fact]

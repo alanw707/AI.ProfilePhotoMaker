@@ -6,7 +6,7 @@ import { EMPTY, map, distinctUntilChanged, switchMap, tap } from 'rxjs';
 import {
   CareerApiError,
   CareerProfileService,
-  CareerRunAllowance,
+  CareerAllowanceDto,
   CareerRunDto,
   CareerRunStatus,
 } from '../../services/career-profile.service';
@@ -17,6 +17,7 @@ import {
   pollRun,
   releaseStartKey,
   startKey,
+  runErrorMessage,
 } from './career-run';
 
 export const START_KEY_STORAGE = 'career-summary-start-key';
@@ -56,7 +57,7 @@ export class CareerSummaryComponent implements OnInit {
 
   run = signal<CareerRunDto | null>(null);
   runs = signal<CareerRunDto[]>([]);
-  allowance = signal<CareerRunAllowance | null>(null);
+  allowance = signal<CareerAllowanceDto | null>(null);
   starting = signal(false);
   sending = signal(false);
   cancelling = signal(false);
@@ -68,7 +69,7 @@ export class CareerSummaryComponent implements OnInit {
 
   draftsLeft = computed(() => {
     const a = this.allowance();
-    return a ? Math.max(0, a.limit - a.used - a.reserved) : null;
+    return a ? a.remaining : null;
   });
   statusText = computed(() => {
     const run = this.run();
@@ -191,10 +192,11 @@ export class CareerSummaryComponent implements OnInit {
     this.api.listRuns().subscribe({
       next: list => {
         this.runs.set(list.runs.filter(r => r.task !== 'occupation_match'));
-        this.allowance.set(list.allowance);
       },
       error: e => this.handle(e),
     });
+    // The only allowance source is GET /api/career/allowance; the run DTO's allowance is legacy.
+    this.api.getAllowance().subscribe({ next: a => this.allowance.set(a), error: () => undefined });
   }
 
   private handle(e: CareerApiError) {
@@ -221,7 +223,7 @@ export class CareerSummaryComponent implements OnInit {
         this.error.set('The assistant is no longer waiting for an answer.');
         break;
       default:
-        this.error.set(e.message || 'Something went wrong. Try again.');
+        this.error.set(runErrorMessage(e));
     }
     this.errorKind.set(e.kind);
   }

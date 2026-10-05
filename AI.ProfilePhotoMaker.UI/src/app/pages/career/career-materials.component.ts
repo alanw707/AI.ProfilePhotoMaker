@@ -7,6 +7,7 @@ import {
   CareerPhotoEntitlement,
   CareerProfileService,
   ResumeMaterialSummary,
+  PLAIN_503,
 } from '../../services/career-profile.service';
 import { careerHandoffQuery } from './career-return';
 import { clearStartKey, releaseStartKey, startKey } from './career-run';
@@ -133,6 +134,8 @@ export class CareerMaterialsComponent implements OnInit {
         releaseStartKey(SUMMARY_KEY, e);
         if (e.kind === 'unauthorized' || e.kind === 'disabled') {
           this.handle(e);
+        } else if (PLAIN_503[e.kind]) {
+          this.materialsError.set(PLAIN_503[e.kind] as string);
         } else if (e.kind === 'allowance') {
           this.materialsError.set(
             'You have used this period’s drafting allowance, so we cannot draft a new summary now. You can still open, edit and download what you have.'

@@ -26,11 +26,13 @@ public sealed class JobObservationService : IJobObservationService
     private readonly IJobObservationSource _source;
     private readonly TimeProvider _clock;
     private readonly ILogger<JobObservationService> _logger;
+    private readonly ICareerOperatorControls? _controls;
 
     public JobObservationService(
         ApplicationDbContext db, IMarketReference reference, IJobObservationSource source, TimeProvider clock,
-        ILogger<JobObservationService> logger)
+        ILogger<JobObservationService> logger, ICareerOperatorControls? controls = null)
     {
+        _controls = controls;
         _db = db;
         _reference = reference;
         _source = source;
@@ -92,8 +94,14 @@ public sealed class JobObservationService : IJobObservationService
         {
             reason = JobSourceReasons.OccupationRequired;
         }
+        else if (_controls != null && (await _controls.GetAsync(ct)).SourcesDisabled)
+        {
+            return CareerUsage.Paused<JobObservationResult>();
+        }
         else
         {
+            var startedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+            var outcome = Models.Career.CareerUsageOutcomes.Ok;
             try
             {
                 var page = await _source.FetchAsync(query, ct);
@@ -106,6 +114,15 @@ public sealed class JobObservationService : IJobObservationService
                 _logger.LogWarning(ex, "Job source {Source} is unavailable", info.SourceId);
                 reason = JobSourceReasons.Unavailable;
                 normalized = JobObservationNormalizer.Empty;
+                outcome = Models.Career.CareerUsageOutcomes.Failed;
+            }
+            finally
+            {
+                // One ledger row per external source call; counts and timing only.
+                _db.CareerUsageEvents.Add(CareerUsage.Event(
+                    ownerId, null, Models.Career.CareerUsageActions.JobSource, outcome, now.UtcDateTime,
+                    (int)System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds));
+                try { await _db.SaveChangesAsync(CancellationToken.None); } catch (DbUpdateException) { _db.ChangeTracker.Clear(); }
             }
         }
 

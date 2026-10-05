@@ -23,6 +23,7 @@ public class CareerWorkspaceFlagOffTests : IClassFixture<CustomWebApplicationFac
     {
         { "GET", "/api/career/profile" },
         { "GET", "/api/career/journey" },
+        { "GET", "/api/career/allowance" },
         { "PUT", "/api/career/profile" },
         { "GET", "/api/career/profile/versions" },
         { "GET", "/api/career/profile/versions/1" },

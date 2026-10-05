@@ -104,6 +104,12 @@ public static class CareerWorkspaceServiceCollectionExtensions
         // worker is Program.cs-only too, so the test host drives the runner directly.
         services.AddOptions<CareerAgentOptions>().BindConfiguration(CareerAgentOptions.SectionName);
         services.AddScoped<ICareerAgentRunService, CareerAgentRunService>();
+
+        // Usage controls (#395, ADR 0022). The reaper loop is Program.cs-only; tests call it directly.
+        services.AddOptions<CareerUsagePolicy>().BindConfiguration(CareerUsagePolicy.SectionName);
+        services.AddSingleton<ICareerOperatorControls, CareerOperatorControls>();
+        services.AddScoped<ICareerReservationReaper, CareerReservationReaper>();
+        services.AddScoped<ICareerUsageReportService, CareerUsageReportService>();
         // Built by hand because the model is optional: occupation matching runs without one.
         services.AddScoped<ICareerAgentRunner>(sp => new CareerAgentRunner(
             sp.GetRequiredService<ApplicationDbContext>(),
