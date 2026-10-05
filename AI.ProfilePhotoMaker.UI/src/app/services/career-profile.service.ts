@@ -405,6 +405,82 @@ export interface MarketComparisonQuery {
   areas?: string[];
   q?: string;
 }
+export type RemoteEligibility = 'eligible' | 'ineligible' | 'unknown';
+export type RemoteFilter = 'all' | RemoteEligibility;
+export interface JobObservationsQuery {
+  area?: string;
+  eligibleOnly?: boolean;
+  remote?: RemoteFilter;
+  q?: string;
+}
+export interface JobCoverageCounts {
+  matched: number;
+  shown: number;
+  duplicateIds: number;
+  duplicateReposts: number;
+  expired: number;
+  remoteUnknownExcluded: number;
+  otherLocationExcluded: number;
+}
+export interface JobCoverage {
+  available: boolean;
+  reason: 'source_not_configured' | 'source_unavailable' | null;
+  sourceId: string;
+  sourceName: string;
+  coverage: string;
+  attribution: string;
+  sourceUrl: string;
+  retrievedAt: string | null;
+  observedFrom: string | null;
+  observedTo: string | null;
+  counts: JobCoverageCounts;
+}
+export interface JobLocation {
+  city: string;
+  state: string;
+  areaCode: string | null;
+  match: 'user_area' | 'other';
+}
+export interface JobPay {
+  min: number | null;
+  max: number | null;
+  unit: 'usd_per_year' | 'usd_per_hour';
+  basis: 'annual' | 'hourly';
+  status: 'available' | 'not_available' | 'top_coded';
+}
+export interface JobObservation {
+  observationId: string;
+  title: string;
+  organization: string;
+  locations: JobLocation[];
+  multiLocation: boolean;
+  pay: JobPay;
+  postedOn: string | null;
+  closesOn: string | null;
+  remoteEligibility: RemoteEligibility;
+  remoteNote: string | null;
+  series?: string | null;
+  grade?: string | null;
+  sourceUrl?: string | null;
+  sourceId: string;
+}
+export interface JobObservations {
+  occupation: { code: string; title: string };
+  area: { input: string | null; resolution: string; code: string | null; title: string | null };
+  coverage: JobCoverage;
+  preferences: { areaCode: string | null; stalePreference: boolean; note: string | null };
+  observations: JobObservation[];
+  truncated: boolean;
+  note: string;
+}
+export interface JobSourceInfo {
+  sourceId: string;
+  name: string;
+  configured: boolean;
+  coverage: string;
+  attribution: string;
+  sourceUrl: string;
+}
 export interface MarketReferenceInfo {
   sources: MarketSource[];
   areaCount: number;
@@ -862,5 +938,25 @@ export class CareerProfileService {
       false,
       { 'If-Match': goalEtag }
     );
+  }
+  getJobObservations(query: JobObservationsQuery = {}) {
+    const params = new URLSearchParams();
+    if (query.area) {
+      params.set('area', query.area);
+    }
+    if (query.eligibleOnly) {
+      params.set('eligibleOnly', 'true');
+    }
+    if (query.remote && query.remote !== 'all') {
+      params.set('remote', query.remote);
+    }
+    if (query.q) {
+      params.set('q', query.q);
+    }
+    const text = params.toString();
+    return this.request<JobObservations>('GET', `jobs/observations${text ? `?${text}` : ''}`);
+  }
+  getJobSource() {
+    return this.request<JobSourceInfo>('GET', 'jobs/source');
   }
 }
