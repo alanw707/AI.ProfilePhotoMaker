@@ -284,7 +284,7 @@ public sealed class CareerAgentRunner : ICareerAgentRunner
             return;
         }
 
-        var choices = result.Candidates.Take(MaxOccupationChoices)
+        var choices = OccupationMatcher.ClarificationChoices(result, MaxOccupationChoices)
             .Select(c => new CareerRunChoiceDto(c.Code, c.Title))
             .Append(new CareerRunChoiceDto(CareerAgentRunService.NoOccupationChoice, "None of these"))
             .ToList();

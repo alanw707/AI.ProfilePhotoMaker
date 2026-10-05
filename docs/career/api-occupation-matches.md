@@ -31,7 +31,7 @@ A completed run's DTO has `occupationMatchId` (null for other tasks).
   "pinnedProfileVersion": 3, "pinnedGoalVersion": 2, "profileChanged": false,
   "reference": { "name": "O*NET 30.0 Database", "release": "30.0", "releaseDate": "2025-08", "taxonomy": "O*NET-SOC 2019",
                  "license": "CC BY 4.0", "licenseUrl": "…", "url": "…", "attribution": "…" },
-  "matcherVersion": "duty-overlap-1",
+  "matcherVersion": "duty-overlap-2",
   "candidates": [
     {
       "code": "15-1252.00", "title": "Software Developers", "description": "…",

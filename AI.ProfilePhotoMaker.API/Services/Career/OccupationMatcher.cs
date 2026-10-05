@@ -44,7 +44,7 @@ public sealed record OccupationMatchResult(
 /// </summary>
 public static class OccupationMatcher
 {
-    public const string Version = "duty-overlap-1";
+    public const string Version = "duty-overlap-2";
     public const string Candidates = "candidates";
     public const string Unsupported = "unsupported";
 
@@ -70,8 +70,10 @@ public static class OccupationMatcher
     internal const double StrongWeight = 40.0;
     internal const int ModerateDuties = 2;
 
-    // Ambiguous: the runner-up is in another SOC major group and nearly as well supported.
+    // Ambiguous: another SOC major group is nearly as well supported as the leader, or it
+    // explains duties the leading family does not (the profile describes two kinds of work).
     internal const double AmbiguityRatio = 0.8;
+    internal const int MinContradictoryDuties = 2;
 
     private const int MaxSummarySentences = 8;
 
@@ -98,12 +100,49 @@ public static class OccupationMatcher
             return new OccupationMatchResult(Unsupported, false, Array.Empty<OccupationCandidate>(), UnsupportedGuidance, Version);
         }
 
-        var ambiguous = ranked.Count > 1
-            && ranked[0].Occupation.MajorGroup != ranked[1].Occupation.MajorGroup
-            && ranked[1].Weight >= AmbiguityRatio * ranked[0].Weight;
+        var ambiguous = IsAmbiguous(ranked);
         return new OccupationMatchResult(
             Candidates, ambiguous, ranked.Select(s => s.Candidate).ToList(), null, Version);
     }
+
+    private static bool IsAmbiguous(IReadOnlyList<Scored> ranked)
+    {
+        var leaderGroup = ranked[0].Occupation.MajorGroup;
+        var rival = ranked.Skip(1).FirstOrDefault(s => s.Occupation.MajorGroup != leaderGroup);
+        if (rival == null)
+        {
+            return false;
+        }
+        if (rival.Weight >= AmbiguityRatio * ranked[0].Weight)
+        {
+            return true;
+        }
+
+        // Duties the leading family explains, across all its listed candidates.
+        var leaderDuties = ranked.Where(s => s.Occupation.MajorGroup == leaderGroup)
+            .SelectMany(s => DutyKeys(s.Candidate))
+            .ToHashSet();
+        var rivalOnly = ranked.Where(s => s.Occupation.MajorGroup == rival.Occupation.MajorGroup)
+            .SelectMany(s => DutyKeys(s.Candidate))
+            .Where(key => !leaderDuties.Contains(key))
+            .Distinct()
+            .Count();
+        return rivalOnly >= MinContradictoryDuties;
+    }
+
+    private static IEnumerable<(string Field, int Index)> DutyKeys(OccupationCandidate candidate) =>
+        candidate.Evidence.Where(e => e.Kind == "duty").Select(e => (e.ProfileField, e.ProfileIndex));
+
+    /// <summary>
+    /// Choices for the clarification question: the leading candidate of each SOC major
+    /// group, in rank order, so every competing family is offered once.
+    /// </summary>
+    public static IReadOnlyList<OccupationCandidate> ClarificationChoices(OccupationMatchResult result, int max) =>
+        result.Candidates
+            .GroupBy(c => c.Code[..2])
+            .Select(g => g.First())
+            .Take(max)
+            .ToList();
 
     private sealed record Duty(string Field, int Index, string Text, HashSet<string> Stems, double Weight);
 

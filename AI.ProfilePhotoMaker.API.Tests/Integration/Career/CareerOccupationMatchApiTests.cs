@@ -134,7 +134,7 @@ public class CareerOccupationMatchApiTests : IClassFixture<CareerAgentFactory>
             await user.GetAsync($"/api/career/occupation-matches/{run.GetProperty("occupationMatchId").GetString()}"), 200);
         match.GetProperty("status").GetString().Should().Be("proposed");
         match.GetProperty("runId").GetString().Should().Be(run.GetProperty("id").GetString());
-        match.GetProperty("matcherVersion").GetString().Should().Be("duty-overlap-1");
+        match.GetProperty("matcherVersion").GetString().Should().Be("duty-overlap-2");
         match.GetProperty("pinnedProfileVersion").GetInt32().Should().Be(1);
         match.GetProperty("pinnedGoalVersion").GetInt32().Should().Be(1);
         match.GetProperty("profileChanged").GetBoolean().Should().BeFalse();

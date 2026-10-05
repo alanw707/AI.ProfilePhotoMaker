@@ -68,7 +68,7 @@ public class OccupationMatcherTests
         result.Status.Should().Be("candidates");
         Rank(result, "15-1252.00").Should().BeInRange(1, 2);
         result.Ambiguous.Should().BeFalse();
-        result.MatcherVersion.Should().Be("duty-overlap-1");
+        result.MatcherVersion.Should().Be("duty-overlap-2");
     }
 
     [Fact]
@@ -131,6 +131,46 @@ public class OccupationMatcherTests
         result.Ambiguous.Should().BeTrue();
         var top = result.Candidates.Take(2).Select(c => c.Code[..2]).ToList();
         top.Distinct().Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void ContradictoryDutiesAreAmbiguousEvenWhenOneFamilyTakesTheTopTwoPlaces()
+    {
+        // Live-review profile: two nursing occupations rank first and second, but software
+        // is nearly as well supported, so the user must still be asked.
+        var duties = new[]
+        {
+            "Monitored patient vital signs and recorded observations in medical records",
+            "Administered medications and treatments as prescribed by physicians",
+            "Assessed patient health problems and developed nursing care plans",
+            "Designed and developed software applications and modified existing programs to meet user needs",
+            "Analyzed user requirements and tested software systems to correct errors",
+            "Wrote and maintained documentation for application code and database systems"
+        };
+
+        var result = Match(Input("Hybrid specialist", duties, "Python", "Patient care"));
+
+        result.Ambiguous.Should().BeTrue();
+        var choices = OccupationMatcher.ClarificationChoices(result, 3);
+        choices.Select(c => c.Code[..2]).Should().OnlyHaveUniqueItems().And.Contain("29").And.Contain("15");
+    }
+
+    [Fact]
+    public void ClarificationChoicesTakeTheLeadingOccupationOfEachFamilyInRankOrder()
+    {
+        var result = Match(Input("Consultant", NurseDuties.Concat(SoftwareDuties)));
+
+        var choices = OccupationMatcher.ClarificationChoices(result, 3);
+
+        choices.Should().NotBeEmpty();
+        choices[0].Code.Should().Be(result.Candidates[0].Code);
+        choices.Select(c => c.Code[..2]).Should().OnlyHaveUniqueItems();
+    }
+
+    [Fact]
+    public void ASingleFamilyResultIsNotAmbiguous()
+    {
+        Match(Input("Staff nurse", NurseDuties)).Ambiguous.Should().BeFalse();
     }
 
     [Fact]

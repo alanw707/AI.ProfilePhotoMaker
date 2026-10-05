@@ -191,7 +191,7 @@ function matchDto(scenario: Scenario) {
     pinnedGoalVersion: 2,
     profileChanged: scenario === 'changed',
     reference,
-    matcherVersion: 'duty-overlap-1',
+    matcherVersion: 'duty-overlap-2',
     candidates: unsupported ? [] : [candidate, second],
     clarification:
       scenario === 'question' ? { question: 'Which?', answer: 'Software Developers' } : null,
