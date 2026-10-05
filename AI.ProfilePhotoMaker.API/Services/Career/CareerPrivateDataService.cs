@@ -13,6 +13,11 @@ public sealed class CareerPrivacyOptions
 
     /// <summary>Wait after a failed blob-delete round, doubled each round (tests set 0).</summary>
     public int PurgeBackoffMilliseconds { get; set; } = 200;
+
+    /// <summary>First wait before the hosted service retries a failed tombstone replay; doubled up to <see cref="MaxReplayRetryMilliseconds"/>.</summary>
+    public int ReplayRetryMilliseconds { get; set; } = 30_000;
+
+    public int MaxReplayRetryMilliseconds { get; set; } = 900_000;
 }
 
 /// <summary>A purge that could not finish. Account deletion aborts on it instead of orphaning career data.</summary>
@@ -43,7 +48,8 @@ public interface ICareerPrivateDataService
     Task<CareerDeletionRequest> RetryAsync(CareerDeletionRequest request, CancellationToken ct = default);
 
     /// <summary>
-    /// Re-applies one tombstone: removes rows of the scope created at or before it (a restored backup).
+    /// Re-applies one tombstone (the replayer passes the newest one per owner and scope): removes rows of the
+    /// scope created at or before it (a restored backup).
     /// Returns false when something could not be removed.
     /// </summary>
     Task<bool> ApplyTombstoneAsync(CareerTombstone tombstone, CancellationToken ct = default);
@@ -109,7 +115,6 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
     /// </summary>
     internal static string? TimestampProperty(Type type) =>
         type == typeof(CareerProfileProposalItem) ? null
-        : type == typeof(CareerAllowance) ? nameof(CareerAllowance.PeriodStart)
         : type == typeof(CareerPhotoSelection) ? nameof(CareerPhotoSelection.SelectedAt)
         : type == typeof(CareerRoadmapTaskProgress) ? nameof(CareerRoadmapTaskProgress.UpdatedAt)
         : "CreatedAt";
@@ -346,6 +351,8 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         try
         {
             // A false answer may only mean "already gone"; only a file that still exists is a failure.
+            // A blob that is not there yet (an upload racing this purge) is handled by the upload's own fence
+            // in ResumeImportService: after its blob write it re-checks its row and the tombstones and deletes the blob.
             return await _storage.DeleteImageAsync(key) || !await _storage.ExistsAsync(key);
         }
         catch (Exception ex)

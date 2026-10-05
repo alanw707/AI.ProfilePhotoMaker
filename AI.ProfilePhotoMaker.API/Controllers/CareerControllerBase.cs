@@ -9,6 +9,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers;
 /// translating <see cref="CareerOutcome{T}"/> into the spec #376 status codes and
 /// response envelope.
 /// </summary>
+[ServiceFilter(typeof(CareerReplayGuardFilter))]
 public abstract class CareerControllerBase : BaseController
 {
     protected CareerControllerBase(ILogger logger) : base(logger)

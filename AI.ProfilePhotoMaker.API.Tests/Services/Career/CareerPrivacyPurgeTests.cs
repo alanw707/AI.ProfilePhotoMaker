@@ -187,7 +187,7 @@ public class CareerPrivacyPurgeTests
         {
             check.CareerProfiles.Where(p => p.OwnerId == Owner).Should().OnlyContain(p => p.CreatedAt > tombstoneAt);
             check.CareerAgentRuns.Where(p => p.OwnerId == Owner).Should().OnlyContain(p => p.CreatedAt > tombstoneAt);
-            check.CareerAllowances.Where(p => p.OwnerId == Owner).Should().OnlyContain(p => p.PeriodStart > tombstoneAt);
+            check.CareerAllowances.Where(p => p.OwnerId == Owner).Should().OnlyContain(p => p.CreatedAt > tombstoneAt);
         }
         (await TotalAsync(Other)).Should().Be(perSeed, "another owner has no tombstone");
         _storage.Count.Should().Be(2, "the old owner file is deleted; the new one and the other owner's remain");

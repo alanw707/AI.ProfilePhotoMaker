@@ -182,6 +182,7 @@ public static class CareerErrorCodes
     public const string GoalAlreadyExists = "CareerGoalAlreadyExists";
     public const string ResumeNotFound = "CareerResumeNotFound";
     public const string ResumeFileGone = "CareerResumeFileGone";
+    public const string ResumeDeleted = "CareerResumeDeleted";
     public const string ProposalNotFound = "CareerProposalNotFound";
     public const string ProposalAlreadyDecided = "CareerProposalAlreadyDecided";
     public const string ResumeTooLarge = "CareerResumeTooLarge";

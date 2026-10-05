@@ -144,6 +144,16 @@ public sealed class ResumeImportService : IResumeImportService
             throw;
         }
 
+        // Fence (#392 PRIV-1): a deletion may have run between the row insert and the blob write. The purge
+        // deletes blob-then-row, so if the row is gone or a newer tombstone exists the blob just written is
+        // orphaned and must not stay.
+        if (await IsFencedAsync(document, now))
+        {
+            await AbortFencedAsync(document);
+            return CareerOutcome<ResumeDocumentDto>.Gone(CareerErrorCodes.ResumeDeleted,
+                "The file was deleted while it was uploading, so it was not kept.");
+        }
+
         var scan = await ScanAsync(document, bytes, ct);
         if (scan != MalwareScanResult.Clean)
         {
@@ -378,6 +388,35 @@ public sealed class ResumeImportService : IResumeImportService
     }
 
     /// <summary>Removes the raw file and row of an upload that must not be kept.</summary>
+    private async Task<bool> IsFencedAsync(ResumeDocument document, DateTime uploadStarted)
+    {
+        var ct = CancellationToken.None;
+        return !await _db.CareerResumeDocuments.AsNoTracking().AnyAsync(d => d.Id == document.Id, ct)
+            || await _db.CareerTombstones.AsNoTracking().AnyAsync(t => t.OwnerId == document.OwnerId
+                && (t.Scope == CareerDeletionScopes.RawDocuments || t.Scope == CareerDeletionScopes.CareerProfile)
+                && t.CreatedAt >= uploadStarted, ct);
+    }
+
+    private async Task AbortFencedAsync(ResumeDocument document)
+    {
+        try
+        {
+            await _storage.DeleteImageAsync(document.StorageKey);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Could not delete the raw file of fenced resume {ResumeId}", document.Id);
+            return;
+        }
+
+        _db.ChangeTracker.Clear();
+        var row = await _db.CareerResumeDocuments.FirstOrDefaultAsync(d => d.Id == document.Id);
+        if (row != null)
+        {
+            await RemoveRowsAsync(row, CancellationToken.None);
+        }
+    }
+
     private async Task DiscardAsync(ResumeDocument document)
     {
         try

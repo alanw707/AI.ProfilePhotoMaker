@@ -75,7 +75,8 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 _mockReplicateApiClient.Object,
                 _mockBasicTierService.Object,
                 _mockStorageService.Object,
-                pathResolver
+                pathResolver,
+                Mock.Of<AI.ProfilePhotoMaker.API.Services.Career.ICareerPrivateDataService>()
             );
 
             // Setup a default user for tests that require authentication

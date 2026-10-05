@@ -27,7 +27,7 @@ public class ProfileController : ControllerBase
     private readonly IBasicTierService _basicTierService;
     private readonly IStorageService _storageService;
     private readonly StoragePathResolver _pathResolver;
-    private readonly AI.ProfilePhotoMaker.API.Services.Career.ICareerPrivateDataService? _careerData;
+    private readonly AI.ProfilePhotoMaker.API.Services.Career.ICareerPrivateDataService _careerData;
 
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
@@ -42,7 +42,7 @@ public class ProfileController : ControllerBase
         IBasicTierService basicTierService,
         IStorageService storageService,
         StoragePathResolver pathResolver,
-        AI.ProfilePhotoMaker.API.Services.Career.ICareerPrivateDataService? careerData = null)
+        AI.ProfilePhotoMaker.API.Services.Career.ICareerPrivateDataService careerData)
     {
         _careerData = careerData;
         _userProfileRepository = userProfileRepository;
@@ -772,17 +772,14 @@ public class ProfileController : ControllerBase
         {
             // Career data goes first and a failure stops here: the account must not be removed while
             // private career rows or files are left behind (ADR 0020).
-            if (_careerData != null)
+            try
             {
-                try
-                {
-                    await _careerData.DeleteAllForOwnerAsync(userId);
-                }
-                catch (AI.ProfilePhotoMaker.API.Services.Career.CareerPurgeException ex)
-                {
-                    _logger.LogError(ex, "Career data purge failed; account deletion aborted for user {UserId}", Sid(userId));
-                    return StatusCode(500, new { success = false, error = new { code = "CareerDataDeletionFailed", message = "Your career data could not be fully deleted, so your account was not deleted. Try again." } });
-                }
+                await _careerData.DeleteAllForOwnerAsync(userId);
+            }
+            catch (AI.ProfilePhotoMaker.API.Services.Career.CareerPurgeException ex)
+            {
+                _logger.LogError(ex, "Career data purge failed; account deletion aborted for user {UserId}", Sid(userId));
+                return StatusCode(500, new { success = false, error = new { code = "CareerDataDeletionFailed", message = "Your career data could not be fully deleted, so your account was not deleted. Try again." } });
             }
 
             var profile = await _userProfileRepository.GetByUserIdAsync(userId);

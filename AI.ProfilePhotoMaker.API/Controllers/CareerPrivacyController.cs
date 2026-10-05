@@ -29,6 +29,7 @@ public sealed class CareerPrivacyController : CareerControllerBase
     private void NoStore() => Response.Headers.CacheControl = "no-store, private";
 
     [HttpGet("retention")]
+    [AllowWhileCareerReplayPending]
     public async Task<IActionResult> Retention() =>
         await Respond(_ => Task.FromResult(CareerOutcome<CareerRetentionDto>.Ok(_privacy.GetRetention())));
 
@@ -46,6 +47,7 @@ public sealed class CareerPrivacyController : CareerControllerBase
     }
 
     [HttpPost("deletions")]
+    [AllowWhileCareerReplayPending]
     public async Task<IActionResult> CreateDeletion([FromBody] CreateCareerDeletionRequest? request, CancellationToken ct)
     {
         NoStore();
@@ -70,6 +72,7 @@ public sealed class CareerPrivacyController : CareerControllerBase
     }
 
     [HttpGet("deletions/{id:guid}")]
+    [AllowWhileCareerReplayPending]
     public async Task<IActionResult> GetDeletion(Guid id, CancellationToken ct)
     {
         NoStore();
@@ -77,6 +80,7 @@ public sealed class CareerPrivacyController : CareerControllerBase
     }
 
     [HttpPost("deletions/{id:guid}/retry")]
+    [AllowWhileCareerReplayPending]
     public async Task<IActionResult> RetryDeletion(Guid id, CancellationToken ct)
     {
         NoStore();

@@ -47,4 +47,13 @@ public class CareerTombstone
     public string OwnerId { get; set; } = string.Empty;
     public string Scope { get; set; } = CareerDeletionScopes.CareerProfile;
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>When a startup replay last applied this tombstone completely; null until then.</summary>
+    public DateTime? ReplayedAt { get; set; }
+
+    /// <summary>
+    /// Set when a replay could not finish. While any tombstone of an owner has it, career reads and exports for
+    /// that owner answer 503 <c>CareerPrivacyReplayPending</c> (fail closed); a successful replay clears it.
+    /// </summary>
+    public DateTime? ReplayFailedAt { get; set; }
 }

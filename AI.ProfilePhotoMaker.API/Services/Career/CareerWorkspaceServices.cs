@@ -87,6 +87,8 @@ public static class CareerWorkspaceServiceCollectionExtensions
         services.AddScoped<ICareerPrivacyExporter, CareerPrivacyExporter>();
         services.AddScoped<ICareerPrivacyService, CareerPrivacyService>();
         services.AddScoped<ICareerTombstoneReplayer, CareerTombstoneReplayer>();
+        services.AddScoped<CareerReplayGate>();
+        services.AddScoped<CareerReplayGuardFilter>();
         services.AddScoped<ICareerPhotoService, CareerPhotoService>();
 
         // Resume import (#379). The scanner is deliberately NOT registered here: only

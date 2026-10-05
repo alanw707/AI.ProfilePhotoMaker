@@ -24,8 +24,12 @@ public sealed class InMemoryStorage : IStorageService
     /// <summary>The next N deletes throw; later ones work.</summary>
     public int FailNextDeletes { get; set; }
 
+    /// <summary>Runs just before a save lands, to simulate a deletion racing the upload.</summary>
+    public Action? BeforeSave { get; set; }
+
     public Task<string> SaveImageToPathAsync(Stream imageStream, string storagePath)
     {
+        BeforeSave?.Invoke();
         if (FailSaves)
         {
             throw new IOException("blob store unavailable");
