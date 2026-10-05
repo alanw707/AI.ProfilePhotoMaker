@@ -53,9 +53,9 @@
       "gateCount": 8,
       "scenario": {
         "requested": 150000,
-        "median": 135980,
-        "gap": 14020,
-        "percent": 10.3
+        "median": 137610,
+        "gap": 12390,
+        "percent": 9
       },
       "scenarioCheck": true,
       "dollarSignsInPersonalizedCard": 0,
@@ -65,7 +65,7 @@
         "limit": 20,
         "periodStart": "2026-10-01T00:00:00Z"
       },
-      "inputHash": "8685312b7c03",
+      "inputHash": "65b4256eadbb",
       "stale": false,
       "sources": [
         "oews 2025-05",
@@ -102,7 +102,7 @@
       "matches": true,
       "hashEqual": true,
       "differences": [],
-      "pageText": "Reproduced exactly (input hash 8685312b7c03)"
+      "pageText": "Reproduced exactly (input hash 65b4256eadbb)"
     },
     {
       "label": "03-recompute @desktop",

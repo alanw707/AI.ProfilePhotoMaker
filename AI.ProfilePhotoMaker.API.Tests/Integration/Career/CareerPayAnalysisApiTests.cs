@@ -36,14 +36,15 @@ public class CareerPayAnalysisApiTests
             options.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
             return JsonSerializer.Deserialize<List<PayObservation>>(json.RootElement.GetProperty("covered").GetRawText(), options)!
                 .Where(r => r.Role == "software").Take(_count)
-                .Select(r => r with { Role = occupationCode }).ToList();
+                // The adapter contract: rows are keyed by the requested occupation and area code.
+                .Select(r => r with { Role = occupationCode, Geography = areaCode }).ToList();
         }
     }
 
     [Theory]
-    [InlineData(12, "complete")]
-    [InlineData(7, "insufficient_evidence")]
-    public async Task FixtureSourceReportsCohortOrSparseFallback(int count, string status)
+    [InlineData(12)]
+    [InlineData(7)]
+    public async Task ARealCohortIsCountedButNeverPublishedWhileNoProviderHasRights(int count)
     {
         var clock = new MovableClock();
         clock.Set(new DateTimeOffset(2026, 9, 23, 12, 0, 0, TimeSpan.Zero));
@@ -51,15 +52,19 @@ public class CareerPayAnalysisApiTests
         var user = await User(host);
         var (_, analysis) = await Analyze(user, host);
         var cohort = Section(analysis, "personalized");
-        Assert.Equal(status, cohort.GetProperty("status").GetString());
+
+        // The cohort is reported for transparency, but authorization is the gate's to give: with no
+        // provider rights, no interval is published however good the data is.
+        Assert.Equal("unavailable", cohort.GetProperty("status").GetString());
+        Assert.Equal("provider_rights_unverified", cohort.GetProperty("reason").GetString());
+        Assert.Equal(JsonValueKind.Null, cohort.GetProperty("interval").ValueKind);
         Assert.Equal(count, cohort.GetProperty("cohort").GetProperty("included").GetInt32());
+        Assert.Contains("provider_rights_unverified",
+            analysis.GetProperty("blockedReasons").EnumerateArray().Select(x => x.GetString()));
         if (count == 12)
         {
             Assert.Equal(6, cohort.GetProperty("cohort").GetProperty("employers").GetInt32());
-            Assert.Equal(110300, cohort.GetProperty("interval").GetProperty("low").GetInt32());
-            Assert.Equal(195200, cohort.GetProperty("interval").GetProperty("high").GetInt32());
         }
-        else Assert.Equal(JsonValueKind.Null, cohort.GetProperty("interval").ValueKind);
         var recompute = await CareerClient.ReadDataAsync(await user.SendAsync(HttpMethod.Post,
             $"/api/career/pay-analyses/{analysis.GetProperty("id").GetString()}/recompute"), 200);
         Assert.True(recompute.GetProperty("matches").GetBoolean());
@@ -128,7 +133,7 @@ public class CareerPayAnalysisApiTests
         Assert.Equal("provider_rights_unverified", Section(analysis, "personalized").GetProperty("reason").GetString());
         Assert.Equal(JsonValueKind.Null, Section(analysis, "personalized").GetProperty("interval").ValueKind);
         Assert.Equal(135980, Section(analysis, "benchmark").GetProperty("figures")[0].GetProperty("value").GetInt32());
-        Assert.Equal(14020, Section(analysis, "scenario").GetProperty("gapAnnual").GetDouble());
+        Assert.Equal(12390, Section(analysis, "scenario").GetProperty("gapAnnual").GetDouble());
         var list = await CareerClient.ReadDataAsync(await user.GetAsync("/api/career/pay-analyses"), 200);
         Assert.Equal(analysis.GetProperty("id").GetString(), list.GetProperty("analyses")[0].GetProperty("id").GetString());
         Assert.False(list.GetProperty("analyses")[0].GetProperty("personalizedAvailable").GetBoolean());

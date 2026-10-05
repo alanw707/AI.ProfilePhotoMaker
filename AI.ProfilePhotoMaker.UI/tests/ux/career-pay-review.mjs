@@ -120,7 +120,7 @@ for (const f of benchmark.figures) {
 }
 const personalized = analysis.sections.find(s => s.key === 'personalized');
 const scenario = analysis.sections.find(s => s.key === 'scenario');
-const median = benchmark.figures.find(f => f.key === 'medianAnnual' && f.areaCode === '99')?.value;
+const median = scenario.benchmarkMedianAnnual; // the area the scenario names, local when resolved
 const personalizedCard = await page.locator('[data-section="personalized"]').innerText();
 results.push({
   label: 'analysis vs snapshot', status: analysis.status, checked, mismatches,

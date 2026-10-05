@@ -4,7 +4,8 @@ namespace AI.ProfilePhotoMaker.API.Services.Career;
 public sealed record PayAnalysisInput(int ProfileVersion, int GoalVersion, string OccupationCode, string OccupationTitle,
     string? LocationText, int? RequestedAnnual, string? AreaCode, string? AreaTitle, string AreaResolution,
     string? OewsRelease, string OewsSnapshotSha256, string? ProjectionsRelease, string RuleVersion,
-    string? ObservationSourceId, IReadOnlyList<PayObservation> Observations, DateTime AsOf);
+    string? ObservationSourceId, IReadOnlyList<PayObservation> Observations, DateTime AsOf,
+    string? RequestedPaySource = null);
 
 public sealed record PayCohortDto(int Included, int Excluded, int Employers, decimal LargestEmployerShare,
     bool Concentrated, bool Sensitive, IReadOnlyDictionary<string, int> ExclusionReasons);
@@ -13,7 +14,8 @@ public sealed record PayBenchmarkSection(string Key, string Title, string Status
 public sealed record PayPersonalizedSection(string Key, string Title, string Status, string? Reason, PayInterval? Interval,
     PayCohortDto Cohort, string Note);
 public sealed record PayScenarioSection(string Key, string Title, string Status, int? RequestedAnnual,
-    double? BenchmarkMedianAnnual, double? GapAnnual, double? GapPercent, string Note);
+    double? BenchmarkMedianAnnual, double? GapAnnual, double? GapPercent, string Note,
+    string? BenchmarkAreaCode = null, string? BenchmarkAreaTitle = null, string? RequestedPaySource = null);
 public sealed record PayAnalysisSections(PayBenchmarkSection Benchmark, PayPersonalizedSection Personalized, PayScenarioSection Scenario);
 public sealed record PayQualificationDto(bool PersonalizedAllowed, IReadOnlyList<string> BlockedReasons, IReadOnlyList<PayGateRow> Gates);
 public sealed record PayAnalysisContent(string Status, MarketLocationDto Location, MarketCodeDto? Published,
