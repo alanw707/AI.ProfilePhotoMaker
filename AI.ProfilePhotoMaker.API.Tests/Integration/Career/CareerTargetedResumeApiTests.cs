@@ -320,6 +320,18 @@ public class CareerTargetedResumeApiTests
     // ---- Versions ---------------------------------------------------------------------
 
     [Fact]
+    public async Task AHumanResumeLineCitingAnUnresolvedFactIs409()
+    {
+        using var host = new CareerPayFactory();
+        var user = await UserAsync(host);
+        var material = await NewMaterialAsync(user, host);
+        var id = material.GetProperty("id").GetString()!;
+        var bad = new { id = "u-9", text = "Mentored 12 engineers", factIds = new[] { "highlight:99" }, origin = "human" };
+        var error = await CareerClient.ReadErrorAsync(await Save(user, id, Sections("experience_highlights", bad), "\"material-v1\""), 409);
+        Assert.Equal("CareerResumeUnsupportedClaim", error.GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task RestoreCreatesANewVersionAndNeedsIfMatch()
     {
         using var host = new CareerPayFactory();

@@ -1,5 +1,6 @@
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models.Career;
+using AI.ProfilePhotoMaker.API.Services.Career.Export;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -104,7 +105,8 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         typeof(CareerRoadmapReplan),
         typeof(CareerMaterial),
         typeof(CareerMaterialVersion),
-        typeof(CareerMaterialProposal)
+        typeof(CareerMaterialProposal),
+        typeof(CareerExport)
     };
 
     private readonly ApplicationDbContext _db;
@@ -129,6 +131,7 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         _db.CareerMarketBriefs.RemoveRange(await _db.CareerMarketBriefs.Where(b => b.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerPayAnalyses.RemoveRange(await _db.CareerPayAnalyses.Where(b => b.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerRoadmapTaskProgress.RemoveRange(await _db.CareerRoadmapTaskProgress.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerExports.RemoveRange(await _db.CareerExports.Where(e => e.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerMaterialProposals.RemoveRange(await _db.CareerMaterialProposals.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerMaterialVersions.RemoveRange(await _db.CareerMaterialVersions.Where(v => v.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerMaterials.RemoveRange(await _db.CareerMaterials.Where(m => m.OwnerId == ownerId).ToListAsync(ct));
@@ -208,6 +211,11 @@ public static class CareerWorkspaceServiceCollectionExtensions
         services.AddScoped<ICareerPayService, CareerPayService>();
         services.AddScoped<ICareerRoadmapService, CareerRoadmapService>();
         services.AddScoped<ICareerMaterialService, CareerMaterialService>();
+
+        // Exports (#390, ADR 0019): renderers sit behind IMaterialExportRenderer.
+        services.AddSingleton<IMaterialExportRenderer, PdfMaterialRenderer>();
+        services.AddSingleton<IMaterialExportRenderer, DocxMaterialRenderer>();
+        services.AddScoped<ICareerExportService, CareerExportService>();
         services.AddScoped<ICareerRoadmapTrackingService>(sp => new CareerRoadmapTrackingService(
             sp.GetRequiredService<ApplicationDbContext>(),
             sp.GetRequiredService<ICareerRoadmapService>(),

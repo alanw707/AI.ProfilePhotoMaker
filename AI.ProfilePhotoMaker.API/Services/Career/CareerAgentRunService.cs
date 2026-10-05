@@ -35,7 +35,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
 
     // A lost race is retried a few times; more than that means heavy contention.
     private const int MaxCommitAttempts = 5;
-    private const string TaskError = "Choose a task the assistant can do: profile_summary, occupation_match, market_brief, pay_analysis, roadmap or targeted_resume.";
+    private const string TaskError = "Choose a task the assistant can do: profile_summary, occupation_match, market_brief, pay_analysis, roadmap, targeted_resume or professional_summary.";
 
     private static readonly IReadOnlyDictionary<string, string> StepLabels = new Dictionary<string, string>
     {
@@ -61,7 +61,8 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
         [CareerStepNames.SaveRoadmap] = "Saved your roadmap",
         [CareerStepNames.SelectFacts] = "Chose the facts that fit your target",
         [CareerStepNames.DraftResume] = "Drafted your resume",
-        [CareerStepNames.SaveResume] = "Saved your draft"
+        [CareerStepNames.SaveResume] = "Saved your draft",
+        [CareerStepNames.SaveSummary] = "Saved your summary"
     };
 
     private readonly ApplicationDbContext _db;
@@ -107,7 +108,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             return CareerOutcome<CareerAgentRunDto>.Invalid(errors);
         }
 
-        var materialId = task == CareerAgentTasks.TargetedResume ? request.MaterialId : null;
+        var materialId = task is CareerAgentTasks.TargetedResume or CareerAgentTasks.ProfessionalSummary ? request.MaterialId : null;
         var hashInput = materialId == null ? $"task={task}" : $"task={task}&material={materialId}";
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(hashInput))).ToLowerInvariant();
 
@@ -166,9 +167,10 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
                                 ? "Confirm your target occupation before asking for a targeted resume."
                                 : "Confirm your target occupation before asking for a market brief.");
             }
-            if (materialId != null && !await _db.CareerMaterials.AsNoTracking().AnyAsync(m => m.Id == materialId && m.OwnerId == ownerId, ct))
+            var materialKind = task == CareerAgentTasks.ProfessionalSummary ? CareerMaterialKinds.Summary : CareerMaterialKinds.Resume;
+            if (materialId != null && !await _db.CareerMaterials.AsNoTracking().AnyAsync(m => m.Id == materialId && m.OwnerId == ownerId && m.Kind == materialKind, ct))
             {
-                return CareerOutcome<CareerAgentRunDto>.NotFound(ResumeErrorCodes.MaterialNotFound, "That resume was not found.");
+                return CareerOutcome<CareerAgentRunDto>.NotFound(ResumeErrorCodes.MaterialNotFound, "That material was not found.");
             }
 
             var now = Now();
@@ -405,7 +407,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
 
     private DateTime Now() => _clock.GetUtcNow().UtcDateTime;
 
-    private static bool IsKnownTask(string? task) => task is CareerAgentTasks.ProfileSummary or CareerAgentTasks.OccupationMatch or CareerAgentTasks.MarketBrief or CareerAgentTasks.PayAnalysis or CareerAgentTasks.Roadmap or CareerAgentTasks.TargetedResume;
+    private static bool IsKnownTask(string? task) => task is CareerAgentTasks.ProfileSummary or CareerAgentTasks.OccupationMatch or CareerAgentTasks.MarketBrief or CareerAgentTasks.PayAnalysis or CareerAgentTasks.Roadmap or CareerAgentTasks.TargetedResume or CareerAgentTasks.ProfessionalSummary;
 
     /// <summary>The offered choices, saved with the question step so the answer can be checked against them.</summary>
     internal static IReadOnlyList<CareerRunChoiceDto>? ChoicesFrom(IEnumerable<CareerAgentStep> steps)
@@ -453,10 +455,10 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             .Where(b => b.RunId == run.Id && b.OwnerId == run.OwnerId).Select(b => (Guid?)b.Id).FirstOrDefaultAsync(ct);
         var roadmapId = await _db.CareerRoadmaps.AsNoTracking()
             .Where(b => b.RunId == run.Id && b.OwnerId == run.OwnerId).Select(b => (Guid?)b.Id).FirstOrDefaultAsync(ct);
-        var materialId = run.Task != CareerAgentTasks.TargetedResume ? null
+        var materialId = run.Task is not (CareerAgentTasks.TargetedResume or CareerAgentTasks.ProfessionalSummary) ? null
             : run.MaterialId ?? await _db.CareerMaterials.AsNoTracking()
                 .Where(m => m.RunId == run.Id && m.OwnerId == run.OwnerId).Select(m => (Guid?)m.Id).FirstOrDefaultAsync(ct);
-        var resumeProposalId = run.Task != CareerAgentTasks.TargetedResume ? null
+        var resumeProposalId = run.Task is not (CareerAgentTasks.TargetedResume or CareerAgentTasks.ProfessionalSummary) ? null
             : await _db.CareerMaterialProposals.AsNoTracking()
                 .Where(p => p.RunId == run.Id && p.OwnerId == run.OwnerId).Select(p => (Guid?)p.Id).FirstOrDefaultAsync(ct);
         return ToDto(run, steps, await CurrentProfileVersionAsync(run.OwnerId, ct), await AllowanceDtoAsync(run.OwnerId, ct), matchId, briefId, payId, roadmapId, materialId, resumeProposalId);
@@ -481,7 +483,8 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             run.PinnedProfileVersion,
             run.PinnedGoalVersion,
             stepList.OrderBy(s => s.Ordinal).Select(s => new CareerRunStepDto(
-                s.Ordinal, s.Kind, s.Name, StepLabels.GetValueOrDefault(s.Name, s.Name), s.Status,
+                s.Ordinal, s.Kind, s.Name,
+                run.Task == CareerAgentTasks.ProfessionalSummary && s.Name == CareerStepNames.DraftSummary ? "Drafted your summary" : StepLabels.GetValueOrDefault(s.Name, s.Name), s.Status,
                 s.CompletedAt is { } done ? Utc(done) : null)).ToList(),
             run.Status == CareerRunStatus.NeedsInput && run.QuestionId != null
                 ? new CareerRunQuestionDto(

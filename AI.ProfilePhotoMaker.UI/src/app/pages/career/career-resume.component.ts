@@ -6,6 +6,7 @@ import {
   CareerApiError,
   CareerProfileService,
   CareerRunDto,
+  MaterialKind,
   ResumeChange,
   ResumeContact,
   ResumeMaterialDto,
@@ -23,6 +24,7 @@ import {
   startKey,
 } from './career-run';
 import { dateText } from './market-format';
+import { CareerExportPanelComponent } from './career-export-panel.component';
 
 const START_KEY = 'career-resume-start-key';
 const SAVE_DELAY_MS = 800;
@@ -31,7 +33,11 @@ const SECTION_LABELS: Record<ResumeSectionKey, string> = {
   summary: 'Summary',
   experience_highlights: 'Experience highlights',
   skills: 'Skills',
+  short: 'Short bio',
+  long: 'Longer summary',
 };
+/** Matches the summary limits on the API. */
+export const SUMMARY_LIMITS: Partial<Record<ResumeSectionKey, number>> = { short: 300, long: 1200 };
 const CONTACT_FIELDS: { key: keyof ResumeContact; label: string }[] = [
   { key: 'name', label: 'Name' },
   { key: 'email', label: 'Email' },
@@ -66,7 +72,7 @@ interface StoredDraft {
 @Component({
   standalone: true,
   selector: 'app-career-resume',
-  imports: [RouterLink],
+  imports: [RouterLink, CareerExportPanelComponent],
   templateUrl: './career-resume.component.html',
   styleUrl: './career.scss',
 })
@@ -80,6 +86,11 @@ export class CareerResumeComponent implements OnInit {
   private revision = 0;
   private savedRevision = 0;
   private etag = '';
+  kind = signal<MaterialKind>(
+    inject(ActivatedRoute).snapshot.data?.['kind'] === 'summary' ? 'summary' : 'resume'
+  );
+  isSummary = computed(() => this.kind() === 'summary');
+  copied = signal('');
   material = signal<ResumeMaterialDto | null>(null);
   sections = signal<ResumeSection[]>([]);
   contact = signal<ResumeContact>({ ...DEFAULT_CONTACT });
@@ -188,6 +199,9 @@ export class CareerResumeComponent implements OnInit {
   }
   private show(m: ResumeMaterialDto, restore: boolean) {
     this.material.set(m);
+    if (m.kind) {
+      this.kind.set(m.kind);
+    }
     this.etag = m.etag ?? `"material-v${m.currentVersion}"`;
     this.sections.set(m.sections);
     this.contact.set({ ...DEFAULT_CONTACT, ...m.contact });
@@ -270,9 +284,13 @@ export class CareerResumeComponent implements OnInit {
     this.proposalError.set('');
     this.proposalNotice.set('');
     this.starting.set(true);
-    const key = START_KEY + (refresh ? '-refresh' : '');
+    const key = START_KEY + (this.isSummary() ? '-summary' : '') + (refresh ? '-refresh' : '');
     this.api
-      .createRun(startKey(key), 'targeted_resume', refresh ? this.material()?.id : undefined)
+      .createRun(
+        startKey(key),
+        this.isSummary() ? 'professional_summary' : 'targeted_resume',
+        refresh ? this.material()?.id : undefined
+      )
       .subscribe({
         next: run => {
           this.starting.set(false);
@@ -295,6 +313,23 @@ export class CareerResumeComponent implements OnInit {
   // ---- editing --------------------------------------------------------------
   sectionLabel(key: ResumeSectionKey) {
     return SECTION_LABELS[key] ?? 'Section';
+  }
+  limit(key: ResumeSectionKey) {
+    return SUMMARY_LIMITS[key] ?? MAX_LINE_LENGTH;
+  }
+  counterText(key: ResumeSectionKey, text: string) {
+    return `${text.length} of ${this.limit(key)} characters`;
+  }
+  copy(key: ResumeSectionKey, text: string) {
+    const done = () =>
+      this.copied.set(`${SECTION_LABELS[key]} copied. Nothing was posted anywhere.`);
+    const fail = () =>
+      this.copied.set('Copying did not work. Select the text and copy it yourself.');
+    if (!navigator.clipboard?.writeText) {
+      fail();
+      return;
+    }
+    navigator.clipboard.writeText(text).then(done, fail);
   }
   basedOn(ids: string[]) {
     return ids
@@ -585,7 +620,11 @@ export class CareerResumeComponent implements OnInit {
     if (e.kind === 'disabled') {
       this.router.navigateByUrl('/app');
     } else if (e.kind === 'unauthorized') {
-      this.router.navigate(['/auth/login'], { queryParams: { returnUrl: '/app/career/resume' } });
+      this.router.navigate(['/auth/login'], {
+        queryParams: {
+          returnUrl: this.isSummary() ? '/app/career/summary-draft' : '/app/career/resume',
+        },
+      });
     } else if (e.kind === 'occupationRequired' || e.kind === 'goalRequired') {
       this.occupationMissing.set(true);
     } else if (e.kind === 'profileRequired') {
@@ -593,7 +632,7 @@ export class CareerResumeComponent implements OnInit {
     } else if (e.kind === 'allowance') {
       this.error.set('You have used this period’s agent runs. Try again later.');
     } else if (e.kind === 'notFound') {
-      this.error.set('We could not find that resume.');
+      this.error.set(`We could not find that ${this.isSummary() ? 'summary' : 'resume'}.`);
     } else {
       this.error.set('Something went wrong. Try again.');
     }

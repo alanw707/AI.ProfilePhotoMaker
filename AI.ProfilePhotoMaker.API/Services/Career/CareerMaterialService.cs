@@ -54,15 +54,15 @@ public sealed class CareerMaterialService : ICareerMaterialService
 
     public async Task<CareerOutcome<CareerMaterialListDto>> ListAsync(string ownerId, string? kind, CancellationToken ct = default)
     {
-        if (!string.IsNullOrEmpty(kind) && kind != CareerMaterialKinds.Resume)
+        if (!string.IsNullOrEmpty(kind) && !CareerMaterialKinds.IsKnown(kind))
         {
-            return Field<CareerMaterialListDto>("kind", "Only resume materials are available.");
+            return Field<CareerMaterialListDto>("kind", "Kind must be resume or summary.");
         }
-        var rows = await _db.CareerMaterials.AsNoTracking().Where(m => m.OwnerId == ownerId && m.Kind == CareerMaterialKinds.Resume)
+        var rows = await _db.CareerMaterials.AsNoTracking().Where(m => m.OwnerId == ownerId && (string.IsNullOrEmpty(kind) || m.Kind == kind))
             .OrderByDescending(m => m.UpdatedAt).Take(MaxListed).ToListAsync(ct);
         var (profile, goal) = await CurrentAsync(ownerId, ct);
         return CareerOutcome<CareerMaterialListDto>.Ok(new CareerMaterialListDto(rows.Select(m =>
-            new CareerMaterialSummaryDto(m.Id, m.Title, StaleReasons(m.PinnedProfileVersion, m.PinnedGoalVersion, profile, goal).Count > 0, m.CurrentVersion, Utc(m.UpdatedAt))).ToList()));
+            new CareerMaterialSummaryDto(m.Id, m.Title, StaleReasons(m.PinnedProfileVersion, m.PinnedGoalVersion, profile, goal).Count > 0, m.CurrentVersion, Utc(m.UpdatedAt), m.Kind)).ToList()));
     }
 
     public async Task<CareerOutcome<CareerMaterialDto>> GetAsync(string ownerId, Guid id, CancellationToken ct = default)
@@ -135,7 +135,7 @@ public sealed class CareerMaterialService : ICareerMaterialService
             return gate;
         }
 
-        var (sections, errors) = ParseSections(request.Sections);
+        var (sections, errors) = ParseSections(request.Sections, material.Kind);
         if (errors != null)
         {
             return CareerOutcome<CareerMaterialDto>.Invalid(errors);
@@ -144,7 +144,7 @@ public sealed class CareerMaterialService : ICareerMaterialService
         var contact = MergeContact(Contact(current), request.Contact);
 
         var profile = await ProfileAsync(ownerId, material.PinnedProfileVersion, ct);
-        var unsupported = profile == null ? sections.SelectMany(s => s.Lines).Where(l => l.Origin == ResumeOrigins.Generated).Select(l => l.Id).ToList()
+        var unsupported = profile == null ? sections.SelectMany(s => s.Lines).Where(l => l.Origin == ResumeOrigins.Generated || l.FactIds.Count > 0).Select(l => l.Id).ToList()
             : ResumeFacts.UnsupportedLineIds(profile, sections);
         if (unsupported.Count > 0)
         {
@@ -179,7 +179,7 @@ public sealed class CareerMaterialService : ICareerMaterialService
         }
         var oldSections = Sections(old);
         var oldPinned = await ProfileAsync(ownerId, old.PinnedProfileVersion, ct);
-        var oldUnsupported = oldPinned == null ? oldSections.SelectMany(s => s.Lines).Where(l => l.Origin == ResumeOrigins.Generated).Select(l => l.Id).ToList()
+        var oldUnsupported = oldPinned == null ? oldSections.SelectMany(s => s.Lines).Where(l => l.Origin == ResumeOrigins.Generated || l.FactIds.Count > 0).Select(l => l.Id).ToList()
             : ResumeFacts.UnsupportedLineIds(oldPinned, oldSections);
         if (oldUnsupported.Count > 0)
         {
@@ -236,7 +236,7 @@ public sealed class CareerMaterialService : ICareerMaterialService
             return Field<CareerMaterialDto>("acceptedChangeIds", "The profile this proposal was built from is no longer available.");
         }
 
-        var (sections, questions) = ApplyChanges(Sections(current), Questions(current), stored, changes.Where(c => accepted.Contains(c.Id)).ToList(), oldProfile, newProfile);
+        var (sections, questions) = ApplyChanges(Sections(current), Questions(current), stored, changes.Where(c => accepted.Contains(c.Id)).ToList(), oldProfile, newProfile, ResumeSectionKeys.For(material.Kind));
         var applyUnsupported = ResumeFacts.UnsupportedLineIds(newProfile, sections);
         if (applyUnsupported.Count > 0)
         {
@@ -288,7 +288,8 @@ public sealed class CareerMaterialService : ICareerMaterialService
     /// </summary>
     internal static (List<ResumeSection> Sections, List<ResumeQuestion> Questions) ApplyChanges(
         IReadOnlyList<ResumeSection> current, IReadOnlyList<ResumeQuestion> currentQuestions, StoredProposal stored,
-        IReadOnlyList<ResumeChange> accepted, CareerProfileVersion? oldProfile, CareerProfileVersion newProfile)
+        IReadOnlyList<ResumeChange> accepted, CareerProfileVersion? oldProfile, CareerProfileVersion newProfile,
+        IReadOnlyList<string>? sectionKeys = null)
     {
         bool Shifted(ResumeLine line) =>
             line.Origin == ResumeOrigins.Generated
@@ -297,7 +298,7 @@ public sealed class CareerMaterialService : ICareerMaterialService
         var acceptedIds = accepted.Select(c => c.Id[(c.Id.IndexOf(':') + 1)..]).ToHashSet(StringComparer.Ordinal);
         var total = current.Sum(s => s.Lines.Count);
         var result = new List<ResumeSection>();
-        foreach (var key in ResumeSectionKeys.All)
+        foreach (var key in sectionKeys ?? ResumeSectionKeys.All)
         {
             var lines = (current.FirstOrDefault(s => s.Key == key)?.Lines ?? Array.Empty<ResumeLine>()).ToList();
             var proposedLines = stored.Sections.FirstOrDefault(s => s.Key == key)?.Lines ?? Array.Empty<ResumeLine>();
@@ -347,8 +348,9 @@ public sealed class CareerMaterialService : ICareerMaterialService
 
     // ---- Validation ------------------------------------------------------------
 
-    private static (List<ResumeSection> Sections, Dictionary<string, string>? Errors) ParseSections(List<SaveSectionRequest?>? input)
+    private static (List<ResumeSection> Sections, Dictionary<string, string>? Errors) ParseSections(List<SaveSectionRequest?>? input, string kind)
     {
+        var allowedKeys = ResumeSectionKeys.For(kind);
         var errors = new Dictionary<string, string>();
         if (input == null)
         {
@@ -360,18 +362,19 @@ public sealed class CareerMaterialService : ICareerMaterialService
         foreach (var section in input)
         {
             var key = section?.Key?.Trim();
-            if (key == null || !ResumeSectionKeys.All.Contains(key) || byKey.ContainsKey(key))
+            if (key == null || !allowedKeys.Contains(key) || byKey.ContainsKey(key))
             {
-                errors["sections"] = $"Each section needs one unique key: {string.Join(", ", ResumeSectionKeys.All)}.";
+                errors["sections"] = $"Each section needs one unique key: {string.Join(", ", allowedKeys)}.";
                 return (new(), errors);
             }
             var lines = new List<ResumeLine>();
             foreach (var line in section!.Lines ?? new())
             {
                 var text = line?.Text?.Trim();
-                if (text == null || text.Length == 0 || text.Length > ResumeLimits.MaxLineLength)
+                var lineMax = ResumeLimits.SectionTotalMax(kind, key) ?? ResumeLimits.MaxLineLength;
+                if (text == null || text.Length == 0 || text.Length > lineMax)
                 {
-                    errors["lines"] = $"Each line needs 1-{ResumeLimits.MaxLineLength} characters.";
+                    errors["lines"] = $"Each line needs 1-{lineMax} characters.";
                     return (new(), errors);
                 }
                 var origin = line!.Origin?.Trim() ?? ResumeOrigins.Human;
@@ -394,6 +397,11 @@ public sealed class CareerMaterialService : ICareerMaterialService
                 }
                 lines.Add(new ResumeLine(id, text, factIds, origin));
             }
+            if (ResumeLimits.SectionTotalMax(kind, key) is { } cap && lines.Sum(l => l.Text.Length) + Math.Max(0, lines.Count - 1) > cap)
+            {
+                errors["lines"] = $"The {key} summary can have at most {cap} characters.";
+                return (new(), errors);
+            }
             byKey[key] = lines;
         }
         if (byKey.Values.Sum(l => l.Count) > ResumeLimits.MaxLines)
@@ -401,7 +409,7 @@ public sealed class CareerMaterialService : ICareerMaterialService
             errors["lines"] = $"A resume can have at most {ResumeLimits.MaxLines} lines.";
             return (new(), errors);
         }
-        return (ResumeSectionKeys.All.Select(k => new ResumeSection(k, byKey.GetValueOrDefault(k) ?? new())).ToList(), null);
+        return (allowedKeys.Select(k => new ResumeSection(k, byKey.GetValueOrDefault(k) ?? new())).ToList(), null);
     }
 
     /// <summary>A question stays until the user answers it by writing the line themselves (a human line citing it, or digits).</summary>
@@ -503,7 +511,8 @@ public sealed class CareerMaterialService : ICareerMaterialService
     {
         var reasons = new List<string>();
         if (profile != pinnedProfile) reasons.Add("profile_changed");
-        if (goal != pinnedGoal) reasons.Add("goal_changed");
+        // A summary may be pinned without a goal (0); having none still is not a change.
+        if ((goal ?? 0) != pinnedGoal) reasons.Add("goal_changed");
         return reasons;
     }
 
@@ -530,7 +539,7 @@ public sealed class CareerMaterialService : ICareerMaterialService
             material.Id, material.Title, Etag(material.CurrentVersion), material.CurrentVersion,
             new ResumePinnedDto(material.PinnedProfileVersion, material.PinnedGoalVersion, material.OccupationCode),
             reasons.Count > 0, reasons, Contact(version), sections, questions,
-            await FactsAsync(material.OwnerId, material.PinnedProfileVersion, sections, questions, ct));
+            await FactsAsync(material.OwnerId, material.PinnedProfileVersion, sections, questions, ct), material.Kind);
     }
 
     private static CareerMaterialProposalDto ToDto(CareerMaterialProposal proposal) => new(

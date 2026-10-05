@@ -6,7 +6,7 @@ public sealed class CreateCareerRunRequest
 {
     public string? Task { get; set; }
 
-    /// <summary>targeted_resume only: propose changes to this resume instead of creating a new one.</summary>
+    /// <summary>targeted_resume and professional_summary only: propose changes to this resume instead of creating a new one.</summary>
     public Guid? MaterialId { get; set; }
 }
 

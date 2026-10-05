@@ -714,4 +714,56 @@ describe('CareerProfileService', () => {
       expect(got).toBe(kind);
     }
   });
+  it('lists materials of both kinds or one kind', () => {
+    service.listMaterials().subscribe();
+    http
+      .expectOne('/api/career/materials')
+      .flush({ success: true, data: { materials: [{ id: 'a', kind: 'summary' }] } });
+    service.listMaterials('summary').subscribe();
+    http
+      .expectOne('/api/career/materials?kind=summary')
+      .flush({ success: true, data: { materials: [] } });
+  });
+  it('starts a professional summary run', () => {
+    service.createRun('k1', 'professional_summary').subscribe();
+    expect(http.expectOne('/api/career/runs').request.body).toEqual({
+      task: 'professional_summary',
+    });
+  });
+  it('creates, lists and downloads exports', () => {
+    service.createExport('m1', { format: 'pdf', version: 2, includePhoto: false }).subscribe();
+    const create = http.expectOne('/api/career/materials/m1/exports');
+    expect(create.request.method).toBe('POST');
+    expect(create.request.body).toEqual({ format: 'pdf', version: 2, includePhoto: false });
+    create.flush({ success: true, data: { id: 'e1' } });
+    service.listExports('m1').subscribe();
+    http
+      .expectOne('/api/career/materials/m1/exports')
+      .flush({ success: true, data: { exports: [] } });
+    let size = 0;
+    service.downloadExport('e1').subscribe(b => (size = b.size));
+    const file = http.expectOne('/api/career/exports/e1');
+    expect(file.request.responseType).toBe('blob');
+    file.flush(new Blob(['abc']));
+    expect(size).toBe(3);
+  });
+  it('maps export failures', () => {
+    const cases: [number, string | undefined, string][] = [
+      [400, 'CareerExportPhotoUnavailable', 'exportPhotoUnavailable'],
+      [410, 'CareerExportExpired', 'exportExpired'],
+      [410, undefined, 'exportExpired'],
+    ];
+    for (const [status, code, kind] of cases) {
+      let got = '';
+      service.createExport('m1', { format: 'docx' }).subscribe({ error: e => (got = e.kind) });
+      http
+        .expectOne('/api/career/materials/m1/exports')
+        .flush({ success: false, error: { code, message: 'x' } }, { status, statusText: 'x' });
+      expect(got).toBe(kind);
+    }
+    let expired = '';
+    service.downloadExport('e1').subscribe({ error: e => (expired = e.kind) });
+    http.expectOne('/api/career/exports/e1').flush(new Blob(), { status: 410, statusText: 'Gone' });
+    expect(expired).toBe('exportExpired');
+  });
 });

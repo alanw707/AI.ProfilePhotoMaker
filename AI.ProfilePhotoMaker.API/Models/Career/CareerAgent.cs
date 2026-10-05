@@ -19,6 +19,7 @@ public static class CareerAgentTasks
     public const string PayAnalysis = "pay_analysis";
     public const string Roadmap = "roadmap";
     public const string TargetedResume = "targeted_resume";
+    public const string ProfessionalSummary = "professional_summary";
 }
 
 public static class CareerStepKinds
@@ -54,6 +55,7 @@ public static class CareerStepNames
     public const string SelectFacts = "select_facts";
     public const string DraftResume = "draft_resume";
     public const string SaveResume = "save_resume";
+    public const string SaveSummary = "save_summary";
 }
 
 /// <summary>
@@ -96,7 +98,7 @@ public class CareerAgentRun
 
     public Guid? ProposalId { get; set; }
 
-    /// <summary>targeted_resume only: the material to propose changes for; null creates a new one.</summary>
+    /// <summary>targeted_resume and professional_summary only: the material to propose changes for; null creates a new one.</summary>
     public Guid? MaterialId { get; set; }
     public string? ErrorCode { get; set; }
 

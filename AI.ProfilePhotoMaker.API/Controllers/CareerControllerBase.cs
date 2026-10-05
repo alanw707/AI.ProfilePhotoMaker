@@ -76,6 +76,7 @@ public abstract class CareerControllerBase : BaseController
             CareerOutcomeKind.Rejected => StatusCodes.Status422UnprocessableEntity,
             CareerOutcomeKind.Unavailable => StatusCodes.Status503ServiceUnavailable,
             CareerOutcomeKind.QuotaExceeded => StatusCodes.Status429TooManyRequests,
+            CareerOutcomeKind.Gone => StatusCodes.Status410Gone,
             _ => StatusCodes.Status500InternalServerError
         };
 

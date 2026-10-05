@@ -24,7 +24,14 @@ public static class ResumeSectionKeys
     public const string ExperienceHighlights = "experience_highlights";
     public const string Skills = "skills";
 
+    public const string Short = "short";
+    public const string Long = "long";
+
     public static readonly IReadOnlyList<string> All = new[] { Headline, Summary, ExperienceHighlights, Skills };
+    public static readonly IReadOnlyList<string> SummaryKeys = new[] { Short, Long };
+
+    /// <summary>The section keys a material of this kind has, in order.</summary>
+    public static IReadOnlyList<string> For(string? kind) => kind == CareerMaterialKinds.Summary ? SummaryKeys : All;
 }
 
 public static class ResumeErrorCodes
@@ -44,6 +51,12 @@ public static class ResumeLimits
     public const int MaxLineIdLength = 64;
     public const int MaxVersionsListed = 200;
     public const int VersionPageSize = 50;
+    public const int ShortSummaryMax = 300;
+    public const int LongSummaryMax = 1200;
+
+    /// <summary>Total text a section may hold: summaries cap `short` and `long`; resume sections cap each line instead.</summary>
+    public static int? SectionTotalMax(string kind, string key) =>
+        kind != CareerMaterialKinds.Summary ? null : key == ResumeSectionKeys.Short ? ShortSummaryMax : LongSummaryMax;
 }
 
 public sealed record ResumeLine(string Id, string Text, IReadOnlyList<string> FactIds, string Origin);
@@ -60,7 +73,7 @@ public sealed record ResumeFactDto(string Id, string Text);
 
 public sealed record ResumePinnedDto(int ProfileVersion, int GoalVersion, string OccupationCode);
 
-public sealed record CareerMaterialSummaryDto(Guid Id, string Title, bool Stale, int CurrentVersion, DateTime UpdatedAt);
+public sealed record CareerMaterialSummaryDto(Guid Id, string Title, bool Stale, int CurrentVersion, DateTime UpdatedAt, string Kind = "resume");
 
 public sealed record CareerMaterialListDto(IReadOnlyList<CareerMaterialSummaryDto> Materials);
 
@@ -75,7 +88,8 @@ public sealed record CareerMaterialDto(
     ResumeContact Contact,
     IReadOnlyList<ResumeSection> Sections,
     IReadOnlyList<ResumeQuestion> Questions,
-    IReadOnlyList<ResumeFactDto> Facts);
+    IReadOnlyList<ResumeFactDto> Facts,
+    string Kind = "resume");
 
 public sealed record CareerMaterialVersionSummaryDto(int Number, string Author, DateTime CreatedAt);
 
@@ -166,9 +180,11 @@ public static class ResumeFacts
         return list != null && index < list.Count ? Pick(list[index]) : null;
     }
 
-    /// <summary>Generated lines whose fact ids do not all resolve, or that cite nothing. Empty means every claim is grounded.</summary>
+    /// <summary>Generated lines whose fact ids do not all resolve or that cite nothing, and human lines that cite a fact that does not resolve. Empty means every claim is grounded.</summary>
     public static IReadOnlyList<string> UnsupportedLineIds(CareerProfileVersion profile, IEnumerable<ResumeSection> sections) =>
         sections.SelectMany(s => s.Lines)
-            .Where(l => l.Origin == ResumeOrigins.Generated && (l.FactIds.Count == 0 || l.FactIds.Any(f => Resolve(profile, f) == null)))
+            .Where(l => l.Origin == ResumeOrigins.Generated
+                ? l.FactIds.Count == 0 || l.FactIds.Any(f => Resolve(profile, f) == null)
+                : l.FactIds.Any(f => Resolve(profile, f) == null))
             .Select(l => l.Id).ToList();
 }

@@ -78,7 +78,7 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         "CareerProfiles", "CareerProfileVersions", "CareerGoals", "CareerGoalVersions",
         "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems", "CareerPhotoSelections",
         "CareerAgentRuns", "CareerAgentSteps", "CareerAllowances", "CareerOccupationMatches", "CareerMarketBriefs", "CareerPayAnalyses", "CareerRoadmaps",
-        "CareerRoadmapTaskProgress", "CareerRoadmapReplans", "CareerMaterials", "CareerMaterialVersions", "CareerMaterialProposals"
+        "CareerRoadmapTaskProgress", "CareerRoadmapReplans", "CareerMaterials", "CareerMaterialVersions", "CareerMaterialProposals", "CareerExports"
     };
 
     [Fact]
@@ -192,6 +192,18 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         (added.Table, added.Name, added.IsNullable).Should().Be(("CareerAgentRuns", "MaterialId", true));
         operations.OfType<CreateIndexOperation>().Should()
             .Contain(i => i.Table == "CareerMaterialVersions" && i.IsUnique && i.Columns.SequenceEqual(new[] { "MaterialId", "Number" }));
+        operations.OfType<DropTableOperation>().Should().BeEmpty();
+        operations.OfType<DropColumnOperation>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ExportsMigrationOnlyAddsOneTableAndItsIndexes()
+    {
+        var operations = new AddCareerExports().UpOperations;
+
+        AssertAdditive(operations, allowAddColumn: false);
+        operations.OfType<CreateTableOperation>().Select(o => o.Name).Should().Equal("CareerExports");
+        operations.OfType<CreateIndexOperation>().Should().OnlyContain(i => i.Table == "CareerExports");
         operations.OfType<DropTableOperation>().Should().BeEmpty();
         operations.OfType<DropColumnOperation>().Should().BeEmpty();
     }
