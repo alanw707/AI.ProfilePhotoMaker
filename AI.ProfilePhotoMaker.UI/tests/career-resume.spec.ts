@@ -46,6 +46,7 @@ interface Opts {
   put?: number;
   apply?: number;
   stale?: boolean;
+  saveDropsQuestions?: boolean;
   m?: Record<string, unknown>;
 }
 async function mock(page: Page, o: Opts = {}) {
@@ -110,7 +111,12 @@ async function mock(page: Page, o: Opts = {}) {
         });
         return fail(o.put);
       }
-      current = material({ ...body, etag: '"material-v2"', currentVersion: 2 });
+      current = material({
+        ...body,
+        ...(o.saveDropsQuestions ? { questions: [] } : {}),
+        etag: '"material-v2"',
+        currentVersion: 2,
+      });
       return send(current);
     }
     if (path === '/api/career/materials/mat-1/versions')
@@ -194,6 +200,24 @@ test('autosave sends If-Match and shows saved; edited line says Your wording', a
   await page.getByLabel('Skills, line 1', { exact: true }).fill('Angular');
   await expect(status(page)).toHaveText('All changes saved');
   expect(calls.put[1].ifMatch).toBe('"material-v2"');
+});
+
+test('a question disappears after a save whose response omits it', async ({ page }) => {
+  await mock(page, { saveDropsQuestions: true });
+  await open(page);
+  await expect(page.locator('[data-questions]')).toContainText('How many people used');
+  await page.getByLabel('Experience highlights, line 1', { exact: true }).fill('Shipped, 40 users');
+  await expect(status(page)).toHaveText('All changes saved');
+  await expect(page.locator('[data-questions]')).toHaveCount(0);
+});
+
+test('line editor allows 600 characters', async ({ page }) => {
+  await mock(page);
+  await open(page);
+  await expect(page.getByLabel('Headline, line 1', { exact: true })).toHaveAttribute(
+    'maxlength',
+    '600'
+  );
 });
 
 test('412 keeps the draft and offers reload or compare', async ({ page }) => {

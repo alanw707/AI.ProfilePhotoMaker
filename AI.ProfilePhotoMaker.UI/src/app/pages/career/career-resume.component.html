@@ -106,7 +106,7 @@
               <textarea
                 [id]="'ln-' + line.id"
                 rows="2"
-                maxlength="500"
+                [attr.maxlength]="maxLineLength"
                 [value]="line.text"
                 (input)="editLine(s.key, line.id, $any($event.target).value)"></textarea>
               @if (line.origin === 'human') {

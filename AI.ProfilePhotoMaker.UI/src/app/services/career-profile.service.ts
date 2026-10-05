@@ -158,12 +158,7 @@ export interface CareerPhotoSelection {
   selectedAt: string;
 }
 export type CareerRunStatus =
-  | 'queued'
-  | 'working'
-  | 'needs_input'
-  | 'completed'
-  | 'failed'
-  | 'cancelled';
+  'queued' | 'working' | 'needs_input' | 'completed' | 'failed' | 'cancelled';
 export interface CareerRunStep {
   ordinal: number;
   kind: string;
@@ -736,6 +731,17 @@ export interface ResumeMaterialDto {
   questions: { id: string; factId: string; text: string }[];
   facts: { id: string; text: string }[];
 }
+export interface ResumeMaterialVersionDto {
+  number: number;
+  author: string;
+  createdAt: string;
+  restoredFromVersion: number | null;
+  pinned: { profileVersion: number; goalVersion: number; occupationCode: string };
+  contact: ResumeContact;
+  sections: ResumeSection[];
+  questions: { id: string; factId: string; text: string }[];
+  facts: { id: string; text: string }[];
+}
 export interface ResumeVersionInfo {
   number: number;
   author: string;
@@ -1170,7 +1176,7 @@ export class CareerProfileService {
     );
   }
   getResumeVersion(id: string, n: number) {
-    return this.request<ResumeMaterialDto>(
+    return this.request<ResumeMaterialVersionDto>(
       'GET',
       `materials/${encodeURIComponent(id)}/versions/${n}`
     );

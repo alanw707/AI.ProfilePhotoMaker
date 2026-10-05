@@ -45,6 +45,8 @@ const AUTHORS: Record<string, string> = {
   system: 'Drafted for you',
 };
 const KIND_LABELS = { added: 'New line', removed: 'Line removed', changed: 'Line changed' };
+/** Matches ResumeLimits.MaxLineLength on the API. */
+export const MAX_LINE_LENGTH = 600;
 const SAVING = 'Saving…';
 const SAVED = 'All changes saved';
 const CONFLICT = 'Not saved — changed elsewhere';
@@ -69,6 +71,7 @@ interface StoredDraft {
   styleUrl: './career.scss',
 })
 export class CareerResumeComponent implements OnInit {
+  readonly maxLineLength = MAX_LINE_LENGTH;
   private api = inject(CareerProfileService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -350,10 +353,26 @@ export class CareerResumeComponent implements OnInit {
         next: fresh => {
           this.etag = fresh.etag ?? `"material-v${fresh.currentVersion}"`;
           this.savedRevision = sent;
+          // Metadata always follows the server; line text only when no newer local edit exists.
           this.material.update(cur =>
-            cur ? { ...cur, currentVersion: fresh.currentVersion } : cur
+            cur
+              ? {
+                  ...cur,
+                  etag: this.etag,
+                  currentVersion: fresh.currentVersion,
+                  pinned: fresh.pinned ?? cur.pinned,
+                  questions: fresh.questions ?? cur.questions,
+                  facts: fresh.facts ?? cur.facts,
+                  stale: fresh.stale ?? cur.stale,
+                  staleReasons: fresh.staleReasons ?? cur.staleReasons,
+                  contact: fresh.contact ?? cur.contact,
+                }
+              : cur
           );
           if (this.revision === sent) {
+            if (fresh.contact) {
+              this.contact.set({ ...DEFAULT_CONTACT, ...fresh.contact });
+            }
             this.clearDraft();
             this.status.set(SAVED);
           } else {
@@ -435,7 +454,22 @@ export class CareerResumeComponent implements OnInit {
   }
   viewVersion(n: number) {
     this.api.getResumeVersion(this.material()!.id, n).subscribe({
-      next: v => this.viewing.set({ ...v, currentVersion: n }),
+      next: v => {
+        const m = this.material()!;
+        this.viewing.set({
+          id: m.id,
+          title: m.title,
+          etag: `"material-v${v.number}"`,
+          currentVersion: v.number,
+          pinned: v.pinned,
+          stale: false,
+          staleReasons: [],
+          contact: v.contact,
+          sections: v.sections,
+          questions: v.questions,
+          facts: v.facts,
+        });
+      },
       error: e => this.handle(e),
     });
   }

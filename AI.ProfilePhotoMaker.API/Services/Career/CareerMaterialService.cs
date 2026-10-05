@@ -177,7 +177,16 @@ public sealed class CareerMaterialService : ICareerMaterialService
         {
             return gate;
         }
-        Append(material, Sections(old), Questions(old), Contact(old), ResumeAuthors.User, old.Number,
+        var oldSections = Sections(old);
+        var oldPinned = await ProfileAsync(ownerId, old.PinnedProfileVersion, ct);
+        var oldUnsupported = oldPinned == null ? oldSections.SelectMany(s => s.Lines).Where(l => l.Origin == ResumeOrigins.Generated).Select(l => l.Id).ToList()
+            : ResumeFacts.UnsupportedLineIds(oldPinned, oldSections);
+        if (oldUnsupported.Count > 0)
+        {
+            return CareerOutcome<CareerMaterialDto>.AlreadyExists(ResumeErrorCodes.UnsupportedClaim,
+                "Some generated lines are not backed by a fact in your confirmed profile.") with { Detail = string.Join(",", oldUnsupported) };
+        }
+        Append(material, oldSections, Questions(old), Contact(old), ResumeAuthors.User, old.Number,
             old.PinnedProfileVersion, old.PinnedGoalVersion, old.OccupationCode);
         return await CommitAsync(material, ct);
     }
@@ -228,6 +237,12 @@ public sealed class CareerMaterialService : ICareerMaterialService
         }
 
         var (sections, questions) = ApplyChanges(Sections(current), Questions(current), stored, changes.Where(c => accepted.Contains(c.Id)).ToList(), oldProfile, newProfile);
+        var applyUnsupported = ResumeFacts.UnsupportedLineIds(newProfile, sections);
+        if (applyUnsupported.Count > 0)
+        {
+            return CareerOutcome<CareerMaterialDto>.AlreadyExists(ResumeErrorCodes.UnsupportedClaim,
+                "Some generated lines are not backed by a fact in your confirmed profile.") with { Detail = string.Join(",", applyUnsupported) };
+        }
         proposal.Status = CareerMaterialProposalStatuses.Applied;
         Append(material, sections, questions, Contact(current), ResumeAuthors.Agent, null,
             stored.ProfileVersion, stored.GoalVersion, stored.OccupationCode);

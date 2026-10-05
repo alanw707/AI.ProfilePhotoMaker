@@ -346,6 +346,56 @@ public class CareerTargetedResumeApiTests
     }
 
     [Fact]
+    public async Task RestoringAVersionWithAnUnresolvedGeneratedFactIs409AndAddsNoVersion()
+    {
+        using var host = new CareerPayFactory();
+        var user = await UserWithAsync(host, ProfileWith(new[] { "Built software for 3 clients" }));
+        var material = await NewMaterialAsync(user, host);
+        var id = material.GetProperty("id").GetString()!;
+        await CareerClient.ReadDataAsync(await Save(user, id, Sections("skills", Human("Edited by me")), "\"material-v1\""), 200);
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var v1 = await db.CareerMaterialVersions.FirstAsync(v => v.MaterialId == Guid.Parse(id) && v.Number == 1);
+            Assert.Contains("\"highlight:0\"", v1.SectionsJson);
+            v1.SectionsJson = v1.SectionsJson.Replace("\"factIds\":[\"highlight:0\"]", "\"factIds\":[\"highlight:99\"]");
+            await db.SaveChangesAsync();
+        }
+
+        var error = await CareerClient.ReadErrorAsync(await user.SendAsync(HttpMethod.Post, $"/api/career/materials/{id}/versions/1/restore", null, "\"material-v2\""), 409);
+
+        Assert.Equal("CareerResumeUnsupportedClaim", error.GetProperty("code").GetString());
+        var versions = await CareerClient.ReadDataAsync(await user.GetAsync($"/api/career/materials/{id}/versions"), 200);
+        Assert.Equal(2, versions.GetProperty("total").GetInt32());
+    }
+
+    [Fact]
+    public async Task ApplyingATamperedProposalIs409AndLeavesItOpenWithNoNewVersion()
+    {
+        using var host = new CareerPayFactory();
+        var user = await UserWithAsync(host, ProfileWith(new[] { "Built software for 3 clients" }));
+        var material = await NewMaterialAsync(user, host);
+        var id = material.GetProperty("id").GetString()!;
+        var (proposalId, proposal) = await ProposalAfterProfileChangeAsync(user, host, id, new[] { "Built software for 3 clients", "Led a software migration for 9 teams" }, "A new summary.");
+        var all = proposal.GetProperty("changes").EnumerateArray().Select(c => c.GetProperty("id").GetString()).ToArray();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var row = await db.CareerMaterialProposals.FirstAsync(p => p.Id == Guid.Parse(proposalId));
+            Assert.Contains("\"factIds\":[\"highlight:1\"]", row.ProposedJson);
+            row.ProposedJson = row.ProposedJson.Replace("\"factIds\":[\"highlight:1\"]", "\"factIds\":[\"highlight:99\"]");
+            await db.SaveChangesAsync();
+        }
+
+        var error = await CareerClient.ReadErrorAsync(await user.SendAsync(HttpMethod.Post,
+            $"/api/career/materials/{id}/proposals/{proposalId}/apply", new { acceptedChangeIds = all }, "\"material-v1\""), 409);
+
+        Assert.Equal("CareerResumeUnsupportedClaim", error.GetProperty("code").GetString());
+        Assert.Equal(1, (await CareerClient.ReadDataAsync(await user.GetAsync($"/api/career/materials/{id}"), 200)).GetProperty("currentVersion").GetInt32());
+        Assert.Equal("open", (await CareerClient.ReadDataAsync(await user.GetAsync($"/api/career/materials/{id}/proposals/{proposalId}"), 200)).GetProperty("status").GetString());
+    }
+
+    [Fact]
     public async Task VersionsPageByFiftyNewestFirstAndListingStopsAtTwoHundred()
     {
         using var host = new CareerPayFactory();
