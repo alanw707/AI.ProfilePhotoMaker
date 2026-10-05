@@ -1,4 +1,22 @@
-# #390 summaries and exports: review
+# #390 Summaries and exports — review
+
+Branch `career/390-summaries-exports` off `feature/career-workspace`. Design: ADR 0019; contract: `docs/career/api-summaries-exports.md`. Independent review by openai-codex/gpt-5.5 (spec + standards).
+
+## Gates (after fixes)
+- API `dotnet test` (excl. Performance): 1212 passed, 1 skipped, 0 failed. Release `-warnaserror` clean. EF: no pending model changes (`AddCareerExports` additive).
+- UI: lint 0 errors; Karma 700; `build:mvp-v1` succeeds. Playwright materials-exports + resume + photo-handoff: 46 passed, 0 axe WCAG 2.2 AA violations at 1280/390/320, no overflow at 320.
+
+## Acceptance criteria → evidence
+| Criterion | Evidence |
+|---|---|
+| Factual summary, same review/version workflow, no publishing | `SummaryAssembler` cites facts verbatim (≤300/≤1200); shared material versions/proposals; copy-to-clipboard only, no publish button (Playwright) |
+| PDF/DOCX of a selected version with headings and links | PDFsharp + DejaVu Sans (outline, link annotations); OpenXml Heading styles + hyperlinks; text order tested with PdfPig/OpenXml |
+| Free at quota exhaustion, no ATS promise | Export is not a run; quota-exhausted API + UI tests; copy says we do not promise ATS behaviour |
+| Private, expiring downloads | Owner 404, 410 after 24 h with row removed, `no-store, private` + attachment; newest 50 kept |
+| No headshot by default | No image parts by default; photo only as a separate PDF with a selection |
+| Short/long/multilingual/long-link, page breaks | Multi-page PDF with no line split; accented name extracts as text (CJK has no glyphs in DejaVu — noted); long URL wrapped and linked |
+| Placeholder replaced | "later release" text gone; materials page lists resumes and summaries |
+
 
 Open P0/P1: **none**
 
