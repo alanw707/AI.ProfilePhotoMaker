@@ -14,7 +14,7 @@ No provider qualifies, so the analysis ships **benchmark-first**: the BLS benchm
 | Benchmark labelling | `Occupational wage benchmark`, with the "not advertised pay and not a prediction" note, as-of/coverage line and a source button per figure |
 | Personalized section | `unavailable`, reason `provider_rights_unverified`, `interval: null`, cohort all zero, 0 dollar signs in the card, plain-language explanation plus the 8 gates |
 | Blocked banner | plain words; the raw code is no longer shown to the user |
-| Scenario | requested 150,000 vs benchmark median 135,980 → gap 14,020 and 10.3 %, matching the arithmetic; note says a target is a preference, not evidence |
+| Scenario | requested 150,000 vs the **local** Denver benchmark median 137,610 → gap 12,390 and 9.0 %, matching the arithmetic and the area the card names; the note says a target is a preference, not evidence |
 | Scenario without a requested salary | `unavailable` (no invented target) |
 | Reproducibility | `POST …/recompute` → `matches: true`, identical `inputHash`; the page reads "Reproduced exactly (input hash 8685312b7c03)" |
 | Stale after a profile change | `stale: true` (`profile_changed`), sections byte-identical, banner shown |

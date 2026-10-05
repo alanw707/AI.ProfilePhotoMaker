@@ -39,7 +39,12 @@ Same envelope, auth, flag (403 `CareerWorkspaceDisabled`) and error shape as `ap
                   "sensitive": false, "exclusionReasons": {} },
       "note": "No qualified source: no provider has granted written rights for ongoing commercial use." },
     { "key": "scenario", "title": "Your requested pay", "status": "complete | unavailable",
-      "requestedAnnual": 150000, "benchmarkMedianAnnual": 135980, "gapAnnual": 14020, "gapPercent": 10.3,
+      // The median compared against is the local benchmark when the location resolved (here Denver),
+      // otherwise the national one; the area is always named, and requestedPaySource records where
+      // the target came from.
+      "requestedAnnual": 150000, "benchmarkMedianAnnual": 137610, "gapAnnual": 12390, "gapPercent": 9.0,
+      "benchmarkAreaCode": "19740", "benchmarkAreaTitle": "Denver-Aurora-Centennial, CO",
+      "requestedPaySource": "desiredPayMin",
       "note": "Your target is a preference, not evidence about what employers pay." }
   ],
   "blockedReasons": ["provider_rights_unverified"],
