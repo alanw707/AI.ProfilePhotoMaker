@@ -30,7 +30,7 @@ public interface IMaterialExportRenderer
 /// <summary>Text hygiene shared by the renderers: no control characters, and URLs found in text become links.</summary>
 public static class ExportText
 {
-    private static readonly Regex UrlPattern = new(@"https?://[^\s<>""]+", RegexOptions.Compiled | RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
+    private static readonly Regex UrlPattern = new(@"(?:https?://|mailto:)[^\s<>""]+", RegexOptions.Compiled | RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
     private const string TrailingPunctuation = ".,;:!?)]}'\u2019";
 
     public static string Clean(string? text)
@@ -64,7 +64,7 @@ public static class ExportText
         return new string(chars.ToArray()).Trim();
     }
 
-    /// <summary>Splits text into plain and link runs. Only absolute http(s) URLs become links.</summary>
+    /// <summary>Splits text into plain and link runs. Only absolute http, https and mailto URIs become links.</summary>
     public static IReadOnlyList<(string Text, string? Url)> Runs(string text)
     {
         var runs = new List<(string, string?)>();
@@ -72,7 +72,7 @@ public static class ExportText
         foreach (Match match in UrlPattern.Matches(text))
         {
             var url = match.Value.TrimEnd(TrailingPunctuation.ToCharArray());
-            if (url.Length <= "https://".Length || !Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+            if (url.Length <= "mailto:".Length || !Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https" or "mailto"))
             {
                 continue;
             }

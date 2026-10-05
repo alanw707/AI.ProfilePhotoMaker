@@ -32,7 +32,6 @@ public static class CareerExportErrorCodes
     public const string Expired = "CareerExportExpired";
     public const string NotFound = "CareerExportNotFound";
     public const string PhotoUnavailable = "CareerExportPhotoUnavailable";
-    public const string LimitReached = "CareerExportLimit";
 }
 
 public interface ICareerExportService
@@ -121,9 +120,13 @@ public sealed class CareerExportService : ICareerExportService
         var now = Now();
         // Expired rows are removed whenever the owner exports, so they never pile up.
         _db.CareerExports.RemoveRange(await _db.CareerExports.Where(e => e.OwnerId == ownerId && e.ExpiresAt <= now).ToListAsync(ct));
-        if (await _db.CareerExports.CountAsync(e => e.OwnerId == ownerId && e.ExpiresAt > now, ct) >= MaxActivePerOwner)
+        // Retention: the newest MaxActivePerOwner unexpired exports are kept; the new one takes a slot.
+        var excess = await _db.CareerExports.Where(e => e.OwnerId == ownerId && e.ExpiresAt > now)
+            .OrderByDescending(e => e.CreatedAt).ThenByDescending(e => e.Id)
+            .Select(e => e.Id).Skip(MaxActivePerOwner - 1).ToListAsync(ct);
+        if (excess.Count > 0)
         {
-            return CareerOutcome<CareerExportDto>.QuotaExceeded(CareerExportErrorCodes.LimitReached, "You have a lot of exports waiting. They expire after 24 hours.");
+            _db.CareerExports.RemoveRange(await _db.CareerExports.Where(e => excess.Contains(e.Id)).ToListAsync(ct));
         }
 
         var document = await BuildDocumentAsync(material, version, photo, ct);

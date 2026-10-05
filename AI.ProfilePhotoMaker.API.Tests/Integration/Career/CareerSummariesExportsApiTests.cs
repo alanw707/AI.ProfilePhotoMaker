@@ -300,6 +300,92 @@ public class CareerSummariesExportsApiTests
         text.Should().Contain("José").And.Contain("Ñúñez");
     }
 
+    private static object[] SummarySections(string text, string[] factIds) => new object[]
+    {
+        new { key = "headline", lines = Array.Empty<object>() },
+        new { key = "summary", lines = new object[] { new { id = "u-x", text, factIds, origin = "human" } } },
+        new { key = "experience_highlights", lines = Array.Empty<object>() },
+        new { key = "skills", lines = Array.Empty<object>() }
+    };
+
+    [Theory]
+    [InlineData("mailto:person@example.com", "mailto:person@example.com")]
+    [InlineData("javascript:alert(1)", null)]
+    [InlineData("data:text/html,hi", null)]
+    [InlineData("file:///etc/passwd", null)]
+    public async Task OnlyHttpHttpsAndMailtoBecomeLinksInPdfAndDocx(string uri, string? expected)
+    {
+        using var host = new CareerPayFactory();
+        var user = await UserAsync(host);
+        var material = await MaterialAsync(user, host);
+        var id = material.GetProperty("id").GetString()!;
+        (await Save(user, id, SummarySections($"Reach me at {uri} anytime", Array.Empty<string>()), material.GetProperty("etag").GetString()!))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var (_, pdfBytes, _) = await ExportFileAsync(user, id, new { format = "pdf" });
+        var (_, docxBytes, _) = await ExportFileAsync(user, id, new { format = "docx" });
+
+        using var pdf = PdfDocument.Open(pdfBytes);
+        var pdfLinks = pdf.GetPages().SelectMany(p => p.GetHyperlinks()).Select(l => l.Uri).ToList();
+        using var stream = new MemoryStream(docxBytes);
+        using var docx = WordprocessingDocument.Open(stream, false);
+        var docxLinks = docx.MainDocumentPart!.HyperlinkRelationships.Select(r => r.Uri.OriginalString).ToList();
+        if (expected == null)
+        {
+            pdfLinks.Should().BeEmpty();
+            docxLinks.Should().BeEmpty();
+            Squash(PdfText(pdfBytes)).Should().Contain(Squash(uri));
+            Squash(DocxText(docxBytes)).Should().Contain(Squash(uri));
+        }
+        else
+        {
+            pdfLinks.Should().Contain(expected);
+            docxLinks.Should().Contain(expected);
+        }
+    }
+
+    [Fact]
+    public async Task AHumanSummaryLineCitingAnUnresolvedFactIs409AndResolvedOrEmptyIsFine()
+    {
+        using var host = new CareerPayFactory();
+        var user = await UserAsync(host);
+        var material = await MaterialAsync(user, host);
+        var id = material.GetProperty("id").GetString()!;
+        var error = await CareerClient.ReadErrorAsync(
+            await Save(user, id, SummarySections("Hello", new[] { "highlight:99" }), material.GetProperty("etag").GetString()!), 409);
+        error.GetProperty("code").GetString().Should().Be("CareerResumeUnsupportedClaim");
+        (await Save(user, id, SummarySections("Hello", Array.Empty<string>()), material.GetProperty("etag").GetString()!)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task TheFiftyFirstExportSucceedsAndTheOldestIsRemoved()
+    {
+        using var host = new CareerPayFactory();
+        var user = await UserAsync(host);
+        var material = await MaterialAsync(user, host);
+        var id = material.GetProperty("id").GetString()!;
+        var first = await CareerClient.ReadDataAsync(await Export(user, id, new { format = "docx" }), 201);
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var seed = await db.CareerExports.AsNoTracking().FirstAsync(e => e.Id == Guid.Parse(first.GetProperty("id").GetString()!));
+            for (var i = 0; i < 49; i++)
+            {
+                db.CareerExports.Add(new CareerExport
+                {
+                    Id = Guid.NewGuid(), OwnerId = seed.OwnerId, MaterialId = seed.MaterialId, Version = seed.Version, Format = seed.Format,
+                    FileName = seed.FileName, Content = seed.Content, CreatedAt = seed.CreatedAt.AddSeconds(i + 1), ExpiresAt = seed.ExpiresAt.AddSeconds(i + 1)
+                });
+            }
+            await db.SaveChangesAsync();
+        }
+        var latest = await CareerClient.ReadDataAsync(await Export(user, id, new { format = "docx" }), 201);
+        (await user.GetAsync(latest.GetProperty("downloadUrl").GetString()!)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await user.GetAsync(first.GetProperty("downloadUrl").GetString()!)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var check = host.Services.CreateScope();
+        (await check.ServiceProvider.GetRequiredService<ApplicationDbContext>().CareerExports.CountAsync(e => e.OwnerId == user.UserId)).Should().Be(50);
+    }
+
     [Fact]
     public async Task ALongLinkIsWrappedAndIsBothALinkAnnotationAndText()
     {

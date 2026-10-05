@@ -1,4 +1,13 @@
-import { Component, OnInit, computed, effect, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import {
   CareerApiError,
   CareerExportDto,
@@ -26,7 +35,9 @@ export function expiryText(expiresAt: string, now = Date.now()): string {
   templateUrl: './career-export-panel.component.html',
   styleUrl: './career.scss',
 })
-export class CareerExportPanelComponent implements OnInit {
+export class CareerExportPanelComponent implements OnInit, OnDestroy {
+  static readonly REVOKE_DELAY_MS = 60_000;
+  private objectUrls = new Set<string>();
   private api = inject(CareerProfileService);
   materialId = input.required<string>();
   currentVersion = input.required<number>();
@@ -50,6 +61,11 @@ export class CareerExportPanelComponent implements OnInit {
         this.loadRecent();
       }
     });
+  }
+
+  ngOnDestroy() {
+    this.objectUrls.forEach(url => URL.revokeObjectURL(url));
+    this.objectUrls.clear();
   }
 
   ngOnInit() {
@@ -120,7 +136,12 @@ export class CareerExportPanelComponent implements OnInit {
         document.body.appendChild(link);
         link.click();
         link.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        this.objectUrls.add(url);
+        setTimeout(() => {
+          if (this.objectUrls.delete(url)) {
+            URL.revokeObjectURL(url);
+          }
+        }, CareerExportPanelComponent.REVOKE_DELAY_MS);
         this.busy.set(false);
         this.status.set('Your file was downloaded. Check it before you send it.');
       },

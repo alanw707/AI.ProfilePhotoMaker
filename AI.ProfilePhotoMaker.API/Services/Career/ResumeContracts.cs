@@ -180,9 +180,11 @@ public static class ResumeFacts
         return list != null && index < list.Count ? Pick(list[index]) : null;
     }
 
-    /// <summary>Generated lines whose fact ids do not all resolve, or that cite nothing. Empty means every claim is grounded.</summary>
+    /// <summary>Generated lines whose fact ids do not all resolve or that cite nothing, and human lines that cite a fact that does not resolve. Empty means every claim is grounded.</summary>
     public static IReadOnlyList<string> UnsupportedLineIds(CareerProfileVersion profile, IEnumerable<ResumeSection> sections) =>
         sections.SelectMany(s => s.Lines)
-            .Where(l => l.Origin == ResumeOrigins.Generated && (l.FactIds.Count == 0 || l.FactIds.Any(f => Resolve(profile, f) == null)))
+            .Where(l => l.Origin == ResumeOrigins.Generated
+                ? l.FactIds.Count == 0 || l.FactIds.Any(f => Resolve(profile, f) == null)
+                : l.FactIds.Any(f => Resolve(profile, f) == null))
             .Select(l => l.Id).ToList();
 }

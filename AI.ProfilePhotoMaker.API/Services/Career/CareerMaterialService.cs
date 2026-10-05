@@ -144,7 +144,7 @@ public sealed class CareerMaterialService : ICareerMaterialService
         var contact = MergeContact(Contact(current), request.Contact);
 
         var profile = await ProfileAsync(ownerId, material.PinnedProfileVersion, ct);
-        var unsupported = profile == null ? sections.SelectMany(s => s.Lines).Where(l => l.Origin == ResumeOrigins.Generated).Select(l => l.Id).ToList()
+        var unsupported = profile == null ? sections.SelectMany(s => s.Lines).Where(l => l.Origin == ResumeOrigins.Generated || l.FactIds.Count > 0).Select(l => l.Id).ToList()
             : ResumeFacts.UnsupportedLineIds(profile, sections);
         if (unsupported.Count > 0)
         {
@@ -179,7 +179,7 @@ public sealed class CareerMaterialService : ICareerMaterialService
         }
         var oldSections = Sections(old);
         var oldPinned = await ProfileAsync(ownerId, old.PinnedProfileVersion, ct);
-        var oldUnsupported = oldPinned == null ? oldSections.SelectMany(s => s.Lines).Where(l => l.Origin == ResumeOrigins.Generated).Select(l => l.Id).ToList()
+        var oldUnsupported = oldPinned == null ? oldSections.SelectMany(s => s.Lines).Where(l => l.Origin == ResumeOrigins.Generated || l.FactIds.Count > 0).Select(l => l.Id).ToList()
             : ResumeFacts.UnsupportedLineIds(oldPinned, oldSections);
         if (oldUnsupported.Count > 0)
         {
