@@ -596,14 +596,16 @@ public sealed class CareerConcurrentCreateTests : IDisposable
         return owner;
     }
 
-    private async Task<CareerOutcomeKind> CreateAsync(string owner, int allowance, int concurrent)
+    private async Task<CareerOutcomeKind> CreateAsync(string owner, int allowance, int concurrent, Action<CareerUsagePolicy>? tune = null, string task = "profile_summary")
     {
+        var policy = new CareerUsagePolicy { PerMinuteRunLimit = 1000, MaxConcurrentRunsPerUser = concurrent };
+        tune?.Invoke(policy);
         await using var db = new ApplicationDbContext(Options);
         var service = new CareerAgentRunService(
             db, Microsoft.Extensions.Options.Options.Create(new CareerAgentOptions { MonthlyRunAllowance = allowance }), TimeProvider.System,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<CareerAgentRunService>.Instance, new FakeCareerTextModel(),
-            usage: Microsoft.Extensions.Options.Options.Create(new CareerUsagePolicy { PerMinuteRunLimit = 1000, MaxConcurrentRunsPerUser = concurrent }));
-        return (await service.CreateAsync(owner, new CreateCareerRunRequest { Task = "profile_summary" }, $"key-{Guid.NewGuid():N}")).Kind;
+            usage: Microsoft.Extensions.Options.Options.Create(policy));
+        return (await service.CreateAsync(owner, new CreateCareerRunRequest { Task = task }, $"key-{Guid.NewGuid():N}")).Kind;
     }
 
     [Fact]
@@ -629,5 +631,53 @@ public sealed class CareerConcurrentCreateTests : IDisposable
         kinds.Count(k => k == CareerOutcomeKind.Ok).Should().BeInRange(1, 2);
         await using var db = new ApplicationDbContext(Options);
         (await db.CareerAgentRuns.CountAsync(r => r.OwnerId == owner)).Should().BeLessThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public async Task ParallelCreatesFromDifferentUsersNeverExceedTheGlobalQueueCap()
+    {
+        var owners = new List<string>();
+        for (var i = 0; i < 10; i++)
+        {
+            owners.Add(await SeedAsync());
+        }
+        var kinds = await Task.WhenAll(owners.Select(o => Task.Run(() => CreateAsync(o, 20, 100, p => p.MaxQueuedRunsGlobal = 3))));
+
+        kinds.Count(k => k == CareerOutcomeKind.Ok).Should().BeInRange(1, 3);
+        await using var db = new ApplicationDbContext(Options);
+        (await db.CareerAgentRuns.CountAsync(r => r.Status == CareerRunStatus.Queued)).Should().BeLessThanOrEqualTo(3);
+    }
+
+    private async Task AddCostAsync(string owner, int cents)
+    {
+        await using var db = new ApplicationDbContext(Options);
+        db.CareerUsageEvents.Add(CareerUsage.Event(owner, null, CareerUsageActions.ModelStep, CareerUsageOutcomes.Ok, DateTime.UtcNow, 1, costCents: cents));
+        await db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task ARunWhoseEstimateFitsUnderTheUserCapIsAcceptedAndOneCentOverIsRefused()
+    {
+        var ok = await SeedAsync();
+        await AddCostAsync(ok, 199); // cap 2.00 USD, estimate 1 cent: 200 <= 200
+        (await CreateAsync(ok, 20, 100, p => p.PerUserMonthlyModelCostCapUsd = 2m)).Should().Be(CareerOutcomeKind.Ok);
+
+        var over = await SeedAsync();
+        await AddCostAsync(over, 200);
+        (await CreateAsync(over, 20, 100, p => p.PerUserMonthlyModelCostCapUsd = 2m)).Should().Be(CareerOutcomeKind.QuotaExceeded);
+    }
+
+    [Fact]
+    public async Task TheGlobalCostCapUsesTheEstimateAndModelFreeTasksCostNothing()
+    {
+        var a = await SeedAsync();
+        var b = await SeedAsync();
+        await AddCostAsync(a, 199);
+        void Tune(CareerUsagePolicy p) => p.MonthlyModelCostCapUsd = 2m;
+        (await CreateAsync(b, 20, 100, Tune)).Should().Be(CareerOutcomeKind.Ok); // 199 + 1 <= 200
+        await AddCostAsync(b, 1);
+        (await CreateAsync(a, 20, 100, Tune)).Should().Be(CareerOutcomeKind.Unavailable);
+        // A task with no estimate (model-free) is not refused merely for sitting exactly at the cap.
+        (await CreateAsync(a, 20, 100, p => { Tune(p); p.TaskCostEstimatesUsd = new(); })).Should().Be(CareerOutcomeKind.Ok);
     }
 }

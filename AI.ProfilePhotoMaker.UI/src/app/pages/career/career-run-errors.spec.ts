@@ -10,6 +10,13 @@ describe('run start errors', () => {
     expect(runErrorMessage({ kind: 'busy', message: 'x' })).toContain('try again in a minute');
     expect(runErrorMessage({ kind: 'costCap', message: 'x' })).toContain('saved work');
   });
+  it('shows plain copy for the 429 usage limits', () => {
+    for (const kind of ['rateLimited', 'concurrencyLimit', 'userCostCap'] as const) {
+      const text = runErrorMessage({ kind, message: 'raw Career code' });
+      expect(text).toBe(PLAIN_503[kind] as string);
+      expect(text).not.toContain('Career');
+    }
+  });
   it('falls back to the server message, then a generic one', () => {
     expect(runErrorMessage({ kind: 'unknown', message: 'Nope' })).toBe('Nope');
     expect(runErrorMessage({ kind: 'unknown', message: '' })).toBe(

@@ -10,6 +10,7 @@ Policy values are **provisional until the owner approves the budget**. Config: `
 | `MaxConcurrentRunsPerUser` (queued + working) | 2 |
 | `MaxQueuedRunsGlobal` | 200 |
 | `MonthlyModelCostCapUsd` (global) / `PerUserMonthlyModelCostCapUsd` | 50 / 2 |
+| `TaskCostEstimatesUsd` (per-task estimate; unlisted = model-free = 0) | `profile_summary`: 0.01 |
 | `ControlsCacheSeconds` | 30 |
 | `AbandonedReservationMinutes` / `ReaperPollSeconds` | 30 / 300 |
 
@@ -30,7 +31,11 @@ Checked after the idempotent replay (a replay of an existing key always answers)
 
 Only run creation (and the external job source, below) is gated. Reading, editing, exporting, replays, cancel and the allowance
 endpoint never depend on a switch or on the allowance. The checks run inside the allowance-row race (its `Version` is a concurrency
-token), so parallel creates cannot exceed the allowance or the concurrency limit.
+token), so parallel creates cannot exceed the allowance or the concurrency limit. Every create also bumps the singleton
+`CareerOperatorStates.GuardVersion` concurrency token, which serializes the *global* checks (`MaxQueuedRunsGlobal`, global cost cap)
+across users: a losing create retries. Cost caps refuse when `current cost + the task's estimate > cap` (per user and global).
+
+**Legacy:** the `allowance` object on run DTOs/list is legacy; the UI reads the allowance only from `GET /api/career/allowance`.
 
 `GET /api/career/jobs/observations` answers 503 `CareerGenerationPaused` when `sourcesDisabled` is set and the source would be called.
 

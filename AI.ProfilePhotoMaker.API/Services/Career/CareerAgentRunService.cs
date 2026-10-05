@@ -186,6 +186,16 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
 
             var now = Now();
             var period = CareerAllowanceStore.PeriodStart(now);
+            // Tracked and bumped: every create contends for this one row, so the global checks below
+            // (queue depth, cost) are serialized across users. A loser retries from the top.
+            var guard = await _db.CareerOperatorStates.FirstOrDefaultAsync(s => s.Id == CareerOperatorState.SingletonId, ct);
+            var guardCreated = guard == null;
+            if (guard == null)
+            {
+                guard = new CareerOperatorState();
+                _db.CareerOperatorStates.Add(guard);
+            }
+            guard.GuardVersion++;
             // Tracked before the run is added: the allowance is the row a racing create contends for.
             var allowance = await _db.CareerAllowances.FirstOrDefaultAsync(a => a.OwnerId == ownerId && a.PeriodStart == period, ct);
             var committed = (allowance?.Reserved ?? 0) + (allowance?.Used ?? 0);
@@ -194,7 +204,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
                 return CareerOutcome<CareerAgentRunDto>.QuotaExceeded(
                     CareerAgentErrorCodes.AllowanceExhausted, "You have used this month's assistant runs.");
             }
-            if (await CheckLimitsAsync(ownerId, now, period, ct) is { } limited)
+            if (await CheckLimitsAsync(ownerId, task!, now, period, ct) is { } limited)
             {
                 return limited;
             }
@@ -227,7 +237,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
                 _logger.LogInformation("Career run {RunId} queued", run.Id);
                 return CareerOutcome<CareerAgentRunDto>.Ok(await ToDtoAsync(run, ct));
             }
-            catch (DbUpdateException ex) when (CareerProfileService.IsLostRace(ex))
+            catch (DbUpdateException ex) when (guardCreated || CareerProfileService.IsLostRace(ex))
             {
                 // Another request took the key (unique index) or the allowance row moved.
                 // Start over: the loop returns the winner's run, or re-checks the allowance.
@@ -244,7 +254,7 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
     /// Rate, concurrency, backpressure and cost caps (ADR 0022). Runs inside the allowance-row race, so two
     /// creates for one user cannot both pass the concurrency check: one loses the row and re-checks.
     /// </summary>
-    private async Task<CareerOutcome<CareerAgentRunDto>?> CheckLimitsAsync(string ownerId, DateTime now, DateTime period, CancellationToken ct)
+    private async Task<CareerOutcome<CareerAgentRunDto>?> CheckLimitsAsync(string ownerId, string task, DateTime now, DateTime period, CancellationToken ct)
     {
         var windowStart = now.AddMinutes(-1);
         var recent = await _db.CareerAgentRuns.AsNoTracking()
@@ -269,16 +279,17 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             return CareerOutcome<CareerAgentRunDto>.Busy(CareerAgentErrorCodes.Busy, "The career assistant is busy. Try again shortly.", 30);
         }
 
+        var estimateCents = _usage.TaskCostEstimatesUsd.TryGetValue(task, out var usd) ? usd * 100m : 0m;
         var userCents = await _db.CareerUsageEvents.AsNoTracking()
             .Where(e => e.OwnerId == ownerId && e.CreatedAt >= period).SumAsync(e => (int?)e.CostCents, ct) ?? 0;
-        if (userCents >= _usage.PerUserMonthlyModelCostCapUsd * 100m)
+        if (userCents + estimateCents > _usage.PerUserMonthlyModelCostCapUsd * 100m)
         {
             return CareerOutcome<CareerAgentRunDto>.QuotaExceeded(
                 CareerAgentErrorCodes.UserCostCapReached, "You have reached this month's assistant usage limit.");
         }
         var globalCents = await _db.CareerUsageEvents.AsNoTracking()
             .Where(e => e.CreatedAt >= period).SumAsync(e => (long?)e.CostCents, ct) ?? 0;
-        if (globalCents >= _usage.MonthlyModelCostCapUsd * 100m)
+        if (globalCents + estimateCents > _usage.MonthlyModelCostCapUsd * 100m)
         {
             return CareerOutcome<CareerAgentRunDto>.Busy(
                 CareerAgentErrorCodes.CostCapReached, "The career assistant has reached its monthly capacity.", (int)(NextPeriod(period) - now).TotalSeconds);

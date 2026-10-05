@@ -341,6 +341,9 @@ describe('CareerProfileService', () => {
       [503, 'CareerGenerationPaused', 'paused'],
       [503, 'CareerBusy', 'busy'],
       [503, 'CareerCostCapReached', 'costCap'],
+      [429, 'CareerRateLimited', 'rateLimited'],
+      [429, 'CareerConcurrencyLimit', 'concurrencyLimit'],
+      [429, 'CareerUserCostCapReached', 'userCostCap'],
     ];
     for (const [status, code, kind] of cases) {
       it(`maps ${status} ${code} to ${kind}`, () => {

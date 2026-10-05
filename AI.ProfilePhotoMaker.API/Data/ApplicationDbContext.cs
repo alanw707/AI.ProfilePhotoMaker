@@ -327,6 +327,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         operatorState.ToTable("CareerOperatorStates");
         operatorState.Property(o => o.Id).ValueGeneratedNever();
         operatorState.Property(o => o.UpdatedBy).HasMaxLength(450);
+        operatorState.Property(o => o.GuardVersion).IsConcurrencyToken();
 
         // Occupation matches (#381, ADR 0010). One per run; cascade from the user.
         var match = builder.Entity<Models.Career.CareerOccupationMatch>();

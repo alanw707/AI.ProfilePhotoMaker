@@ -28,10 +28,18 @@ const usage = {
       costUsd: 1.5,
       latencyP50Ms: 900,
       latencyP95Ms: 2400,
-      failureRate: 0.05,
+      failures: 3,
     },
   ],
-  perUser: { activeUsers: 4, p50Cost: 0.2, p95Cost: 0.9, maxCost: 1.1, p50Runs: 2, p95Runs: 7 },
+  perActiveUser: {
+    activeUsers: 4,
+    eventsP50: 2,
+    eventsP95: 7,
+    eventsMax: 9,
+    costUsdP50: 0.2,
+    costUsdP95: 0.9,
+    costUsdMax: 1.1,
+  },
   totalCostUsd: 1.5,
 };
 
@@ -58,9 +66,18 @@ async function mock(page: Page, opts: { allowance?: object; runStatus?: number; 
     if (path === '/api/admin/career/controls') {
       if (req.method() === 'PUT') {
         calls.puts.push(req.postDataJSON());
-        return send({ ...req.postDataJSON(), updatedAt: '2026-10-05T12:00:00Z' });
+        return send({
+          ...req.postDataJSON(),
+          updatedAt: '2026-10-05T12:00:00Z',
+          updatedBy: 'admin-1',
+        });
       }
-      return send({ generationDisabled: false, sourcesDisabled: false, updatedAt: null });
+      return send({
+        generationDisabled: false,
+        sourcesDisabled: false,
+        updatedAt: null,
+        updatedBy: null,
+      });
     }
     return send([]);
   });
@@ -111,7 +128,9 @@ test('admin page shows usage and toggles only after confirmation', async ({ page
   await expect(row).toHaveCount(1);
   await expect(row).toContainText('Pay analysis');
   await expect(row).not.toContainText('pay_analysis');
+  await expect(row).toContainText('25%');
   await expect(page.locator('[data-per-user]')).toContainText('4');
+  await expect(page.locator('[data-per-user]')).toContainText('1.10');
   await page.locator('[data-switch="generationDisabled"]').click();
   await expect(page.locator('[data-confirm]')).toBeVisible();
   expect(calls.puts).toEqual([]);

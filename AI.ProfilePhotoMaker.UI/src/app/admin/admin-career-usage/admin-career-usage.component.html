@@ -42,7 +42,7 @@
         </p>
       }
       @if (c.updatedAt) {
-        <p>Last changed {{ c.updatedAt | date: 'medium' }}.</p>
+        <p>Last changed {{ c.updatedAt | date: 'medium' }}{{ c.updatedBy ? ' by ' + c.updatedBy : '' }}.</p>
       }
       @if (pending()) {
         <div role="alertdialog" aria-labelledby="confirm-text" data-confirm>
@@ -78,7 +78,7 @@
                 <td>{{ a.costUsd | number: '1.2-2' }}</td>
                 <td>{{ a.latencyP50Ms | number: '1.0-0' }}</td>
                 <td>{{ a.latencyP95Ms | number: '1.0-0' }}</td>
-                <td>{{ a.failureRate | percent: '1.0-1' }}</td>
+                <td>{{ failureRate(a) | percent: '1.0-1' }}</td>
               </tr>
             }
           </tbody>
@@ -89,17 +89,19 @@
       <h2 id="users-heading">Per-user spread</h2>
       <dl data-per-user>
         <dt>Active users</dt>
-        <dd>{{ u.perUser.activeUsers }}</dd>
+        <dd>{{ u.perActiveUser.activeUsers }}</dd>
         <dt>Median cost per user (USD)</dt>
-        <dd>{{ u.perUser.p50Cost | number: '1.2-2' }}</dd>
+        <dd>{{ u.perActiveUser.costUsdP50 | number: '1.2-2' }}</dd>
         <dt>Slow-end cost per user (USD)</dt>
-        <dd>{{ u.perUser.p95Cost | number: '1.2-2' }}</dd>
+        <dd>{{ u.perActiveUser.costUsdP95 | number: '1.2-2' }}</dd>
         <dt>Highest cost (USD)</dt>
-        <dd>{{ u.perUser.maxCost | number: '1.2-2' }}</dd>
+        <dd>{{ u.perActiveUser.costUsdMax | number: '1.2-2' }}</dd>
         <dt>Median runs per user</dt>
-        <dd>{{ u.perUser.p50Runs | number: '1.0-0' }}</dd>
+        <dd>{{ u.perActiveUser.eventsP50 | number: '1.0-0' }}</dd>
         <dt>Slow-end runs per user</dt>
-        <dd>{{ u.perUser.p95Runs | number: '1.0-0' }}</dd>
+        <dd>{{ u.perActiveUser.eventsP95 | number: '1.0-0' }}</dd>
+        <dt>Most runs by one user</dt>
+        <dd>{{ u.perActiveUser.eventsMax | number: '1.0-0' }}</dd>
       </dl>
     </section>
   }

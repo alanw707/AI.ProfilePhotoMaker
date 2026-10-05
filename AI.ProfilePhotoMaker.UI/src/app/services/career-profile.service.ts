@@ -158,12 +158,7 @@ export interface CareerPhotoSelection {
   selectedAt: string;
 }
 export type CareerRunStatus =
-  | 'queued'
-  | 'working'
-  | 'needs_input'
-  | 'completed'
-  | 'failed'
-  | 'cancelled';
+  'queued' | 'working' | 'needs_input' | 'completed' | 'failed' | 'cancelled';
 export interface CareerRunStep {
   ordinal: number;
   kind: string;
@@ -700,12 +695,7 @@ export interface PayRecomputeResult {
   sections: PaySection[];
 }
 export type ResumeSectionKey =
-  | 'headline'
-  | 'summary'
-  | 'experience_highlights'
-  | 'skills'
-  | 'short'
-  | 'long';
+  'headline' | 'summary' | 'experience_highlights' | 'skills' | 'short' | 'long';
 export type MaterialKind = 'resume' | 'summary';
 export type ExportFormat = 'pdf' | 'docx';
 export interface CareerExportDto {
@@ -806,6 +796,9 @@ export interface CareerApiError {
     | 'paused'
     | 'busy'
     | 'costCap'
+    | 'rateLimited'
+    | 'concurrencyLimit'
+    | 'userCostCap'
     | 'unavailable'
     | 'profileRequired'
     | 'idempotencyMismatch'
@@ -832,12 +825,16 @@ export interface CareerApiError {
   detail?: string;
   retryAfterSeconds?: number;
 }
-/** Plain wording for the 503 codes; machine codes are never shown. */
+/** Plain wording for the 503 and usage-limit 429 codes; machine codes are never shown. */
 export const PLAIN_503: Partial<Record<CareerApiError['kind'], string>> = {
   paused: 'Drafting is paused for now. Your saved work is still available.',
   busy: 'Busy \u2014 try again in a minute.',
   costCap:
     'Drafting is unavailable for the rest of this period. Your saved work is still available.',
+  rateLimited: 'You are starting drafts too quickly. Wait a moment and try again.',
+  concurrencyLimit: 'Wait for your current drafts to finish before starting another.',
+  userCostCap:
+    'You have reached this month\u2019s drafting limit. Your saved work is still available.',
 };
 export interface CareerAllowanceDto {
   policyVersion: string;
@@ -853,17 +850,18 @@ export interface CareerUsageAction {
   costUsd: number;
   latencyP50Ms: number;
   latencyP95Ms: number;
-  failureRate: number;
+  failures: number;
 }
 export interface CareerUsageDto {
   actions: CareerUsageAction[];
-  perUser: {
+  perActiveUser: {
     activeUsers: number;
-    p50Cost: number;
-    p95Cost: number;
-    maxCost: number;
-    p50Runs: number;
-    p95Runs: number;
+    eventsP50: number;
+    eventsP95: number;
+    eventsMax: number;
+    costUsdP50: number;
+    costUsdP95: number;
+    costUsdMax: number;
   };
   totalCostUsd: number;
 }
@@ -871,6 +869,7 @@ export interface CareerControlsDto {
   generationDisabled: boolean;
   sourcesDisabled: boolean;
   updatedAt: string | null;
+  updatedBy: string | null;
 }
 interface Envelope<T> {
   success: boolean;
@@ -995,6 +994,9 @@ export class CareerProfileService {
       CareerGenerationPaused: 'paused',
       CareerBusy: 'busy',
       CareerCostCapReached: 'costCap',
+      CareerRateLimited: 'rateLimited',
+      CareerConcurrencyLimit: 'concurrencyLimit',
+      CareerUserCostCapReached: 'userCostCap',
       CareerModelUnavailable: 'unavailable',
       CareerIdempotencyMismatch: 'idempotencyMismatch',
       CareerProfileRequired: 'profileRequired',

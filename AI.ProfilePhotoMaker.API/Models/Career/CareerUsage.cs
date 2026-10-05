@@ -54,4 +54,10 @@ public class CareerOperatorState
     public bool SourcesDisabled { get; set; }
     public DateTime UpdatedAt { get; set; }
     public string? UpdatedBy { get; set; }
+
+    /// <summary>
+    /// Concurrency token bumped by every run create (ADR 0022): serializes the global backpressure and cost
+    /// checks across users, so two creates cannot both pass them against the same counts.
+    /// </summary>
+    public int GuardVersion { get; set; }
 }

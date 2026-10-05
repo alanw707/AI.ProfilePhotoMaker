@@ -61,6 +61,9 @@ export class AdminCareerUsageComponent implements OnInit {
   pending = signal<Switch | null>(null);
   switches = SWITCHES;
   label = actionLabel;
+  /** The API reports failures and a count; the rate is derived here. */
+  failureRate = (a: { count: number; failures: number }) =>
+    a.count > 0 ? a.failures / a.count : 0;
 
   ngOnInit() {
     this.api.getAdminUsage().subscribe({
