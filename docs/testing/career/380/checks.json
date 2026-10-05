@@ -1,0 +1,269 @@
+{
+  "results": [
+    {
+      "label": "start without profile",
+      "status": 409,
+      "code": "CareerProfileRequired"
+    },
+    {
+      "label": "real api idempotency/ownership",
+      "first": 202,
+      "replaySameId": true,
+      "changedPayload": [
+        409,
+        "CareerIdempotencyMismatch"
+      ],
+      "missingKey": 400,
+      "readsFree": true,
+      "allowance": {
+        "used": 0,
+        "reserved": 1,
+        "limit": 20,
+        "periodStart": "2026-10-01T00:00:00Z"
+      },
+      "crossUserGet": 404,
+      "crossUserCancel": 404
+    },
+    {
+      "label": "01-needs-answer @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-needs-answer @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-needs-answer @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-draft-ready @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-draft-ready @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-draft-ready @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "steps shown",
+      "steps": [
+        "Read your confirmed profile",
+        "Read your career goal",
+        "Asked who the summary is for",
+        "Drafted a summary",
+        "Saved the draft for your review"
+      ]
+    },
+    {
+      "label": "review page",
+      "text": "Back to career workspace\nReview your drafted summary\n\nNothing changes on your profile until you add it.\n\nReview suggestions\n\nThis draft was written by the assistant from your profile and goal. Check each one you want to add.\n\nSummary\nSenior Operations Lead with 9 years of experience. Skills include SQL, Tableau, Process improvement. Highlights: Reduced scheduling backlog by 30 percent across 12 clinics. Written for Hiring managers for clinic operations roles.\n\"Drafted by the career assistant fro"
+    },
+    {
+      "label": "03-review-agent-proposal @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-review-agent-proposal @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-review-agent-proposal @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Import Your Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "profile facts unchanged by run",
+      "summary": null,
+      "version": 1
+    },
+    {
+      "label": "04-start @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "04-start @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "04-start @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "reconnect after reload",
+      "ok": true,
+      "url": "/app/career/summary?run=4aa42804-7b39-4aae-8808-fac8328c252c"
+    },
+    {
+      "label": "profile updated after run",
+      "status": 200
+    },
+    {
+      "label": "profile changed note",
+      "count": 1
+    },
+    {
+      "label": "accept stale proposal",
+      "profileChanged": true,
+      "status": 412,
+      "code": "CareerVersionConflict"
+    },
+    {
+      "label": "05-profile-changed @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05-profile-changed @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05-profile-changed @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "cancel",
+      "againStatus": 200,
+      "status": "cancelled",
+      "proposalId": null
+    },
+    {
+      "label": "06-cancelled @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "06-cancelled @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "06-cancelled @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "progressbars": 0,
+      "h1": 1,
+      "title": "Profile Summary Draft - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "runs list",
+      "statuses": [
+        "cancelled"
+      ],
+      "allowance": {
+        "used": 0,
+        "reserved": 0,
+        "limit": 20,
+        "periodStart": "2026-10-01T00:00:00Z"
+      }
+    },
+    {
+      "label": "expired session",
+      "url": "/auth/login?message=Please log in to access this feature&returnUrl=/app/career/summary"
+    }
+  ],
+  "errors": []
+}

@@ -96,6 +96,8 @@ export class CareerImportComponent implements OnInit, OnDestroy {
     })).filter(g => g.items.length > 0);
   });
   selectedCount = computed(() => this.selected().size);
+  /** An assistant draft opened from the summary page is not a resume import. */
+  isAgentDraft = computed(() => this.proposal()?.source === 'agent');
   showPaste = computed(() => {
     const result = this.result();
     return !this.proposal() && !!result && result.state !== 'ready';

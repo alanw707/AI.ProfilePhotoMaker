@@ -286,4 +286,7 @@ test('career import opens a proposal from ?proposal=', async ({ page }) => {
   await page.goto('/app/career/import?e2eAuthBypass=1&proposal=proposal-9');
   await expect(page.getByRole('heading', { name: 'Review suggestions' })).toBeVisible();
   await expect(page.getByText('A drafted summary.')).toBeVisible();
+  // An assistant draft is not a resume import: its own heading, no upload prompt.
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Review your drafted summary');
+  await expect(page.getByText('Upload a PDF or DOCX')).toHaveCount(0);
 });
