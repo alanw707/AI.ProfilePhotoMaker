@@ -31,6 +31,7 @@ import {
   releaseStartKey,
   startKey,
 } from './career-run';
+import { CareerRoadmapTrackingComponent } from './career-roadmap-tracking.component';
 import { dateText } from './market-format';
 import { periodText } from './career-market.component';
 
@@ -61,7 +62,7 @@ const plain = (code: string) => {
 @Component({
   standalone: true,
   selector: 'app-career-roadmap',
-  imports: [RouterLink, NgTemplateOutlet],
+  imports: [RouterLink, NgTemplateOutlet, CareerRoadmapTrackingComponent],
   templateUrl: './career-roadmap.component.html',
   styleUrl: './career.scss',
 })
@@ -278,6 +279,17 @@ export class CareerRoadmapComponent implements OnInit {
         }
       },
     });
+  }
+  onReplanApplied(r: RoadmapDto) {
+    this.roadmap.set(r);
+    if (this.route.snapshot.queryParamMap.get('roadmap') !== r.id) {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { roadmap: r.id },
+        replaceUrl: true,
+      });
+    }
+    this.loadRecent();
   }
   taskKey(option: RoadmapOption, task: RoadmapTask) {
     return `${option.key}-${task.id}`;

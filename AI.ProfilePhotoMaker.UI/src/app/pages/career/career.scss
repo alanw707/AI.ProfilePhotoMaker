@@ -904,3 +904,51 @@ button:disabled {
     min-height: 44px;
   }
 }
+
+.career-page.career-roadmap {
+  .tracking {
+    margin-top: 24px;
+    min-width: 0;
+  }
+  .track-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 6px 0;
+    min-width: 0;
+  }
+  .track-field input,
+  .track-field select,
+  .track-field textarea {
+    max-width: 100%;
+    min-height: 44px;
+    padding: 4px 8px;
+    box-sizing: border-box;
+  }
+  .tracking button {
+    min-height: 44px;
+    align-self: flex-start;
+    max-width: 100%;
+  }
+  .tracking .check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    overflow-wrap: anywhere;
+  }
+  .tracking fieldset {
+    min-width: 0;
+    margin: 8px 0;
+  }
+  .change {
+    border-top: 1px solid #e3e8e5;
+    padding: 8px 0;
+    overflow-wrap: anywhere;
+  }
+  .add-task,
+  .replan {
+    margin-top: 24px;
+    min-width: 0;
+  }
+}
