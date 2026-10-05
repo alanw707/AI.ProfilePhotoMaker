@@ -229,6 +229,13 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ICreditPackageServi
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IOutcomePackageService, AI.ProfilePhotoMaker.API.Services.OutcomePackageService>();
 // Career workspace (spec #376); endpoints stay disabled unless Features:CareerWorkspace=true.
 AI.ProfilePhotoMaker.API.Services.Career.CareerWorkspaceServiceCollectionExtensions.AddCareerWorkspace(builder.Services);
+// The placeholder scanner approves everything, so it exists only outside production;
+// with none registered, resume uploads fail closed (ADR 0007).
+if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("LocalDev") || builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddSingleton<AI.ProfilePhotoMaker.API.Services.Career.IMalwareScanner, AI.ProfilePhotoMaker.API.Services.Career.NoThreatsScanner>();
+}
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.Career.CareerResumePurgeBackgroundService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ImageProcessing.IProfilePhotoScoreService, AI.ProfilePhotoMaker.API.Services.ImageProcessing.ProfilePhotoScoreService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ImageProcessing.IPlatformExportService, AI.ProfilePhotoMaker.API.Services.ImageProcessing.PlatformExportService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();

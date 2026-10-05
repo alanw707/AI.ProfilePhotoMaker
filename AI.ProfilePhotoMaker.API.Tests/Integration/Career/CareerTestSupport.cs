@@ -12,7 +12,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Integration.Career;
 /// supplied as in-memory configuration (not an environment variable) so it cannot
 /// leak into the flag-off factories that run in parallel.
 /// </summary>
-public sealed class CareerWorkspaceEnabledFactory : CustomWebApplicationFactory
+public class CareerWorkspaceEnabledFactory : CustomWebApplicationFactory
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -83,6 +83,34 @@ public sealed class CareerClient
         }
         return _http.SendAsync(request);
     }
+
+    /// <summary>Multipart upload to POST /api/career/resumes.</summary>
+    public Task<HttpResponseMessage> UploadResumeAsync(
+        byte[]? bytes, string fileName = "resume.pdf", string? consent = "true")
+    {
+        var form = new MultipartFormDataContent();
+        if (bytes != null)
+        {
+            var file = new ByteArrayContent(bytes);
+            file.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            form.Add(file, "file", fileName);
+        }
+        if (consent != null)
+        {
+            form.Add(new StringContent(consent), "consent");
+        }
+        return _http.PostAsync("/api/career/resumes", form);
+    }
+
+    /// <summary>Uploads and returns the 201 body.</summary>
+    public async Task<JsonElement> UploadOkAsync(byte[] bytes, string fileName = "resume.pdf") =>
+        await ReadDataAsync(await UploadResumeAsync(bytes, fileName), 201);
+
+    public Task<HttpResponseMessage> PostPasteAsync(string text) =>
+        SendAsync(HttpMethod.Post, "/api/career/profile/proposals", new { text });
+
+    public Task<HttpResponseMessage> AcceptAsync(string proposalId, IEnumerable<string> itemIds, string? ifMatch) =>
+        SendAsync(HttpMethod.Post, $"/api/career/profile/proposals/{proposalId}/accept", new { itemIds }, ifMatch);
 
     public Task<HttpResponseMessage> PutProfileAsync(object body, string? ifMatch = null) =>
         SendAsync(HttpMethod.Put, "/api/career/profile", body, ifMatch);

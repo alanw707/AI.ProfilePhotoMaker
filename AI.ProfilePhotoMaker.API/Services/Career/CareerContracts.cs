@@ -26,7 +26,7 @@ public sealed class CareerGoalRequest
     public bool Confirmed { get; set; }
 }
 
-public sealed record CareerProvenanceDto(string Source, DateTime ConfirmedAt, int? RestoredFromVersion = null);
+public sealed record CareerProvenanceDto(string Source, DateTime ConfirmedAt, int? RestoredFromVersion = null, Guid? SourceProposalId = null);
 
 public sealed record CareerProfileFactsDto(
     string CurrentTitle,
@@ -83,7 +83,11 @@ public enum CareerOutcomeKind
     Invalid,
     PreconditionRequired,
     VersionConflict,
-    AlreadyExists
+    AlreadyExists,
+    TooLarge,
+    Unsupported,
+    Rejected,
+    Unavailable
 }
 
 /// <summary>
@@ -96,7 +100,9 @@ public sealed record CareerOutcome<T>(
     string? ErrorCode = null,
     string? Message = null,
     IReadOnlyDictionary<string, string>? FieldErrors = null,
-    int? CurrentVersion = null)
+    int? CurrentVersion = null,
+    string? Detail = null,
+    int? RetryAfterSeconds = null)
 {
     public static CareerOutcome<T> Ok(T value) => new(CareerOutcomeKind.Ok, value);
     public static CareerOutcome<T> Created(T value) => new(CareerOutcomeKind.Created, value);
@@ -117,6 +123,22 @@ public sealed record CareerOutcome<T>(
             Message: "This was changed in another tab or device. Reload the latest version.",
             CurrentVersion: currentVersion);
 
+    public static CareerOutcome<T> TooLarge(string detail) =>
+        new(CareerOutcomeKind.TooLarge, ErrorCode: CareerErrorCodes.ResumeTooLarge,
+            Message: "This file is too large to import.", Detail: detail);
+
+    public static CareerOutcome<T> Unsupported(string detail) =>
+        new(CareerOutcomeKind.Unsupported, ErrorCode: CareerErrorCodes.ResumeUnsupported,
+            Message: "We can only import a regular PDF or DOCX file.", Detail: detail);
+
+    public static CareerOutcome<T> Rejected() =>
+        new(CareerOutcomeKind.Rejected, ErrorCode: CareerErrorCodes.ResumeRejected,
+            Message: "This file was rejected by the security check and has been deleted.");
+
+    public static CareerOutcome<T> ScannerUnavailable(int retryAfterSeconds) =>
+        new(CareerOutcomeKind.Unavailable, ErrorCode: CareerErrorCodes.ScannerUnavailable,
+            Message: "Resume import is temporarily unavailable. Try again shortly.", RetryAfterSeconds: retryAfterSeconds);
+
     public static CareerOutcome<T> AlreadyExists(string code, string message) =>
         new(CareerOutcomeKind.AlreadyExists, ErrorCode: code, Message: message);
 }
@@ -131,4 +153,58 @@ public static class CareerErrorCodes
     public const string GoalNotFound = "CareerGoalNotFound";
     public const string VersionNotFound = "CareerVersionNotFound";
     public const string GoalAlreadyExists = "CareerGoalAlreadyExists";
+    public const string ResumeNotFound = "CareerResumeNotFound";
+    public const string ProposalNotFound = "CareerProposalNotFound";
+    public const string ProposalAlreadyDecided = "CareerProposalAlreadyDecided";
+    public const string ResumeTooLarge = "CareerResumeTooLarge";
+    public const string ResumeUnsupported = "CareerResumeUnsupported";
+    public const string ResumeRejected = "CareerResumeRejected";
+    public const string ScannerUnavailable = "CareerScannerUnavailable";
 }
+
+// ---- Resume import and proposals (docs/career/api-resume-import.md) ----------
+
+public sealed record ResumeDocumentDto(
+    Guid Id,
+    string FileName,
+    string Format,
+    long SizeBytes,
+    int PageCount,
+    string State,
+    string? FailureCode,
+    Guid? ProposalId,
+    DateTime UploadedAt,
+    DateTime ExpiresAt);
+
+public sealed record ProposalItemDto(
+    Guid Id,
+    string Field,
+    string Value,
+    string? CurrentValue,
+    int? Page,
+    string? Section,
+    string Excerpt,
+    IReadOnlyList<string> Flags);
+
+public sealed record CareerProfileProposalDto(
+    Guid Id,
+    string Source,
+    Guid? ResumeId,
+    int? BaseProfileVersion,
+    string Status,
+    bool IsStale,
+    IReadOnlyList<ProposalItemDto> Items,
+    DateTime CreatedAt);
+
+public sealed class PasteProposalRequest
+{
+    public string? Text { get; set; }
+}
+
+public sealed class AcceptProposalRequest
+{
+    public List<Guid>? ItemIds { get; set; }
+}
+
+/// <summary>The original bytes for the owner-only download endpoint.</summary>
+public sealed record ResumeFileResult(Stream Content, string ContentType, string FileName);

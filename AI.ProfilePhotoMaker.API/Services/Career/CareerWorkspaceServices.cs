@@ -1,5 +1,6 @@
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models.Career;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
@@ -86,14 +87,19 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         typeof(CareerProfile),
         typeof(CareerProfileVersion),
         typeof(CareerGoal),
-        typeof(CareerGoalVersion)
+        typeof(CareerGoalVersion),
+        typeof(ResumeDocument),
+        typeof(CareerProfileProposal),
+        typeof(CareerProfileProposalItem)
     };
 
     private readonly ApplicationDbContext _db;
+    private readonly IStorageService _storage;
 
-    public CareerPrivateDataService(ApplicationDbContext db)
+    public CareerPrivateDataService(ApplicationDbContext db, IStorageService storage)
     {
         _db = db;
+        _storage = storage;
     }
 
     public async Task DeleteAllForOwnerAsync(string ownerId, CancellationToken ct = default)
@@ -102,6 +108,17 @@ public sealed class CareerPrivateDataService : ICareerPrivateDataService
         // behaviour is the same on providers that do not enforce foreign keys.
         _db.CareerProfileVersions.RemoveRange(await _db.CareerProfileVersions.Where(v => v.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerGoalVersions.RemoveRange(await _db.CareerGoalVersions.Where(v => v.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerProfileProposalItems.RemoveRange(await _db.CareerProfileProposalItems.Where(i => i.OwnerId == ownerId).ToListAsync(ct));
+        _db.CareerProfileProposals.RemoveRange(await _db.CareerProfileProposals.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
+
+        // Raw files go first: a row without its file is recoverable, a file without its row is not.
+        var resumes = await _db.CareerResumeDocuments.Where(d => d.OwnerId == ownerId).ToListAsync(ct);
+        foreach (var resume in resumes)
+        {
+            await _storage.DeleteImageAsync(resume.StorageKey);
+        }
+        _db.CareerResumeDocuments.RemoveRange(resumes);
+
         _db.CareerProfiles.RemoveRange(await _db.CareerProfiles.Where(p => p.OwnerId == ownerId).ToListAsync(ct));
         _db.CareerGoals.RemoveRange(await _db.CareerGoals.Where(g => g.OwnerId == ownerId).ToListAsync(ct));
         await _db.SaveChangesAsync(ct);
@@ -118,6 +135,14 @@ public static class CareerWorkspaceServiceCollectionExtensions
         services.AddScoped<RequireCareerWorkspaceFilter>();
         services.AddScoped<ICareerProfileService, CareerProfileService>();
         services.AddScoped<ICareerPrivateDataService, CareerPrivateDataService>();
+
+        // Resume import (#379). The scanner is deliberately NOT registered here: only
+        // Program.cs adds the placeholder, and only outside production, so uploads
+        // fail closed until a real scanner is chosen. The purge job is Program.cs-only
+        // too, so the test host never runs it.
+        services.TryAddSingleton<IResumeParser, DependencyFreeResumeParser>();
+        services.AddScoped<IResumeImportService, ResumeImportService>();
+        services.AddScoped<ICareerProposalService, CareerProposalService>();
         return services;
     }
 }

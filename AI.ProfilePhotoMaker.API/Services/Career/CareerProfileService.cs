@@ -24,6 +24,16 @@ public interface ICareerProfileService
     Task<CareerOutcome<CareerProfileVersionDto>> GetProfileVersionAsync(string ownerId, int version, CancellationToken ct = default);
     Task<CareerOutcome<CareerProfileDto>> RestoreProfileVersionAsync(string ownerId, int version, VersionPrecondition precondition, CancellationToken ct = default);
 
+    /// <summary>
+    /// Appends a version created by accepting a proposal (#379). <paramref name="baseVersion"/>
+    /// is the profile version the proposal was pinned to (null when none existed);
+    /// any other current version is a conflict. <paramref name="beforeCommit"/> receives
+    /// the new version number so related rows are saved in the same SaveChanges.
+    /// </summary>
+    Task<CareerOutcome<CareerProfileDto>> AppendFromProposalAsync(
+        string ownerId, ValidProfileFacts facts, string source, Guid proposalId, int? baseVersion,
+        Action<int>? beforeCommit = null, CancellationToken ct = default);
+
     Task<CareerOutcome<CareerGoalDto>> GetGoalAsync(string ownerId, CancellationToken ct = default);
     Task<CareerOutcome<CareerGoalDto>> CreateGoalAsync(string ownerId, CareerGoalRequest request, CancellationToken ct = default);
     Task<CareerOutcome<CareerGoalDto>> UpdateGoalAsync(string ownerId, Guid goalId, CareerGoalRequest request, VersionPrecondition precondition, CancellationToken ct = default);
@@ -108,6 +118,49 @@ public sealed class CareerProfileService : ICareerProfileService
         return await AppendProfileVersionAsync(ownerId, profile, next, ct);
     }
 
+    public async Task<CareerOutcome<CareerProfileDto>> AppendFromProposalAsync(
+        string ownerId, ValidProfileFacts facts, string source, Guid proposalId, int? baseVersion,
+        Action<int>? beforeCommit = null, CancellationToken ct = default)
+    {
+        var profile = await FindProfileAsync(ownerId, ct);
+        var now = Now();
+
+        if (profile == null)
+        {
+            if (baseVersion != null)
+            {
+                return CareerOutcome<CareerProfileDto>.Conflict(0);
+            }
+
+            profile = new CareerProfile
+            {
+                Id = Guid.NewGuid(),
+                OwnerId = ownerId,
+                ActiveVersionNumber = 1,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            var first = NewProfileVersion(profile, 1, facts, now, restoredFrom: null);
+            first.Source = source;
+            first.SourceProposalId = proposalId;
+            _db.CareerProfiles.Add(profile);
+            _db.CareerProfileVersions.Add(first);
+            beforeCommit?.Invoke(1);
+            return await CommitProfileAsync(ownerId, profile, first, ct);
+        }
+
+        if (baseVersion != profile.ActiveVersionNumber)
+        {
+            return CareerOutcome<CareerProfileDto>.Conflict(profile.ActiveVersionNumber);
+        }
+
+        var next = NewProfileVersion(profile, profile.ActiveVersionNumber + 1, facts, now, restoredFrom: null);
+        next.Source = source;
+        next.SourceProposalId = proposalId;
+        beforeCommit?.Invoke(next.VersionNumber);
+        return await AppendProfileVersionAsync(ownerId, profile, next, ct);
+    }
+
     public async Task<CareerOutcome<IReadOnlyList<CareerProfileVersionSummaryDto>>> ListProfileVersionsAsync(
         string ownerId, CancellationToken ct = default)
     {
@@ -140,7 +193,7 @@ public sealed class CareerProfileService : ICareerProfileService
         }
 
         return CareerOutcome<CareerProfileVersionDto>.Ok(new CareerProfileVersionDto(
-            row.VersionNumber, ToFacts(row), ToProvenance(row.Source, row.ConfirmedAt, row.RestoredFromVersion), row.CreatedAt,
+            row.VersionNumber, ToFacts(row), ToProvenance(row.Source, row.ConfirmedAt, row.RestoredFromVersion, row.SourceProposalId), row.CreatedAt,
             row.VersionNumber == profile.ActiveVersionNumber));
     }
 
@@ -468,15 +521,15 @@ public sealed class CareerProfileService : ICareerProfileService
     private static CareerProfileFactsDto ToFacts(CareerProfileVersion v) => new(
         v.CurrentTitle, v.Industry, v.YearsExperience, v.Location, v.Summary, v.Skills, v.Highlights, v.WorkArrangement);
 
-    private static CareerProvenanceDto ToProvenance(string source, DateTime confirmedAt, int? restoredFrom) =>
-        new(source, DateTime.SpecifyKind(confirmedAt, DateTimeKind.Utc), restoredFrom);
+    private static CareerProvenanceDto ToProvenance(string source, DateTime confirmedAt, int? restoredFrom, Guid? proposalId = null) =>
+        new(source, DateTime.SpecifyKind(confirmedAt, DateTimeKind.Utc), restoredFrom, proposalId);
 
     private static CareerGoalFactsDto ToGoalFacts(CareerGoalVersion v) => new(
         v.TargetRole, v.TargetLocation, v.WorkArrangement, v.DesiredPayMin, v.DesiredPayMax, v.WeeklyEffortHours);
 
     private static CareerProfileDto ToDto(CareerProfile profile, CareerProfileVersion active) => new(
         profile.Id, active.VersionNumber, ProfileEtag(active.VersionNumber), ToFacts(active),
-        ToProvenance(active.Source, active.ConfirmedAt, active.RestoredFromVersion), profile.CreatedAt, profile.UpdatedAt);
+        ToProvenance(active.Source, active.ConfirmedAt, active.RestoredFromVersion, active.SourceProposalId), profile.CreatedAt, profile.UpdatedAt);
 
     private static CareerGoalDto ToDto(CareerGoal goal, CareerGoalVersion active, int? currentProfileVersion) => new(
         goal.Id, active.VersionNumber, GoalEtag(active.VersionNumber),

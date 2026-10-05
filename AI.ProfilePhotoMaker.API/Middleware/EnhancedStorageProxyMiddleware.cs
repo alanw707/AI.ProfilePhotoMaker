@@ -74,9 +74,15 @@ public class EnhancedStorageProxyMiddleware
         await _next(context);
     }
 
-    internal static bool IsPrivateStoragePath(string? path) =>
-        path?.Split('/', StringSplitOptions.RemoveEmptyEntries)
-            .Contains("generated-private", StringComparer.OrdinalIgnoreCase) == true;
+    // generated-private: entitlement-gated raw previews. career-private: uploaded
+    // resumes, which are only ever read through the owner-checked API (ADR 0007).
+    internal static bool IsPrivateStoragePath(string? path)
+    {
+        var segments = path?.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments != null
+            && (segments.Contains("generated-private", StringComparer.OrdinalIgnoreCase)
+                || segments.Contains("career-private", StringComparer.OrdinalIgnoreCase));
+    }
 
     /// <summary>
     /// Proxy requests to Azurite (development storage emulator)
