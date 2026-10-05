@@ -1,0 +1,247 @@
+<main class="career-page career-roadmap">
+  <div class="career-sheet">
+    <p><a routerLink="/app/career">Back to career workspace</a></p>
+    <h1>Your career roadmap</h1>
+    <p>
+      Possible paths built from your goal and the published evidence, with small tasks fitted to the time you have.
+      Nothing changes in your goal unless you choose to change it.
+    </p>
+    @if (occupationMissing()) {
+      <div class="caution" role="status" data-occupation-required>
+        <p>Confirm your occupation first.</p>
+        <a routerLink="/app/career/occupation">Confirm your occupation</a>
+      </div>
+    }
+    @if (error()) {
+      <p class="caution" role="alert" data-error>{{ error() }}</p>
+    }
+    @if (connectionLost()) {
+      <p class="caution" role="status">Connection lost. Retrying…</p>
+    }
+    @if (run(); as r) {
+      @if (!roadmap()) {
+        <section class="run-area" aria-label="Roadmap status">
+          <h2>Roadmap status</h2>
+          <p class="status" role="status" data-run-status>
+            {{
+              r.status === 'completed'
+                ? 'Roadmap ready'
+                : r.status === 'failed'
+                  ? 'Could not finish'
+                  : r.status === 'queued'
+                    ? 'Waiting to start'
+                    : 'Working'
+            }}
+          </p>
+          @if (r.steps.length) {
+            <ol class="run-steps" aria-label="Completed steps">
+              @for (step of r.steps; track step.ordinal) {
+                <li>{{ step.label }}</li>
+              }
+            </ol>
+          }
+          @if (r.status === 'failed') {
+            <p role="alert">We could not build your roadmap.</p>
+            <button type="button" class="primary" (click)="start()">Try again</button>
+          }
+        </section>
+      }
+    } @else if (loading()) {
+      <p role="status">Loading your roadmap…</p>
+    } @else if (!roadmap() && !occupationMissing()) {
+      <div class="actions">
+        <button type="button" class="primary" (click)="start()" [disabled]="starting()">Build my roadmap</button>
+      </div>
+    }
+
+    @if (roadmap(); as rm) {
+      <article class="roadmap" data-roadmap>
+        <p class="muted">
+          {{ statusText(rm.status) }}
+          @if (rm.weeklyEffortHours) {
+            · Planned around {{ hoursText(rm.weeklyEffortHours) }} a week
+          }
+        </p>
+        @if (rm.stale) {
+          <div class="caution" role="status" data-stale>
+            <p>
+              Your profile, goal or market evidence changed after this roadmap. It is kept as it was; build a new one for current inputs.
+            </p>
+            <button type="button" class="primary" (click)="start()">Build a new roadmap</button>
+          </div>
+        }
+        @if (rm.lowTimeNote) {
+          <p class="notice" role="note" data-low-time>{{ rm.lowTimeNote }}</p>
+        }
+        @if (rm.omittedOptions.length) {
+          <section aria-labelledby="omitted-heading" data-omitted>
+            <h2 id="omitted-heading">Paths we left out</h2>
+            <ul>
+              @for (o of rm.omittedOptions; track o.key) {
+                <li>
+                  <strong>{{ optionLabel(o.key) }}.</strong>
+                  {{ omittedText(o.reason) }}
+                </li>
+              }
+            </ul>
+          </section>
+        }
+        @if (effortSaved()) {
+          <p role="status" data-effort-saved>{{ effortSaved() }}</p>
+        }
+        <fieldset class="path-group" [disabled]="!proposed()">
+          <legend>Choose a path</legend>
+          @for (option of rm.options; track option.key) {
+            <section class="path" [attr.data-option]="option.key" [class.in-use]="rm.selectedOption === option.key">
+              <div class="choice">
+                <input
+                  type="radio"
+                  name="path"
+                  [id]="'path-' + option.key"
+                  [value]="option.key"
+                  [checked]="(proposed() ? selected() : rm.selectedOption) === option.key"
+                  (change)="choose(option.key)" />
+                <label [for]="'path-' + option.key">{{ optionLabel(option.key) }}: {{ option.title }}</label>
+              </div>
+              <h3>Why this path</h3>
+              <ul>
+                @for (r of option.rationale; track $index) {
+                  <li>
+                    {{ r.text }}
+                    <span class="muted">(Source: {{ sourceText(r) }})</span>
+                  </li>
+                }
+              </ul>
+              <h3>Assumptions</h3>
+              @if (option.assumptions.length) {
+                <ul data-assumptions>
+                  @for (a of option.assumptions; track $index) {
+                    <li>{{ a }}</li>
+                  }
+                </ul>
+              } @else {
+                <p>No special assumptions.</p>
+              }
+              <h3>Missing evidence</h3>
+              @if (option.missingEvidence.length) {
+                <ul data-missing>
+                  @for (m of option.missingEvidence; track $index) {
+                    <li>{{ m }}</li>
+                  }
+                </ul>
+              } @else {
+                <p>Nothing important is missing.</p>
+              }
+              <p class="muted" data-scenario>{{ option.timelineNote }}</p>
+              <h3>This week</h3>
+              @if (option.thisWeek.length) {
+                <ul class="task-list">
+                  @for (t of option.thisWeek; track t.id) {
+                    <ng-container *ngTemplateOutlet="taskTpl; context: { option: option, task: t }" />
+                  }
+                </ul>
+              } @else {
+                <p>No tasks this week.</p>
+              }
+              @for (m of option.milestones; track m.day) {
+                <h3>By day {{ m.day }}</h3>
+                @if (m.tasks.length) {
+                  <ul class="task-list">
+                    @for (t of m.tasks; track t.id) {
+                      <ng-container *ngTemplateOutlet="taskTpl; context: { option: option, task: t }" />
+                    }
+                  </ul>
+                } @else {
+                  <p>No tasks planned for this milestone.</p>
+                }
+              }
+            </section>
+          }
+        </fieldset>
+
+        @if (proposed()) {
+          <div class="actions">
+            <button type="button" class="primary" (click)="askToAccept()" [disabled]="accepting()">
+              Accept this path
+            </button>
+            <button type="button" class="secondary" (click)="dismiss()">Dismiss</button>
+          </div>
+        }
+        @if (rm.status === 'accepted') {
+          <div class="notice" role="status" data-accepted>
+            <p>
+              You chose "{{ chosen()?.title }}". Your goal itself was not changed.
+              @if (rm.selectedOption !== 'closest_fit') {
+                To aim for this occupation, change it on the occupation page.
+              }
+            </p>
+            @if (rm.selectedOption !== 'closest_fit') {
+              <a routerLink="/app/career/occupation">Go to the occupation page</a>
+            }
+          </div>
+        }
+        @if (rm.status === 'dismissed') {
+          <p role="status" data-dismissed>This roadmap was dismissed.</p>
+        }
+        <p class="muted" data-retention>Roadmaps are kept with your career data while your account exists.</p>
+      </article>
+    }
+    @if (recent().length) {
+      <section aria-labelledby="recent-roadmaps">
+        <h2 id="recent-roadmaps">Recent roadmaps</h2>
+        <ul class="history">
+          @for (item of recent(); track item.id) {
+            <li>
+              <button type="button" class="secondary" (click)="open(item.id)">
+                {{ dateText(item.createdAt) }} · {{ item.optionCount }}
+                {{ item.optionCount === 1 ? 'path' : 'paths' }} · {{ statusText(item.status) }}
+              </button>
+              @if (item.stale) {
+                <span class="muted">Out of date</span>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+  <dialog #confirm class="confirm-dialog" aria-labelledby="confirm-heading">
+    <h2 id="confirm-heading">Accept this path?</h2>
+    <p>
+      You are choosing "{{ selectedTitle() }}". This records your choice on the roadmap. It does not change your goal.
+    </p>
+    <div class="actions">
+      <button type="button" class="primary" (click)="accept()" data-confirm>Yes, accept this path</button>
+      <button type="button" class="secondary" (click)="cancelAccept()">Cancel</button>
+    </div>
+  </dialog>
+</main>
+
+<ng-template #taskTpl let-option="option" let-task="task">
+  <li class="task" [attr.data-task]="task.id">
+    <span class="task-title">{{ task.title }}</span>
+    <span class="muted">{{ hoursText(task.effortHours) }}</span>
+    @if (task.dependsOn.length) {
+      <span class="muted">Do this after: {{ dependsText(option, task) }}.</span>
+    }
+    <span class="effort">
+      <label [for]="'effort-' + taskKey(option, task)">Hours for {{ task.title }}</label>
+      <input
+        type="number"
+        min="0.5"
+        max="40"
+        step="0.5"
+        inputmode="decimal"
+        [id]="'effort-' + taskKey(option, task)"
+        [value]="task.effortHours"
+        #hours
+        [attr.aria-describedby]="'effort-err-' + taskKey(option, task)"
+        [attr.aria-invalid]="effortErrors()[taskKey(option, task)] ? 'true' : null"
+        (keydown.enter)="saveEffort(option, task, hours.value)" />
+      <button type="button" class="secondary" (click)="saveEffort(option, task, hours.value)">Save hours</button>
+    </span>
+    <span class="field-error" role="alert" [id]="'effort-err-' + taskKey(option, task)">
+      {{ effortErrors()[taskKey(option, task)] }}
+    </span>
+  </li>
+</ng-template>

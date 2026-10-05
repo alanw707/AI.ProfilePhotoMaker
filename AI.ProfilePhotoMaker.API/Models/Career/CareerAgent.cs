@@ -17,6 +17,7 @@ public static class CareerAgentTasks
     public const string OccupationMatch = "occupation_match";
     public const string MarketBrief = "market_brief";
     public const string PayAnalysis = "pay_analysis";
+    public const string Roadmap = "roadmap";
 }
 
 public static class CareerStepKinds
@@ -45,6 +46,10 @@ public static class CareerStepNames
     public const string EvaluateCohort = "evaluate_cohort";
     public const string BuildScenario = "build_scenario";
     public const string SaveAnalysis = "save_analysis";
+    public const string ReadEvidence = "read_evidence";
+    public const string BuildOptions = "build_options";
+    public const string PlanTasks = "plan_tasks";
+    public const string SaveRoadmap = "save_roadmap";
 }
 
 /// <summary>

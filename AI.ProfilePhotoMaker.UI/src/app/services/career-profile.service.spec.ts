@@ -551,4 +551,47 @@ describe('CareerProfileService', () => {
       ]);
     });
   });
+  it('starts a roadmap run and reads the roadmap id', () => {
+    service.createRun('k1', 'roadmap').subscribe(run => expect(run.roadmapId).toBe('r1'));
+    const req = http.expectOne('/api/career/runs');
+    expect(req.request.body).toEqual({ task: 'roadmap' });
+    req.flush({ success: true, data: { id: 'run', roadmapId: 'r1' } });
+  });
+  it('accepts with the goal ETag, edits effort and dismisses', () => {
+    service.acceptRoadmap('r1', 'closest_fit', '"goal-v2"').subscribe();
+    const accept = http.expectOne('/api/career/roadmaps/r1/accept');
+    expect(accept.request.headers.get('If-Match')).toBe('"goal-v2"');
+    expect(accept.request.body).toEqual({ optionKey: 'closest_fit' });
+    accept.flush({ success: true, data: { id: 'r1' } });
+    service.updateRoadmapTask('r1', 't1', 3).subscribe();
+    const put = http.expectOne('/api/career/roadmaps/r1/tasks/t1');
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body).toEqual({ effortHours: 3 });
+    put.flush({ success: true, data: { id: 'r1' } });
+    service.dismissRoadmap('r1').subscribe();
+    http.expectOne('/api/career/roadmaps/r1/dismiss').flush({ success: true, data: { id: 'r1' } });
+    service.listRoadmaps().subscribe();
+    http.expectOne('/api/career/roadmaps').flush({ success: true, data: { roadmaps: [] } });
+  });
+  it('maps roadmap conflicts and preconditions', () => {
+    const kinds: string[] = [];
+    const fail = (status: number, code?: string) => {
+      service.dismissRoadmap('r1').subscribe({ error: (e: CareerApiError) => kinds.push(e.kind) });
+      http
+        .expectOne('/api/career/roadmaps/r1/dismiss')
+        .flush({ success: false, error: { code } }, { status, statusText: 'x' });
+    };
+    fail(409, 'CareerRoadmapCycle');
+    fail(409, 'CareerRoadmapNotProposed');
+    fail(409, 'CareerOccupationRequired');
+    fail(412);
+    fail(428);
+    expect(kinds).toEqual([
+      'roadmapCycle',
+      'roadmapNotProposed',
+      'occupationRequired',
+      'conflict',
+      'precondition',
+    ]);
+  });
 });

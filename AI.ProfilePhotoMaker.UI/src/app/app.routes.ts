@@ -199,6 +199,13 @@ export const routes: Routes = [
         title: 'Comparable Pay Analysis - AI Profile Photo Maker',
       },
       {
+        path: 'career/roadmap',
+        canActivate: [careerWorkspaceGuard],
+        loadComponent: () =>
+          import('./pages/career/career-roadmap.component').then(m => m.CareerRoadmapComponent),
+        title: 'Career Roadmap - AI Profile Photo Maker',
+      },
+      {
         path: 'career/materials',
         canActivate: [careerWorkspaceGuard],
         loadComponent: () => import('./pages/career/career-materials.component').then(m => m.CareerMaterialsComponent),

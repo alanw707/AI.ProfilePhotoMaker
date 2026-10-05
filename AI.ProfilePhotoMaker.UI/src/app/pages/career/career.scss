@@ -843,3 +843,64 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+.career-page.career-roadmap {
+  .path-group {
+    border: 0;
+    padding: 0;
+    margin: 0 0 16px;
+    min-width: 0;
+  }
+  .path-group legend {
+    font-weight: 700;
+    font-size: 1.25rem;
+    padding: 0;
+    margin-bottom: 8px;
+  }
+  .path {
+    border: 1px solid #d1d8d4;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+    background: #fff;
+    min-width: 0;
+  }
+  .path.in-use {
+    border-color: #1b2c31;
+  }
+  .path h3 {
+    margin: 16px 0 6px;
+    font-size: 1rem;
+  }
+  .task-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .task {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 0;
+    border-top: 1px solid #e3e8e5;
+    min-width: 0;
+  }
+  .task-title {
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+  .effort {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .effort input {
+    width: 6rem;
+    min-height: 44px;
+    padding: 4px 8px;
+  }
+  .effort button {
+    min-height: 44px;
+  }
+}

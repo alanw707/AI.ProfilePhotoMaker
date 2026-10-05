@@ -77,7 +77,7 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
     {
         "CareerProfiles", "CareerProfileVersions", "CareerGoals", "CareerGoalVersions",
         "CareerResumeDocuments", "CareerProfileProposals", "CareerProfileProposalItems", "CareerPhotoSelections",
-        "CareerAgentRuns", "CareerAgentSteps", "CareerAllowances", "CareerOccupationMatches", "CareerMarketBriefs", "CareerPayAnalyses"
+        "CareerAgentRuns", "CareerAgentSteps", "CareerAllowances", "CareerOccupationMatches", "CareerMarketBriefs", "CareerPayAnalyses", "CareerRoadmaps"
     };
 
     [Fact]
@@ -177,6 +177,19 @@ public class CareerPrivateDataTests : IClassFixture<CareerWorkspaceEnabledFactor
         added.Should().OnlyContain(c => c.Table == "CareerGoalVersions" && c.IsNullable);
         added.Select(c => c.Name).Should().BeEquivalentTo("PreferredAreaCode", "PreferredAreaTitle", "PreferredAreaLevel");
         operations.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void RoadmapMigrationOnlyAddsATableAndItsIndexes()
+    {
+        var operations = new AddCareerRoadmaps().UpOperations;
+
+        AssertAdditive(operations, allowAddColumn: false);
+        operations.OfType<CreateTableOperation>().Select(o => o.Name).Should().Equal("CareerRoadmaps");
+        operations.OfType<CreateIndexOperation>().Should()
+            .Contain(i => i.Table == "CareerRoadmaps" && i.IsUnique && i.Columns.SequenceEqual(new[] { "RunId" }));
+        operations.OfType<DropTableOperation>().Should().BeEmpty();
+        operations.OfType<DropColumnOperation>().Should().BeEmpty();
     }
 
     private static void AssertAdditive(IReadOnlyList<MigrationOperation> operations, bool allowAddColumn)
