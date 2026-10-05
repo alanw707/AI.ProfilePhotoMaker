@@ -245,6 +245,33 @@
     </button>
   </section>
 
+  @if (careerEnabled) {
+    <section id="career-entry" class="career-entry" aria-labelledby="career-entry-title" data-career-entry>
+      <div class="career-entry__inner">
+        <p class="career-entry__eyebrow">Career planning, now part of AI Profile Photo Maker</p>
+        <h2 id="career-entry-title" class="career-entry__title">Plan your next career move</h2>
+        <p>
+          Beyond professional photos, you can now plan your next role. Choose a target occupation and get:
+        </p>
+        <ul class="career-entry__list">
+          <li>An occupation match for your background</li>
+          <li>A market brief for your target role</li>
+          <li>Pay benchmarks from public BLS data</li>
+          <li>A step-by-step roadmap</li>
+          <li>A fact-grounded resume and summary built from facts you confirm</li>
+          <li>Free PDF and Word export</li>
+        </ul>
+        <p>Free with a monthly drafting allowance. Pay figures are benchmarks, not predictions.</p>
+        <p>Your data stays private. Download or delete it any time.</p>
+        <div class="career-entry__actions">
+          <a class="career-entry__cta" routerLink="/app/career" data-career-cta>Plan my next career move</a>
+          <a class="career-entry__secondary" routerLink="/auth/register" [queryParams]="{ returnUrl: '/app/enhance' }" data-career-photos>Create AI headshots</a>
+        </div>
+        <p class="career-entry__note">Existing pricing covers photos only.</p>
+      </div>
+    </section>
+  }
+
   <!-- Features Section - Image-Led with Before/After Examples -->
   <section *ngIf="!showNotFound" id="features" class="features-section features-minimal py-12 md:py-16">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">

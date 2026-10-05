@@ -127,4 +127,35 @@ describe('LandingComponent styles grid', () => {
     });
     expect(navigation.goToDashboard).not.toHaveBeenCalled();
   });
+
+  describe('career entry flag', () => {
+    const render = (enabled: boolean) => {
+      (TestBed.inject(ConfigService) as any).isCareerWorkspaceEnabled = enabled;
+      component.showNotFound = false;
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    };
+
+    it('renders no career section or CTA when the flag is off', () => {
+      const el = render(false);
+      expect(el.querySelector('[data-career-entry]')).toBeNull();
+      expect(el.querySelector('[data-career-cta]')).toBeNull();
+      expect(el.textContent).not.toContain('Plan my next career move');
+    });
+
+    it('renders the career section with CTA and honest copy when on', () => {
+      const el = render(true);
+      const cta = el.querySelector('[data-career-cta]') as HTMLAnchorElement;
+      expect(cta.textContent?.trim()).toBe('Plan my next career move');
+      expect(cta.getAttribute('href')).toBe('/app/career');
+      const text = el.querySelector('[data-career-entry]')!.textContent!.toLowerCase();
+      expect(text).toContain('public bls data');
+      expect(text).toContain('monthly drafting allowance');
+      expect(text).toContain('existing pricing covers photos only');
+      expect(text).not.toContain('unlimited');
+      expect(text).not.toContain('guarantee');
+      expect(el.querySelector('[data-career-entry] h2')).not.toBeNull();
+      expect(el.querySelector('[data-career-entry] h1')).toBeNull();
+    });
+  });
 });
