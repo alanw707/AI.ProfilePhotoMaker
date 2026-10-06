@@ -31,6 +31,7 @@ test.describe('Enhanced Image Diagnostics', () => {
     await prepareSession(page);
     await page.goto(BASE_URL + '/app/enhance');
     await page.waitForLoadState('domcontentloaded');
+    await page.waitForFunction(() => !!(window as any).__APP_DEBUG__?.services, null, { timeout: 15000 });
   });
 
   test('reflects authenticated state when session is seeded', async ({ page }) => {

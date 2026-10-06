@@ -59,6 +59,7 @@ test.describe('Photo Enhancement Experience', () => {
   test('renders photo enhancement workspace with seeded session', async ({ page }) => {
     await page.goto(BASE_URL + '/app/enhance');
     await page.waitForLoadState('domcontentloaded');
+    await page.waitForFunction(() => !!(window as any).__APP_DEBUG__?.services, null, { timeout: 15000 });
 
     await expect(page.locator('app-photo-enhancement')).toBeVisible({ timeout: 5000 });
   });
@@ -66,6 +67,7 @@ test.describe('Photo Enhancement Experience', () => {
   test('exposes debug services while on enhancement route', async ({ page }) => {
     await page.goto(BASE_URL + '/app/enhance');
     await page.waitForLoadState('domcontentloaded');
+    await page.waitForFunction(() => !!(window as any).__APP_DEBUG__?.services, null, { timeout: 15000 });
 
     const debugSummary = await page.evaluate(() => {
       const debug = (window as any).__APP_DEBUG__;

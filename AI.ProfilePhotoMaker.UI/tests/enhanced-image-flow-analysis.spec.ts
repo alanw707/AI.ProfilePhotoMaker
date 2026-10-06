@@ -31,6 +31,10 @@ test.describe('Enhanced Image Flow Analysis', () => {
     await seedSession(page);
     await page.goto(BASE_URL + '/app/enhance');
     await page.waitForLoadState('domcontentloaded');
+    // The debug context is registered during app bootstrap; wait for it instead of racing it.
+    await page.waitForFunction(() => !!(window as any).__APP_DEBUG__?.services, null, {
+      timeout: 15000,
+    });
   });
 
   test('routes OpenAI enhancement requests through the new endpoint', async ({ page }) => {
@@ -48,7 +52,8 @@ test.describe('Enhanced Image Flow Analysis', () => {
             creditsRemaining: 9,
             enhancementType: 'chibi',
             provider: 'openai',
-            dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2P4//8/AwAI/AL+g0BGVAAAAABJRU5ErkJggg==',
+            dataUrl:
+              'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2P4//8/AwAI/AL+g0BGVAAAAABJRU5ErkJggg==',
           },
           error: null,
         }),
@@ -65,7 +70,8 @@ test.describe('Enhanced Image Flow Analysis', () => {
       return await new Promise((resolve, reject) => {
         replicateService
           .enhancePhoto({
-            imageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2P4//8/AwAI/AL+g0BGVAAAAABJRU5ErkJggg==',
+            imageUrl:
+              'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2P4//8/AwAI/AL+g0BGVAAAAABJRU5ErkJggg==',
             enhancementType: 'chibi',
           })
           .subscribe({

@@ -6,8 +6,8 @@ Branch `career/396-release-readiness` off `feature/career-workspace` (b4e306ef).
 | Suite | Flag off | Flag on |
 |---|---|---|
 | API `dotnet test --filter "Category!=Performance"` | 1302 passed, 1 skipped, 0 failed | 1302 passed, 1 skipped, 0 failed |
-| Karma | 723 SUCCESS (the flag is mocked per spec) | same run |
-| Playwright full (chromium) | 290 passed, 18 failed, 1 skipped; every career spec passes and both flag states are mocked per spec (career-homepage covers flag off and flag on) | same run |
+| Karma | 723 SUCCESS (separate run, LocalDev API flag off) | 723 SUCCESS (separate run, flag on) |
+| Playwright full (chromium), real LocalDev API | 307 passed, 0 failed, 1 skipped | 307 passed, 0 failed, 1 skipped |
 
 Fixes made here:
 - Five career e2e specs still checked the old career home; they now check the journey home and allowance (44/44).
@@ -52,7 +52,7 @@ Fixes made here:
 - [ ] Owner approval of the usage budget and quotas (#395, currently provisional).
 - [ ] Confirm the hosting backup expiry (stated as up to 35 days).
 - [ ] CI/deploy parity evidence: main SHA, artifact digest, production digest.
-- [ ] Make the pre-existing SEO/marketing Playwright failures green or track them separately.
+- [x] Pre-existing SEO/marketing Playwright failures made green (owner chose option 1).
 
 ## Findings
 | id | sev | finding | status |
@@ -60,6 +60,13 @@ Fixes made here:
 | R1 | P2 | Five career e2e specs were stale after #393/#395 | fixed |
 | R2 | P2 | Flag-off API tests depended on the environment default | fixed: explicit factory |
 | R3 | P3 | Untagged Performance load tests | fixed: tagged |
-| R4 | P3 | 17 Playwright failures predate career work; 1 is flaky | open, outside scope |
+| R4 | P2 | 15 stale photo/SEO Playwright tests and 4 flaky debug-context/axe tests | fixed in career/396-playwright-green (see below) |
 
 Open P0/P1: **none**
+
+## Playwright green-up (owner decision: fix, not quarantine)
+- SEO static HTML regenerated with `npm run generate:seo-static`; sitemap lists nurse/teacher and the 3 use-case pack pages; the 3 pack pages get canonical routes (the `/use-cases/...` paths stay as aliases).
+- `/pricing` is the packages page, not an SEO component page, so the live-DOM SEO check skips it; its prerendered crawler HTML is still checked.
+- Marketing copy test now asserts the current one-clear-photo copy and that the old "at least 5" wording is gone.
+- `model-status-display` became `photo-workspace-bootstrap`: the training dashboard it checked was replaced by the package photo workspace.
+- Flaky tests: specs reading `__APP_DEBUG__` wait for it to register; the market-comparison axe test emulates reduced motion so it measures settled colours. 165/165 and 20/20 across 5 repeats.

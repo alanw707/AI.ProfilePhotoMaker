@@ -1,25 +1,27 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Marketing selfie count copy', () => {
-  test('how-it-works uses at least 5 copy', async ({ page }) => {
+// The photo product needs one clear photo (since 15120119). These checks keep the marketing
+// pages consistent with that and catch a regression to the old "at least 5 selfies" copy.
+test.describe('Marketing photo count copy', () => {
+  test('how-it-works says one clear photo', async ({ page }) => {
     await page.goto('/how-it-works');
 
-    await expect(page.getByText('Upload at least 5 clear selfies')).toBeVisible();
+    await expect(page.getByText('Upload one clear photo', { exact: true })).toBeVisible();
 
-    const recommendedHighlight = page.locator('.highlight', { hasText: 'Recommended selfies' });
-    await expect(recommendedHighlight.locator('.highlight-value')).toHaveText('At least 5');
+    const minimumHighlight = page.locator('.highlight', { hasText: 'Minimum input' });
+    await expect(minimumHighlight.locator('.highlight-value')).toHaveText('One photo');
+    await expect(page.locator('body')).not.toContainText(/at least 5/i);
   });
 
-  test('ai-headshot-generator uses at least 5 copy', async ({ page }) => {
+  test('ai-headshot-generator says one clear photo', async ({ page }) => {
     await page.goto('/ai-headshot-generator');
 
-    await expect(
-      page.getByText('Provide at least 5 clear images to train a personalized model.')
-    ).toBeVisible();
+    await expect(page.getByText('Upload one clear photo', { exact: true })).toBeVisible();
     const faqItem = page.locator('details', { hasText: 'How many photos should I upload?' });
     await faqItem.locator('summary').click();
     await expect(
-      faqItem.getByText('We recommend at least 5 clear selfies with varied angles and lighting.')
+      faqItem.getByText('We recommend one clear photo with varied angles and lighting.')
     ).toBeVisible();
+    await expect(page.locator('body')).not.toContainText(/at least 5/i);
   });
 });

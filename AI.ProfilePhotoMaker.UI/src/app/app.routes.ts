@@ -628,6 +628,37 @@ export const routes: Routes = [
     },
   },
 
+  {
+    // Canonical URL from the SEO record (sitemap + static HTML); /use-cases/linkedin-executive-profile-photo stays as an alias.
+    path: 'linkedin-executive-profile-photo',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['linkedin-executive-profile-photo'].title,
+    data: {
+      seoPage: seoPages['linkedin-executive-profile-photo'],
+    },
+  },
+  {
+    // Canonical URL from the SEO record (sitemap + static HTML); /use-cases/realtor-profile-photo-pack stays as an alias.
+    path: 'realtor-profile-photo-pack',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['realtor-profile-photo-pack'].title,
+    data: {
+      seoPage: seoPages['realtor-profile-photo-pack'],
+    },
+  },
+  {
+    // Canonical URL from the SEO record (sitemap + static HTML); /use-cases/founder-press-kit-photo-pack stays as an alias.
+    path: 'founder-press-kit-photo-pack',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['founder-press-kit-photo-pack'].title,
+    data: {
+      seoPage: seoPages['founder-press-kit-photo-pack'],
+    },
+  },
+
   // Help & Support
   {
     path: 'help',

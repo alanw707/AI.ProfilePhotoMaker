@@ -569,6 +569,9 @@ test.describe('accessibility', () => {
   for (const width of [1280, 390, 320]) {
     test(`0 axe WCAG 2.2 AA violations at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
+      // Measure settled colours: the page drops transitions under reduced motion, so axe never
+      // samples a row mid-fade after the area type changes.
+      await page.emulateMedia({ reducedMotion: 'reduce' });
       await mock(page);
       await open(page, '&areas=08,06');
       await expect(page.locator('tr[data-area]').first()).toBeAttached();
