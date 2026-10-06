@@ -25,6 +25,31 @@ function fakeBackend(page: Page, enabled = true) {
     if (url.startsWith('/api/career/')) {
       if (!enabled) return fail(route, 403, 'CareerWorkspaceDisabled');
       const path = url.slice('/api/career/'.length);
+      if (path === 'allowance')
+        return send(route, {
+          policyVersion: 'v1',
+          limit: 20,
+          used: 1,
+          reserved: 0,
+          remaining: 19,
+          resetsAt: '2026-11-01T00:00:00Z',
+        });
+      if (path === 'journey')
+        return profile
+          ? send(route, {
+              profile: { version: profile.version, confirmed: true },
+              goal: goal
+                ? { version: goal.version, occupationTitle: goal.goal.targetRole, location: null }
+                : null,
+              nextAction: { key: 'none', route: '/app/career' },
+              latestResult: null,
+              activeRuns: [],
+              stale:
+                goal && goal.basedOnProfileVersion !== profile.version
+                  ? [{ id: 'm1', kind: 'market_brief' }]
+                  : [],
+            })
+          : fail(route, 404, 'CareerProfileNotFound');
       if (path === 'profile' && method === 'GET')
         return profile
           ? send(route, profile, 200, profile.etag)
@@ -178,13 +203,14 @@ test('setup saves profile and goal; reload restores both', async ({ page }) => {
   fakeBackend(page);
   await setup(page);
   await page.reload();
-  await expect(page.getByText('Data analyst')).toBeVisible();
-  await expect(page.getByText('Senior analyst')).toBeVisible();
+  await expect(page.locator('[data-goal]')).toContainText('Senior analyst');
+  await page.getByRole('link', { name: 'Profile and goal' }).click();
+  await expect(page.getByLabel('Current title')).toHaveValue('Data analyst');
 });
 test('editing profile marks goal stale', async ({ page }) => {
   fakeBackend(page);
   await setup(page);
-  await page.getByRole('link', { name: 'View and edit profile' }).click();
+  await page.getByRole('link', { name: 'Profile and goal' }).click();
   await page.getByLabel('Current title').fill('Principal analyst');
   await page.getByLabel('I confirm these facts are accurate').first().check();
   await page.getByRole('button', { name: 'Save professional facts' }).click();
