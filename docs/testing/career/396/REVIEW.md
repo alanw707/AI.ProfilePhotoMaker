@@ -73,3 +73,23 @@ Open P0/P1: **none**
 - Marketing copy test now asserts the current one-clear-photo copy and that the old "at least 5" wording is gone.
 - `model-status-display` became `photo-workspace-bootstrap`: the training dashboard it checked was replaced by the package photo workspace.
 - Flaky tests: specs reading `__APP_DEBUG__` wait for it to register; the market-comparison axe test emulates reduced motion so it measures settled colours. 165/165 and 20/20 across 5 repeats.
+
+## Local end-to-end run on real SQL Server (2026-10-06, feature/career-workspace @ 935a6c80)
+
+Stack: API in `Development` against SQL Server 2022 (`career-mssql` container, fresh `CareerE2E` database migrated with `dotnet ef database update`), throwaway local JWT secret, fake career model; UI via `ng serve` on :4200. Evidence in `docs/testing/career/e2e-2026-10-06/`.
+
+| Check | Result |
+|---|---|
+| API start-up on SQL Server | 200 on `/api/config/client`, 0 error log lines; tombstone replay ran (0 groups) |
+| Register → dev confirm → career profile save | 200s; profile v1 saved |
+| Flag on, worker on: `profile_summary` run | queued → needs_input (audience) → answered → completed; allowance used 1 / reserved 0 |
+| Flag on, worker off: new run | stays `Queued` in SQL |
+| Flag off, worker on (PR #429) | run still `Queued` after 10 s; no new usage events; career endpoint 403 `CareerWorkspaceDisabled`; no career model warning logged |
+| Flag back on | the same run is picked up (`NeedsInput`) without manual action |
+| Full Playwright with API up | 309 passed, 1 skipped, 0 failed (the live `/api/health` test now passes) |
+| Browser walkthroughs (`career-ux-review`, `career-agent-review`, `career-photo-review`) | 89 checks, 0 failures, 0 page errors; desktop, 390 and 320 px |
+
+Notes:
+- The `career-photo-review` steps marked "mocked" use a fake photo id; against a real database the workspace correctly shows "This photo is no longer available to refine". Expected, not a defect.
+- In `Development` the photo workspace shows the legacy layout because the headshot MVP flags are LocalDev/production settings; the career screens are unaffected.
+- #404 (refine across checkout) was not exercised live: it needs a real generated image and a payment round trip (no image provider or Stripe test keys locally). It is covered by `tests/refine-checkout-return.spec.ts`.
