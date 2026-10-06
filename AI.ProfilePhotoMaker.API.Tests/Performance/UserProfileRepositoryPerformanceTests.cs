@@ -9,6 +9,7 @@ using Xunit.Abstractions;
 namespace AI.ProfilePhotoMaker.API.Tests.Performance;
 
 [Collection("Performance")]
+[Trait("Category", "Performance")]
 public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
 {
     private static readonly TimeSpan PerformanceNoiseBuffer = TimeSpan.FromMilliseconds(20);

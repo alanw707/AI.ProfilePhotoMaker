@@ -1,0 +1,65 @@
+# #396 Release readiness — review
+
+Branch `career/396-release-readiness` off `feature/career-workspace` (b4e306ef). No merge to main, no deploy, no production change.
+
+## Regression, flag off and on
+| Suite | Flag off | Flag on |
+|---|---|---|
+| API `dotnet test --filter "Category!=Performance"` | 1302 passed, 1 skipped, 0 failed | 1302 passed, 1 skipped, 0 failed |
+| Karma | 723 SUCCESS (the flag is mocked per spec) | same run |
+| Playwright full (chromium) | 290 passed, 18 failed, 1 skipped; every career spec passes and both flag states are mocked per spec (career-homepage covers flag off and flag on) | same run |
+
+Fixes made here:
+- Five career e2e specs still checked the old career home; they now check the journey home and allowance (44/44).
+- `CareerWorkspaceFlagOffTests` now uses an explicit `CareerWorkspaceDisabledFactory`. Before, `Features__CareerWorkspace=true` made 78 of its tests fail.
+- The untagged Performance-namespace load tests now carry `Category=Performance`, so both test filters run the same 1303 tests.
+
+### Pre-existing Playwright failures (not caused by career work)
+17 of the 18 fail the same way on the pre-career merge base 340273b7. They cover SEO smoke against a non-SSR dev server, marketing selfie copy, model status and auto-repair connectivity. The 18th, `auto-repair-functionality:50`, passes when run alone on both trees, so it is flaky under the full run.
+- `tests/auto-repair-functionality.spec.ts:50` should keep auth service accessible via debug context 
+- `tests/auto-repair-simplified.spec.ts:157` should validate API connectivity for auto-repair operations 
+- `tests/marketing-selfie-count-copy.spec.ts:13` ai-headshot-generator uses at least 5 copy 
+- `tests/marketing-selfie-count-copy.spec.ts:4` how-it-works uses at least 5 copy 
+- `tests/model-status-display.spec.ts:19` renders "Ready for training" when unified status returns ReadyForTraining 
+- `tests/seo-metadata-smoke.spec.ts:101` sitemap.xml lists SEO routes 
+- `tests/seo-metadata-smoke.spec.ts:21` has SEO metadata for founder-press-kit-photo-pack 
+- `tests/seo-metadata-smoke.spec.ts:21` has SEO metadata for linkedin-executive-profile-photo 
+- `tests/seo-metadata-smoke.spec.ts:21` has SEO metadata for pricing 
+- `tests/seo-metadata-smoke.spec.ts:21` has SEO metadata for realtor-profile-photo-pack 
+- `tests/seo-metadata-smoke.spec.ts:62` server-rendered HTML includes SEO tags for features 
+- `tests/seo-metadata-smoke.spec.ts:62` server-rendered HTML includes SEO tags for founder-press-kit-photo-pack 
+- `tests/seo-metadata-smoke.spec.ts:62` server-rendered HTML includes SEO tags for how-it-works 
+- `tests/seo-metadata-smoke.spec.ts:62` server-rendered HTML includes SEO tags for linkedin-executive-profile-photo 
+- `tests/seo-metadata-smoke.spec.ts:62` server-rendered HTML includes SEO tags for nurse-headshots 
+- `tests/seo-metadata-smoke.spec.ts:62` server-rendered HTML includes SEO tags for pricing 
+- `tests/seo-metadata-smoke.spec.ts:62` server-rendered HTML includes SEO tags for realtor-profile-photo-pack 
+- `tests/seo-metadata-smoke.spec.ts:62` server-rendered HTML includes SEO tags for teacher-headshots 
+
+## Rollout / rollback checklist (nonproduction rehearsal first)
+1. **Baseline:** record the intended main SHA, the CI build artifact digest and the deployed production SHA/digest. Parity is **unresolved** until CI evidence exists.
+2. **Migrations:** every career migration is additive (drops only in `Down`). Apply to staging SQL Server and check `has-pending-model-changes` reports none.
+3. **Config:** `Features:CareerWorkspace=false` by default. Production keys stay unset until approved: OpenAI, `USAJobs:ApiKey`/`Email`. Set the `Career:Usage` policy values.
+4. **Staff rollout:** enable the flag in staging, then production for staff only. Watch error rate, `CareerUsageEvent` cost against the cap, run failure rate and 503 `CareerBusy`/`CostCapReached` counts.
+5. **Invited beta:** widen after 7 days without a threshold breach.
+6. **Rollback:** (a) switch on the admin kill switch `generationDisabled` to stop new work immediately; (b) set `Features:CareerWorkspace=false`. Career routes return 403, the homepage is unchanged and photo delivery and checkout are unaffected. Data is preserved and tombstone replay still runs. Restoring the flag resumes work, and runs recover through the reaper and checkpoints.
+7. **Monitoring thresholds (proposed):** 5xx > 1% over 15 min, cost > 80% of the monthly cap, or run failure > 10% triggers the kill switch. Rollback owner: repo owner.
+8. **GO/NO-GO:** owner decision, recorded on #396. Currently **NO-GO** until the human gates below close.
+
+## Human gates (open, owner)
+- [ ] Real SQL Server concurrency proof: allowance, global guard and unique indexes (tests ran on InMemory and SQLite only).
+- [ ] #377 independent target-user observation (owner walkthroughs were coached).
+- [ ] Production keys and provider rights: OpenAI, USAJOBS, licensed data.
+- [ ] Owner approval of the usage budget and quotas (#395, currently provisional).
+- [ ] Confirm the hosting backup expiry (stated as up to 35 days).
+- [ ] CI/deploy parity evidence: main SHA, artifact digest, production digest.
+- [ ] Make the pre-existing SEO/marketing Playwright failures green or track them separately.
+
+## Findings
+| id | sev | finding | status |
+|---|---|---|---|
+| R1 | P2 | Five career e2e specs were stale after #393/#395 | fixed |
+| R2 | P2 | Flag-off API tests depended on the environment default | fixed: explicit factory |
+| R3 | P3 | Untagged Performance load tests | fixed: tagged |
+| R4 | P3 | 17 Playwright failures predate career work; 1 is flaky | open, outside scope |
+
+Open P0/P1: **none**

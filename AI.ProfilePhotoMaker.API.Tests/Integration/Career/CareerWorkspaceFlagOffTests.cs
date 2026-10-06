@@ -8,12 +8,12 @@ namespace AI.ProfilePhotoMaker.API.Tests.Integration.Career;
 /// With <c>Features:CareerWorkspace</c> unset (the default everywhere), the server
 /// refuses every career endpoint and leaves existing photo/account routes alone.
 /// </summary>
-public class CareerWorkspaceFlagOffTests : IClassFixture<CustomWebApplicationFactory>, IClassFixture<CareerWorkspaceEnabledFactory>
+public class CareerWorkspaceFlagOffTests : IClassFixture<CareerWorkspaceDisabledFactory>, IClassFixture<CareerWorkspaceEnabledFactory>
 {
-    private readonly CustomWebApplicationFactory _flagOff;
+    private readonly CareerWorkspaceDisabledFactory _flagOff;
     private readonly CareerWorkspaceEnabledFactory _flagOn;
 
-    public CareerWorkspaceFlagOffTests(CustomWebApplicationFactory flagOff, CareerWorkspaceEnabledFactory flagOn)
+    public CareerWorkspaceFlagOffTests(CareerWorkspaceDisabledFactory flagOff, CareerWorkspaceEnabledFactory flagOn)
     {
         _flagOff = flagOff;
         _flagOn = flagOn;

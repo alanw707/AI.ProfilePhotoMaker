@@ -10,6 +10,7 @@ using Xunit.Abstractions;
 namespace AI.ProfilePhotoMaker.API.Tests.Performance;
 
 [Collection("PerformanceRunner")]
+[Trait("Category", "Performance")]
 public class PerformanceTestRunner : PerformanceTestBase
 {
     private readonly ITestOutputHelper _output;

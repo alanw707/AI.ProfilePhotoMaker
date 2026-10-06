@@ -11,6 +11,7 @@ using Xunit.Abstractions;
 namespace AI.ProfilePhotoMaker.API.Tests.Performance;
 
 [Collection("LoadTesting")]
+[Trait("Category", "Performance")]
 public class LoadTestingScenarios : PerformanceTestBase
 {
     private readonly ITestOutputHelper _output;

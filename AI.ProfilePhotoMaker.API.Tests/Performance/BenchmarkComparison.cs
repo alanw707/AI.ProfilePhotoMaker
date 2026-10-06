@@ -16,6 +16,7 @@ using Xunit.Abstractions;
 
 namespace AI.ProfilePhotoMaker.API.Tests.Performance;
 
+[Trait("Category", "Performance")]
 public class BenchmarkComparisonRunner
 {
     private readonly ITestOutputHelper _output;

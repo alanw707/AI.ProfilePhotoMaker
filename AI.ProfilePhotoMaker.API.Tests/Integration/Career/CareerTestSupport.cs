@@ -27,6 +27,23 @@ public class CareerWorkspaceEnabledFactory : CustomWebApplicationFactory
 }
 
 /// <summary>
+/// The standard test host with the career flag explicitly OFF, so flag-off assertions
+/// hold even when the environment sets Features__CareerWorkspace=true.
+/// </summary>
+public class CareerWorkspaceDisabledFactory : CustomWebApplicationFactory
+{
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        base.ConfigureWebHost(builder);
+        builder.ConfigureAppConfiguration(config =>
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Features:CareerWorkspace"] = "false"
+            }));
+    }
+}
+
+/// <summary>
 /// A signed-in test user. Each test creates its own user ID so tests sharing one
 /// in-memory database never see each other's career data.
 /// </summary>
