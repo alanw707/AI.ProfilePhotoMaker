@@ -448,7 +448,15 @@ public sealed class CareerProfileService : ICareerProfileService
     /// </summary>
     internal static bool IsLostRace(DbUpdateException exception) =>
         exception is DbUpdateConcurrencyException
-        || exception.InnerException is SqlException { Number: 2601 or 2627 };
+        || exception.InnerException is SqlException { Number: 2601 or 2627 }
+        || IsSqliteUniqueViolation(exception.InnerException);
+
+    // SQLite (used by the test databases) reports a duplicate key as extended code 2067 (unique) or
+    // 1555 (primary key). Read by name so the API does not reference the SQLite provider.
+    private static bool IsSqliteUniqueViolation(Exception? inner) =>
+        inner is System.Data.Common.DbException && inner.GetType().Name == "SqliteException"
+        && inner.GetType().GetProperty("SqliteExtendedErrorCode")?.GetValue(inner) is int code
+        && code is 2067 or 1555;
 
     private static CareerOutcome<T>? CheckPrecondition<T>(VersionPrecondition precondition, int activeVersion)
     {

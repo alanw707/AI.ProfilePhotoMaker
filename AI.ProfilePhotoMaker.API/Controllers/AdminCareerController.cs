@@ -7,6 +7,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers;
 public sealed record UpdateCareerControlsRequest(bool? GenerationDisabled, bool? SourcesDisabled);
 
 /// <summary>Operator usage report and kill switches (ticket #395, ADR 0022). Admin role only.</summary>
+/// <remarks>Deliberately NOT gated by Features:CareerWorkspace: operators need past usage and the kill switches
+/// while the feature is off (e.g. to pause generation before turning it back on).</remarks>
 [Authorize(Roles = "Admin")]
 [ApiController]
 [Route("api/admin/career")]
