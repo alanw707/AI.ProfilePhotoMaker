@@ -5,6 +5,8 @@ namespace AI.ProfilePhotoMaker.API.Services.Career;
 /// <summary>
 /// Hourly purge of expired raw resumes (ADR 0007). Registered from Program.cs only,
 /// so the test host never runs it.
+/// Deliberately NOT gated by Features:CareerWorkspace: the retention promise for uploaded resumes holds
+/// whether or not the feature is on.
 /// </summary>
 public sealed class CareerResumePurgeBackgroundService : BackgroundService
 {

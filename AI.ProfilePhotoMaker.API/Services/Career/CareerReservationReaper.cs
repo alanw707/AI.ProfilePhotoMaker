@@ -78,12 +78,26 @@ public sealed class CareerReservationReaperService : BackgroundService
     private readonly IServiceScopeFactory _scopes;
     private readonly CareerUsagePolicy _policy;
     private readonly ILogger<CareerReservationReaperService> _logger;
+    private readonly ICareerFeatureGate _gate;
 
-    public CareerReservationReaperService(IServiceScopeFactory scopes, IOptions<CareerUsagePolicy> policy, ILogger<CareerReservationReaperService> logger)
+    public CareerReservationReaperService(IServiceScopeFactory scopes, IOptions<CareerUsagePolicy> policy, ILogger<CareerReservationReaperService> logger,
+        ICareerFeatureGate gate)
     {
+        _gate = gate;
         _scopes = scopes;
         _policy = policy.Value;
         _logger = logger;
+    }
+
+    /// <summary>One pass; idle while the career flag is off (no runs are worked then, so nothing goes stale).</summary>
+    public async Task ReapOnceAsync(CancellationToken ct)
+    {
+        if (!_gate.IsEnabled)
+        {
+            return;
+        }
+        using var scope = _scopes.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<ICareerReservationReaper>().ReapAsync(ct);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -92,8 +106,7 @@ public sealed class CareerReservationReaperService : BackgroundService
         {
             try
             {
-                using var scope = _scopes.CreateScope();
-                await scope.ServiceProvider.GetRequiredService<ICareerReservationReaper>().ReapAsync(stoppingToken);
+                await ReapOnceAsync(stoppingToken);
                 await Task.Delay(TimeSpan.FromSeconds(Math.Max(5, _policy.ReaperPollSeconds)), stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

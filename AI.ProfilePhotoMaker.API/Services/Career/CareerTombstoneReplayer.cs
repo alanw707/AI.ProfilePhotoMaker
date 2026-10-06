@@ -36,12 +36,17 @@ public sealed class CareerTombstoneReplayer : ICareerTombstoneReplayer
 
     public async Task<int> ApplyAsync(CancellationToken ct = default)
     {
-        var tombstones = await _db.CareerTombstones.AsNoTracking().OrderBy(t => t.CreatedAt).ToListAsync(ct);
-        var groups = tombstones.GroupBy(t => (t.OwnerId, t.Scope)).ToList();
+        // Grouped in SQL: only one key per owner and scope comes back, never the whole tombstone table.
+        var groups = await _db.CareerTombstones.AsNoTracking()
+            .GroupBy(t => new { t.OwnerId, t.Scope })
+            .Select(g => new { g.Key.OwnerId, g.Key.Scope, Newest = g.Max(t => t.CreatedAt) })
+            .ToListAsync(ct);
         var failed = 0;
         foreach (var group in groups)
         {
-            var newest = group.OrderByDescending(t => t.CreatedAt).First();
+            var newest = await _db.CareerTombstones.AsNoTracking()
+                .Where(t => t.OwnerId == group.OwnerId && t.Scope == group.Scope && t.CreatedAt == group.Newest)
+                .OrderBy(t => t.Id).FirstAsync(ct);
             var ok = false;
             try
             {
@@ -55,8 +60,8 @@ public sealed class CareerTombstoneReplayer : ICareerTombstoneReplayer
             _db.ChangeTracker.Clear();
 
             var now = _clock.GetUtcNow().UtcDateTime;
-            var ids = group.Select(t => t.Id).ToList();
-            foreach (var row in await _db.CareerTombstones.Where(t => ids.Contains(t.Id)).ToListAsync(ct))
+            foreach (var row in await _db.CareerTombstones
+                .Where(t => t.OwnerId == group.OwnerId && t.Scope == group.Scope && t.CreatedAt <= group.Newest).ToListAsync(ct))
             {
                 row.ReplayedAt = ok ? now : row.ReplayedAt;
                 row.ReplayFailedAt = ok ? null : now;
@@ -127,6 +132,8 @@ public sealed class CareerReplayGuardFilter : IAsyncActionFilter
 /// <summary>
 /// Runs <see cref="ICareerTombstoneReplayer"/> at startup and, while it reports incomplete work, again in the
 /// background with a doubling wait. Program.cs only, so the test host never runs it.
+/// Deliberately NOT gated by Features:CareerWorkspace: deleted data must stay deleted after a restore even while
+/// the feature is off. The replay groups tombstones in SQL, so startup cost does not grow with the table.
 /// </summary>
 public sealed class CareerTombstoneReplayHostedService : IHostedService
 {
