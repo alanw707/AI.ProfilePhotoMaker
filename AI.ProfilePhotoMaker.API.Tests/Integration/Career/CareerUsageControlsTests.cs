@@ -565,17 +565,31 @@ public class CareerAdminUsageTests : IClassFixture<CareerUsageFactory>
 /// <summary>
 /// Real parallel creates against SQLite (the in-memory test database ignores concurrency tokens, so it cannot
 /// show a race). Each request has its own context and connection, as in production.
+/// Set <c>CAREER_SQLSERVER_TESTS</c> to a SQL Server connection string to run the same races against SQL Server
+/// (a fresh database per test, dropped afterwards); the release gate requires that run (#396).
 /// </summary>
 public sealed class CareerConcurrentCreateTests : IDisposable
 {
+    private static readonly string? SqlServer = Environment.GetEnvironmentVariable("CAREER_SQLSERVER_TESTS");
     private readonly string _path = Path.Combine(Path.GetTempPath(), $"career-usage-{Guid.NewGuid():N}.db");
-    private DbContextOptions<ApplicationDbContext> Options => new DbContextOptionsBuilder<ApplicationDbContext>()
-        .UseSqlite($"Data Source={_path}").Options;
+    private readonly string _database = $"career_race_{Guid.NewGuid():N}";
+
+    private DbContextOptions<ApplicationDbContext> Options => string.IsNullOrWhiteSpace(SqlServer)
+        ? new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite($"Data Source={_path}").Options
+        : new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(
+            new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(SqlServer) { InitialCatalog = _database }.ConnectionString).Options;
 
     public void Dispose()
     {
-        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-        File.Delete(_path);
+        if (string.IsNullOrWhiteSpace(SqlServer))
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            File.Delete(_path);
+            return;
+        }
+        Microsoft.Data.SqlClient.SqlConnection.ClearAllPools();
+        using var db = new ApplicationDbContext(Options);
+        db.Database.EnsureDeleted();
     }
 
     private async Task<string> SeedAsync()
@@ -620,6 +634,32 @@ public sealed class CareerConcurrentCreateTests : IDisposable
         var row = await db.CareerAllowances.SingleAsync(a => a.OwnerId == owner);
         (row.Reserved + row.Used).Should().Be(accepted);
         (await db.CareerAgentRuns.CountAsync(r => r.OwnerId == owner)).Should().Be(accepted);
+    }
+
+    [Fact]
+    public async Task ParallelCreatesWithOneIdempotencyKeyMakeOneRunAndReserveOnce()
+    {
+        var owner = await SeedAsync();
+        const string key = "same-key-race-0001";
+        async Task<(CareerOutcomeKind Kind, Guid? Id)> Create()
+        {
+            await using var db = new ApplicationDbContext(Options);
+            var service = new CareerAgentRunService(
+                db, Microsoft.Extensions.Options.Options.Create(new CareerAgentOptions { MonthlyRunAllowance = 20 }), TimeProvider.System,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<CareerAgentRunService>.Instance, new FakeCareerTextModel(),
+                usage: Microsoft.Extensions.Options.Options.Create(new CareerUsagePolicy { PerMinuteRunLimit = 1000, MaxConcurrentRunsPerUser = 100 }));
+            var outcome = await service.CreateAsync(owner, new CreateCareerRunRequest { Task = "profile_summary" }, key);
+            return (outcome.Kind, outcome.Value?.Id);
+        }
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Task.Run(Create)));
+
+        // Every caller either gets the one winning run back or is told to retry; none makes a second run.
+        results.Where(r => r.Kind == CareerOutcomeKind.Ok).Select(r => r.Id).Distinct().Should().HaveCount(1);
+        await using var check = new ApplicationDbContext(Options);
+        (await check.CareerAgentRuns.CountAsync(r => r.OwnerId == owner)).Should().Be(1);
+        var row = await check.CareerAllowances.SingleAsync(a => a.OwnerId == owner);
+        (row.Reserved + row.Used).Should().Be(1);
     }
 
     [Fact]

@@ -46,7 +46,10 @@ Fixes made here:
 8. **GO/NO-GO:** owner decision, recorded on #396. Currently **NO-GO** until the human gates below close.
 
 ## Human gates (open, owner)
-- [ ] Real SQL Server concurrency proof: allowance, global guard and unique indexes (tests ran on InMemory and SQLite only).
+- [x] Real SQL Server concurrency proof (2026-10-06, SQL Server 2022 container `mcr.microsoft.com/mssql/server:2022-latest`):
+  - `dotnet ef database update` applied every migration cleanly, through `20261005233749_CareerGlobalUsageGuard`.
+  - `CareerConcurrentCreateTests` (6 tests) run against SQL Server when `CAREER_SQLSERVER_TESTS` holds a connection string: parallel creates within the allowance, the per-user concurrency limit, the global queue cap across users, the user and global cost caps, and a new same-Idempotency-Key race (one run, one reservation). Passed 6/6 in 3 consecutive runs. A wrong-password run failed with `Login failed for user 'sa'`, which shows the SQL Server path is really used. Each test uses its own database and drops it afterwards.
+  - Command: `CAREER_SQLSERVER_TESTS='Server=localhost,14333;User Id=sa;Password=…;TrustServerCertificate=True' dotnet test --filter FullyQualifiedName~CareerConcurrentCreateTests`
 - [ ] #377 independent target-user observation (owner walkthroughs were coached).
 - [ ] Production keys and provider rights: OpenAI, USAJOBS, licensed data.
 - [ ] Owner approval of the usage budget and quotas (#395, currently provisional).
