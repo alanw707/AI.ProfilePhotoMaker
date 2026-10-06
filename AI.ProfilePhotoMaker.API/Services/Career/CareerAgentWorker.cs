@@ -2,21 +2,40 @@ namespace AI.ProfilePhotoMaker.API.Services.Career;
 
 /// <summary>
 /// Polls for claimable agent runs and works them, one at a time (ADR 0009). Off when
-/// <c>Career:Agent:WorkerEnabled</c> is false. Logs ids and codes only.
+/// <c>Career:Agent:WorkerEnabled</c> is false, and idle while <c>Features:CareerWorkspace</c> is off
+/// (checked every pass, so a config reload applies without a restart). Logs ids and codes only.
 /// </summary>
 public sealed class CareerAgentWorker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopes;
     private readonly Microsoft.Extensions.Options.IOptions<CareerAgentOptions> _options;
     private readonly ILogger<CareerAgentWorker> _logger;
+    private readonly ICareerFeatureGate _gate;
     private readonly string _workerId = $"{Environment.MachineName}-{Guid.NewGuid():N}";
 
     public CareerAgentWorker(
-        IServiceScopeFactory scopes, Microsoft.Extensions.Options.IOptions<CareerAgentOptions> options, ILogger<CareerAgentWorker> logger)
+        IServiceScopeFactory scopes, Microsoft.Extensions.Options.IOptions<CareerAgentOptions> options, ILogger<CareerAgentWorker> logger,
+        ICareerFeatureGate gate)
     {
+        _gate = gate;
         _scopes = scopes;
         _options = options;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// One pass: claims and works at most one run. Does nothing (and resolves no runner or reference data)
+    /// while the career flag is off, so queued runs are never processed or billed for a disabled feature.
+    /// </summary>
+    public async Task<bool> WorkOnceAsync(CancellationToken ct)
+    {
+        if (!_gate.IsEnabled)
+        {
+            return false;
+        }
+        // A scope per pass: each gets a fresh DbContext, so nothing stale carries over.
+        using var scope = _scopes.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<ICareerAgentRunner>().RunOnceAsync(_workerId, ct);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -33,10 +52,7 @@ public sealed class CareerAgentWorker : BackgroundService
             var worked = false;
             try
             {
-                // A scope per iteration: each pass gets a fresh DbContext, so nothing stale carries over.
-                using var scope = _scopes.CreateScope();
-                var runner = scope.ServiceProvider.GetRequiredService<ICareerAgentRunner>();
-                worked = await runner.RunOnceAsync(_workerId, stoppingToken);
+                worked = await WorkOnceAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
