@@ -67,6 +67,15 @@ async function mockBackend(page: Page, scenario: Scenario = 'normal') {
 
     if (url === '/api/config/client') return send({ features: { careerWorkspace: true } });
     if (url === '/api/career/profile') return send(profile);
+    if (url === '/api/career/allowance')
+      return send({
+        policyVersion: 'v1',
+        limit: 20,
+        used: 1,
+        reserved: 0,
+        remaining: 19,
+        resetsAt: '2026-11-01T00:00:00Z',
+      });
     if (url === '/api/career/goals') return fail(404, 'CareerGoalNotFound');
     if (url === '/api/career/runs' && method === 'POST') {
       state.keys.push(route.request().headers()['idempotency-key'] ?? null);

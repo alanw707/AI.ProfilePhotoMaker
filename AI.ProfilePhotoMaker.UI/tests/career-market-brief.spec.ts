@@ -246,6 +246,15 @@ async function mockBackend(page: Page, options: Options = {}) {
       route.fulfill({ status, json: { success: false, error: { code, message: code } } });
 
     if (url === '/api/config/client') return send({ features: { careerWorkspace: true } });
+    if (url === '/api/career/journey')
+      return send({
+        profile: { version: 1, confirmed: true },
+        goal: { version: 1, occupationCode: '15-1252.00', occupationTitle: 'Software Developers' },
+        nextAction: { key: 'build_brief', route: '/app/career/market' },
+        latestResult: null,
+        activeRuns: [],
+        stale: [],
+      });
     if (url === '/api/career/profile')
       return send({
         id: 'p1',
@@ -491,7 +500,11 @@ test('the career home links to the market brief', async ({ page }) => {
   await page.goto('/app/career?e2eAuthBypass=1');
   const cookies = page.getByRole('button', { name: 'Reject Non-Essential' });
   if (await cookies.isVisible()) await cookies.click();
-  await expect(page.getByRole('link', { name: 'Analytics: market brief' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Build your market brief' })).toHaveAttribute(
+    'href',
+    '/app/career/market'
+  );
+  await expect(page.getByRole('link', { name: 'Market brief', exact: true })).toHaveAttribute(
     'href',
     '/app/career/market'
   );

@@ -129,6 +129,24 @@ async function mockBackend(page: Page, scenario: Scenario = 'normal') {
       route.fulfill({ status, json: { success: false, error: { code, message: code } } });
 
     if (url === '/api/config/client') return send({ features: { careerWorkspace: true } });
+    if (url === '/api/career/journey') {
+      const occ = state.savedOccupation as { code: string; title: string } | null;
+      return send({
+        profile: { version: 1, confirmed: true },
+        goal: {
+          version: 1,
+          occupationCode: occ?.code ?? null,
+          occupationTitle: occ?.title ?? null,
+          location: null,
+        },
+        nextAction: { key: 'none', route: '/app/career' },
+        latestResult: occ
+          ? { kind: 'occupation_match', id: MATCH_ID, createdAt: '2026-10-05T10:00:00Z' }
+          : null,
+        activeRuns: [],
+        stale: [],
+      });
+    }
     if (url === '/api/career/profile') return send(profile);
     if (url === '/api/career/goals') {
       if (state.goalMissing) return fail(404, 'CareerGoalNotFound');
@@ -359,8 +377,8 @@ test('career home shows the confirmed occupation', async ({ page }) => {
     matchId: MATCH_ID,
   };
   await page.goto('/app/career?e2eAuthBypass=1');
-  await expect(page.getByText('Occupation: Software Developers (15-1252.00)')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Confirm your occupation' })).toHaveAttribute(
+  await expect(page.locator('[data-goal]')).toContainText('Software Developers');
+  await expect(page.getByRole('link', { name: 'Occupation match' })).toHaveAttribute(
     'href',
     '/app/career/occupation'
   );
