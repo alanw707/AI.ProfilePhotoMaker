@@ -10,9 +10,13 @@ const STATIC_SOURCE =
   (BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1') ? 'file' : 'http');
 
 const seoPageEntries = Object.values(seoPages);
+// /pricing is served by the packages page (PremiumComponent), not SeoPageComponent; its SEO
+// record only feeds the prerendered crawler HTML, which the server-rendered checks below cover.
+const NOT_SEO_COMPONENT_ROUTES = new Set(['pricing']);
+const liveSeoPageEntries = seoPageEntries.filter(p => !NOT_SEO_COMPONENT_ROUTES.has(p.slug));
 
 test.describe('SEO metadata smoke checks', () => {
-  for (const pageContent of seoPageEntries) {
+  for (const pageContent of liveSeoPageEntries) {
     const routePath = pageContent.slug ? `/${pageContent.slug}` : '/';
     const expectedCanonical = pageContent.slug
       ? `${CANONICAL_BASE}/${pageContent.slug}`
@@ -27,7 +31,10 @@ test.describe('SEO metadata smoke checks', () => {
         pageContent.description
       );
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow');
-      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', expectedCanonical);
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+        'href',
+        expectedCanonical
+      );
 
       const title = await page.title();
       expect(title).toBe(pageContent.title);
@@ -128,10 +135,7 @@ async function loadStaticHtml(
     return response.text();
   }
 
-  const slugPath = slug
-    .split('/')
-    .filter(Boolean)
-    .join(path.sep);
+  const slugPath = slug.split('/').filter(Boolean).join(path.sep);
   const htmlPath = path.join(__dirname, '..', 'public', slugPath, 'index.html');
   if (!fs.existsSync(htmlPath)) {
     throw new Error(
@@ -151,10 +155,7 @@ function extractMetaContent(html: string, attr: string, key: string): string | n
 }
 
 function extractLinkHref(html: string, rel: string): string | null {
-  const regex = new RegExp(
-    `<link[^>]*rel="${escapeRegex(rel)}"[^>]*href="([^"]*)"[^>]*>`,
-    'i'
-  );
+  const regex = new RegExp(`<link[^>]*rel="${escapeRegex(rel)}"[^>]*href="([^"]*)"[^>]*>`, 'i');
   const match = html.match(regex);
   return match ? decodeHtml(match[1]) : null;
 }

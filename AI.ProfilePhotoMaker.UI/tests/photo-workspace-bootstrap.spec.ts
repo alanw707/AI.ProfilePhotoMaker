@@ -15,8 +15,12 @@ const stubUser = {
   lastName: 'Wright',
 };
 
-test.describe('Dashboard Model Status Display', () => {
-  test('renders "Ready for training" when unified status returns ReadyForTraining', async ({ page }) => {
+// The model-training dashboard was replaced by the package photo workspace (1ac254ef); it no
+// longer shows a training status. This keeps the signed-in workspace bootstrap covered.
+test.describe('Photo workspace bootstrap', () => {
+  test('signed-in workspace renders the package steps with stubbed model status', async ({
+    page,
+  }) => {
     // Seed a mock authenticated session before the app initializes
     await page.addInitScript(user => {
       localStorage.setItem('currentUser', JSON.stringify(user));
@@ -155,14 +159,19 @@ test.describe('Dashboard Model Status Display', () => {
         return;
       }
 
-      if (url.includes('/api/image/training-zips') || url.includes('/api/image/latest-training-zip')) {
+      if (
+        url.includes('/api/image/training-zips') ||
+        url.includes('/api/image/latest-training-zip')
+      ) {
         await route.fulfill(jsonResponse({ success: true, data: [] }));
         return;
       }
 
       if (url.includes('/api/style/user-selected') || url.includes('/api/style/select')) {
         if (route.request().method() === 'POST') {
-          await route.fulfill(jsonResponse({ success: true, message: 'Selection saved', error: null }));
+          await route.fulfill(
+            jsonResponse({ success: true, message: 'Selection saved', error: null })
+          );
         } else {
           await route.fulfill(jsonResponse({ success: true, data: [], error: null }));
         }
@@ -206,6 +215,12 @@ test.describe('Dashboard Model Status Display', () => {
 
     await page.goto(`${BASE_URL}/app/enhance`);
 
-    await expect(page.getByText('Ready for Training')).toBeVisible({ timeout: 15000 });
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Your professional photo, proofed and ready' })
+    ).toBeVisible({ timeout: 15000 });
+    const steps = page.getByRole('list', { name: 'Photo package steps' });
+    await expect(steps).toBeVisible();
+    await expect(steps).toContainText('Source');
+    await expect(page.locator('body')).not.toContainText(/training failed|error/i);
   });
 });
