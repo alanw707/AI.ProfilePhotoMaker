@@ -28,7 +28,7 @@ public static class CareerTextModelRegistration
         if (problem != null)
         {
             services.AddHostedService(sp => new CareerTextModelConfigurationWarning(
-                problem, sp.GetRequiredService<ILogger<CareerTextModelConfigurationWarning>>()));
+                problem, sp.GetRequiredService<ILogger<CareerTextModelConfigurationWarning>>(), sp.GetService<ICareerFeatureGate>() ?? new CareerFeatureGate(configuration)));
         }
         if (environment.IsDevelopment() || environment.IsEnvironment("LocalDev") || environment.IsEnvironment("Testing"))
         {
@@ -38,21 +38,26 @@ public static class CareerTextModelRegistration
     }
 }
 
-/// <summary>Logs once at startup why a partly configured career model stayed off.</summary>
+/// <summary>Logs once at startup why a partly configured career model stayed off; silent while the career feature is off.</summary>
 public sealed class CareerTextModelConfigurationWarning : IHostedService
 {
     private readonly string _problem;
     private readonly ILogger<CareerTextModelConfigurationWarning> _logger;
+    private readonly ICareerFeatureGate _gate;
 
-    public CareerTextModelConfigurationWarning(string problem, ILogger<CareerTextModelConfigurationWarning> logger)
+    public CareerTextModelConfigurationWarning(string problem, ILogger<CareerTextModelConfigurationWarning> logger, ICareerFeatureGate gate)
     {
+        _gate = gate;
         _problem = problem;
         _logger = logger;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.LogWarning("{Problem}", _problem);
+        if (_gate.IsEnabled)
+        {
+            _logger.LogWarning("{Problem}", _problem);
+        }
         return Task.CompletedTask;
     }
 
