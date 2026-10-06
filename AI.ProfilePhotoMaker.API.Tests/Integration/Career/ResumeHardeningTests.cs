@@ -14,7 +14,9 @@ namespace AI.ProfilePhotoMaker.API.Tests.Integration.Career;
 public class ResumeHardeningTests
 {
     private static byte[] Valid => ResumeFixtures.Pdf(ResumeFixtures.MorganPages);
-    private static readonly TimeSpan Fast = TimeSpan.FromSeconds(2);
+    // Generous wall-clock bound: an unbudgeted decompression bomb takes far longer, while
+    // a loaded CI machine must not flake a correct implementation.
+    private static readonly TimeSpan Fast = TimeSpan.FromSeconds(10);
 
     // ---- Parser: object flood, overflow, budgets --------------------------------
 

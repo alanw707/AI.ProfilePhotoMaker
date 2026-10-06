@@ -16,6 +16,7 @@ public class PerformanceReportGenerator
     }
 
     [Fact]
+    [Trait("Category", "Performance")]
     public async Task GeneratePerformanceAuditReport()
     {
         _output.WriteLine("Generating comprehensive performance audit report...");
