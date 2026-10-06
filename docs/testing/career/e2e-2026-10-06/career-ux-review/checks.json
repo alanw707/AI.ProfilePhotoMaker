@@ -1,0 +1,414 @@
+[
+  {
+    "label": "01-home-empty @desktop",
+    "url": "http://localhost:4200/app/career",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Career workspace",
+      "H2:Drafting allowance",
+      "H2:Your goal",
+      "H2:Next step",
+      "H2:Your career pages"
+    ],
+    "h1Count": 1,
+    "title": "Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "01-home-empty @mobile-390",
+    "url": "http://localhost:4200/app/career",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Career workspace",
+      "H2:Drafting allowance",
+      "H2:Your goal",
+      "H2:Next step",
+      "H2:Your career pages"
+    ],
+    "h1Count": 1,
+    "title": "Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "01-home-empty @mobile-320",
+    "url": "http://localhost:4200/app/career",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Career workspace",
+      "H2:Drafting allowance",
+      "H2:Your goal",
+      "H2:Next step",
+      "H2:Your career pages"
+    ],
+    "h1Count": 1,
+    "title": "Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "02-setup-step1 @desktop",
+    "url": "http://localhost:4200/app/career/setup",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Set up your career workspace",
+      "H2:Step 1 · Professional facts"
+    ],
+    "h1Count": 1,
+    "title": "Set Up Your Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "02-setup-step1 @mobile-390",
+    "url": "http://localhost:4200/app/career/setup",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Set up your career workspace",
+      "H2:Step 1 · Professional facts"
+    ],
+    "h1Count": 1,
+    "title": "Set Up Your Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "02-setup-step1 @mobile-320",
+    "url": "http://localhost:4200/app/career/setup",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Set up your career workspace",
+      "H2:Step 1 · Professional facts"
+    ],
+    "h1Count": 1,
+    "title": "Set Up Your Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "setup step 1 keyboard",
+    "focusOrder": [
+      "a focusVisible=true",
+      "input#profile-currentTitle focusVisible=true",
+      "input#profile-industry focusVisible=true",
+      "input#profile-yearsExperience focusVisible=true",
+      "input#profile-location focusVisible=true",
+      "textarea#profile-summary focusVisible=true",
+      "select#profile-workArrangement focusVisible=true",
+      "input#profile-skills focusVisible=true",
+      "button focusVisible=true",
+      "input#profile-highlights focusVisible=true",
+      "button focusVisible=true",
+      "input#profile-confirmed focusVisible=true"
+    ]
+  },
+  {
+    "label": "03-setup-validation @desktop",
+    "url": "http://localhost:4200/app/career/setup",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Set up your career workspace",
+      "H2:Step 1 · Professional facts"
+    ],
+    "h1Count": 1,
+    "title": "Set Up Your Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "03-setup-validation @mobile-390",
+    "url": "http://localhost:4200/app/career/setup",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Set up your career workspace",
+      "H2:Step 1 · Professional facts"
+    ],
+    "h1Count": 1,
+    "title": "Set Up Your Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "03-setup-validation @mobile-320",
+    "url": "http://localhost:4200/app/career/setup",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Set up your career workspace",
+      "H2:Step 1 · Professional facts"
+    ],
+    "h1Count": 1,
+    "title": "Set Up Your Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "validation focus",
+    "focused": "alert"
+  },
+  {
+    "label": "04-setup-step2 @desktop",
+    "url": "http://localhost:4200/app/career/setup",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Set up your career workspace",
+      "H2:Step 2 · Your goal"
+    ],
+    "h1Count": 1,
+    "title": "Set Up Your Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "04-setup-step2 @mobile-390",
+    "url": "http://localhost:4200/app/career/setup",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Set up your career workspace",
+      "H2:Step 2 · Your goal"
+    ],
+    "h1Count": 1,
+    "title": "Set Up Your Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "04-setup-step2 @mobile-320",
+    "url": "http://localhost:4200/app/career/setup",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Set up your career workspace",
+      "H2:Step 2 · Your goal"
+    ],
+    "h1Count": 1,
+    "title": "Set Up Your Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "05-home-saved @desktop",
+    "url": "http://localhost:4200/app/career",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Career workspace",
+      "H2:Drafting allowance",
+      "H2:Your goal",
+      "H2:Next step",
+      "H2:Your career pages"
+    ],
+    "h1Count": 1,
+    "title": "Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "05-home-saved @mobile-390",
+    "url": "http://localhost:4200/app/career",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Career workspace",
+      "H2:Drafting allowance",
+      "H2:Your goal",
+      "H2:Next step",
+      "H2:Your career pages"
+    ],
+    "h1Count": 1,
+    "title": "Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "05-home-saved @mobile-320",
+    "url": "http://localhost:4200/app/career",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Career workspace",
+      "H2:Drafting allowance",
+      "H2:Your goal",
+      "H2:Next step",
+      "H2:Your career pages"
+    ],
+    "h1Count": 1,
+    "title": "Career Workspace - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "reload restores",
+    "text": "Career workspace\n\nYour goal, next step and latest work in one place. You enter and confirm every detail.\n\nDrafting allowance\n\n20 of 20 drafts left this month\n\nResets on November 1, 2026.\n\nYour goal\n\nGoal saved · Seattle, WA\n\nNext step\nConfirm your occupation\nYour career pages\nProfile and goal\nImport from a resume\nProfile summary\nOccupation\nMarket brief\nCompare markets\nPay analysis\nOpen postings\nCa"
+  },
+  {
+    "label": "06-profile-edited-goal-stale @desktop",
+    "url": "http://localhost:4200/app/career/profile",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Your professional profile",
+      "H2:Professional facts",
+      "H2:Your goal",
+      "H2:Profile history",
+      "H2:Goal history"
+    ],
+    "h1Count": 1,
+    "title": "Career Profile - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "06-profile-edited-goal-stale @mobile-390",
+    "url": "http://localhost:4200/app/career/profile",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Your professional profile",
+      "H2:Professional facts",
+      "H2:Your goal",
+      "H2:Profile history",
+      "H2:Goal history"
+    ],
+    "h1Count": 1,
+    "title": "Career Profile - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "06-profile-edited-goal-stale @mobile-320",
+    "url": "http://localhost:4200/app/career/profile",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Your professional profile",
+      "H2:Professional facts",
+      "H2:Your goal",
+      "H2:Profile history",
+      "H2:Goal history"
+    ],
+    "h1Count": 1,
+    "title": "Career Profile - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "profile keyboard",
+    "focusOrder": [
+      "a focusVisible=true",
+      "a focusVisible=true",
+      "input#profile-currentTitle focusVisible=true",
+      "input#profile-industry focusVisible=true",
+      "input#profile-yearsExperience focusVisible=true",
+      "input#profile-location focusVisible=true",
+      "textarea#profile-summary focusVisible=true",
+      "select#profile-workArrangement focusVisible=true",
+      "input#profile-skills focusVisible=true",
+      "button focusVisible=true",
+      "button focusVisible=true",
+      "button focusVisible=true"
+    ]
+  },
+  {
+    "label": "07-profile-version-history @desktop",
+    "url": "http://localhost:4200/app/career/profile",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Your professional profile",
+      "H2:Professional facts",
+      "H2:Your goal",
+      "H2:Profile history",
+      "H3:Version 1",
+      "H2:Goal history"
+    ],
+    "h1Count": 1,
+    "title": "Career Profile - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "07-profile-version-history @mobile-390",
+    "url": "http://localhost:4200/app/career/profile",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Your professional profile",
+      "H2:Professional facts",
+      "H2:Your goal",
+      "H2:Profile history",
+      "H3:Version 1",
+      "H2:Goal history"
+    ],
+    "h1Count": 1,
+    "title": "Career Profile - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "07-profile-version-history @mobile-320",
+    "url": "http://localhost:4200/app/career/profile",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Your professional profile",
+      "H2:Professional facts",
+      "H2:Your goal",
+      "H2:Profile history",
+      "H3:Version 1",
+      "H2:Goal history"
+    ],
+    "h1Count": 1,
+    "title": "Career Profile - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "08-goal-history @desktop",
+    "url": "http://localhost:4200/app/career/profile",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Your professional profile",
+      "H2:Professional facts",
+      "H2:Your goal",
+      "H2:Profile history",
+      "H3:Version 1",
+      "H2:Goal history",
+      "H3:Goal version 1"
+    ],
+    "h1Count": 1,
+    "title": "Career Profile - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "08-goal-history @mobile-390",
+    "url": "http://localhost:4200/app/career/profile",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Your professional profile",
+      "H2:Professional facts",
+      "H2:Your goal",
+      "H2:Profile history",
+      "H3:Version 1",
+      "H2:Goal history",
+      "H3:Goal version 1"
+    ],
+    "h1Count": 1,
+    "title": "Career Profile - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "08-goal-history @mobile-320",
+    "url": "http://localhost:4200/app/career/profile",
+    "overflow": 0,
+    "small": [],
+    "headings": [
+      "H1:Your professional profile",
+      "H2:Professional facts",
+      "H2:Your goal",
+      "H2:Profile history",
+      "H3:Version 1",
+      "H2:Goal history",
+      "H3:Goal version 1"
+    ],
+    "h1Count": 1,
+    "title": "Career Profile - AI Profile Photo Maker",
+    "axe": []
+  },
+  {
+    "label": "goal restore status",
+    "text": "Goal version restored."
+  }
+]
