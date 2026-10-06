@@ -131,6 +131,8 @@ test('admin page shows usage and toggles only after confirmation', async ({ page
   await expect(row).toContainText('25%');
   await expect(page.locator('[data-per-user]')).toContainText('4');
   await expect(page.locator('[data-per-user]')).toContainText('1.10');
+  await expect(page.locator('body')).toContainText('New drafts are running.');
+  await expect(page.locator('body')).not.toContainText('Pause drafting — On.');
   await page.locator('[data-switch="generationDisabled"]').click();
   await expect(page.locator('[data-confirm]')).toBeVisible();
   expect(calls.puts).toEqual([]);

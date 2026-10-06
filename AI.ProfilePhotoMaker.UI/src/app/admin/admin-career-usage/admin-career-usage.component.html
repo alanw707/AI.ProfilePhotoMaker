@@ -38,7 +38,7 @@
               (click)="$event.preventDefault(); request(s.key)" />
             {{ s.label }}
           </label>
-          — {{ c[s.key] ? s.on : 'On.' }}
+          — {{ c[s.key] ? s.on : s.off }}
         </p>
       }
       @if (c.updatedAt) {

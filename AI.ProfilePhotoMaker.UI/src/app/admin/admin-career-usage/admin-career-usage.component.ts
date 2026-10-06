@@ -29,17 +29,19 @@ export function actionLabel(key: string): string {
   const text = key.replace(/[_-]+/g, ' ').trim();
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
-const SWITCHES: { key: Switch; label: string; on: string; confirm: string }[] = [
+const SWITCHES: { key: Switch; label: string; on: string; off: string; confirm: string }[] = [
   {
     key: 'generationDisabled',
     label: 'Pause drafting',
     on: 'New drafts are paused for everyone.',
+    off: 'New drafts are running.',
     confirm: 'Pause all new career drafting? Saved work stays available.',
   },
   {
     key: 'sourcesDisabled',
     label: 'Pause job sources',
     on: 'External job sources are off.',
+    off: 'External job sources are on.',
     confirm: 'Turn off external job sources?',
   },
 ];
