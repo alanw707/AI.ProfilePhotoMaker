@@ -31,6 +31,10 @@
   color: var(--workspace-ink, #15252a)
   text-decoration: none
 
+  // Beats the global a:not(.btn) link colour, which turned the product name a low-contrast blue.
+  .app-header &
+    color: var(--workspace-ink, #15252a)
+
   &:focus-visible
     outline: 3px solid rgba(15, 118, 110, .3)
     outline-offset: 4px
@@ -199,7 +203,11 @@
 .mobile-menu-toggle
   display: none
 
-[data-theme='dark'] .app-header
+// :host-context reaches the theme attribute on <html>; a plain [data-theme] prefix is scoped to
+// this component by view encapsulation and never matched, leaving light colours on a dark header.
+:host-context([data-theme='dark']) .app-header
+  // The global dark header rule is !important, so this restatement must be too.
+  background: var(--workspace-surface) !important
   --workspace-bg: #101c1e
   --workspace-surface: #172628
   --workspace-surface-muted: #203437

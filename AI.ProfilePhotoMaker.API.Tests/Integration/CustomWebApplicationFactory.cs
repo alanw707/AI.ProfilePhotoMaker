@@ -172,6 +172,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 sp.GetRequiredService<ILogger<OpenAIImageGenerationService>>(),
                 sp.GetRequiredService<IStorageService>()));
         services.AddScoped<IOutcomePackageService, OutcomePackageService>();
+        AI.ProfilePhotoMaker.API.Services.Career.CareerWorkspaceServiceCollectionExtensions.AddCareerWorkspace(services);
         services.AddScoped<IProfilePhotoScoreService, FakeProfilePhotoScoreService>();
         services.AddScoped<IPlatformExportService, FakePlatformExportService>();
         services.AddScoped<IHeadshotGenerationProvider, OpenAIHeadshotGenerationProvider>();

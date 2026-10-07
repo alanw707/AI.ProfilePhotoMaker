@@ -51,6 +51,13 @@ describe('ConfigService - API URL building in test env', () => {
       window.fetch = originalFetch;
     });
 
+    it('keeps career workspace off until runtime enables it', async () => {
+      expect(service.isCareerWorkspaceEnabled).toBeFalse();
+      window.fetch = jasmine.createSpy('fetch').and.resolveTo(new Response(JSON.stringify({ success: true, data: { features: { careerWorkspace: true } } }), { status: 200 }));
+      await service.loadClientConfiguration();
+      expect(service.isCareerWorkspaceEnabled).toBeTrue();
+    });
+
     it('should override build-time feature flags from /api/config/client', async () => {
       window.fetch = jasmine.createSpy('fetch').and.resolveTo(
         new Response(

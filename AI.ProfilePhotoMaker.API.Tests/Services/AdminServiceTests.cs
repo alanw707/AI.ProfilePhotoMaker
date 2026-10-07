@@ -530,6 +530,7 @@ public class AdminServiceTests
             creditPackageService,
             userManager,
             storageMock.Object,
-            NullLogger<AdminService>.Instance);
+            NullLogger<AdminService>.Instance,
+            Mock.Of<AI.ProfilePhotoMaker.API.Services.Career.ICareerPrivateDataService>());
     }
 }

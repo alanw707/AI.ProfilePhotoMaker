@@ -1,4 +1,5 @@
 /* eslint-disable max-lines -- legacy workspace orchestration remains in one route component; state seams are covered by focused and E2E tests */
+import { CareerReturn, resolveCareerReturn } from '../../pages/career/career-return';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -135,6 +136,11 @@ interface PortraitStyleCard {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PhotoEnhancementComponent implements OnInit, OnDestroy {
+  /** Optional link back to the career workspace; null unless the URL carries a valid key. */
+  careerReturn: CareerReturn | null = null;
+  private careerReturnKey = '';
+  /** Saved photo opened via ?refineImageId=, kept so checkout returns to it (#404). */
+  private refiningImageId: number | null = null;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild(TurnstileComponent) turnstile?: TurnstileComponent;
 
@@ -1301,12 +1307,21 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     }
 
     this._route.queryParamMap.subscribe(params => {
+      this.careerReturnKey = params.get('careerReturn') ?? '';
+      this.careerReturn = resolveCareerReturn(params.get('careerReturn'), params.get('careerGoal'));
       const upgraded = params.get('upgraded');
       const resumePreviewId = Number(params.get('resumePreviewId') ?? params.get('previewId'));
       const refineImageId = Number(params.get('refineImageId'));
       this.applyUseCaseFromQuery(params.get('useCase'));
       if (Number.isFinite(refineImageId) && refineImageId > 0) {
-        this.loadGalleryImageForRefinement(refineImageId);
+        if (upgraded === 'starter_package' || upgraded === 'pro_package') {
+          // Back from checkout while refining: refresh entitlements for the new package, then
+          // reopen the photo so the refinement picks up the purchase.
+          this.trackVerticalFunnelEvent('vertical_pack_purchase_success', { packageCode: upgraded });
+          this.loadPackageEntitlements(() => this.loadGalleryImageForRefinement(refineImageId, upgraded));
+        } else {
+          this.loadGalleryImageForRefinement(refineImageId);
+        }
         return;
       }
       if (upgraded === 'starter_package' || upgraded === 'pro_package') {
@@ -1345,7 +1360,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadGalleryImageForRefinement(processedImageId: number): void {
+  private loadGalleryImageForRefinement(processedImageId: number, upgraded?: string): void {
+    this.refiningImageId = processedImageId;
     this._profileWorkflowService.getStudioImageSource(processedImageId).subscribe({
       next: response => {
         if (!response.success || !response.data) {
@@ -1377,8 +1393,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
           (entitlement.packageCode === 'starter_package' || entitlement.packageCode === 'pro_package'))?.packageCode;
         this.selectedPackageCode = refinementPackage === 'starter_package' || refinementPackage === 'pro_package'
           ? refinementPackage : this.getBestActivePaidPackageCode() ?? this.selectedPackageCode;
-        this.saveSuccessMessage =
-          'Photo loaded from your workspace. Choose a refinement to continue.';
+        this.saveSuccessMessage = upgraded
+          ? `${this.getPackageLabel(upgraded)} unlocked. Choose a refinement to continue.`
+          : 'Photo loaded from your workspace. Choose a refinement to continue.';
         this._cdr.markForCheck();
       },
       error: () => {
@@ -1883,7 +1900,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadPackageEntitlements(): void {
+  private loadPackageEntitlements(then?: () => void): void {
     this.isLoadingEntitlements = true;
     this._profileWorkflowService.getEntitlements().subscribe({
       next: response => {
@@ -1893,11 +1910,13 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
           this.applyActiveEntitlementSelection();
         }
         this._cdr.markForCheck();
+        then?.();
       },
       error: error => {
         this.isLoadingEntitlements = false;
         console.warn('Failed to load package entitlements', error);
         this._cdr.markForCheck();
+        then?.();
       },
     });
   }
@@ -2700,9 +2719,23 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         packageId: option.internalCreditPackageId,
         outcomePackage: option.code,
         previewId: this.previewCandidate?.processedImageId ?? null,
-        returnUrl: `/app/enhance?useCase=${this.selectedUseCaseCode}&previewId=${this.previewCandidate?.processedImageId ?? ''}`,
+        returnUrl: `/app/enhance?useCase=${this.selectedUseCaseCode}&previewId=${this.previewCandidate?.processedImageId ?? ''}${this.refineReturnQuery()}${this.careerReturnQuery()}`,
       },
     });
+  }
+
+  /** Keeps the photo being refined open through checkout (#404). */
+  private refineReturnQuery(): string {
+    const id = this.refiningImageId;
+    return id && this.enhancedImage?.processedImageId === id ? `&refineImageId=${id}` : '';
+  }
+
+  /** Keeps the optional career back link alive through checkout (#391). */
+  private careerReturnQuery(): string {
+    if (!this.careerReturn) {
+      return '';
+    }
+    return `&careerReturn=${encodeURIComponent(this.careerReturnKey)}&careerGoal=${encodeURIComponent(this.careerReturn.goalId)}`;
   }
 
   private persistPreviewDraft(packageCode: string): void {

@@ -140,6 +140,8 @@ public class AuthService : IAuthService
                 new Claim(ClaimTypes.Name, user.UserName),
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                // When the user signed in; career deletion needs a recent one (ADR 0020).
+                new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture), ClaimValueTypes.Integer64),
                 new Claim(ClaimTypes.Email, user.Email ?? ""),
                 new Claim(ClaimTypes.GivenName, user.FirstName ?? ""),
                 new Claim(ClaimTypes.Surname, user.LastName ?? "")

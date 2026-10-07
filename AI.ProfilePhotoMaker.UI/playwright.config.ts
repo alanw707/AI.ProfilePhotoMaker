@@ -9,6 +9,7 @@ export default defineConfig({
     headless: true,
     baseURL: 'http://localhost:4200',
     trace: 'off',
+    launchOptions: { executablePath: process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] || undefined },
   },
   webServer: {
     command: 'npm run dev:local',
@@ -16,6 +17,6 @@ export default defineConfig({
     reuseExistingServer: true,
     timeout: 120_000,
   },
-  // Keep default single project unless overridden
+  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
 });
 

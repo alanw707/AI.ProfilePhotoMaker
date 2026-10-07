@@ -3,6 +3,7 @@ import { Router, Routes } from '@angular/router';
 import { LoginComponent } from './auth/login/login.component';
 import { RegisterComponent } from './auth/register/register.component';
 import { guestGuard } from './guards/guest.guard';
+import { careerWorkspaceGuard } from './guards/career-workspace.guard';
 import { AppGuard } from './guards/app.guard';
 import { AdminGuard } from './guards/admin.guard';
 import { seoPages } from './pages/marketing/seo-pages.data';
@@ -126,6 +127,116 @@ export const routes: Routes = [
           breadcrumb: 'Photo Workspace',
           hideNavigation: false,
         },
+      },
+      {
+        path: 'career',
+        canActivate: [careerWorkspaceGuard],
+        // One shell for every career page: shared header plus the step rail (career-shell-brief.md).
+        loadComponent: () =>
+          import('./pages/career/career-shell.component').then(m => m.CareerShellComponent),
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('./pages/career/career-home.component').then(m => m.CareerHomeComponent),
+            title: 'Career Workspace - AI Profile Photo Maker',
+          },
+          {
+            path: 'setup',
+            loadComponent: () =>
+              import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
+            title: 'Set Up Your Career Workspace - AI Profile Photo Maker',
+          },
+          {
+            path: 'profile',
+            loadComponent: () =>
+              import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
+            title: 'Career Profile - AI Profile Photo Maker',
+          },
+          {
+            path: 'import',
+            loadComponent: () =>
+              import('./pages/career/career-import.component').then(m => m.CareerImportComponent),
+            title: 'Import Your Resume - AI Profile Photo Maker',
+          },
+          {
+            path: 'summary',
+            loadComponent: () =>
+              import('./pages/career/career-summary.component').then(m => m.CareerSummaryComponent),
+            title: 'Profile Summary Draft - AI Profile Photo Maker',
+          },
+          {
+            path: 'occupation',
+            loadComponent: () =>
+              import('./pages/career/career-occupation.component').then(
+                m => m.CareerOccupationComponent
+              ),
+            title: 'Confirm Your Occupation - AI Profile Photo Maker',
+          },
+          {
+            // The analytics view for this release is the market brief (national/local comparison);
+            // multi-market comparison arrives with #385.
+            path: 'analytics',
+            redirectTo: 'market',
+            pathMatch: 'full',
+          },
+          {
+            path: 'market',
+            loadComponent: () =>
+              import('./pages/career/career-market.component').then(m => m.CareerMarketComponent),
+            title: 'Career Market Brief - AI Profile Photo Maker',
+          },
+          {
+            path: 'markets',
+            loadComponent: () =>
+              import('./pages/career/career-markets.component').then(m => m.CareerMarketsComponent),
+            title: 'Compare U.S. Markets - AI Profile Photo Maker',
+          },
+          {
+            path: 'jobs',
+            loadComponent: () =>
+              import('./pages/career/career-jobs.component').then(m => m.CareerJobsComponent),
+            title: 'Open Job Observations - AI Profile Photo Maker',
+          },
+          {
+            path: 'pay',
+            loadComponent: () =>
+              import('./pages/career/career-pay.component').then(m => m.CareerPayComponent),
+            title: 'Comparable Pay Analysis - AI Profile Photo Maker',
+          },
+          {
+            path: 'roadmap',
+            loadComponent: () =>
+              import('./pages/career/career-roadmap.component').then(m => m.CareerRoadmapComponent),
+            title: 'Career Roadmap - AI Profile Photo Maker',
+          },
+          {
+            path: 'resume',
+            loadComponent: () =>
+              import('./pages/career/career-resume.component').then(m => m.CareerResumeComponent),
+            title: 'Targeted Resume - AI Profile Photo Maker',
+          },
+          {
+            path: 'summary-draft',
+            data: { kind: 'summary' },
+            loadComponent: () =>
+              import('./pages/career/career-resume.component').then(m => m.CareerResumeComponent),
+            title: 'Professional Summary - AI Profile Photo Maker',
+          },
+          {
+            path: 'materials',
+            loadComponent: () =>
+              import('./pages/career/career-materials.component').then(m => m.CareerMaterialsComponent),
+            title: 'Career Materials - AI Profile Photo Maker',
+          },
+          {
+            path: 'privacy',
+            loadComponent: () =>
+              import('./pages/career/career-privacy.component').then(m => m.CareerPrivacyComponent),
+            title: 'Career Privacy - AI Profile Photo Maker',
+          },
+        ],
       },
       {
         path: 'settings',
@@ -512,6 +623,37 @@ export const routes: Routes = [
     },
   },
 
+  {
+    // Canonical URL from the SEO record (sitemap + static HTML); /use-cases/linkedin-executive-profile-photo stays as an alias.
+    path: 'linkedin-executive-profile-photo',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['linkedin-executive-profile-photo'].title,
+    data: {
+      seoPage: seoPages['linkedin-executive-profile-photo'],
+    },
+  },
+  {
+    // Canonical URL from the SEO record (sitemap + static HTML); /use-cases/realtor-profile-photo-pack stays as an alias.
+    path: 'realtor-profile-photo-pack',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['realtor-profile-photo-pack'].title,
+    data: {
+      seoPage: seoPages['realtor-profile-photo-pack'],
+    },
+  },
+  {
+    // Canonical URL from the SEO record (sitemap + static HTML); /use-cases/founder-press-kit-photo-pack stays as an alias.
+    path: 'founder-press-kit-photo-pack',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['founder-press-kit-photo-pack'].title,
+    data: {
+      seoPage: seoPages['founder-press-kit-photo-pack'],
+    },
+  },
+
   // Help & Support
   {
     path: 'help',
@@ -593,6 +735,14 @@ export const routes: Routes = [
             m => m.AdminCampaignsComponent
           ),
         title: 'Email Campaigns',
+      },
+      {
+        path: 'career-usage',
+        loadComponent: () =>
+          import('./admin/admin-career-usage/admin-career-usage.component').then(
+            m => m.AdminCareerUsageComponent
+          ),
+        title: 'Career usage',
       },
     ],
   },

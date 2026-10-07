@@ -20,6 +20,15 @@
       class="nav-menu"
       [class.mobile-open]="isMobileMenuOpen"
       aria-label="Primary navigation">
+      <a
+        *ngIf="showCareer"
+        routerLink="/app/career"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="page"
+        class="nav-link"
+        (click)="closeMobileMenu()">
+        Career
+      </a>
       <a routerLink="/pricing" routerLinkActive="active" class="nav-link" (click)="closeMobileMenu()">Packages</a>
       <a
         routerLink="/app/enhance"

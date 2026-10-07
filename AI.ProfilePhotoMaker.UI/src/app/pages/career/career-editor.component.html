@@ -1,0 +1,404 @@
+<main class="career-page">
+  <div class="career-sheet">
+    <a routerLink="/app/career">Back to career workspace</a>
+    <h1>{{ setup ? 'Set up your career workspace' : 'Your professional profile' }}</h1>
+    <p>Only facts you enter and confirm are saved. Resume suggestions are added only when you accept them.</p>
+    @if (error()) {
+      <div #errorSummary tabindex="-1" role="alert" class="career-error-summary">
+        <strong>{{ error() }}</strong>
+        @if (!conflict()) {
+          <ul>
+            @for (
+              entry of errorForm() === 'goal'
+                ? [
+                    'targetRole',
+                    'targetLocation',
+                    'workArrangement',
+                    'desiredPayMin',
+                    'desiredPayMax',
+                    'weeklyEffortHours',
+                    'confirmed',
+                  ]
+                : [
+                    'currentTitle',
+                    'industry',
+                    'yearsExperience',
+                    'location',
+                    'summary',
+                    'workArrangement',
+                    'skills',
+                    'highlights',
+                    'confirmed',
+                  ];
+              track entry
+            ) {
+              @if (hasError(entry, errorForm() === 'goal')) {
+                <li>
+                  <a [href]="'#' + (errorForm() === 'goal' ? 'goal-' : 'profile-') + entry">
+                    {{ label(entry) }}: {{ message(entry, errorForm() === 'goal') }}
+                  </a>
+                </li>
+              }
+            }
+          </ul>
+        }
+        @if (conflict()) {
+          <button type="button" (click)="reloadLatest()">Reload the latest version</button>
+        }
+      </div>
+    }
+    @if (!setup) {
+      <a routerLink="/app/career/import">Import from a resume</a>
+    }
+    <p aria-live="polite" role="status">{{ status() }}</p>
+    @if (!setup || step() === 1) {
+      <section aria-labelledby="facts-heading">
+        <h2 id="facts-heading">{{ setup ? 'Step 1 · Professional facts' : 'Professional facts' }}</h2>
+        @if (profile(); as p) {
+          <p class="muted">
+            {{ sourceLabel(p.provenance.source) }} · confirmed {{ p.provenance.confirmedAt | date: 'mediumDate' }} ·
+            Version {{ p.version }}
+            @if (p.provenance.restoredFromVersion) {
+              · restored from version {{ p.provenance.restoredFromVersion }}
+            }
+          </p>
+        }
+        <form [formGroup]="profileForm" (ngSubmit)="submitProfile()" novalidate>
+          <div class="field">
+            <label for="profile-currentTitle">Current title</label>
+            <input
+              id="profile-currentTitle"
+              formControlName="currentTitle"
+              maxlength="120"
+              [attr.aria-invalid]="hasError('currentTitle')"
+              aria-describedby="profile-currentTitle-error" />
+            <span id="profile-currentTitle-error" class="field-error">
+              {{ hasError('currentTitle') ? message('currentTitle') : '' }}
+            </span>
+          </div>
+          <div class="field">
+            <label for="profile-industry">Industry</label>
+            <input
+              id="profile-industry"
+              formControlName="industry"
+              maxlength="120"
+              [attr.aria-invalid]="hasError('industry')"
+              aria-describedby="profile-industry-error" />
+            <span id="profile-industry-error" class="field-error">
+              {{ hasError('industry') ? message('industry') : '' }}
+            </span>
+          </div>
+          <div class="field">
+            <label for="profile-yearsExperience">Years of experience</label>
+            <input
+              id="profile-yearsExperience"
+              type="number"
+              min="0"
+              max="60"
+              formControlName="yearsExperience"
+              [attr.aria-invalid]="hasError('yearsExperience')"
+              aria-describedby="profile-yearsExperience-error" />
+            <span id="profile-yearsExperience-error" class="field-error">
+              {{ hasError('yearsExperience') ? message('yearsExperience') : '' }}
+            </span>
+          </div>
+          <div class="field">
+            <label for="profile-location">Location</label>
+            <input
+              id="profile-location"
+              formControlName="location"
+              maxlength="120"
+              [attr.aria-invalid]="hasError('location')"
+              aria-describedby="profile-location-error" />
+            <span id="profile-location-error" class="field-error">
+              {{ hasError('location') ? message('location') : '' }}
+            </span>
+          </div>
+          <div class="field">
+            <label for="profile-summary">Summary</label>
+            <textarea
+              id="profile-summary"
+              formControlName="summary"
+              maxlength="2000"
+              [attr.aria-invalid]="hasError('summary')"
+              aria-describedby="profile-summary-error"></textarea>
+            <span id="profile-summary-error" class="field-error">
+              {{ hasError('summary') ? message('summary') : '' }}
+            </span>
+          </div>
+          <div class="field">
+            <label for="profile-workArrangement">Work arrangement</label>
+            <select
+              id="profile-workArrangement"
+              formControlName="workArrangement"
+              [attr.aria-invalid]="hasError('workArrangement')"
+              aria-describedby="profile-workArrangement-error">
+              <option value="">Not specified</option>
+              <option value="onsite">On-site</option>
+              <option value="hybrid">Hybrid</option>
+              <option value="remote">Remote</option>
+              <option value="flexible">Flexible</option>
+            </select>
+            <span id="profile-workArrangement-error" class="field-error">
+              {{ hasError('workArrangement') ? message('workArrangement') : '' }}
+            </span>
+          </div>
+          <div class="field">
+            <label for="profile-skills">Skills (up to 50)</label>
+            <div class="add-row">
+              <input
+                #skill
+                id="profile-skills"
+                maxlength="80"
+                [attr.aria-invalid]="hasError('skills')"
+                aria-describedby="profile-skills-error"
+                (keydown.enter)="$event.preventDefault(); addItem('skills', skill)" />
+              <button type="button" (click)="addItem('skills', skill)">Add skill</button>
+            </div>
+            <span id="profile-skills-error" class="field-error">{{ hasError('skills') ? message('skills') : '' }}</span>
+            <ul class="chips">
+              @for (item of profileForm.controls.skills.value; track $index) {
+                <li>
+                  {{ item }}
+                  <button
+                    type="button"
+                    (click)="removeItem('skills', $index)"
+                    [attr.aria-label]="'Remove skill ' + item">
+                    Remove
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+          <div class="field">
+            <label for="profile-highlights">Highlights (up to 20)</label>
+            <div class="add-row">
+              <input
+                #highlight
+                id="profile-highlights"
+                maxlength="300"
+                [attr.aria-invalid]="hasError('highlights')"
+                aria-describedby="profile-highlights-error"
+                (keydown.enter)="$event.preventDefault(); addItem('highlights', highlight)" />
+              <button type="button" (click)="addItem('highlights', highlight)">Add highlight</button>
+            </div>
+            <span id="profile-highlights-error" class="field-error">
+              {{ hasError('highlights') ? message('highlights') : '' }}
+            </span>
+            <ul class="chips">
+              @for (item of profileForm.controls.highlights.value; track $index) {
+                <li>
+                  {{ item }}
+                  <button
+                    type="button"
+                    (click)="removeItem('highlights', $index)"
+                    [attr.aria-label]="'Remove highlight ' + item">
+                    Remove
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+          <div class="field check">
+            <input
+              id="profile-confirmed"
+              type="checkbox"
+              formControlName="confirmed"
+              [attr.aria-invalid]="hasError('confirmed')"
+              aria-describedby="profile-confirmed-error" />
+            <label for="profile-confirmed">I confirm these facts are accurate</label>
+            <span id="profile-confirmed-error" class="field-error">
+              {{ hasError('confirmed') ? message('confirmed') : '' }}
+            </span>
+          </div>
+          <button class="primary" type="submit" [disabled]="saving()">
+            {{ setup ? 'Save facts and continue' : 'Save professional facts' }}
+          </button>
+        </form>
+      </section>
+    }
+    @if (!setup || step() === 2) {
+      <section aria-labelledby="goal-heading">
+        <h2 id="goal-heading">{{ setup ? 'Step 2 · Your goal' : 'Your goal' }}</h2>
+        @if (goal()?.isStale) {
+          <p class="caution">
+            Needs review · Your profile changed since you confirmed this goal. Check it, confirm, and save to clear
+            this.
+          </p>
+        }
+        <form [formGroup]="goalForm" (ngSubmit)="submitGoal()" novalidate>
+          <div class="field">
+            <label for="goal-targetRole">Target role</label>
+            <input
+              id="goal-targetRole"
+              formControlName="targetRole"
+              maxlength="120"
+              [attr.aria-invalid]="hasError('targetRole', true)"
+              aria-describedby="goal-targetRole-error" />
+            <span id="goal-targetRole-error" class="field-error">
+              {{ hasError('targetRole', true) ? message('targetRole', true) : '' }}
+            </span>
+          </div>
+          <div class="field">
+            <label for="goal-targetLocation">Target location</label>
+            <input
+              id="goal-targetLocation"
+              formControlName="targetLocation"
+              maxlength="120"
+              [attr.aria-invalid]="hasError('targetLocation', true)"
+              aria-describedby="goal-targetLocation-error" />
+            <span id="goal-targetLocation-error" class="field-error">
+              {{ hasError('targetLocation', true) ? message('targetLocation', true) : '' }}
+            </span>
+          </div>
+          <div class="field">
+            <label for="goal-workArrangement">Preferred work arrangement</label>
+            <select
+              id="goal-workArrangement"
+              formControlName="workArrangement"
+              [attr.aria-invalid]="hasError('workArrangement', true)"
+              aria-describedby="goal-workArrangement-error">
+              <option value="">Not specified</option>
+              <option value="onsite">On-site</option>
+              <option value="hybrid">Hybrid</option>
+              <option value="remote">Remote</option>
+              <option value="flexible">Flexible</option>
+            </select>
+            <span id="goal-workArrangement-error" class="field-error">
+              {{ hasError('workArrangement', true) ? message('workArrangement', true) : '' }}
+            </span>
+          </div>
+          <div class="field">
+            <label for="goal-desiredPayMin">Desired annual pay minimum (USD)</label>
+            <input
+              id="goal-desiredPayMin"
+              type="number"
+              min="0"
+              max="1000000"
+              formControlName="desiredPayMin"
+              [attr.aria-invalid]="hasError('desiredPayMin', true)"
+              aria-describedby="goal-desiredPayMin-error" />
+            <span id="goal-desiredPayMin-error" class="field-error">
+              {{ hasError('desiredPayMin', true) ? message('desiredPayMin', true) : '' }}
+            </span>
+          </div>
+          <div class="field">
+            <label for="goal-desiredPayMax">Desired annual pay maximum (USD)</label>
+            <input
+              id="goal-desiredPayMax"
+              type="number"
+              min="0"
+              max="1000000"
+              formControlName="desiredPayMax"
+              [attr.aria-invalid]="hasError('desiredPayMax', true)"
+              aria-describedby="goal-desiredPayMax-error" />
+            <span id="goal-desiredPayMax-error" class="field-error">
+              {{ hasError('desiredPayMax', true) ? message('desiredPayMax', true) : '' }}
+            </span>
+          </div>
+          <div class="field">
+            <label for="goal-weeklyEffortHours">Weekly effort (hours)</label>
+            <input
+              id="goal-weeklyEffortHours"
+              type="number"
+              min="1"
+              max="40"
+              formControlName="weeklyEffortHours"
+              [attr.aria-invalid]="hasError('weeklyEffortHours', true)"
+              aria-describedby="goal-weeklyEffortHours-error" />
+            <span id="goal-weeklyEffortHours-error" class="field-error">
+              {{ hasError('weeklyEffortHours', true) ? message('weeklyEffortHours', true) : '' }}
+            </span>
+          </div>
+          <div class="field check">
+            <input
+              id="goal-confirmed"
+              type="checkbox"
+              formControlName="confirmed"
+              [attr.aria-invalid]="hasError('confirmed', true)"
+              aria-describedby="goal-confirmed-error" />
+            <label for="goal-confirmed">I confirm these facts are accurate</label>
+            <span id="goal-confirmed-error" class="field-error">
+              {{ hasError('confirmed', true) ? message('confirmed', true) : '' }}
+            </span>
+          </div>
+          <button class="primary" type="submit" [disabled]="saving()">Save goal</button>
+        </form>
+      </section>
+    }
+    @if (!setup && versions().length) {
+      <section aria-labelledby="versions-heading">
+        <h2 id="versions-heading">Profile history</h2>
+        <ul class="history">
+          @for (v of versions(); track v.version) {
+            <li>
+              <span>
+                Version {{ v.version }} · {{ v.currentTitle }} · {{ v.createdAt | date: 'mediumDate' }}
+                @if (v.isActive) {
+                  (Current)
+                }
+              </span>
+              <button type="button" (click)="viewVersion(v.version)">View version {{ v.version }}</button>
+            </li>
+          }
+        </ul>
+        @if (selectedVersion(); as v) {
+          <div class="version">
+            <h3>Version {{ v.version }}</h3>
+            <p>{{ v.facts.currentTitle }} · {{ v.facts.industry }}</p>
+            <p>{{ v.facts.summary }}</p>
+            <p>
+              {{ sourceLabel(v.provenance.source) }} · confirmed {{ v.provenance.confirmedAt | date: 'mediumDate' }}
+            </p>
+            @if (!v.isActive) {
+              <button type="button" (click)="restoreVersion(v.version)">Restore this version</button>
+            }
+          </div>
+        }
+      </section>
+    }
+    @if (!setup && goalVersions().length) {
+      <section aria-labelledby="goal-versions-heading">
+        <h2 id="goal-versions-heading">Goal history</h2>
+        <ul class="history">
+          @for (v of goalVersions(); track v.version) {
+            <li>
+              <span>
+                Version {{ v.version }} · {{ v.targetRole }} · {{ v.createdAt | date: 'mediumDate' }}
+                @if (v.isActive) {
+                  (Current)
+                }
+              </span>
+              <button type="button" (click)="viewGoalVersion(v.version)">View goal version {{ v.version }}</button>
+            </li>
+          }
+        </ul>
+        @if (selectedGoalVersion(); as v) {
+          <div class="version">
+            <h3>Goal version {{ v.version }}</h3>
+            <p>
+              {{ v.goal.targetRole }}
+              @if (v.goal.targetLocation) {
+                · {{ v.goal.targetLocation }}
+              }
+            </p>
+            @if (v.goal.desiredPayMin || v.goal.desiredPayMax) {
+              <p>
+                Desired pay: {{ v.goal.desiredPayMin | number }}–{{ v.goal.desiredPayMax | number }} USD per year (your
+                entry)
+              </p>
+            }
+            <p>
+              {{ sourceLabel(v.provenance.source) }} · confirmed {{ v.provenance.confirmedAt | date: 'mediumDate' }}
+            </p>
+            @if (!v.isActive) {
+              <button type="button" (click)="restoreGoalVersion(v.version)">
+                Restore goal version {{ v.version }}
+              </button>
+            }
+          </div>
+        }
+      </section>
+    }
+  </div>
+</main>

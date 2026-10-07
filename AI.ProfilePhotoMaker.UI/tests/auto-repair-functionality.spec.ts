@@ -28,6 +28,10 @@ test.describe('Auto-Repair Functionality Tests', () => {
 
     await page.goto(BASE_URL + '/app/enhance');
     await page.waitForLoadState('domcontentloaded');
+    // The debug context is registered during app bootstrap; wait for it instead of racing it.
+    await page.waitForFunction(() => !!(window as any).__APP_DEBUG__?.services, null, {
+      timeout: 15000,
+    });
   });
 
   test('should expose environment configuration for auto-repair helpers', async ({ page }) => {

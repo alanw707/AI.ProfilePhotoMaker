@@ -1,0 +1,314 @@
+<main class="career-page career-resume">
+  <div class="career-sheet">
+    <p><a routerLink="/app/career">Back to career workspace</a></p>
+    <p><a routerLink="/app/career/materials">All career materials</a></p>
+    @if (isSummary()) {
+      <h1>Your professional summary</h1>
+      <p>
+        A short bio and a longer summary built only from facts in your confirmed profile. You can edit both. Copy them
+        to use where you like. Nothing is posted for you.
+      </p>
+    } @else {
+      <h1>Your targeted resume</h1>
+      <p>
+        A resume draft built only from facts in your confirmed profile and aimed at your career goal. You can edit every
+        line. Nothing is shared or sent anywhere.
+      </p>
+    }
+    @if (occupationMissing()) {
+      <div class="caution" role="status" data-occupation-required>
+        <p>Confirm your occupation first.</p>
+        <a routerLink="/app/career/occupation">Confirm your occupation</a>
+      </div>
+    }
+    @if (error()) {
+      <p class="caution" role="alert" data-error>{{ error() }}</p>
+    }
+    @if (connectionLost()) {
+      <p class="caution" role="status">Connection lost. Retrying…</p>
+    }
+
+    @if (run(); as r) {
+      @if (!material()) {
+        <section class="run-area" aria-label="Draft status">
+          <h2>Draft status</h2>
+          <p class="status" role="status" data-run-status>
+            {{
+              r.status === 'completed'
+                ? 'Draft ready'
+                : r.status === 'failed'
+                  ? 'Could not finish'
+                  : r.status === 'queued'
+                    ? 'Waiting to start'
+                    : 'Working'
+            }}
+          </p>
+          @if (r.steps.length) {
+            <ol class="run-steps" aria-label="Completed steps">
+              @for (step of r.steps; track step.ordinal) {
+                <li>{{ step.label }}</li>
+              }
+            </ol>
+          }
+          @if (r.status === 'failed') {
+            <p role="alert">We could not draft your {{ isSummary() ? 'summary' : 'resume' }}.</p>
+            <button type="button" class="primary" (click)="start()">Try again</button>
+          }
+        </section>
+      }
+    } @else if (loading()) {
+      <p role="status">Loading your {{ isSummary() ? 'summary' : 'resume' }}…</p>
+    } @else if (!material() && !occupationMissing()) {
+      <div class="actions">
+        <button type="button" class="primary" (click)="start()" [disabled]="starting()">
+          {{ isSummary() ? 'Draft my summary' : 'Draft my resume' }}
+        </button>
+      </div>
+    }
+
+    @if (material(); as m) {
+      <div class="resume-status">
+        <p role="status" aria-live="polite" data-save-status>{{ status() }}</p>
+        <p class="visually-hidden" role="status" aria-live="polite" data-copy-status>{{ copied() }}</p>
+        @if (notice()) {
+          <p class="muted" role="status" data-notice>{{ notice() }}</p>
+        }
+      </div>
+
+      @if (m.stale) {
+        <div class="caution" role="status" data-stale>
+          <p>
+            {{ staleText() }} after this draft was written. Nothing was deleted. Refresh from your profile to see
+            suggested changes.
+          </p>
+        </div>
+      }
+
+      @if (conflict()) {
+        <section class="caution conflict" aria-labelledby="conflict-heading" data-conflict>
+          <h2 id="conflict-heading">This {{ isSummary() ? 'summary' : 'resume' }} changed elsewhere</h2>
+          <p>Your latest text is still here and has not been saved. Choose what to do.</p>
+          <div class="actions">
+            <button type="button" class="secondary" (click)="compare()">Compare with the latest</button>
+            <button type="button" class="secondary" (click)="keepMine()">Keep my text and save it</button>
+            <button type="button" class="secondary" (click)="useLatest()">Use the latest instead</button>
+          </div>
+          @if (latest(); as l) {
+            <div data-latest>
+              <h3>Latest saved version</h3>
+              @for (s of l.sections; track s.key) {
+                <h4>{{ sectionLabel(s.key) }}</h4>
+                <ul>
+                  @for (line of s.lines; track line.id) {
+                    <li>{{ line.text }}</li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+        </section>
+      }
+
+      @for (s of sections(); track s.key) {
+        <section class="resume-section" [attr.data-section]="s.key" [attr.aria-labelledby]="'h-' + s.key">
+          <h2 [id]="'h-' + s.key">{{ sectionLabel(s.key) }}</h2>
+          @if (isSummary()) {
+            @for (line of s.lines.slice(0, 1); track line.id) {
+              <div class="resume-line" [attr.data-line]="line.id">
+                <label [for]="'ln-' + line.id">{{ sectionLabel(s.key) }}</label>
+                <textarea
+                  [id]="'ln-' + line.id"
+                  [rows]="s.key === 'long' ? 8 : 4"
+                  [attr.maxlength]="limit(s.key)"
+                  [attr.aria-describedby]="'count-' + line.id"
+                  [value]="line.text"
+                  (input)="editLine(s.key, line.id, $any($event.target).value)"></textarea>
+                <p class="muted" [id]="'count-' + line.id" data-counter>{{ counterText(s.key, line.text) }}</p>
+                @if (line.origin === 'human') {
+                  <p class="muted" data-origin>Your wording</p>
+                } @else if (basedOn(line.factIds)) {
+                  <p class="muted" data-origin>Based on: {{ basedOn(line.factIds) }}</p>
+                }
+                <button
+                  type="button"
+                  class="secondary"
+                  [attr.aria-label]="'Copy ' + sectionLabel(s.key).toLowerCase() + ' to clipboard'"
+                  (click)="copy(s.key, line.text)">
+                  Copy to clipboard
+                </button>
+              </div>
+            } @empty {
+              <button type="button" class="secondary" (click)="addLine(s.key)">
+                Write your {{ sectionLabel(s.key).toLowerCase() }}
+              </button>
+            }
+          } @else {
+            @for (line of s.lines; track line.id; let i = $index) {
+              <div class="resume-line" [attr.data-line]="line.id">
+                <label [for]="'ln-' + line.id">{{ sectionLabel(s.key) }}, line {{ i + 1 }}</label>
+                <textarea
+                  [id]="'ln-' + line.id"
+                  rows="2"
+                  [attr.maxlength]="maxLineLength"
+                  [value]="line.text"
+                  (input)="editLine(s.key, line.id, $any($event.target).value)"></textarea>
+                @if (line.origin === 'human') {
+                  <p class="muted" data-origin>Your wording</p>
+                } @else if (basedOn(line.factIds)) {
+                  <p class="muted" data-origin>Based on: {{ basedOn(line.factIds) }}</p>
+                }
+                <button
+                  type="button"
+                  class="secondary"
+                  [attr.aria-label]="'Remove ' + sectionLabel(s.key) + ', line ' + (i + 1)"
+                  (click)="removeLine(s.key, line.id)">
+                  Remove line
+                </button>
+              </div>
+            }
+            <button type="button" class="secondary" (click)="addLine(s.key)">
+              Add a line to {{ sectionLabel(s.key) }}
+            </button>
+          }
+        </section>
+      }
+
+      @if (m.questions.length && !isSummary()) {
+        <section aria-labelledby="questions-heading" data-questions>
+          <h2 id="questions-heading">Questions to strengthen your resume</h2>
+          <p class="muted">These are not part of your resume. Answer one by adding your own line.</p>
+          <ul>
+            @for (q of m.questions; track q.id) {
+              <li>
+                <span>{{ q.text }}</span>
+                <button
+                  type="button"
+                  class="secondary"
+                  [attr.aria-label]="'Add a result: ' + q.text"
+                  (click)="addLine('experience_highlights')">
+                  Add a result
+                </button>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      <section aria-labelledby="contact-heading" data-contact>
+        <h2 id="contact-heading">Contact details</h2>
+        <fieldset>
+          <legend>Include these in your file</legend>
+          @for (f of contactFields; track f.key) {
+            <label class="check">
+              <input
+                type="checkbox"
+                [checked]="contact()[f.key]"
+                (change)="toggleContact(f.key, $any($event.target).checked)" />
+              {{ f.label }}
+            </label>
+          }
+        </fieldset>
+        <p class="muted">No photo is included unless you ask for the separate photo PDF below.</p>
+      </section>
+
+      <app-career-export-panel [materialId]="m.id" [currentVersion]="m.currentVersion" [versions]="versions()" />
+
+      <section aria-labelledby="refresh-heading" data-refresh>
+        <h2 id="refresh-heading">Refresh from my profile</h2>
+        <p>
+          We re-check your {{ isSummary() ? 'summary' : 'resume' }} against your profile and goal. You choose which
+          changes to apply.
+        </p>
+        <button type="button" class="secondary" (click)="start(true)" [disabled]="starting() || active()">
+          Refresh from my profile
+        </button>
+        @if (active()) {
+          <p role="status" data-run-status>Checking your profile…</p>
+        }
+        @if (proposalError()) {
+          <p class="field-error" role="alert" data-proposal-error>{{ proposalError() }}</p>
+        }
+        @if (proposalNotice()) {
+          <p role="status" data-proposal-notice>{{ proposalNotice() }}</p>
+        }
+        @if (proposal(); as p) {
+          @if (!p.changes.length) {
+            <p role="status" data-no-changes>Your {{ isSummary() ? 'summary' : 'resume' }} is still current.</p>
+          } @else {
+            <fieldset class="diff">
+              <legend>Suggested changes</legend>
+              @for (c of p.changes; track c.id) {
+                <div class="change" [attr.data-change]="c.id">
+                  <label class="check">
+                    <input
+                      type="checkbox"
+                      [checked]="checked().includes(c.id)"
+                      (change)="toggleChange(c.id, $any($event.target).checked)" />
+                    {{ kindText(c) }}
+                  </label>
+                  @if (c.before) {
+                    <p>Before: {{ c.before }}</p>
+                  }
+                  @if (c.after) {
+                    <p>After: {{ c.after }}</p>
+                  }
+                </div>
+              }
+            </fieldset>
+          }
+          <div class="actions">
+            @if (p.changes.length) {
+              <button type="button" class="primary" (click)="apply()" [disabled]="busy() || !settled()">
+                Apply selected changes
+              </button>
+            }
+            <button type="button" class="secondary" (click)="keep()">Keep my version</button>
+          </div>
+        }
+      </section>
+
+      <section aria-labelledby="versions-heading" data-versions>
+        <h2 id="versions-heading">Version history</h2>
+        @if (!versions().length) {
+          <p class="muted">No saved versions yet.</p>
+        }
+        <ul class="version-list">
+          @for (v of versions(); track v.number) {
+            <li [attr.data-version]="v.number">
+              <span>Version {{ v.number }} · {{ authorText(v.author) }} · {{ dateText(v.createdAt) }}</span>
+              <button
+                type="button"
+                class="secondary"
+                [attr.aria-label]="'View version ' + v.number"
+                (click)="viewVersion(v.number)">
+                View
+              </button>
+              <button
+                type="button"
+                class="secondary"
+                [attr.aria-label]="'Restore version ' + v.number"
+                [disabled]="busy() || conflict() || !settled()"
+                (click)="restore(v.number)">
+                Restore
+              </button>
+            </li>
+          }
+        </ul>
+        @if (viewing(); as v) {
+          <div class="notice" role="region" aria-label="Viewing an older version" data-viewing>
+            <h3>Version {{ v.currentVersion }}</h3>
+            @for (s of v.sections; track s.key) {
+              <h4>{{ sectionLabel(s.key) }}</h4>
+              <ul>
+                @for (line of s.lines; track line.id) {
+                  <li>{{ line.text }}</li>
+                }
+              </ul>
+            }
+            <button type="button" class="secondary" (click)="closeVersion()">Close version</button>
+          </div>
+        }
+      </section>
+    }
+  </div>
+</main>

@@ -1,0 +1,288 @@
+{
+  "results": [
+    {
+      "label": "user B match",
+      "matchId": "b81501aa-1162-4e90-8364-e72f9becb454"
+    },
+    {
+      "label": "01-start @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-start @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-start @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "software match",
+      "steps": [
+        "Read your confirmed profile",
+        "Read your career goal",
+        "Compared your duties with occupation tasks",
+        "Saved the matches for your review"
+      ],
+      "allowance": {
+        "used": 0,
+        "reserved": 0,
+        "limit": 20,
+        "periodStart": "2026-10-01T00:00:00Z"
+      },
+      "candidates": [
+        "15-1252.00 Software Developers moderate ev2 titlefalse",
+        "15-1299.08 Computer Systems Engineers/Architects moderate ev2 titlefalse",
+        "15-1299.02 Geographic Information Systems Technologists and Technicians moderate ev2 titlefalse",
+        "15-1242.00 Database Administrators moderate ev2 titlefalse",
+        "15-1254.00 Web Developers moderate ev2 titlefalse"
+      ],
+      "unsupportedSkills": [
+        "Python",
+        "SQL",
+        "Phlebotomy"
+      ],
+      "attribution": true,
+      "attributionShown": 1
+    },
+    {
+      "label": "02-candidates @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-candidates @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-candidates @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "cross-user",
+      "get": 404,
+      "confirm": 404,
+      "dismiss": 404
+    },
+    {
+      "label": "03-confirmed @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-confirmed @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03-confirmed @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "goal after confirm",
+      "occupation": {
+        "code": "15-1252.00",
+        "title": "Software Developers",
+        "referenceRelease": "30.0",
+        "matchId": "1e05ec66-774d-4650-abb3-853a53656d0f"
+      },
+      "version": 2,
+      "source": "occupation_match",
+      "doubleConfirm": [
+        409,
+        "CareerMatchNotConfirmable"
+      ],
+      "noIfMatch": 409
+    },
+    {
+      "label": "career home shows occupation",
+      "count": 1
+    },
+    {
+      "label": "stale match",
+      "profileChanged": true,
+      "confirm": [
+        409,
+        "CareerMatchStale"
+      ],
+      "note": 1,
+      "confirmDisabled": true
+    },
+    {
+      "label": "04-stale @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "04-stale @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "04-stale @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "ambiguous",
+      "choices": [
+        "29-2061.00 Licensed Practical and Licensed Vocational Nurses",
+        "15-1252.00 Software Developers",
+        "none None of these"
+      ],
+      "badAnswer": 400
+    },
+    {
+      "label": "05-question @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05-question @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05-question @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "after answer",
+      "toldUs": 1
+    },
+    {
+      "label": "06-after-answer @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "06-after-answer @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "06-after-answer @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "title only unsupported",
+      "confirmButtons": 0
+    },
+    {
+      "label": "07-unsupported @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "07-unsupported @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "07-unsupported @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "user B goal before (occupation)",
+      "occupation": null
+    },
+    {
+      "label": "expired session",
+      "url": "/auth/login?message=Please log in to access this feature&returnUrl=/app/career/occupation"
+    }
+  ],
+  "errors": []
+}

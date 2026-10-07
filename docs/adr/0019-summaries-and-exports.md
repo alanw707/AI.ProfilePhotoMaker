@@ -1,0 +1,10 @@
+# ADR 0019: Summaries reuse the material workflow; exports are free, private and short-lived
+
+Status: accepted (2026-10-05, ticket #390, spec #376). Builds on ADR 0018.
+
+## Decision
+- **Summary material.** `CareerMaterial.Kind` gains `summary`. Run task `professional_summary` is deterministic and model-free (allowance released), uses the same fact ids, provenance, If-Match versioning, proposals and stale rules as the resume. It drafts a `short` bio (≤ 300 chars) and a `long` summary (≤ 1200 chars), both assembled only from cited facts (title, years, industry, skills, highlights copied verbatim). It is never published anywhere; the UI offers copy-to-clipboard only.
+- **Exports.** `POST /api/career/materials/{id}/exports { format: "pdf"|"docx", version?: n, includePhoto?: false }` renders the chosen accepted version (default current) synchronously. Libraries: **PDFsharp 6 (MIT)** with an embedded Unicode font (DejaVu Sans, Bitstream Vera licence, shipped in the repo) so non-Latin names stay text-extractable, and **DocumentFormat.OpenXml (MIT)**. Layout: name, enabled contact fields, then sections in fixed order with real headings (DOCX Heading styles, PDF outline), links as hyperlinks, long URLs wrapped, page breaks between lines, never mid-line. Reading order = document order.
+- **Free.** Export is not a run, consumes no allowance and works at quota exhaustion. Copy never claims ATS compatibility.
+- **Privacy.** `CareerExport` rows store owner, material, version, format and bytes (≤ 2 MB) with `ExpiresAt = now + 24 h`. Ids are random GUIDs; `GET /api/career/exports/{id}` checks owner (404 otherwise) and expiry (410 `CareerExportExpired`), returns `Content-Disposition: attachment`, `Cache-Control: no-store, private`. Expired rows are deleted on read and by the private-data service; owner cascade.
+- **Photo.** Default exports contain no image. `includePhoto: true` is accepted only for `pdf` and only when the user has a career photo selection (#391); it produces a separate export row, labelled as the photo version. Otherwise 400 `CareerExportPhotoUnavailable`.

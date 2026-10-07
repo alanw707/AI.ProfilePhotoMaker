@@ -27,6 +27,7 @@ public class ProfileController : ControllerBase
     private readonly IBasicTierService _basicTierService;
     private readonly IStorageService _storageService;
     private readonly StoragePathResolver _pathResolver;
+    private readonly AI.ProfilePhotoMaker.API.Services.Career.ICareerPrivateDataService _careerData;
 
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
@@ -40,8 +41,10 @@ public class ProfileController : ControllerBase
         IReplicateApiClient replicateApiClient,
         IBasicTierService basicTierService,
         IStorageService storageService,
-        StoragePathResolver pathResolver)
+        StoragePathResolver pathResolver,
+        AI.ProfilePhotoMaker.API.Services.Career.ICareerPrivateDataService careerData)
     {
+        _careerData = careerData;
         _userProfileRepository = userProfileRepository;
         _context = context;
         _environment = environment;
@@ -767,11 +770,23 @@ public class ProfileController : ControllerBase
 
         try
         {
+            // Career data goes first and a failure stops here: the account must not be removed while
+            // private career rows or files are left behind (ADR 0020).
+            try
+            {
+                await _careerData.DeleteAllForOwnerAsync(userId);
+            }
+            catch (AI.ProfilePhotoMaker.API.Services.Career.CareerPurgeException ex)
+            {
+                _logger.LogError(ex, "Career data purge failed; account deletion aborted for user {UserId}", Sid(userId));
+                return StatusCode(500, new { success = false, error = new { code = "CareerDataDeletionFailed", message = "Your career data could not be fully deleted, so your account was not deleted. Try again." } });
+            }
+
             var profile = await _userProfileRepository.GetByUserIdAsync(userId);
             if (profile == null)
                 return NotFound("Profile not found");
 
-            // First delete all user data using the existing method logic
+            // Then delete all user data using the existing method logic
             await DeleteAllUserDataInternal(userId, profile);
 
             // Then delete the profile itself

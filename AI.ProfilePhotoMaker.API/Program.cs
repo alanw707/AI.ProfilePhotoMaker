@@ -182,9 +182,12 @@ builder.Services.AddPaymentServices(builder.Configuration);
 // Database services
 if (builder.Environment.IsEnvironment("Testing") || builder.Environment.IsEnvironment("LocalDev"))
 {
+    // One name per process: the options callback runs for every DbContext, so a
+    // name generated inside it gave each request its own empty database.
+    var inMemoryDatabaseName = $"LocalDb_{Guid.NewGuid()}";
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
     {
-        options.UseInMemoryDatabase($"LocalDb_{Guid.NewGuid()}");
+        options.UseInMemoryDatabase(inMemoryDatabaseName);
     });
     builder.Services.AddHealthChecks();
 }
@@ -224,6 +227,27 @@ builder.Services.AddStorageServices(builder.Configuration, builder.Environment);
 // Additional application services
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ICreditPackageService, AI.ProfilePhotoMaker.API.Services.CreditPackageService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IOutcomePackageService, AI.ProfilePhotoMaker.API.Services.OutcomePackageService>();
+// Career workspace (spec #376); endpoints stay disabled unless Features:CareerWorkspace=true.
+AI.ProfilePhotoMaker.API.Services.Career.CareerWorkspaceServiceCollectionExtensions.AddCareerWorkspace(builder.Services);
+// The placeholder scanner approves everything, so it exists only outside production;
+// with none registered, resume uploads fail closed (ADR 0007).
+if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("LocalDev") || builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddSingleton<AI.ProfilePhotoMaker.API.Services.Career.IMalwareScanner, AI.ProfilePhotoMaker.API.Services.Career.NoThreatsScanner>();
+}
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.Career.CareerResumePurgeBackgroundService>();
+// Re-applies career deletion tombstones at startup so a restored backup cannot resurrect deleted data (ADR 0020).
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.Career.CareerTombstoneReplayHostedService>();
+// The agent's text model: a configured OpenAI model in any environment; otherwise the offline
+// fake outside production, and nothing in production (starting a run answers 503).
+AI.ProfilePhotoMaker.API.Services.Career.CareerTextModelRegistration.AddCareerTextModel(builder.Services, builder.Configuration, builder.Environment);
+// Tests drive the runner directly, so the polling worker is off in Testing.
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.PostConfigure<AI.ProfilePhotoMaker.API.Services.Career.CareerAgentOptions>(o => o.WorkerEnabled = false);
+}
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.Career.CareerAgentWorker>();
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.Career.CareerReservationReaperService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ImageProcessing.IProfilePhotoScoreService, AI.ProfilePhotoMaker.API.Services.ImageProcessing.ProfilePhotoScoreService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ImageProcessing.IPlatformExportService, AI.ProfilePhotoMaker.API.Services.ImageProcessing.PlatformExportService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();

@@ -109,7 +109,6 @@ package-lock.json
 .claude/
 .opencode/
 CLAUDE.md
-AGENTS.md
 
 # AI IDE tooling configs (keep local only)
 .cursor/
@@ -155,7 +154,9 @@ AI.ProfilePhotoMaker.API/tests/playwright/results/
 **/*-validation-report.md
 **/*-test-report.md
 claude-*.md
+# Stray debugging reports, but not intentional documentation: ADRs and contracts live in docs/.
 *-analysis.md
+!docs/**/*-analysis.md
 .serena/
 
 # General build results
@@ -256,3 +257,6 @@ deployment-secrets.env
 /verified-modal-open.png
 /verified-pricing-after-modal-cta.png
 appsettings.Local.json
+
+# LocalDev career resume uploads (private, never commit)
+AI.ProfilePhotoMaker.API/career-private/

@@ -30,11 +30,23 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
             ? headerUserId.ToString()
             : "test-user-1";
 
-        var claims = new[]
+        // Tests are signed in "now" unless they ask otherwise: X-Test-AuthAgeMinutes sets how long ago
+        // (iat), and X-Test-AuthTimeAgeMinutes sets an auth_time claim, which takes precedence over iat.
+        var issuedAge = Request.Headers.TryGetValue("X-Test-AuthAgeMinutes", out var ageValue)
+            ? double.Parse(ageValue.ToString(), System.Globalization.CultureInfo.InvariantCulture) : 0;
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, userId),
             new Claim(ClaimTypes.Name, "Test User")
         };
+        if (!Request.Headers.ContainsKey("X-Test-NoIat"))
+        {
+            claims.Add(new Claim("iat", DateTimeOffset.UtcNow.AddMinutes(-issuedAge).ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+        if (Request.Headers.TryGetValue("X-Test-AuthTimeAgeMinutes", out var authAge))
+        {
+            claims.Add(new Claim("auth_time", DateTimeOffset.UtcNow.AddMinutes(-double.Parse(authAge.ToString(), System.Globalization.CultureInfo.InvariantCulture)).ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
 
         if (Request.Headers.TryGetValue("X-Test-Roles", out var rolesValue))
         {
@@ -42,7 +54,7 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
             var roleClaims = roles.Select(role => new Claim(ClaimTypes.Role, role));
-            claims = claims.Concat(roleClaims).ToArray();
+            claims.AddRange(roleClaims);
         }
 
         var identity = new ClaimsIdentity(claims, SchemeName);

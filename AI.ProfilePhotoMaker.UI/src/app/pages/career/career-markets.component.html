@@ -1,0 +1,305 @@
+<main class="career-page career-markets">
+  <div class="career-sheet wide">
+    <p><a routerLink="/app/career">Back to career workspace</a></p>
+    <h1>Compare U.S. markets</h1>
+    @if (comparison(); as c) {
+      <p data-intro>
+        Source: {{ c.metric.measure }}, {{ releaseText(c.reference.release) }} release (published
+        {{ publishedText(c.reference.publishedOn) }}) for {{ c.occupation.title }}. Coverage: {{ c.reference.coverage }}
+        These are occupational benchmarks, not job openings.
+        <button type="button" class="secondary source-link" (click)="showSource()">Source details</button>
+      </p>
+    } @else {
+      <p>
+        Compare official U.S. statistics for your confirmed occupation across states or metropolitan areas. These are
+        occupational benchmarks, not job openings.
+      </p>
+    }
+
+    @if (occupationMissing()) {
+      <div class="caution" role="status" data-occupation-required>
+        <p>Confirm your occupation first.</p>
+        <a routerLink="/app/career/occupation">Confirm your occupation</a>
+      </div>
+    }
+    @if (error()) {
+      <p role="alert" class="caution" data-error>{{ error() }}</p>
+    }
+    <p class="status-line" role="status" aria-live="polite" data-live>{{ message() }}</p>
+
+    @if (!occupationMissing()) {
+      <section aria-labelledby="controls-heading" class="market-controls">
+        <h2 id="controls-heading">Choose what to compare</h2>
+        <fieldset data-metrics>
+          <legend>Metric</legend>
+          @for (m of metrics(); track m.key) {
+            <div class="choice">
+              <label>
+                <input
+                  type="radio"
+                  name="metric"
+                  [value]="m.key"
+                  [checked]="metric() === m.key"
+                  [disabled]="!m.supported"
+                  [attr.aria-describedby]="m.supported ? null : 'metric-reason-' + m.key"
+                  (change)="setMetric(m.key)" />
+                {{ m.label }}
+              </label>
+              @if (!m.supported) {
+                <span class="muted" [id]="'metric-reason-' + m.key" data-metric-reason>{{ reasonText(m) }}</span>
+              }
+            </div>
+          }
+        </fieldset>
+        <fieldset data-levels>
+          <legend>Area type</legend>
+          <div class="choice">
+            <label>
+              <input
+                type="radio"
+                name="level"
+                value="state"
+                [checked]="level() === 'state'"
+                (change)="setLevel('state')" />
+              State
+            </label>
+          </div>
+          <div class="choice">
+            <label>
+              <input
+                type="radio"
+                name="level"
+                value="metro"
+                [checked]="level() === 'metro'"
+                (change)="setLevel('metro')" />
+              Metropolitan area
+            </label>
+          </div>
+        </fieldset>
+        <div class="search-row">
+          <label for="area-search">Search areas</label>
+          <input
+            id="area-search"
+            type="search"
+            autocomplete="off"
+            [value]="q()"
+            (input)="onSearch($any($event.target).value)" />
+          <button type="button" class="secondary" (click)="clear()">Clear</button>
+        </div>
+      </section>
+    }
+
+    @if (loading() && !occupationMissing() && !error()) {
+      <p role="status">Loading markets…</p>
+    }
+
+    @if (comparison(); as c) {
+      <section aria-labelledby="legend-heading" class="market-legend" data-legend>
+        <h2 id="legend-heading">{{ c.metric.label }} by {{ levelNoun(c.level) }}</h2>
+        <p>
+          Unit: {{ unitLabel(c.metric.unit) }}. Measure: {{ c.metric.measure }}. Reference period:
+          {{ releaseText(c.reference.release) }}, published {{ publishedText(c.reference.publishedOn) }}.
+        </p>
+        <p data-national>
+          {{ c.national.areaTitle }} (national):
+          <strong>{{ nationalText() }}</strong>
+        </p>
+        <ul class="legend-scale" aria-label="Colour scale">
+          <li>
+            <span class="swatch q1" aria-hidden="true"></span>
+            Highest fifth of ranked areas
+          </li>
+          <li>
+            <span class="swatch q3" aria-hidden="true"></span>
+            Middle fifth
+          </li>
+          <li>
+            <span class="swatch q5" aria-hidden="true"></span>
+            Lowest fifth of ranked areas
+          </li>
+          <li data-pattern-legend>
+            <span class="swatch unranked" aria-hidden="true"></span>
+            Hatched: no figure to rank (not available, top-coded or not published). These are never treated as low
+            values.
+          </li>
+        </ul>
+        <p class="muted">Darker means a better rank. Rank 1 has the highest value. Tiles are not a geographic map.</p>
+        @if (c.truncated) {
+          <p class="caution" data-truncated>
+            Only the first {{ c.areas.length }} areas are shown. Search to narrow the list.
+          </p>
+        }
+      </section>
+
+      @if (!c.areas.length) {
+        <p role="status" data-empty>No areas match your search.</p>
+      } @else {
+        @if (mobile()) {
+          <section aria-labelledby="list-heading" data-list>
+            <h2 id="list-heading">Areas, best rank first</h2>
+            <ul class="area-list">
+              @for (a of ranked(); track trackArea(a)) {
+                <li [attr.data-area]="a.areaCode" [attr.data-value]="dataValue(a)" [attr.data-status]="a.status">
+                  <label>
+                    <input type="checkbox" [checked]="isSelected(a)" (change)="onCheckbox(a, $event)" />
+                    <span class="area-name">{{ a.areaTitle }}</span>
+                  </label>
+                  <span class="area-value">{{ valueText(a) }}</span>
+                  <span class="muted">Rank: {{ rankText(a) }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+          <details class="table-details" data-table-details>
+            <summary>Show as a table</summary>
+            <ng-container [ngTemplateOutlet]="tableTpl" />
+          </details>
+        } @else {
+          <section aria-labelledby="heatmap-heading" data-heatmap>
+            <h2 id="heatmap-heading">Tile heatmap</h2>
+            <p class="muted">
+              Each tile is a button. Press Enter to select up to {{ limit() }} areas. Tiles follow the ranked order.
+            </p>
+            <div class="tile-grid" role="group" [attr.aria-label]="'Areas ranked by ' + c.metric.label">
+              @for (a of ranked(); track trackArea(a)) {
+                <button
+                  type="button"
+                  class="tile"
+                  [class]="'tile ' + bucket(a)"
+                  [class.is-selected]="isSelected(a)"
+                  [attr.data-area]="a.areaCode"
+                  [attr.data-value]="dataValue(a)"
+                  [attr.data-status]="a.status"
+                  [attr.aria-pressed]="isSelected(a)"
+                  [attr.aria-label]="cellLabel(a)"
+                  (click)="toggle(a)">
+                  <span class="tile-text">
+                    <span class="tile-abbr">{{ shortLabel(a) }}</span>
+                    <span class="tile-rank">{{ a.rank === null ? 'No rank' : '#' + a.rank }}</span>
+                    @if (isSelected(a)) {
+                      <span class="tile-badge">Selected</span>
+                    }
+                  </span>
+                </button>
+              }
+            </div>
+          </section>
+          <section aria-labelledby="table-heading" data-table-section>
+            <h2 id="table-heading">Table of the same values</h2>
+            <ng-container [ngTemplateOutlet]="tableTpl" />
+          </section>
+        }
+
+        <section aria-labelledby="save-heading" class="market-save" data-save>
+          <h2 id="save-heading">Your selection</h2>
+          @if (selected().length) {
+            <p data-selected>Selected: {{ selectionText() }}</p>
+          } @else {
+            <p class="muted">Select up to {{ limit() }} areas to compare. Nothing is saved until you confirm.</p>
+          }
+          @if (goalMissing()) {
+            <p>
+              <a routerLink="/app/career/setup">Set up your career goal</a>
+              to save a location.
+            </p>
+          } @else {
+            <button
+              type="button"
+              class="primary"
+              (click)="askToSave()"
+              [disabled]="!saveTarget() || !goal() || saving()">
+              Save this location to my goal
+            </button>
+            @if (!saveTarget()) {
+              <p class="muted">Select exactly one area to save it as your goal location.</p>
+            }
+          }
+          <p class="muted" data-retention>
+            Viewing and selecting areas never changes your goal. Only a confirmed save does, and you can restore an
+            earlier goal version.
+          </p>
+        </section>
+      }
+    }
+  </div>
+
+  <ng-template #tableTpl>
+    @if (comparison(); as c) {
+      <div class="market-table-wrap" tabindex="0" role="region" aria-label="Comparison table, scrollable">
+        <table class="market-table comparison-table" data-table>
+          <caption>{{ caption() }}</caption>
+          <thead>
+            <tr>
+              <th scope="col" [attr.aria-sort]="ariaSort('area')">
+                <button type="button" class="sort" (click)="sortBy('area')">Area</button>
+              </th>
+              <th scope="col">Type</th>
+              <th scope="col" [attr.aria-sort]="ariaSort('value')">
+                <button type="button" class="sort" (click)="sortBy('value')">Value</button>
+              </th>
+              <th scope="col">Rank</th>
+              <th scope="col">Selected</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of tableRows(); track trackArea(a)) {
+              <tr [attr.data-area]="a.areaCode" [attr.data-value]="dataValue(a)" [attr.data-status]="a.status">
+                <th scope="row">{{ a.areaTitle }}</th>
+                <td>{{ a.type === 'metro' ? 'Metro' : 'State' }}</td>
+                <td data-cell="value">{{ valueText(a) }}</td>
+                <td data-cell="rank">{{ rankText(a) }}</td>
+                <td>
+                  <input
+                    type="checkbox"
+                    [checked]="isSelected(a)"
+                    [attr.aria-label]="'Select ' + a.areaTitle"
+                    (change)="onCheckbox(a, $event)" />
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </ng-template>
+
+  <dialog #confirm class="confirm-dialog" aria-labelledby="confirm-heading">
+    <h2 id="confirm-heading">Save this location?</h2>
+    <p>
+      Set
+      <strong>{{ targetText() }}</strong>
+      as the location on your career goal?
+      @if (goal()?.goal?.targetLocation; as current) {
+        This replaces "{{ current }}".
+      }
+    </p>
+    <div class="actions">
+      <button type="button" class="primary" (click)="confirmSave()" [disabled]="saving()">
+        Yes, save this location
+      </button>
+      <button type="button" class="secondary" (click)="cancelSave()">Cancel</button>
+    </div>
+  </dialog>
+
+  @if (comparison(); as c) {
+    <dialog #source class="source-drawer" aria-labelledby="source-heading">
+      <h2 id="source-heading">Source</h2>
+      <p>
+        {{ c.metric.measure }} · Release {{ releaseText(c.reference.release) }} · Published
+        {{ publishedText(c.reference.publishedOn) }}
+      </p>
+      <p>
+        <strong>Coverage.</strong>
+        {{ c.reference.coverage }}
+      </p>
+      <p>
+        <strong>Citation.</strong>
+        {{ c.reference.citation }}
+      </p>
+      <p>
+        <a [href]="c.reference.definitionsUrl" target="_blank" rel="noopener noreferrer">Definitions</a>
+      </p>
+      <button type="button" class="secondary" (click)="closeSource()">Close</button>
+    </dialog>
+  }
+</main>

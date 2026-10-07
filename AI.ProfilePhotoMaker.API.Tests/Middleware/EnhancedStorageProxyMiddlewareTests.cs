@@ -10,6 +10,9 @@ public class EnhancedStorageProxyMiddlewareTests
     [InlineData("/profile-images/dev/generated-private/user/raw.png")]
     [InlineData("/devstoreaccount1/profile-images/dev/generated-private/user/raw.png")]
     [InlineData("/PROFILE-IMAGES/DEV/GENERATED-PRIVATE/user/raw.png")]
+    [InlineData("/profile-images/career-private/resumes/0f8fad5b")]
+    [InlineData("/devstoreaccount1/profile-images/dev/career-private/resumes/0f8fad5b")]
+    [InlineData("/PROFILE-IMAGES/CAREER-PRIVATE/resumes/x")]
     public void IsPrivateStoragePath_BlocksPrivateFolderInEveryProxyShape(string path)
     {
         Assert.True(EnhancedStorageProxyMiddleware.IsPrivateStoragePath(path));

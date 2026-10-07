@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
+    <PackageReference Include="PDFsharp" Version="6.2.4" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.5">
@@ -46,6 +48,12 @@
 
   <ItemGroup>
     <Content Include="content\blog\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <!-- O*NET occupation snapshot (ADR 0010); the loader verifies its SHA-256. -->
+    <EmbeddedResource Include="Data\Reference\onet-snapshot.json.gz" LogicalName="onet-snapshot.json.gz" />
+    <!-- BLS OEWS + Employment Projections snapshot (ADR 0011); the loader verifies its SHA-256. -->
+    <EmbeddedResource Include="Data\Reference\bls-snapshot.json.gz" LogicalName="bls-snapshot.json.gz" />
+    <!-- Unicode font embedded in PDF exports (ADR 0019); its licence sits beside it. -->
+    <EmbeddedResource Include="Resources\Fonts\DejaVuSans.ttf" LogicalName="DejaVuSans.ttf" />
   </ItemGroup>
 
 </Project>

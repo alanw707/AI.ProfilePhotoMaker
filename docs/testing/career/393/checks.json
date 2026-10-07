@@ -1,0 +1,970 @@
+{
+  "steps": [
+    {
+      "step": "0 empty home",
+      "nextAction": "create_profile",
+      "route": "/app/career/setup",
+      "label": "Create your profile",
+      "landed": "/app/career/setup",
+      "ok": true,
+      "screenshot": "00-empty-home-desktop.png"
+    },
+    {
+      "step": "1 profile saved (before goal)",
+      "nextAction": "set_goal",
+      "route": "/app/career/setup",
+      "label": "Set your goal",
+      "landed": "/app/career/setup",
+      "ok": true,
+      "screenshot": "01-profile-home-desktop.png"
+    },
+    {
+      "step": "2 goal set",
+      "nextAction": "confirm_occupation",
+      "route": "/app/career/occupation",
+      "label": "Confirm your occupation",
+      "landed": "/app/career/occupation",
+      "ok": true,
+      "screenshot": "02-goal-home-desktop.png"
+    },
+    {
+      "step": "3 occupation proposed",
+      "nextAction": "confirm_occupation",
+      "route": "/app/career/occupation",
+      "label": "Confirm your occupation",
+      "landed": "/app/career/occupation",
+      "ok": true,
+      "screenshot": "03-occupation-home-desktop.png"
+    },
+    {
+      "step": "4 occupation confirmed -> brief",
+      "nextAction": "build_brief",
+      "route": "/app/career/market",
+      "label": "Build your market brief",
+      "landed": "/app/career/market",
+      "ok": true,
+      "screenshot": "04-brief-home-desktop.png"
+    },
+    {
+      "step": "5 brief done -> pay",
+      "nextAction": "analyze_pay",
+      "route": "/app/career/pay",
+      "label": "Analyze pay",
+      "landed": "/app/career/pay",
+      "ok": true,
+      "screenshot": "05-pay-home-desktop.png"
+    },
+    {
+      "step": "6 pay done -> roadmap",
+      "nextAction": "build_roadmap",
+      "route": "/app/career/roadmap",
+      "label": "Build your roadmap",
+      "landed": "/app/career/roadmap",
+      "ok": true,
+      "screenshot": "06-roadmap-home-desktop.png"
+    },
+    {
+      "step": "7 roadmap proposed -> accept",
+      "nextAction": "accept_roadmap",
+      "route": "/app/career/roadmap",
+      "label": "Review and accept your roadmap",
+      "landed": "/app/career/roadmap",
+      "ok": true,
+      "screenshot": "07-accept-home-desktop.png"
+    },
+    {
+      "step": "8 roadmap accepted -> resume",
+      "nextAction": "draft_resume",
+      "route": "/app/career/resume",
+      "label": "Draft your resume",
+      "landed": "/app/career/resume",
+      "ok": true,
+      "screenshot": "08-resume-home-desktop.png"
+    },
+    {
+      "step": "9 resume drafted -> export",
+      "nextAction": "export_material",
+      "route": "/app/career/materials",
+      "label": "Export your materials",
+      "landed": "/app/career/materials",
+      "ok": true,
+      "screenshot": "09-export-home-desktop.png"
+    },
+    {
+      "step": "10 summary drafted",
+      "nextAction": "none",
+      "route": "/app/career",
+      "label": "",
+      "landed": "",
+      "ok": true,
+      "screenshot": "10-after-summary-home-desktop.png"
+    },
+    {
+      "step": "U1 unusual: occupation unsupported",
+      "nextAction": "confirm_occupation",
+      "route": "/app/career/occupation",
+      "label": "Confirm your occupation",
+      "landed": "/app/career/occupation",
+      "ok": true,
+      "screenshot": "U1-unusual-occupation-home-desktop.png"
+    },
+    {
+      "step": "S1 sparse: brief",
+      "nextAction": "build_brief",
+      "route": "/app/career/market",
+      "label": "Build your market brief",
+      "landed": "/app/career/market",
+      "ok": true,
+      "screenshot": "S1-sparse-brief-home-desktop.png"
+    },
+    {
+      "step": "S2 sparse: pay",
+      "nextAction": "analyze_pay",
+      "route": "/app/career/pay",
+      "label": "Analyze pay",
+      "landed": "/app/career/pay",
+      "ok": true,
+      "screenshot": "S2-sparse-pay-home-desktop.png"
+    }
+  ],
+  "results": [
+    {
+      "label": "client config careerWorkspace",
+      "value": true
+    },
+    {
+      "label": "00-empty-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "Create your profile",
+      "step": "0 empty home",
+      "nextAction": "create_profile",
+      "route": "/app/career/setup",
+      "landed": "/app/career/setup",
+      "ok": true,
+      "screenshot": "00-empty-home-desktop.png"
+    },
+    {
+      "label": "00-empty-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Set Up Your Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-setup-profile @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Set Up Your Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "01-profile-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "Set your goal",
+      "step": "1 profile saved (before goal)",
+      "nextAction": "set_goal",
+      "route": "/app/career/setup",
+      "landed": "/app/career/setup",
+      "ok": true,
+      "screenshot": "01-profile-home-desktop.png"
+    },
+    {
+      "label": "01-profile-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Set Up Your Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "02-goal-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "Confirm your occupation",
+      "step": "2 goal set",
+      "nextAction": "confirm_occupation",
+      "route": "/app/career/occupation",
+      "landed": "/app/career/occupation",
+      "ok": true,
+      "screenshot": "02-goal-home-desktop.png"
+    },
+    {
+      "label": "02-goal-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "occupation match run",
+      "status": "completed",
+      "candidates": [
+        "15-1252.00 strong",
+        "17-2072.00 moderate",
+        "17-2141.00 moderate",
+        "17-2011.00 moderate"
+      ]
+    },
+    {
+      "label": "03-occupation-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "Confirm your occupation",
+      "step": "3 occupation proposed",
+      "nextAction": "confirm_occupation",
+      "route": "/app/career/occupation",
+      "landed": "/app/career/occupation",
+      "ok": true,
+      "screenshot": "03-occupation-home-desktop.png"
+    },
+    {
+      "label": "03-occupation-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "03b-occupation-ui @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "confirm occupation",
+      "code": "15-1252.00",
+      "status": 200
+    },
+    {
+      "label": "04-brief-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "Build your market brief",
+      "step": "4 occupation confirmed -> brief",
+      "nextAction": "build_brief",
+      "route": "/app/career/market",
+      "landed": "/app/career/market",
+      "ok": true,
+      "screenshot": "04-brief-home-desktop.png"
+    },
+    {
+      "label": "04-brief-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "04b-market-result @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "04b-market-result @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "04b-market-result @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "market brief",
+      "status": "complete",
+      "area": "Denver-Aurora-Centennial, CO"
+    },
+    {
+      "label": "05-pay-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "Analyze pay",
+      "step": "5 brief done -> pay",
+      "nextAction": "analyze_pay",
+      "route": "/app/career/pay",
+      "landed": "/app/career/pay",
+      "ok": true,
+      "screenshot": "05-pay-home-desktop.png"
+    },
+    {
+      "label": "05-pay-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05b-pay-covered @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05b-pay-covered @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "05b-pay-covered @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "pay covered",
+      "status": "complete",
+      "area": "Denver-Aurora-Centennial, CO",
+      "personalizedAvailable": false,
+      "personalized": "unavailable",
+      "scenario": "complete",
+      "pageText": [
+        "not advertised pay",
+        "not advertised pay",
+        "prediction"
+      ]
+    },
+    {
+      "label": "06-roadmap-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "Build your roadmap",
+      "step": "6 pay done -> roadmap",
+      "nextAction": "build_roadmap",
+      "route": "/app/career/roadmap",
+      "landed": "/app/career/roadmap",
+      "ok": true,
+      "screenshot": "06-roadmap-home-desktop.png"
+    },
+    {
+      "label": "06-roadmap-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Roadmap - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "06b-roadmap-proposed @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Roadmap - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "06b-roadmap-proposed @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Roadmap - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "06b-roadmap-proposed @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Roadmap - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "07-accept-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "Review and accept your roadmap",
+      "step": "7 roadmap proposed -> accept",
+      "nextAction": "accept_roadmap",
+      "route": "/app/career/roadmap",
+      "landed": "/app/career/roadmap",
+      "ok": true,
+      "screenshot": "07-accept-home-desktop.png"
+    },
+    {
+      "label": "07-accept-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Roadmap - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "roadmap accepted",
+      "status": "accepted"
+    },
+    {
+      "label": "07b-roadmap-accepted @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": true,
+      "h1": 1,
+      "title": "Career Roadmap - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "08-resume-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "Draft your resume",
+      "step": "8 roadmap accepted -> resume",
+      "nextAction": "draft_resume",
+      "route": "/app/career/resume",
+      "landed": "/app/career/resume",
+      "ok": true,
+      "screenshot": "08-resume-home-desktop.png"
+    },
+    {
+      "label": "08-resume-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Targeted Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "08b-resume-ready @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Targeted Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "08b-resume-ready @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Targeted Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "08b-resume-ready @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Targeted Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "resume material",
+      "id": "bdd29d07-6884-43d4-bda9-d0b7647c63e6",
+      "sections": [
+        "headline:1",
+        "summary:0",
+        "experience_highlights:3",
+        "skills:1"
+      ],
+      "origins": [
+        "generated"
+      ]
+    },
+    {
+      "label": "09-export-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "Export your materials",
+      "step": "9 resume drafted -> export",
+      "nextAction": "export_material",
+      "route": "/app/career/materials",
+      "landed": "/app/career/materials",
+      "ok": true,
+      "screenshot": "09-export-home-desktop.png"
+    },
+    {
+      "label": "09-export-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "export pdf",
+      "fileName": "Resume-for-Software-Developers-v1.pdf",
+      "magic": "%PDF",
+      "ok": true,
+      "bytes": 27936
+    },
+    {
+      "label": "export docx",
+      "fileName": "Resume-for-Software-Developers-v1.docx",
+      "magic": "PK\u0003\u0004",
+      "ok": true,
+      "bytes": 3128
+    },
+    {
+      "label": "09b-export-done @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Targeted Resume - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "10-summary @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Professional Summary - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "10-summary @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Professional Summary - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "10-summary @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Professional Summary - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "summary material",
+      "count": 1
+    },
+    {
+      "label": "10-after-summary-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "",
+      "step": "10 summary drafted",
+      "nextAction": "none",
+      "route": "/app/career",
+      "landed": "",
+      "ok": true,
+      "screenshot": "10-after-summary-home-desktop.png"
+    },
+    {
+      "label": "10-after-summary-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "11-privacy @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Privacy - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "11-privacy @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Privacy - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "11-privacy @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Privacy - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "privacy export",
+      "fileName": "career-data.json",
+      "startsWithBrace": true
+    },
+    {
+      "label": "12-materials-photo @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "12-materials-photo @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "12-materials-photo @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Materials - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "photo optional",
+      "text": "Profile photo (optional)\n\nNo photo chosen. A photo is optional for your career profile.\n\nUse a photo you already have\n\nYou have no finished photos yet. Create one in the photo workspace.\n\nCreate a new photo\n\nCreate a new photo\n\nPhoto packages\n\nYou have no photo package.\n\nOpening the photo workspace is free. Any purchase or generation happens there, only after you choose a package and confirm. Care",
+      "continueLink": 1,
+      "createLink": 1
+    },
+    {
+      "label": "reload mid-run",
+      "runStatus": "completed",
+      "stillWorkingOrResult": true,
+      "home": "Career workspace\n\nYour goal, next step and latest work in one place. You enter and confirm every detail.\n\nYour goal\n\nSoftware Developers · Denver, CO\n\nLatest result\n\nCareer roadmap · Oct 5, 2026\n\nYour career pages\nProfile and goal\nImport from a resume\nProfile summary\nOccupation\nMarket brief\nCompare "
+    },
+    {
+      "label": "13-reload-midrun @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "cross-user reads",
+      "roadmap": 404,
+      "resume": 404,
+      "summary": 404,
+      "resumeVersions": 404,
+      "brief": 404,
+      "pay": 404,
+      "runB-as-C": 404,
+      "exportCreate": 404
+    },
+    {
+      "label": "malicious context",
+      "titleRenderedAsText": true,
+      "injectedElements": 0,
+      "dialogs": [],
+      "urlAfterNext": "/app/career?next=javascript:alert(1)",
+      "homeShowsJavascriptLink": 0
+    },
+    {
+      "label": "14-malicious-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "unusual occupation match",
+      "status": "unsupported",
+      "candidates": [],
+      "guidance": "Describe the work you do in your profile highlights, such as the responsibilities you handle day to day. We suggest occupations from your responsibilities, not from a job title alone."
+    },
+    {
+      "label": "U1-unusual-occupation-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "Confirm your occupation",
+      "step": "U1 unusual: occupation unsupported",
+      "nextAction": "confirm_occupation",
+      "route": "/app/career/occupation",
+      "landed": "/app/career/occupation",
+      "ok": true,
+      "screenshot": "U1-unusual-occupation-home-desktop.png"
+    },
+    {
+      "label": "U1-unusual-occupation-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "U1b-unusual-occupation-ui @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Confirm Your Occupation - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "sparse match",
+      "status": "proposed",
+      "candidates": [
+        "15-1252.00 strong",
+        "17-2072.00 moderate",
+        "17-2141.00 moderate",
+        "17-2011.00 moderate"
+      ]
+    },
+    {
+      "label": "sparse confirm",
+      "sparseConfirmed": true,
+      "code": "15-1252.00"
+    },
+    {
+      "label": "S1-sparse-brief-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "Build your market brief",
+      "step": "S1 sparse: brief",
+      "nextAction": "build_brief",
+      "route": "/app/career/market",
+      "landed": "/app/career/market",
+      "ok": true,
+      "screenshot": "S1-sparse-brief-home-desktop.png"
+    },
+    {
+      "label": "S1-sparse-brief-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "S1b-sparse-market @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "S1b-sparse-market @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "S1b-sparse-market @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Market Brief - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "brief sparse",
+      "status": "complete",
+      "resolution": "state",
+      "sections": [
+        "wages:complete",
+        "employment:complete",
+        "outlook:complete",
+        "alternatives:complete"
+      ]
+    },
+    {
+      "label": "S2-sparse-pay-home @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Career Workspace - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "Analyze pay",
+      "step": "S2 sparse: pay",
+      "nextAction": "analyze_pay",
+      "route": "/app/career/pay",
+      "landed": "/app/career/pay",
+      "ok": true,
+      "screenshot": "S2-sparse-pay-home-desktop.png"
+    },
+    {
+      "label": "S2-sparse-pay-page @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "S2b-sparse-pay @desktop",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "S2b-sparse-pay @mobile-390",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "S2b-sparse-pay @mobile-320",
+      "overflow": 0,
+      "small": [],
+      "percent": false,
+      "h1": 1,
+      "title": "Comparable Pay Analysis - AI Profile Photo Maker",
+      "axe": []
+    },
+    {
+      "label": "pay sparse",
+      "status": "complete",
+      "area": "Alaska",
+      "resolution": "state",
+      "sections": [
+        "benchmark:complete",
+        "personalized:unavailable/provider_rights_unverified",
+        "scenario:unavailable"
+      ],
+      "unavailableShown": true
+    }
+  ],
+  "errors": [],
+  "dialogs": []
+}

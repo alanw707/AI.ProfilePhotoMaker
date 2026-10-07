@@ -54,7 +54,8 @@ public class ProfileControllerDeleteModelTests
             replicate.Object,
             basicTierService.Object,
             storageService.Object,
-            pathResolver);
+            pathResolver,
+            Mock.Of<AI.ProfilePhotoMaker.API.Services.Career.ICareerPrivateDataService>());
 
         var userId = "unit-user-comprehensive";
         controller.ControllerContext = new ControllerContext
@@ -172,7 +173,8 @@ public class ProfileControllerDeleteModelTests
             replicate.Object,
             basicTierService.Object,
             storageService.Object,
-            pathResolver);
+            pathResolver,
+            Mock.Of<AI.ProfilePhotoMaker.API.Services.Career.ICareerPrivateDataService>());
 
         var userId = "unit-user-1";
         controller.ControllerContext = new ControllerContext
