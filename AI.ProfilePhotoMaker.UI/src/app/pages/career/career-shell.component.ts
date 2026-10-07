@@ -1,7 +1,7 @@
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { filter } from 'rxjs';
+import { EMPTY, Subject, catchError, filter, switchMap } from 'rxjs';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { CareerJourneyDto, CareerProfileService } from '../../services/career-profile.service';
 
@@ -11,6 +11,7 @@ export interface CareerStep {
   id: string;
   label: string;
   path: string;
+  fragment?: string;
   state: CareerStepState;
   /** Text equivalent of the state; never conveyed by colour alone. */
   status: string;
@@ -113,7 +114,17 @@ export function careerSteps(j: CareerJourneyDto | null): { steps: CareerStep[]; 
       state = 'review';
     }
     const path = def.id === 'profile' && j && !j.profile ? 'setup' : def.path;
-    return { id: def.id, label: def.label, path: ROOT + path, state, status: STATUS[state] };
+    // Without a profile, Profile and Goal both open setup; the Goal link carries a fragment so
+    // only one link reports itself as the current page.
+    const fragment = def.id === 'goal' && j && !j.profile ? 'goal' : undefined;
+    return {
+      id: def.id,
+      label: def.label,
+      path: ROOT + path,
+      fragment,
+      state,
+      status: STATUS[state],
+    };
   });
 
   const summary = allDone
@@ -142,7 +153,17 @@ export class CareerShellComponent implements OnInit {
   /** Narrow screens only: the step list is always shown on wide screens. */
   readonly open = signal(false);
 
+  private host: ElementRef<HTMLElement> = inject(ElementRef);
+  private reload = new Subject<void>();
+
   ngOnInit() {
+    // switchMap drops a slower earlier response so the rail never shows an older journey.
+    this.reload
+      .pipe(
+        switchMap(() => this.api.getJourney().pipe(catchError(() => EMPTY))),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(j => this.journey.set(j));
     this.load();
     this.router.events
       .pipe(
@@ -150,7 +171,13 @@ export class CareerShellComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(() => {
+        const list = this.host.nativeElement.querySelector('#career-step-list');
+        const focusInList = !!list && list.contains(document.activeElement);
         this.open.set(false);
+        // Collapsing hides the focused link; hand focus back to the control that opened it.
+        if (focusInList) {
+          this.host.nativeElement.querySelector<HTMLElement>('.rail__toggle')?.focus();
+        }
         this.load();
       });
   }
@@ -161,6 +188,6 @@ export class CareerShellComponent implements OnInit {
 
   private load() {
     // The rail is guidance only: if the journey fails, the page itself still works and reports it.
-    this.api.getJourney().subscribe({ next: j => this.journey.set(j), error: () => undefined });
+    this.reload.next();
   }
 }

@@ -307,14 +307,14 @@
 
 // The global dark theme forces link text light with !important and paints a background
 // behind hovered SVGs; the rail restates its own colours so its state marks survive.
-:host-context([data-theme='dark']) {
+:host-context([data-theme="dark"]) {
   .rail a {
     color: var(--cw-ink) !important;
   }
   .rail__more a {
     color: var(--cw-muted) !important;
   }
-  [data-step-state='upcoming'] .rail__label {
+  [data-step-state="upcoming"] .rail__label {
     color: var(--cw-muted) !important;
   }
   .rail__home.is-active,

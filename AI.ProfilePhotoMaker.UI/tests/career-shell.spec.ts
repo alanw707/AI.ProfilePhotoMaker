@@ -17,7 +17,7 @@ const journey = {
   stale: [{ kind: 'market_brief', id: 'b1', reasons: ['goal_changed'] }],
 };
 
-async function mock(page: Page, opts: { theme?: 'dark' } = {}) {
+async function mock(page: Page, opts: { theme?: 'dark'; journey?: unknown } = {}) {
   await page.addInitScript(theme => {
     localStorage.setItem('e2eAuthBypass', 'true');
     if (theme) localStorage.setItem('theme', theme);
@@ -27,7 +27,7 @@ async function mock(page: Page, opts: { theme?: 'dark' } = {}) {
     const send = (data: unknown) =>
       route.fulfill({ json: { success: true, isAuthenticated: true, data } });
     if (path === '/api/config/client') return send({ features: { careerWorkspace: true } });
-    if (path === '/api/career/journey') return send(journey);
+    if (path === '/api/career/journey') return send(opts.journey ?? journey);
     return send([]);
   });
 }
@@ -120,3 +120,37 @@ for (const theme of [undefined, 'dark'] as const) {
     });
   }
 }
+
+test('without a profile only one rail link is current on setup', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await mock(page, {
+    journey: {
+      profile: null,
+      goal: null,
+      nextAction: { key: 'create_profile' },
+      latestResult: null,
+      activeRuns: [],
+      stale: [],
+    },
+  });
+  await open(page, '/app/career/setup?e2eAuthBypass=1');
+  const rail = page.getByRole('navigation', { name: 'Career steps' });
+  await expect(rail.locator('[aria-current="page"]')).toHaveCount(1);
+});
+
+test('closing the narrow rail after navigation keeps focus on the step control', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mock(page);
+  await open(page);
+  const toggle = page.getByRole('button', { name: /Step 5 of 7/ });
+  await toggle.click();
+  await page
+    .locator('#career-step-list')
+    .getByRole('link', { name: /Roadmap/ })
+    .focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/app\/career\/roadmap/);
+  await expect(page.locator('.rail__toggle')).toBeFocused();
+});

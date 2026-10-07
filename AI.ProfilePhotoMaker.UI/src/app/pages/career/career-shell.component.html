@@ -26,7 +26,17 @@
       <ol class="rail__steps">
         @for (s of rail().steps; track s.id; let i = $index) {
           <li [attr.data-step-state]="s.state">
-            <a [routerLink]="s.path" routerLinkActive="is-active" ariaCurrentWhenActive="page">
+            <a
+              [routerLink]="s.path"
+              [fragment]="s.fragment"
+              routerLinkActive="is-active"
+              [routerLinkActiveOptions]="{
+                paths: 'exact',
+                fragment: 'exact',
+                queryParams: 'ignored',
+                matrixParams: 'ignored',
+              }"
+              ariaCurrentWhenActive="page">
               <span class="rail__mark" aria-hidden="true">
                 @switch (s.state) {
                   @case ('done') {
