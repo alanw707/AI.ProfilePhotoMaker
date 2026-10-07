@@ -325,10 +325,9 @@ test('stale banner, keyboard selection and no machine codes', async ({ page }) =
 test('home links to the roadmap', async ({ page }) => {
   await mock(page);
   await page.goto('/app/career?e2eAuthBypass=1');
-  await expect(page.getByRole('link', { name: 'Career roadmap' })).toHaveAttribute(
-    'href',
-    '/app/career/roadmap'
-  );
+  await expect(
+    page.getByRole('navigation', { name: 'Career steps' }).getByRole('link', { name: /Roadmap/ })
+  ).toHaveAttribute('href', '/app/career/roadmap');
 });
 
 test.describe('accessibility', () => {

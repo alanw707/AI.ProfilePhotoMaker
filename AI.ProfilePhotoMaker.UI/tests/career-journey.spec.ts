@@ -157,7 +157,9 @@ test('latest result link carries its id and sparse pay shows page wording', asyn
     }),
   ]);
   await open(page);
-  await expect(page.getByText('Software Developers · Denver, CO')).toBeVisible();
+  const goal = page.locator('[data-goal]');
+  await expect(goal).toContainText('Software Developers');
+  await expect(goal.locator('.brief__place')).toHaveText('Denver, CO');
   await expect(page.locator('body')).not.toContainText('15-1252');
   await expect(page.locator('body')).not.toContainText('2026-10-05T');
   const link = page.locator('[data-latest]');
@@ -257,9 +259,10 @@ test('every career page link resolves', async ({ page }) => {
   await mock(page, [J()]);
   await open(page);
   const hrefs = await page
-    .locator('nav[aria-labelledby="pages-heading"] a')
+    .locator('nav[aria-label="Career steps"] a')
     .evaluateAll(as => as.map(a => a.getAttribute('href') as string));
-  expect(hrefs.length).toBe(13);
+  // workspace home + 7 journey steps + 7 more pages, all distinct
+  expect(new Set(hrefs).size).toBe(15);
   for (const href of hrefs) {
     await page.goto(`${href}?e2eAuthBypass=1`);
     await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();

@@ -1,0 +1,72 @@
+<app-header-navigation></app-header-navigation>
+<div class="career-shell">
+  <nav class="rail" aria-label="Career steps">
+    <a
+      class="rail__home"
+      routerLink="/app/career"
+      routerLinkActive="is-active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      ariaCurrentWhenActive="page">
+      Career workspace
+    </a>
+
+    <button
+      type="button"
+      class="rail__toggle"
+      aria-controls="career-step-list"
+      [attr.aria-expanded]="open()"
+      (click)="toggle()">
+      <span>{{ rail().summary }}</span>
+      <svg viewBox="0 0 16 16" aria-hidden="true" [class.is-open]="open()">
+        <path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="1.6" />
+      </svg>
+    </button>
+
+    <div id="career-step-list" class="rail__body" [class.is-collapsed]="!open()">
+      <ol class="rail__steps">
+        @for (s of rail().steps; track s.id; let i = $index) {
+          <li [attr.data-step-state]="s.state">
+            <a [routerLink]="s.path" routerLinkActive="is-active" ariaCurrentWhenActive="page">
+              <span class="rail__mark" aria-hidden="true">
+                @switch (s.state) {
+                  @case ('done') {
+                    <svg viewBox="0 0 16 16">
+                      <path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" />
+                    </svg>
+                  }
+                  @case ('review') {
+                    <svg viewBox="0 0 16 16">
+                      <path d="M8 3.5v5.5M8 11.5v1" fill="none" stroke="currentColor" stroke-width="1.8" />
+                    </svg>
+                  }
+                  @default {
+                    {{ i + 1 }}
+                  }
+                }
+              </span>
+              <span class="rail__label">{{ s.label }}</span>
+              @if (s.status) {
+                <span class="rail__status">{{ s.status }}</span>
+              }
+            </a>
+          </li>
+        }
+      </ol>
+
+      <h2 class="rail__heading" id="career-more-heading">More pages</h2>
+      <ul class="rail__more" aria-labelledby="career-more-heading">
+        @for (p of more; track p.path) {
+          <li>
+            <a [routerLink]="'/app/career/' + p.path" routerLinkActive="is-active" ariaCurrentWhenActive="page">
+              {{ p.label }}
+            </a>
+          </li>
+        }
+      </ul>
+    </div>
+  </nav>
+
+  <div class="career-shell__page">
+    <router-outlet />
+  </div>
+</div>

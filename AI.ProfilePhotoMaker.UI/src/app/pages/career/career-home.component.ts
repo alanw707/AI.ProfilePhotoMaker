@@ -49,97 +49,46 @@ const TASKS: Record<string, Target> = {
   professional_summary: RESULTS['professional_summary'],
 };
 const RUNNING = ['queued', 'running', 'working'];
-const PAGES: { label: string; path: string }[] = [
-  { label: 'Profile and goal', path: 'profile' },
-  { label: 'Import from a resume', path: 'import' },
-  { label: 'Profile summary', path: 'summary' },
-  { label: 'Occupation', path: 'occupation' },
-  { label: 'Market brief', path: 'market' },
-  { label: 'Compare markets', path: 'markets' },
-  { label: 'Pay analysis', path: 'pay' },
-  { label: 'Open postings', path: 'jobs' },
-  { label: 'Career roadmap', path: 'roadmap' },
-  { label: 'Targeted resume', path: 'resume' },
-  { label: 'Professional summary', path: 'summary-draft' },
-  { label: 'Materials and photo', path: 'materials' },
-  { label: 'Privacy and your data', path: 'privacy' },
-];
 
 @Component({
   standalone: true,
   selector: 'app-career-home',
   imports: [RouterLink, DatePipe],
-  template: ` <main class="career-page">
+  template: ` <main class="career-page career-home">
     <div class="career-sheet">
       <h1>Career workspace</h1>
-      <p>Your goal, next step and latest work in one place. You enter and confirm every detail.</p>
-      @if (allowance(); as a) {
-        <section aria-labelledby="allowance-heading" data-allowance>
-          <h2 id="allowance-heading">Drafting allowance</h2>
-          <p data-allowance-count>
-            {{ a.remaining }} of {{ a.limit }} drafts left this month
-            @if (a.reserved > 0) {
-              · <span data-allowance-reserved>{{ a.reserved }} in progress</span>
-            }
-          </p>
-          <p data-allowance-reset>Resets on {{ a.resetsAt | date: 'longDate' : 'UTC' }}.</p>
-          @if (a.remaining <= 0) {
-            <p data-allowance-used>
-              You have used this month's drafts. Your saved work stays readable, editable and
-              exportable:
-              <a routerLink="/app/career/profile">edit your profile</a>,
-              <a routerLink="/app/career/materials">export your materials</a>.
-            </p>
-          }
-        </section>
-      }
+      <p class="lede">
+        Your goal, next step and latest work in one place. You enter and confirm every detail.
+      </p>
       @if (journey(); as j) {
-        <section aria-labelledby="goal-heading">
-          <h2 id="goal-heading">Your goal</h2>
+        <section class="brief" aria-labelledby="goal-heading">
+          <h2 id="goal-heading" class="brief__label">Your goal</h2>
           @if (j.goal) {
-            <p data-goal>
+            <p class="brief__goal" data-goal>
               {{ j.goal.occupationTitle || 'Goal saved' }}
               @if (j.goal.location) {
-                · {{ j.goal.location }}
+                <span class="brief__place">{{ j.goal.location }}</span>
               }
             </p>
           } @else {
-            <p>You have not set a goal yet. Set one to get a tailored plan.</p>
+            <p class="brief__goal brief__goal--empty">
+              You have not set a goal yet. Set one to get a tailored plan.
+            </p>
             <a routerLink="/app/career/setup">Set your goal</a>
           }
-        </section>
-        @if (next(); as n) {
-          <section aria-labelledby="next-heading">
-            <h2 id="next-heading">Next step</h2>
-            <a class="primary" data-next [routerLink]="n.link" [queryParams]="n.params">{{
-              n.label
-            }}</a>
-          </section>
-        }
-        @if (latest(); as l) {
-          <section aria-labelledby="latest-heading">
-            <h2 id="latest-heading">Latest result</h2>
-            <p>
-              <a data-latest [routerLink]="l.link" [queryParams]="l.params">{{ l.label }}</a>
-              · {{ l.at | date: 'mediumDate' }}
+          @if (next(); as n) {
+            <div class="brief__next">
+              <h2 id="next-heading" class="brief__label">Next step</h2>
+              <a class="primary" data-next [routerLink]="n.link" [queryParams]="n.params">{{
+                n.label
+              }}</a>
+            </div>
+          } @else if (j.nextAction.key === 'none') {
+            <p class="brief__done" data-all-done>
+              Every step is done. Open any page from the step list to review or update it.
             </p>
-          </section>
-        }
-        @if (runs().length) {
-          <section aria-labelledby="runs-heading">
-            <h2 id="runs-heading">Work in progress</h2>
-            <ul>
-              @for (r of runs(); track r.id) {
-                <li>
-                  {{ r.label }}:
-                  <a data-run [routerLink]="r.link" [queryParams]="r.params">{{
-                    r.failed ? 'Try again' : 'Still working'
-                  }}</a>
-                </li>
-              }
-            </ul>
-          </section>
-        }
+          }
+        </section>
         @for (s of stale(); track s.id) {
           <p class="caution" data-stale>
             Needs review · Your {{ s.label }} may be out of date because your profile or goal
@@ -148,21 +97,66 @@ const PAGES: { label: string; path: string }[] = [
           </p>
         }
       } @else if (!loading()) {
-        <section>
-          <h2>Start with your facts</h2>
+        <section class="brief">
+          <h2 class="brief__label">Start with your facts</h2>
           <a class="primary" routerLink="/app/career/setup">Set up your profile and goal</a>
         </section>
       }
-      <nav aria-labelledby="pages-heading">
-        <h2 id="pages-heading">Your career pages</h2>
-        <ul>
-          @for (p of pages; track p.path) {
-            <li>
-              <a [routerLink]="'/app/career/' + p.path">{{ p.label }}</a>
-            </li>
+
+      @if (allowance() || latest() || runs().length) {
+        <dl class="ledger" aria-label="Workspace status">
+          @if (allowance(); as a) {
+            <div class="ledger__row" data-allowance>
+              <dt id="allowance-heading">Drafting allowance</dt>
+              <dd>
+                <p data-allowance-count>
+                  {{ a.remaining }} of {{ a.limit }} drafts left this month
+                  @if (a.reserved > 0) {
+                    · <span data-allowance-reserved>{{ a.reserved }} in progress</span>
+                  }
+                </p>
+                <p class="muted" data-allowance-reset>
+                  Resets on {{ a.resetsAt | date: 'longDate' : 'UTC' }}.
+                </p>
+                @if (a.remaining <= 0) {
+                  <p data-allowance-used>
+                    You have used this month's drafts. Your saved work stays readable, editable and
+                    exportable:
+                    <a routerLink="/app/career/profile">edit your profile</a>,
+                    <a routerLink="/app/career/materials">export your materials</a>.
+                  </p>
+                }
+              </dd>
+            </div>
           }
-        </ul>
-      </nav>
+          @if (latest(); as l) {
+            <div class="ledger__row">
+              <dt id="latest-heading">Latest result</dt>
+              <dd>
+                <a data-latest [routerLink]="l.link" [queryParams]="l.params">{{ l.label }}</a>
+                <span class="muted"> · {{ l.at | date: 'mediumDate' }}</span>
+              </dd>
+            </div>
+          }
+          @if (runs().length) {
+            <div class="ledger__row">
+              <dt id="runs-heading">Work in progress</dt>
+              <dd>
+                <ul>
+                  @for (r of runs(); track r.id) {
+                    <li>
+                      {{ r.label }}:
+                      <a data-run [routerLink]="r.link" [queryParams]="r.params">{{
+                        r.failed ? 'Try again' : 'Still working'
+                      }}</a>
+                    </li>
+                  }
+                </ul>
+              </dd>
+            </div>
+          }
+        </dl>
+      }
       @if (error()) {
         <p role="alert">{{ error() }}</p>
       }
@@ -173,7 +167,6 @@ const PAGES: { label: string; path: string }[] = [
 export class CareerHomeComponent implements OnInit {
   private api = inject(CareerProfileService);
   private router = inject(Router);
-  pages = PAGES;
   journey = signal<CareerJourneyDto | null>(null);
   allowance = signal<CareerAllowanceDto | null>(null);
   loading = signal(true);

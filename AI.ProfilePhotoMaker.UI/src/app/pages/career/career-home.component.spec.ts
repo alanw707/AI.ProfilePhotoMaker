@@ -77,7 +77,9 @@ describe('CareerHomeComponent', () => {
     expect(el.querySelector('[data-latest]')?.getAttribute('href')).toBe(
       '/app/career/roadmap?roadmap=r-1'
     );
-    expect(el.textContent?.replace(/\s+/g, ' ')).toContain('Dev · Austin');
+    const goal = el.querySelector('[data-goal]');
+    expect(goal?.firstChild?.textContent?.trim()).toBe('Dev');
+    expect(goal?.querySelector('.brief__place')?.textContent?.trim()).toBe('Austin');
     expect(el.textContent).not.toContain('15-1252');
     expect(el.textContent).not.toContain('2026-10-05T');
   });

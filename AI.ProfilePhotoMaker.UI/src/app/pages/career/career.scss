@@ -1,8 +1,68 @@
+// Career dossier tokens: same names as career-shell.component.scss so page and rail stay in step.
+:host {
+  --cw-ground: #f4f3ec;
+  --cw-surface: #fffefa;
+  --cw-ink: #1b2c31;
+  --cw-muted: #52656a;
+  --cw-rule: #d1d8d4;
+  --cw-rule-soft: #e3e8e5;
+  --cw-teal: #155e62;
+  --cw-teal-ink: #0d3f42;
+  --cw-teal-tint: #e2efeb;
+  --cw-review-tint: #fbefd9;
+  --cw-field-rule: #768b8c;
+  --cw-on-accent: #ffffff;
+  --cw-danger: #92271e;
+  --cw-review: #8a4b00;
+}
+:host-context([data-theme='dark']) {
+  --cw-ground: #11181a;
+  --cw-surface: #182226;
+  --cw-ink: #e4ebe8;
+  --cw-muted: #a3b3b1;
+  --cw-rule: #33433f;
+  --cw-rule-soft: #24302e;
+  --cw-teal: #7cc6bf;
+  --cw-teal-ink: #a9e0d9;
+  --cw-teal-tint: #1c3532;
+  --cw-review-tint: #3a2c17;
+  --cw-field-rule: #6d807e;
+  --cw-on-accent: #0c2224;
+  --cw-danger: #f3a196;
+  --cw-review: #f2bf74;
+}
+// The global dark theme forces every link and button to light text with !important;
+// career controls restate their own colours so the teal action stays readable.
+:host-context([data-theme='dark']) {
+  .career-page a:not(.primary) {
+    color: var(--cw-teal) !important;
+  }
+  .career-page a.primary,
+  .career-page button.primary {
+    color: var(--cw-on-accent) !important;
+  }
+  .career-page button:not(.primary):not(.danger) {
+    color: var(--cw-teal) !important;
+  }
+  .career-page button.danger {
+    color: var(--cw-danger) !important;
+  }
+  // The global dark theme also forces paragraph text bright; keep secondary copy muted.
+  .career-page .muted,
+  .career-page .lede,
+  .career-home .brief__label,
+  .career-home .brief__place,
+  .career-home .brief__done {
+    color: var(--cw-muted) !important;
+  }
+  // Error summaries keep a light field in both themes, so their links keep dark ink.
+  .career-error-summary a:not(.primary) {
+    color: #7a1f17 !important;
+  }
+}
+// The shell supplies the ground, header and gutters; a page is the working column.
 .career-page {
-  background: #f7f7f2;
-  color: #1b2c31;
-  min-height: 100vh;
-  padding: clamp(12px, 4vw, 48px);
+  color: var(--cw-ink);
   font:
     16px/1.5 "DM Sans",
     system-ui,
@@ -11,7 +71,7 @@
 }
 .career-sheet {
   max-width: 780px;
-  margin: auto;
+  margin: 0;
   min-width: 0;
 }
 h1,
@@ -19,7 +79,7 @@ h2,
 h3 {
   font-family: Manrope, system-ui, sans-serif;
   line-height: 1.18;
-  color: #1b2c31;
+  color: var(--cw-ink);
 }
 h1 {
   font-size: clamp(27px, 4vw, 39px);
@@ -34,24 +94,24 @@ h3 {
   margin: 0 0 8px;
 }
 section {
-  background: #fffefa;
-  border: 1px solid #d1d8d4;
+  background: var(--cw-surface);
+  border: 1px solid var(--cw-rule);
   border-radius: 12px;
   padding: clamp(16px, 4vw, 28px);
   margin: 28px 0;
 }
 .muted {
-  color: #42565a;
+  color: var(--cw-muted);
 }
 .caution {
-  background: #f3e7c9;
+  background: var(--cw-review-tint);
   padding: 14px;
   border-radius: 9px;
 }
 // Scoped above the global a:not(.btn):not(.nav-link) rule, which would otherwise
 // recolour career links to a light blue that fails WCAG AA here.
 .career-page a:not(.primary) {
-  color: #155e62;
+  color: var(--cw-teal);
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -60,7 +120,7 @@ section {
   min-height: 44px;
 }
 .career-page a:not(.primary):hover {
-  color: #0d3f42;
+  color: var(--cw-teal-ink);
 }
 .field {
   margin: 0 0 18px;
@@ -80,11 +140,11 @@ select {
   max-width: 100%;
   box-sizing: border-box;
   min-height: 44px;
-  border: 1px solid #768b8c;
+  border: 1px solid var(--cw-field-rule);
   border-radius: 9px;
   padding: 9px 12px;
-  background: white;
-  color: #1b2c31;
+  background: var(--cw-surface);
+  color: var(--cw-ink);
   font: inherit;
 }
 textarea {
@@ -105,10 +165,10 @@ button,
   justify-content: center;
   min-height: 44px;
   padding: 9px 16px;
-  border: 1px solid #155e62;
+  border: 1px solid var(--cw-teal);
   border-radius: 9px;
-  background: white;
-  color: #155e62;
+  background: var(--cw-surface);
+  color: var(--cw-teal);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -116,15 +176,15 @@ button,
 }
 button.primary,
 .career-page a.primary {
-  background: #175e61;
-  color: white;
+  background: var(--cw-teal);
+  color: var(--cw-on-accent);
 }
 button:disabled {
   opacity: 0.6;
   cursor: wait;
 }
 :focus-visible {
-  outline: 3px solid #986700;
+  outline: 3px solid var(--cw-teal);
   outline-offset: 3px;
 }
 [aria-invalid="true"] {
@@ -132,7 +192,7 @@ button:disabled {
 }
 .field-error {
   display: block;
-  color: #92271e;
+  color: var(--cw-danger);
   font-weight: 600;
 }
 .field-error:empty {
@@ -161,7 +221,7 @@ button:disabled {
   padding: 18px;
   border-radius: 9px;
   margin-top: 24px;
-  border-left: 4px solid #9f3028;
+  border: 1px solid #9f3028;
 }
 .career-error-summary strong {
   display: block;
@@ -187,16 +247,16 @@ button:disabled {
   gap: 12px;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #d1d8d4;
+  border-bottom: 1px solid var(--cw-rule);
 }
 .version {
   padding: 16px;
-  background: #e2efeb;
+  background: var(--cw-teal-tint);
   border-radius: 9px;
 }
 @media (max-width: 400px) {
   .career-page {
-    padding: 12px;
+    padding: 0;
   }
   section {
     padding: 16px;
@@ -226,12 +286,12 @@ button:disabled {
     border: 0;
   }
   .status {
-    background: #e2efeb;
+    background: var(--cw-teal-tint);
     padding: 14px;
     border-radius: 9px;
   }
   .notice {
-    background: #e2efeb;
+    background: var(--cw-teal-tint);
     padding: 14px;
     border-radius: 9px;
   }
@@ -255,12 +315,12 @@ button:disabled {
     width: 48px;
     height: 6px;
     border-radius: 3px;
-    background: linear-gradient(90deg, #d1d8d4 0 30%, #175e61 30% 60%, #d1d8d4 60%);
+    background: linear-gradient(90deg, var(--cw-rule) 0 30%, var(--cw-teal) 30% 60%, var(--cw-rule) 60%);
     background-size: 200% 100%;
     animation: career-indeterminate 1.2s linear infinite;
   }
   .suggestion-group {
-    border: 1px solid #d1d8d4;
+    border: 1px solid var(--cw-rule);
     border-radius: 9px;
     margin: 0 0 16px;
     padding: 12px 16px;
@@ -280,7 +340,7 @@ button:disabled {
     gap: 12px;
     align-items: flex-start;
     padding: 10px 0;
-    border-bottom: 1px solid #d1d8d4;
+    border-bottom: 1px solid var(--cw-rule);
   }
   .suggestions li:last-child {
     border-bottom: 0;
@@ -310,8 +370,8 @@ button:disabled {
     font-weight: 700;
   }
   button.danger {
-    border-color: #9f3028;
-    color: #92271e;
+    border-color: var(--cw-danger);
+    color: var(--cw-danger);
   }
 }
 @keyframes career-indeterminate {
@@ -338,9 +398,9 @@ button:disabled {
     white-space: nowrap;
   }
   button.secondary {
-    background: #fffefa;
-    color: #155e62;
-    border: 2px solid #155e62;
+    background: var(--cw-surface);
+    color: var(--cw-teal);
+    border: 2px solid var(--cw-teal);
   }
   .photo-grid {
     display: grid;
@@ -353,7 +413,7 @@ button:disabled {
   }
   .photo-card {
     min-width: 0;
-    border: 1px solid #d1d8d4;
+    border: 1px solid var(--cw-rule);
     border-radius: 10px;
     padding: 10px;
   }
@@ -382,13 +442,13 @@ button:disabled {
     line-height: 1.6;
   }
   .photo-card.in-use {
-    border-color: #155e62;
-    box-shadow: 0 0 0 1px #155e62;
+    border-color: var(--cw-teal);
+    box-shadow: 0 0 0 1px var(--cw-teal);
   }
   .photo-in-use {
     display: block;
     margin-top: 4px;
-    color: #155e62;
+    color: var(--cw-teal);
   }
   .photo-save {
     margin-bottom: 24px;
@@ -401,7 +461,7 @@ button:disabled {
     display: none;
   }
   .photo-disclosure {
-    background: #eef3f0;
+    background: var(--cw-teal-tint);
     border-radius: 9px;
     padding: 14px;
     margin: 20px 0;
@@ -410,7 +470,7 @@ button:disabled {
 
 .career-page {
   .candidate {
-    border-top: 1px solid #d1d8d4;
+    border-top: 1px solid var(--cw-rule);
     padding: 12px 0;
   }
   .candidate:first-of-type {
@@ -466,7 +526,7 @@ button:disabled {
   }
   .market-table th,
   .market-table td {
-    border-top: 1px solid #d1d8d4;
+    border-top: 1px solid var(--cw-rule);
     padding: 8px 6px;
     text-align: left;
     vertical-align: top;
@@ -492,7 +552,7 @@ button:disabled {
     font-size: 14px;
   }
   .market-item {
-    border-top: 1px solid #d1d8d4;
+    border-top: 1px solid var(--cw-rule);
     padding: 10px 0;
   }
   // A right-hand drawer: full height, scrolls inside, never pinned under the page header.
@@ -506,11 +566,11 @@ button:disabled {
     max-height: 100dvh;
     overflow: auto;
     border: 0;
-    border-left: 1px solid #d1d8d4;
+    border-left: 1px solid var(--cw-rule);
     border-radius: 0;
     padding: 24px 20px;
-    color: #1b2c31;
-    background: #fffefa;
+    color: var(--cw-ink);
+    background: var(--cw-surface);
   }
   .source-drawer::backdrop {
     background: rgb(27 44 49 / 55%);
@@ -580,11 +640,11 @@ button:disabled {
     min-width: 0;
     min-height: 44px;
     padding: 0 10px;
-    border: 1px solid #5d7075;
+    border: 1px solid var(--cw-muted);
     border-radius: 8px;
     font: inherit;
-    color: #1b2c31;
-    background: #fff;
+    color: var(--cw-ink);
+    background: var(--cw-surface);
   }
   .status-line:empty {
     display: none;
@@ -604,31 +664,31 @@ button:disabled {
     flex: none;
     width: 28px;
     height: 20px;
-    border: 2px solid #1b2c31;
+    border: 2px solid var(--cw-ink);
     border-radius: 4px;
   }
   .q1 {
     background: #0b3d4a;
-    color: #fff;
+    color: #ffffff;
   }
   .q2 {
     background: #2a6f7f;
-    color: #fff;
+    color: #ffffff;
   }
   .q3 {
     background: #7fb3bf;
-    color: #10262b;
+    color: #1b2c31;
   }
   .q4 {
     background: #bcd8de;
-    color: #10262b;
+    color: #1b2c31;
   }
   .q5 {
     background: #e4f0f2;
-    color: #10262b;
+    color: #1b2c31;
   }
   .unranked {
-    background: repeating-linear-gradient(45deg, #fffefa 0 5px, #8d7a4c 5px 8px);
+    background: repeating-linear-gradient(45deg, var(--cw-surface) 0 5px, #8d7a4c 5px 8px);
     color: #1b2c31;
   }
   .tile-grid {
@@ -639,7 +699,7 @@ button:disabled {
   .tile {
     min-height: 72px;
     padding: 4px;
-    border: 2px solid #1b2c31;
+    border: 2px solid var(--cw-ink);
     border-radius: 8px;
     font: inherit;
     cursor: pointer;
@@ -650,7 +710,7 @@ button:disabled {
     outline-offset: 2px;
   }
   .tile:focus-visible {
-    outline: 4px solid #1b2c31;
+    outline: 4px solid var(--cw-ink);
     outline-offset: 3px;
   }
   .tile-text {
@@ -661,8 +721,8 @@ button:disabled {
     border-radius: 4px;
   }
   .tile.unranked .tile-text {
-    background: #fffefa;
-    color: #1b2c31;
+    background: var(--cw-surface);
+    color: var(--cw-ink);
   }
   .tile-abbr {
     font-weight: 700;
@@ -673,9 +733,9 @@ button:disabled {
   .tile-badge {
     font-size: 13px;
     font-weight: 700;
-    background: #fff;
-    color: #5c3a00;
-    border: 1px solid #5c3a00;
+    background: var(--cw-surface);
+    color: var(--cw-review);
+    border: 1px solid var(--cw-review);
     border-radius: 4px;
     padding: 0 4px;
   }
@@ -696,7 +756,7 @@ button:disabled {
     background: none;
     font: inherit;
     font-weight: 700;
-    color: #1b2c31;
+    color: var(--cw-ink);
     text-decoration: underline;
     cursor: pointer;
   }
@@ -715,7 +775,7 @@ button:disabled {
     display: grid;
     gap: 2px;
     padding: 10px 0;
-    border-top: 1px solid #d1d8d4;
+    border-top: 1px solid var(--cw-rule);
   }
   .area-list label {
     display: inline-flex;
@@ -745,9 +805,9 @@ button:disabled {
   }
   .confirm-dialog {
     max-width: min(480px, calc(100vw - 24px));
-    color: #1b2c31;
-    background: #fffefa;
-    border: 1px solid #5d7075;
+    color: var(--cw-ink);
+    background: var(--cw-surface);
+    border: 1px solid var(--cw-muted);
     border-radius: 12px;
     padding: 20px;
   }
@@ -788,11 +848,11 @@ button:disabled {
     width: 100%;
     min-height: 44px;
     padding: 0 10px;
-    border: 1px solid #5d7075;
+    border: 1px solid var(--cw-muted);
     border-radius: 8px;
     font: inherit;
-    color: #1b2c31;
-    background: #fff;
+    color: var(--cw-ink);
+    background: var(--cw-surface);
   }
   .choice label {
     display: inline-flex;
@@ -814,10 +874,10 @@ button:disabled {
   }
   .job-card {
     min-width: 0;
-    border: 1px solid #d1d8d4;
+    border: 1px solid var(--cw-rule);
     border-radius: 10px;
     padding: 16px;
-    background: #fff;
+    background: var(--cw-surface);
   }
   .job-card p {
     margin: 0 0 8px;
@@ -865,15 +925,15 @@ button:disabled {
     margin-bottom: 8px;
   }
   .path {
-    border: 1px solid #d1d8d4;
+    border: 1px solid var(--cw-rule);
     border-radius: 10px;
     padding: 16px;
     margin-bottom: 16px;
-    background: #fff;
+    background: var(--cw-surface);
     min-width: 0;
   }
   .path.in-use {
-    border-color: #1b2c31;
+    border-color: var(--cw-ink);
   }
   .path h3 {
     margin: 16px 0 6px;
@@ -889,7 +949,7 @@ button:disabled {
     flex-direction: column;
     gap: 4px;
     padding: 8px 0;
-    border-top: 1px solid #e3e8e5;
+    border-top: 1px solid var(--cw-rule-soft);
     min-width: 0;
   }
   .task-title {
@@ -949,7 +1009,7 @@ button:disabled {
     margin: 8px 0;
   }
   .change {
-    border-top: 1px solid #e3e8e5;
+    border-top: 1px solid var(--cw-rule-soft);
     padding: 8px 0;
     overflow-wrap: anywhere;
   }
@@ -993,14 +1053,14 @@ button:disabled {
     margin: 8px 0;
   }
   .change {
-    border-top: 1px solid #e3e8e5;
+    border-top: 1px solid var(--cw-rule-soft);
     padding: 8px 0;
     overflow-wrap: anywhere;
   }
   .resume-status {
     position: sticky;
     top: 0;
-    background: #f7f7f2;
+    background: var(--cw-ground);
     z-index: 1;
   }
   .stale-badge {
@@ -1048,7 +1108,7 @@ button:disabled {
     text-align: left;
     vertical-align: top;
     padding: 8px;
-    border-bottom: 1px solid #5d7075;
+    border-bottom: 1px solid var(--cw-muted);
     overflow-wrap: anywhere;
   }
   fieldset {
@@ -1074,9 +1134,9 @@ button:disabled {
   }
   .privacy-dialog {
     max-width: min(480px, calc(100vw - 24px));
-    color: #1b2c31;
-    background: #fffefa;
-    border: 1px solid #5d7075;
+    color: var(--cw-ink);
+    background: var(--cw-surface);
+    border: 1px solid var(--cw-muted);
     border-radius: 12px;
     padding: 20px;
   }
@@ -1087,5 +1147,126 @@ button:disabled {
     width: 100%;
     box-sizing: border-box;
     min-height: 44px;
+  }
+}
+
+// ---- Shell placement --------------------------------------------------------
+.career-sheet > h1:first-child {
+  margin-top: 4px;
+}
+
+// ---- Career home: goal brief first, then a ruled status ledger ----------------
+.career-home {
+  .lede {
+    color: var(--cw-muted);
+    max-width: 60ch;
+    margin: 0 0 24px;
+  }
+
+  // The one working sheet on the page: lifted, not outlined.
+  .brief {
+    border: 0;
+    margin: 0 0 20px;
+    padding: clamp(20px, 4vw, 32px);
+    box-shadow: 0 12px 32px rgba(27, 44, 49, 0.09);
+  }
+
+  .brief__label {
+    margin: 0 0 6px;
+    font:
+      700 12px/1.3 "DM Sans",
+      system-ui,
+      sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--cw-muted);
+  }
+
+  .brief__goal {
+    margin: 0;
+    font:
+      800 clamp(24px, 3.4vw, 34px) / 1.15 Manrope,
+      system-ui,
+      sans-serif;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  .brief__goal--empty {
+    font-size: clamp(19px, 2.4vw, 22px);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .brief__place {
+    display: block;
+    margin-top: 6px;
+    font:
+      500 16px/1.4 "DM Sans",
+      system-ui,
+      sans-serif;
+    letter-spacing: 0;
+    color: var(--cw-muted);
+  }
+
+  .brief__next {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--cw-rule-soft);
+  }
+
+  .brief__next .primary {
+    min-height: 48px;
+    padding: 11px 22px;
+    font-size: 17px;
+  }
+
+  .brief__done {
+    margin: 20px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--cw-rule-soft);
+    color: var(--cw-muted);
+  }
+
+  .caution {
+    margin: 0 0 12px;
+  }
+
+  .ledger {
+    margin: 28px 0 0;
+    border-top: 1px solid var(--cw-rule);
+  }
+
+  .ledger__row {
+    display: grid;
+    grid-template-columns: minmax(140px, 200px) minmax(0, 1fr);
+    gap: 4px 24px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--cw-rule);
+  }
+
+  .ledger dt {
+    font-weight: 700;
+  }
+
+  .ledger dd,
+  .ledger dd p {
+    margin: 0;
+  }
+
+  .ledger dd p + p {
+    margin-top: 4px;
+  }
+
+  .ledger ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (max-width: 560px) {
+    .ledger__row {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 }

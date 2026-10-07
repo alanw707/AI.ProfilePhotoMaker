@@ -204,19 +204,30 @@ test('setup saves profile and goal; reload restores both', async ({ page }) => {
   await setup(page);
   await page.reload();
   await expect(page.locator('[data-goal]')).toContainText('Senior analyst');
-  await page.getByRole('link', { name: 'Profile and goal' }).click();
+  await page
+    .getByRole('navigation', { name: 'Career steps' })
+    .locator('a[href="/app/career/profile"]')
+    .click();
   await expect(page.getByLabel('Current title')).toHaveValue('Data analyst');
 });
 test('editing profile marks goal stale', async ({ page }) => {
   fakeBackend(page);
   await setup(page);
-  await page.getByRole('link', { name: 'Profile and goal' }).click();
+  await page
+    .getByRole('navigation', { name: 'Career steps' })
+    .locator('a[href="/app/career/profile"]')
+    .click();
   await page.getByLabel('Current title').fill('Principal analyst');
   await page.getByLabel('I confirm these facts are accurate').first().check();
   await page.getByRole('button', { name: 'Save professional facts' }).click();
   await expect(page.getByText('Professional facts saved.')).toBeVisible();
   await page.getByRole('link', { name: 'Back to career workspace' }).click();
-  await expect(page.getByText(/Needs review/)).toBeVisible();
+  await expect(
+    page
+      .locator('main')
+      .getByText(/Needs review/)
+      .first()
+  ).toBeVisible();
 });
 test('stale update keeps unsaved input until reload', async ({ page }) => {
   const backend = fakeBackend(page);

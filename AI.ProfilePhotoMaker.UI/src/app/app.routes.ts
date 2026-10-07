@@ -131,117 +131,112 @@ export const routes: Routes = [
       {
         path: 'career',
         canActivate: [careerWorkspaceGuard],
+        // One shell for every career page: shared header plus the step rail (career-shell-brief.md).
         loadComponent: () =>
-          import('./pages/career/career-home.component').then(m => m.CareerHomeComponent),
-        title: 'Career Workspace - AI Profile Photo Maker',
-      },
-      {
-        path: 'career/setup',
-        canActivate: [careerWorkspaceGuard],
-        loadComponent: () =>
-          import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
-        title: 'Set Up Your Career Workspace - AI Profile Photo Maker',
-      },
-      {
-        path: 'career/profile',
-        canActivate: [careerWorkspaceGuard],
-        loadComponent: () =>
-          import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
-        title: 'Career Profile - AI Profile Photo Maker',
-      },
-      {
-        path: 'career/import',
-        canActivate: [careerWorkspaceGuard],
-        loadComponent: () =>
-          import('./pages/career/career-import.component').then(m => m.CareerImportComponent),
-        title: 'Import Your Resume - AI Profile Photo Maker',
-      },
-      {
-        path: 'career/summary',
-        canActivate: [careerWorkspaceGuard],
-        loadComponent: () =>
-          import('./pages/career/career-summary.component').then(m => m.CareerSummaryComponent),
-        title: 'Profile Summary Draft - AI Profile Photo Maker',
-      },
-      {
-        path: 'career/occupation',
-        canActivate: [careerWorkspaceGuard],
-        loadComponent: () =>
-          import('./pages/career/career-occupation.component').then(
-            m => m.CareerOccupationComponent
-          ),
-        title: 'Confirm Your Occupation - AI Profile Photo Maker',
-      },
-      {
-        // The analytics view for this release is the market brief (national/local comparison);
-        // multi-market comparison arrives with #385.
-        path: 'career/analytics',
-        redirectTo: 'career/market',
-        pathMatch: 'full',
-      },
-      {
-        path: 'career/market',
-        canActivate: [careerWorkspaceGuard],
-        loadComponent: () =>
-          import('./pages/career/career-market.component').then(m => m.CareerMarketComponent),
-        title: 'Career Market Brief - AI Profile Photo Maker',
-      },
-      {
-        path: 'career/markets',
-        canActivate: [careerWorkspaceGuard],
-        loadComponent: () =>
-          import('./pages/career/career-markets.component').then(m => m.CareerMarketsComponent),
-        title: 'Compare U.S. Markets - AI Profile Photo Maker',
-      },
-      {
-        path: 'career/jobs',
-        canActivate: [careerWorkspaceGuard],
-        loadComponent: () =>
-          import('./pages/career/career-jobs.component').then(m => m.CareerJobsComponent),
-        title: 'Open Job Observations - AI Profile Photo Maker',
-      },
-      {
-        path: 'career/pay',
-        canActivate: [careerWorkspaceGuard],
-        loadComponent: () =>
-          import('./pages/career/career-pay.component').then(m => m.CareerPayComponent),
-        title: 'Comparable Pay Analysis - AI Profile Photo Maker',
-      },
-      {
-        path: 'career/roadmap',
-        canActivate: [careerWorkspaceGuard],
-        loadComponent: () =>
-          import('./pages/career/career-roadmap.component').then(m => m.CareerRoadmapComponent),
-        title: 'Career Roadmap - AI Profile Photo Maker',
-      },
-      {
-        path: 'career/resume',
-        canActivate: [careerWorkspaceGuard],
-        loadComponent: () =>
-          import('./pages/career/career-resume.component').then(m => m.CareerResumeComponent),
-        title: 'Targeted Resume - AI Profile Photo Maker',
-      },
-      {
-        path: 'career/summary-draft',
-        canActivate: [careerWorkspaceGuard],
-        data: { kind: 'summary' },
-        loadComponent: () =>
-          import('./pages/career/career-resume.component').then(m => m.CareerResumeComponent),
-        title: 'Professional Summary - AI Profile Photo Maker',
-      },
-      {
-        path: 'career/materials',
-        canActivate: [careerWorkspaceGuard],
-        loadComponent: () =>
-          import('./pages/career/career-materials.component').then(m => m.CareerMaterialsComponent),
-        title: 'Career Materials - AI Profile Photo Maker',
-      },
-      {
-        path: 'career/privacy',
-        canActivate: [careerWorkspaceGuard],
-        loadComponent: () =>
-          import('./pages/career/career-privacy.component').then(m => m.CareerPrivacyComponent),
-        title: 'Career Privacy - AI Profile Photo Maker',
+          import('./pages/career/career-shell.component').then(m => m.CareerShellComponent),
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('./pages/career/career-home.component').then(m => m.CareerHomeComponent),
+            title: 'Career Workspace - AI Profile Photo Maker',
+          },
+          {
+            path: 'setup',
+            loadComponent: () =>
+              import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
+            title: 'Set Up Your Career Workspace - AI Profile Photo Maker',
+          },
+          {
+            path: 'profile',
+            loadComponent: () =>
+              import('./pages/career/career-editor.component').then(m => m.CareerEditorComponent),
+            title: 'Career Profile - AI Profile Photo Maker',
+          },
+          {
+            path: 'import',
+            loadComponent: () =>
+              import('./pages/career/career-import.component').then(m => m.CareerImportComponent),
+            title: 'Import Your Resume - AI Profile Photo Maker',
+          },
+          {
+            path: 'summary',
+            loadComponent: () =>
+              import('./pages/career/career-summary.component').then(m => m.CareerSummaryComponent),
+            title: 'Profile Summary Draft - AI Profile Photo Maker',
+          },
+          {
+            path: 'occupation',
+            loadComponent: () =>
+              import('./pages/career/career-occupation.component').then(
+                m => m.CareerOccupationComponent
+              ),
+            title: 'Confirm Your Occupation - AI Profile Photo Maker',
+          },
+          {
+            // The analytics view for this release is the market brief (national/local comparison);
+            // multi-market comparison arrives with #385.
+            path: 'analytics',
+            redirectTo: 'market',
+            pathMatch: 'full',
+          },
+          {
+            path: 'market',
+            loadComponent: () =>
+              import('./pages/career/career-market.component').then(m => m.CareerMarketComponent),
+            title: 'Career Market Brief - AI Profile Photo Maker',
+          },
+          {
+            path: 'markets',
+            loadComponent: () =>
+              import('./pages/career/career-markets.component').then(m => m.CareerMarketsComponent),
+            title: 'Compare U.S. Markets - AI Profile Photo Maker',
+          },
+          {
+            path: 'jobs',
+            loadComponent: () =>
+              import('./pages/career/career-jobs.component').then(m => m.CareerJobsComponent),
+            title: 'Open Job Observations - AI Profile Photo Maker',
+          },
+          {
+            path: 'pay',
+            loadComponent: () =>
+              import('./pages/career/career-pay.component').then(m => m.CareerPayComponent),
+            title: 'Comparable Pay Analysis - AI Profile Photo Maker',
+          },
+          {
+            path: 'roadmap',
+            loadComponent: () =>
+              import('./pages/career/career-roadmap.component').then(m => m.CareerRoadmapComponent),
+            title: 'Career Roadmap - AI Profile Photo Maker',
+          },
+          {
+            path: 'resume',
+            loadComponent: () =>
+              import('./pages/career/career-resume.component').then(m => m.CareerResumeComponent),
+            title: 'Targeted Resume - AI Profile Photo Maker',
+          },
+          {
+            path: 'summary-draft',
+            data: { kind: 'summary' },
+            loadComponent: () =>
+              import('./pages/career/career-resume.component').then(m => m.CareerResumeComponent),
+            title: 'Professional Summary - AI Profile Photo Maker',
+          },
+          {
+            path: 'materials',
+            loadComponent: () =>
+              import('./pages/career/career-materials.component').then(m => m.CareerMaterialsComponent),
+            title: 'Career Materials - AI Profile Photo Maker',
+          },
+          {
+            path: 'privacy',
+            loadComponent: () =>
+              import('./pages/career/career-privacy.component').then(m => m.CareerPrivacyComponent),
+            title: 'Career Privacy - AI Profile Photo Maker',
+          },
+        ],
       },
       {
         path: 'settings',

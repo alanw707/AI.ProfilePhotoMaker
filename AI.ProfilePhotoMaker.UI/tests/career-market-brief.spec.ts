@@ -504,10 +504,11 @@ test('the career home links to the market brief', async ({ page }) => {
     'href',
     '/app/career/market'
   );
-  await expect(page.getByRole('link', { name: 'Market brief', exact: true })).toHaveAttribute(
-    'href',
-    '/app/career/market'
-  );
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Career steps' })
+      .getByRole('link', { name: /Market brief/ })
+  ).toHaveAttribute('href', '/app/career/market');
 });
 
 test('the analytics route opens the market brief', async ({ page }) => {
