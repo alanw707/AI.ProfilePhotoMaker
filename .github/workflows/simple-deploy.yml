@@ -682,6 +682,12 @@ jobs:
               "openAiApiKey": {
                 "value": "${{ secrets.OPENAI_API_KEY }}"
               },
+              "usaJobsApiKey": {
+                "value": "${{ secrets.USAJOBS_API_KEY }}"
+              },
+              "usaJobsEmail": {
+                "value": "${{ vars.USAJOBS_EMAIL }}"
+              },
               "postmarkServerToken": {
                 "value": "${{ secrets.EMAIL__POSTMARK_SERVER_TOKEN }}"
               },
