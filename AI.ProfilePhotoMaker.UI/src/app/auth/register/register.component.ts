@@ -158,6 +158,8 @@ export class RegisterComponent implements OnInit {
     return this.f['ethnicity'].invalid && this.f['ethnicity'].touched;
   }
 
+  readonly ageConfirmErrorId = 'register-age-confirmation-error';
+
   shouldShowAgeError(): boolean {
     return this.f['ageConfirmed'].invalid && this.f['ageConfirmed'].touched;
   }

@@ -76,4 +76,19 @@ describe('RegisterComponent intent parsing', () => {
     expect(warnSpy).toHaveBeenCalledWith('Failed to parse signup intent query param.');
     expect(intentTracking.storeIntent).not.toHaveBeenCalled();
   });
+
+  it('links the age checkbox to its error for assistive tech', async () => {
+    await configure(null);
+    const fixture = TestBed.createComponent(RegisterComponent);
+    fixture.detectChanges();
+    const box = fixture.nativeElement.querySelector('input[formcontrolname=ageConfirmed]') as HTMLInputElement;
+    expect(box.getAttribute('aria-invalid')).toBeNull();
+    fixture.componentInstance.f['ageConfirmed'].markAsTouched();
+    fixture.detectChanges();
+    expect(box.getAttribute('aria-invalid')).toBe('true');
+    const id = box.getAttribute('aria-describedby');
+    const err = id ? fixture.nativeElement.querySelector('#' + id) : null;
+    expect(err?.textContent).toContain('at least 13');
+    expect(err?.getAttribute('role')).toBe('alert');
+  });
 });

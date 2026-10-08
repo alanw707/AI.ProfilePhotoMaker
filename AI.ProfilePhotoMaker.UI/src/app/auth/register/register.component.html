@@ -9,14 +9,20 @@
     <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
       <div class="form-group age-confirm">
         <label class="checkbox-label">
-          <input type="checkbox" formControlName="ageConfirmed" aria-required="true" />
+          <input
+            type="checkbox"
+            formControlName="ageConfirmed"
+            aria-required="true"
+            [attr.aria-invalid]="shouldShowAgeError() ? 'true' : null"
+            [attr.aria-describedby]="shouldShowAgeError() ? ageConfirmErrorId : null"
+          />
           <span>
             I confirm that I am at least 13 years old and have read the
             <a routerLink="/legal/children-privacy">Children's Privacy Policy</a>.
             <span class="age-confirm-note">Required for email and Google sign-up.</span>
           </span>
         </label>
-        <div *ngIf="shouldShowAgeError()" class="invalid-feedback">
+        <div *ngIf="shouldShowAgeError()" class="invalid-feedback" role="alert" [id]="ageConfirmErrorId">
           You must confirm you are at least 13 years old to create an account.
         </div>
       </div>
