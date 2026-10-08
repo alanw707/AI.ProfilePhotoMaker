@@ -1,0 +1,1082 @@
+[
+ {
+  "route": "/",
+  "w": 1280,
+  "th": "light",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/",
+  "w": 390,
+  "th": "light",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/pricing",
+  "w": 1280,
+  "th": "light",
+  "final": "/pricing",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/pricing",
+  "w": 390,
+  "th": "light",
+  "final": "/pricing",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/how-it-works",
+  "w": 1280,
+  "th": "light",
+  "final": "/how-it-works",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/how-it-works",
+  "w": 390,
+  "th": "light",
+  "final": "/how-it-works",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/examples",
+  "w": 1280,
+  "th": "light",
+  "final": "/examples",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/examples",
+  "w": 390,
+  "th": "light",
+  "final": "/examples",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/reviews",
+  "w": 1280,
+  "th": "light",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/reviews",
+  "w": 390,
+  "th": "light",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/compare/aragon-ai",
+  "w": 1280,
+  "th": "light",
+  "final": "/compare/aragon-ai",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/compare/aragon-ai",
+  "w": 390,
+  "th": "light",
+  "final": "/compare/aragon-ai",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/linkedin-headshots",
+  "w": 1280,
+  "th": "light",
+  "final": "/linkedin-headshots",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/linkedin-headshots",
+  "w": 390,
+  "th": "light",
+  "final": "/linkedin-headshots",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/blog",
+  "w": 1280,
+  "th": "light",
+  "final": "/blog",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/blog",
+  "w": 390,
+  "th": "light",
+  "final": "/blog",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/legal/privacy",
+  "w": 1280,
+  "th": "light",
+  "final": "/legal/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/legal/privacy",
+  "w": 390,
+  "th": "light",
+  "final": "/legal/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/auth/login",
+  "w": 1280,
+  "th": "light",
+  "final": "/auth/login",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/auth/login",
+  "w": 390,
+  "th": "light",
+  "final": "/auth/login",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/auth/register",
+  "w": 1280,
+  "th": "light",
+  "final": "/auth/register",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/auth/register",
+  "w": 390,
+  "th": "light",
+  "final": "/auth/register",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/enhance",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/enhance",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/enhance",
+  "w": 390,
+  "th": "light",
+  "final": "/app/enhance",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/gallery",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/gallery",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/gallery",
+  "w": 390,
+  "th": "light",
+  "final": "/app/gallery",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/settings",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/settings",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/settings",
+  "w": 390,
+  "th": "light",
+  "final": "/app/settings",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/support",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/support",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/support",
+  "w": 390,
+  "th": "light",
+  "final": "/app/support",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/setup",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/setup",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/setup",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/setup",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/profile",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/profile",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/profile",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/profile",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/import",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/import",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/import",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/import",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/summary",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/summary",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/summary",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/summary",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/occupation",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/occupation",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/occupation",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/occupation",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/analytics",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/analytics",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/market",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/market",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/markets",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/markets",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/markets",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/markets",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/jobs",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/jobs",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/jobs",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/jobs",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/pay",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/pay",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/pay",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/pay",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/roadmap",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/roadmap",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/roadmap",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/roadmap",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/resume",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/resume",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/resume",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/resume",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/materials",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/materials",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/materials",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/materials",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/privacy",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/privacy",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/",
+  "w": 1280,
+  "th": "dark",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/",
+  "w": 390,
+  "th": "dark",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/pricing",
+  "w": 1280,
+  "th": "dark",
+  "final": "/pricing",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/pricing",
+  "w": 390,
+  "th": "dark",
+  "final": "/pricing",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/how-it-works",
+  "w": 1280,
+  "th": "dark",
+  "final": "/how-it-works",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/how-it-works",
+  "w": 390,
+  "th": "dark",
+  "final": "/how-it-works",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/examples",
+  "w": 1280,
+  "th": "dark",
+  "final": "/examples",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/examples",
+  "w": 390,
+  "th": "dark",
+  "final": "/examples",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/reviews",
+  "w": 1280,
+  "th": "dark",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/reviews",
+  "w": 390,
+  "th": "dark",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/compare/aragon-ai",
+  "w": 1280,
+  "th": "dark",
+  "final": "/compare/aragon-ai",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/compare/aragon-ai",
+  "w": 390,
+  "th": "dark",
+  "final": "/compare/aragon-ai",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/linkedin-headshots",
+  "w": 1280,
+  "th": "dark",
+  "final": "/linkedin-headshots",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/linkedin-headshots",
+  "w": 390,
+  "th": "dark",
+  "final": "/linkedin-headshots",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/blog",
+  "w": 1280,
+  "th": "dark",
+  "final": "/blog",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/blog",
+  "w": 390,
+  "th": "dark",
+  "final": "/blog",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/legal/privacy",
+  "w": 1280,
+  "th": "dark",
+  "final": "/legal/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/legal/privacy",
+  "w": 390,
+  "th": "dark",
+  "final": "/legal/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/auth/login",
+  "w": 1280,
+  "th": "dark",
+  "final": "/auth/login",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/auth/login",
+  "w": 390,
+  "th": "dark",
+  "final": "/auth/login",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/auth/register",
+  "w": 1280,
+  "th": "dark",
+  "final": "/auth/register",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/auth/register",
+  "w": 390,
+  "th": "dark",
+  "final": "/auth/register",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/enhance",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/enhance",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/enhance",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/enhance",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/gallery",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/gallery",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/gallery",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/gallery",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/settings",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/settings",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/settings",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/settings",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/support",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/support",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/support",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/support",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/setup",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/setup",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/setup",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/setup",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/profile",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/profile",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/profile",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/profile",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/import",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/import",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/import",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/import",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/summary",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/summary",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/summary",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/summary",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/occupation",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/occupation",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/occupation",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/occupation",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/analytics",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/analytics",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/market",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/market",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/markets",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/markets",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/markets",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/markets",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/jobs",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/jobs",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/jobs",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/jobs",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/pay",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/pay",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/pay",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/pay",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/roadmap",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/roadmap",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/roadmap",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/roadmap",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/resume",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/resume",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/resume",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/resume",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/materials",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/materials",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/materials",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/materials",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/privacy",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/privacy",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ }
+]

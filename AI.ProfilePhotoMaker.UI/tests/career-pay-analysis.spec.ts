@@ -356,7 +356,7 @@ test('direct reload, missing occupation and home link', async ({ page }) => {
 test('missing occupation links to confirmation', async ({ page }) => {
   await mock(page, { missing: true });
   await open(page);
-  await expect(page.getByText('Confirm your occupation first.')).toBeVisible();
+  await expect(page.getByText('This page uses your confirmed occupation.', { exact: false })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Confirm your occupation' })).toHaveAttribute(
     'href',
     '/app/career/occupation'

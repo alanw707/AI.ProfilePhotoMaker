@@ -65,7 +65,7 @@ const RUNNING = ['queued', 'running', 'working'];
           <h2 id="goal-heading" class="brief__label">Your goal</h2>
           @if (j.goal) {
             <p class="brief__goal" data-goal>
-              {{ j.goal.occupationTitle || 'Goal saved' }}
+              {{ j.goal.occupationTitle || j.goal.targetRole || 'Goal saved' }}
               @if (j.goal.location) {
                 <span class="brief__place">{{ j.goal.location }}</span>
               }

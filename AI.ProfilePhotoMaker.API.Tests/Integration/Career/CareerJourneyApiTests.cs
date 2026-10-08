@@ -48,6 +48,10 @@ public class CareerJourneyApiTests
 
         await CareerClient.ReadDataAsync(await user.PostGoalAsync(R.Goal()), 201);
         (await NextAsync(user)).Should().Be("confirm_occupation");
+        // Before an occupation is confirmed the home card names the user's own target role.
+        var unconfirmed = (await JourneyAsync(user)).GetProperty("goal");
+        unconfirmed.GetProperty("targetRole").GetString().Should().NotBeNullOrWhiteSpace();
+        unconfirmed.GetProperty("occupationTitle").ValueKind.Should().Be(JsonValueKind.Null);
 
         var match = await R.RunAsync(user, host, "occupation_match");
         (await user.SendAsync(HttpMethod.Post, $"/api/career/occupation-matches/{match.GetProperty("occupationMatchId").GetString()}/confirm",

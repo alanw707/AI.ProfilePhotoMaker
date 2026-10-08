@@ -2,7 +2,7 @@
   <div class="header-left">
     <h3>{{ title }}</h3>
     <div class="filter-controls">
-      <select class="filter-select" [value]="filterType" (change)="onFilterChange($event)">
+      <select class="filter-select" aria-label="Filter images" [value]="filterType" (change)="onFilterChange($event)">
         <option value="all">All Images</option>
         <option value="generated">Generated</option>
         <option value="original">Original</option>

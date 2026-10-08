@@ -1,0 +1,1807 @@
+[
+ {
+  "route": "/",
+  "w": 1280,
+  "th": "light",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "aria-prohibited-attr",
+    "impact": "serious",
+    "n": 6,
+    "t": [
+     ".testimonial-card:nth-child(1) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(2) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(3) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(4) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]"
+    ]
+   },
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 7,
+    "t": [
+     ".cta",
+     ".brand-mark > div[_ngcontent-ng-c2328735548=\"\"] > p",
+     ".brand-note",
+     ".footer-column[_ngcontent-ng-c2328735548=\"\"]:nth-child(1) > .column-title"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/",
+  "w": 390,
+  "th": "light",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "aria-prohibited-attr",
+    "impact": "serious",
+    "n": 6,
+    "t": [
+     ".testimonial-card:nth-child(1) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(2) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(3) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(4) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]"
+    ]
+   },
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 6,
+    "t": [
+     ".brand-mark > div[_ngcontent-ng-c2328735548=\"\"] > p",
+     ".brand-note",
+     ".footer-column[_ngcontent-ng-c2328735548=\"\"]:nth-child(1) > .column-title",
+     ".footer-column[_ngcontent-ng-c2328735548=\"\"]:nth-child(2) > .column-title"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/pricing",
+  "w": 1280,
+  "th": "light",
+  "final": "/pricing",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 3,
+    "t": [
+     ".cta",
+     ".text-center",
+     ".text-primary-600"
+    ]
+   },
+   {
+    "id": "link-in-text-block",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     ".text-primary-600"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/pricing",
+  "w": 390,
+  "th": "light",
+  "final": "/pricing",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 12,
+    "t": [
+     ".text-center",
+     ".text-primary-600",
+     ".credit-costs-info > h3",
+     ".cost-item[_ngcontent-ng-c530046342=\"\"]:nth-child(1) > .operation"
+    ]
+   },
+   {
+    "id": "link-in-text-block",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     ".text-primary-600"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/how-it-works",
+  "w": 1280,
+  "th": "light",
+  "final": "/how-it-works",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 13,
+    "t": [
+     ".cta",
+     ".highlight:nth-child(1) > .highlight-value",
+     ".highlight:nth-child(2) > .highlight-value",
+     ".highlight:nth-child(3) > .highlight-value"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/how-it-works",
+  "w": 390,
+  "th": "light",
+  "final": "/how-it-works",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 12,
+    "t": [
+     ".highlight:nth-child(1) > .highlight-value",
+     ".highlight:nth-child(2) > .highlight-value",
+     ".highlight:nth-child(3) > .highlight-value",
+     ".eyebrow"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/examples",
+  "w": 1280,
+  "th": "light",
+  "final": "/examples",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 10,
+    "t": [
+     ".cta",
+     ".eyebrow",
+     ".cta-row > .btn-primary.btn[href$=\"register\"]",
+     ".cta-card > .btn-primary.btn[href$=\"register\"]"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/examples",
+  "w": 390,
+  "th": "light",
+  "final": "/examples",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 9,
+    "t": [
+     ".eyebrow",
+     ".cta-row > .btn-primary.btn[href$=\"register\"]",
+     ".cta-card > .btn-primary.btn[href$=\"register\"]",
+     ".brand-mark > div[_ngcontent-ng-c2328735548=\"\"] > p"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/reviews",
+  "w": 1280,
+  "th": "light",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "aria-prohibited-attr",
+    "impact": "serious",
+    "n": 6,
+    "t": [
+     ".testimonial-card:nth-child(1) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(2) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(3) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(4) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]"
+    ]
+   },
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 7,
+    "t": [
+     ".cta",
+     ".brand-mark > div[_ngcontent-ng-c2328735548=\"\"] > p",
+     ".brand-note",
+     ".footer-column[_ngcontent-ng-c2328735548=\"\"]:nth-child(1) > .column-title"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/reviews",
+  "w": 390,
+  "th": "light",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "aria-prohibited-attr",
+    "impact": "serious",
+    "n": 6,
+    "t": [
+     ".testimonial-card:nth-child(1) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(2) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(3) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(4) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]"
+    ]
+   },
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 6,
+    "t": [
+     ".brand-mark > div[_ngcontent-ng-c2328735548=\"\"] > p",
+     ".brand-note",
+     ".footer-column[_ngcontent-ng-c2328735548=\"\"]:nth-child(1) > .column-title",
+     ".footer-column[_ngcontent-ng-c2328735548=\"\"]:nth-child(2) > .column-title"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/compare/aragon-ai",
+  "w": 1280,
+  "th": "light",
+  "final": "/compare/aragon-ai",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 10,
+    "t": [
+     ".cta",
+     ".eyebrow",
+     ".cta-row > .btn-primary.btn[href$=\"pricing\"]",
+     ".cta-card > .btn-primary.btn[href$=\"pricing\"]"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/compare/aragon-ai",
+  "w": 390,
+  "th": "light",
+  "final": "/compare/aragon-ai",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 9,
+    "t": [
+     ".eyebrow",
+     ".cta-row > .btn-primary.btn[href$=\"pricing\"]",
+     ".cta-card > .btn-primary.btn[href$=\"pricing\"]",
+     ".brand-mark > div[_ngcontent-ng-c2328735548=\"\"] > p"
+    ]
+   },
+   {
+    "id": "scrollable-region-focusable",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     ".table-wrapper"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/linkedin-headshots",
+  "w": 1280,
+  "th": "light",
+  "final": "/linkedin-headshots",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 13,
+    "t": [
+     ".cta",
+     ".highlight:nth-child(1) > .highlight-value",
+     ".highlight:nth-child(2) > .highlight-value",
+     ".highlight:nth-child(3) > .highlight-value"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/linkedin-headshots",
+  "w": 390,
+  "th": "light",
+  "final": "/linkedin-headshots",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 12,
+    "t": [
+     ".highlight:nth-child(1) > .highlight-value",
+     ".highlight:nth-child(2) > .highlight-value",
+     ".highlight:nth-child(3) > .highlight-value",
+     ".eyebrow"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/blog",
+  "w": 1280,
+  "th": "light",
+  "final": "/blog",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 7,
+    "t": [
+     ".cta",
+     ".brand-mark > div > p",
+     ".brand-note",
+     ".footer-column:nth-child(1) > .column-title"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/blog",
+  "w": 390,
+  "th": "light",
+  "final": "/blog",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 6,
+    "t": [
+     ".brand-mark > div > p",
+     ".brand-note",
+     ".footer-column:nth-child(1) > .column-title",
+     ".footer-column:nth-child(2) > .column-title"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/legal/privacy",
+  "w": 1280,
+  "th": "light",
+  "final": "/legal/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 6,
+    "t": [
+     ".brand-mark > div > p",
+     ".brand-note",
+     ".footer-column:nth-child(1) > .column-title",
+     ".footer-column:nth-child(2) > .column-title"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/legal/privacy",
+  "w": 390,
+  "th": "light",
+  "final": "/legal/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 6,
+    "t": [
+     ".brand-mark > div > p",
+     ".brand-note",
+     ".footer-column:nth-child(1) > .column-title",
+     ".footer-column:nth-child(2) > .column-title"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/auth/login",
+  "w": 1280,
+  "th": "light",
+  "final": "/auth/login",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     "a",
+     ".btn-link"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/auth/login",
+  "w": 390,
+  "th": "light",
+  "final": "/auth/login",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     "a",
+     ".btn-link"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/auth/register",
+  "w": 1280,
+  "th": "light",
+  "final": "/auth/register",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     "a",
+     ".btn-link"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/auth/register",
+  "w": 390,
+  "th": "light",
+  "final": "/auth/register",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     "a",
+     ".btn-link"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/enhance",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/enhance",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "label",
+    "impact": "critical",
+    "n": 1,
+    "t": [
+     "input"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/enhance",
+  "w": 390,
+  "th": "light",
+  "final": "/app/enhance",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "label",
+    "impact": "critical",
+    "n": 1,
+    "t": [
+     "input"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/gallery",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/gallery",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     ".btn-primary"
+    ]
+   },
+   {
+    "id": "select-name",
+    "impact": "critical",
+    "n": 1,
+    "t": [
+     "select"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/gallery",
+  "w": 390,
+  "th": "light",
+  "final": "/app/gallery",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     ".btn-primary"
+    ]
+   },
+   {
+    "id": "select-name",
+    "impact": "critical",
+    "n": 1,
+    "t": [
+     "select"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/settings",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/settings",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 5,
+    "t": [
+     ".danger-header > h3",
+     ".danger-item:nth-child(1) > .danger-info > .warning-badges > .warning-badge:nth-child(1)",
+     ".danger-item:nth-child(1) > .danger-info > .warning-badges > .warning-badge:nth-child(2)",
+     ".danger-item:nth-child(2) > .danger-info > .warning-badges > .warning-badge:nth-child(1)"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/settings",
+  "w": 390,
+  "th": "light",
+  "final": "/app/settings",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 5,
+    "t": [
+     ".danger-header > h3",
+     ".danger-item:nth-child(1) > .danger-info > .warning-badges > .warning-badge:nth-child(1)",
+     ".danger-item:nth-child(1) > .danger-info > .warning-badges > .warning-badge:nth-child(2)",
+     ".danger-item:nth-child(2) > .danger-info > .warning-badges > .warning-badge:nth-child(1)"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/support",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/support",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 3,
+    "t": [
+     ".breadcrumb-link[routerlink=\"/app/enhance\"][href$=\"enhance\"]",
+     ".breadcrumb-link[routerlink=\"/app/settings\"][href$=\"settings\"]",
+     ".btn-primary > span"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/support",
+  "w": 390,
+  "th": "light",
+  "final": "/app/support",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 3,
+    "t": [
+     ".breadcrumb-link[routerlink=\"/app/enhance\"][href$=\"enhance\"]",
+     ".breadcrumb-link[routerlink=\"/app/settings\"][href$=\"settings\"]",
+     ".btn-primary > span"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/career",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/setup",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/setup",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/setup",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/setup",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/profile",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/profile",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/profile",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/profile",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/import",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/import",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/import",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/import",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/summary",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/summary",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/summary",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/summary",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/occupation",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/occupation",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/occupation",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/occupation",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/analytics",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/analytics",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/market",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/market",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/markets",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/markets",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/markets",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/markets",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/jobs",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/jobs",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/jobs",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/jobs",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/pay",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/pay",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/pay",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/pay",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/roadmap",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/roadmap",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/roadmap",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/roadmap",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/resume",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/resume",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/resume",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/resume",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/materials",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/materials",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/materials",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/materials",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/privacy",
+  "w": 1280,
+  "th": "light",
+  "final": "/app/career/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/privacy",
+  "w": 390,
+  "th": "light",
+  "final": "/app/career/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/",
+  "w": 1280,
+  "th": "dark",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "aria-prohibited-attr",
+    "impact": "serious",
+    "n": 6,
+    "t": [
+     ".testimonial-card:nth-child(1) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(2) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(3) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(4) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]"
+    ]
+   },
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     ".cta"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/",
+  "w": 390,
+  "th": "dark",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "aria-prohibited-attr",
+    "impact": "serious",
+    "n": 6,
+    "t": [
+     ".testimonial-card:nth-child(1) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(2) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(3) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(4) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/pricing",
+  "w": 1280,
+  "th": "dark",
+  "final": "/pricing",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     ".cta"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/pricing",
+  "w": 390,
+  "th": "dark",
+  "final": "/pricing",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/how-it-works",
+  "w": 1280,
+  "th": "dark",
+  "final": "/how-it-works",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 3,
+    "t": [
+     ".cta",
+     ".cta-row > .btn-primary.btn[href$=\"pricing\"]",
+     ".cta-card > .btn-primary.btn[href$=\"pricing\"]"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/how-it-works",
+  "w": 390,
+  "th": "dark",
+  "final": "/how-it-works",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     ".cta-row > .btn-primary.btn[href$=\"pricing\"]",
+     ".cta-card > .btn-primary.btn[href$=\"pricing\"]"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/examples",
+  "w": 1280,
+  "th": "dark",
+  "final": "/examples",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 3,
+    "t": [
+     ".cta",
+     ".cta-row > .btn-primary.btn[href$=\"register\"]",
+     ".cta-card > .btn-primary.btn[href$=\"register\"]"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/examples",
+  "w": 390,
+  "th": "dark",
+  "final": "/examples",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     ".cta-row > .btn-primary.btn[href$=\"register\"]",
+     ".cta-card > .btn-primary.btn[href$=\"register\"]"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/reviews",
+  "w": 1280,
+  "th": "dark",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "aria-prohibited-attr",
+    "impact": "serious",
+    "n": 6,
+    "t": [
+     ".testimonial-card:nth-child(1) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(2) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(3) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(4) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]"
+    ]
+   },
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     ".cta"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/reviews",
+  "w": 390,
+  "th": "dark",
+  "final": "/",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "aria-prohibited-attr",
+    "impact": "serious",
+    "n": 6,
+    "t": [
+     ".testimonial-card:nth-child(1) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(2) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(3) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]",
+     ".testimonial-card:nth-child(4) > .testimonial-stars[aria-label=\"5 out of 5 stars\"]"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/compare/aragon-ai",
+  "w": 1280,
+  "th": "dark",
+  "final": "/compare/aragon-ai",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 3,
+    "t": [
+     ".cta",
+     ".cta-row > .btn-primary.btn[href$=\"pricing\"]",
+     ".cta-card > .btn-primary.btn[href$=\"pricing\"]"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/compare/aragon-ai",
+  "w": 390,
+  "th": "dark",
+  "final": "/compare/aragon-ai",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     ".cta-row > .btn-primary.btn[href$=\"pricing\"]",
+     ".cta-card > .btn-primary.btn[href$=\"pricing\"]"
+    ]
+   },
+   {
+    "id": "scrollable-region-focusable",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     ".table-wrapper"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/linkedin-headshots",
+  "w": 1280,
+  "th": "dark",
+  "final": "/linkedin-headshots",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 3,
+    "t": [
+     ".cta",
+     ".cta-row > .btn-primary.btn[href$=\"register\"]",
+     ".cta-card > .btn-primary.btn[href$=\"register\"]"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/linkedin-headshots",
+  "w": 390,
+  "th": "dark",
+  "final": "/linkedin-headshots",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     ".cta-row > .btn-primary.btn[href$=\"register\"]",
+     ".cta-card > .btn-primary.btn[href$=\"register\"]"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/blog",
+  "w": 1280,
+  "th": "dark",
+  "final": "/blog",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     ".cta"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/blog",
+  "w": 390,
+  "th": "dark",
+  "final": "/blog",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/legal/privacy",
+  "w": 1280,
+  "th": "dark",
+  "final": "/legal/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/legal/privacy",
+  "w": 390,
+  "th": "dark",
+  "final": "/legal/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/auth/login",
+  "w": 1280,
+  "th": "dark",
+  "final": "/auth/login",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     "#email",
+     "#password"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/auth/login",
+  "w": 390,
+  "th": "dark",
+  "final": "/auth/login",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     "#email",
+     "#password"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/auth/register",
+  "w": 1280,
+  "th": "dark",
+  "final": "/auth/register",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/auth/register",
+  "w": 390,
+  "th": "dark",
+  "final": "/auth/register",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/enhance",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/enhance",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "label",
+    "impact": "critical",
+    "n": 1,
+    "t": [
+     "input"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/enhance",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/enhance",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "label",
+    "impact": "critical",
+    "n": 1,
+    "t": [
+     "input"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/gallery",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/gallery",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     ".btn-primary"
+    ]
+   },
+   {
+    "id": "select-name",
+    "impact": "critical",
+    "n": 1,
+    "t": [
+     "select"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/gallery",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/gallery",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     ".btn-primary"
+    ]
+   },
+   {
+    "id": "select-name",
+    "impact": "critical",
+    "n": 1,
+    "t": [
+     "select"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/settings",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/settings",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     ".danger-item:nth-child(1) > .btn-danger.btn",
+     ".danger-item:nth-child(2) > .btn-danger.btn"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/settings",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/settings",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     ".danger-item:nth-child(1) > .btn-danger.btn",
+     ".danger-item:nth-child(2) > .btn-danger.btn"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/support",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/support",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     "#message",
+     ".btn-primary > span"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/support",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/support",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 2,
+    "t": [
+     "#message",
+     ".btn-primary > span"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/career",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/setup",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/setup",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/setup",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/setup",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/profile",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/profile",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/profile",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/profile",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/import",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/import",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/import",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/import",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/summary",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/summary",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/summary",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/summary",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/occupation",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/occupation",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/occupation",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/occupation",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/analytics",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/analytics",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/market",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/market",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/market",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/markets",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/markets",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/markets",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/markets",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/jobs",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/jobs",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     "#job-area"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/career/jobs",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/jobs",
+  "over": false,
+  "s5xx": [],
+  "axe": [
+   {
+    "id": "color-contrast",
+    "impact": "serious",
+    "n": 1,
+    "t": [
+     "#job-area"
+    ]
+   }
+  ]
+ },
+ {
+  "route": "/app/career/pay",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/pay",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/pay",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/pay",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/roadmap",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/roadmap",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/roadmap",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/roadmap",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/resume",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/resume",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/resume",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/resume",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/materials",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/materials",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/materials",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/materials",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/privacy",
+  "w": 1280,
+  "th": "dark",
+  "final": "/app/career/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ },
+ {
+  "route": "/app/career/privacy",
+  "w": 390,
+  "th": "dark",
+  "final": "/app/career/privacy",
+  "over": false,
+  "s5xx": [],
+  "axe": []
+ }
+]

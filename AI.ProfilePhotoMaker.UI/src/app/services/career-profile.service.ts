@@ -916,6 +916,7 @@ export interface CareerJourneyDto {
     version: number;
     occupationCode?: string | null;
     occupationTitle?: string | null;
+    targetRole?: string | null;
     location?: string | null;
   } | null;
   nextAction: { key: string; route?: string | null };

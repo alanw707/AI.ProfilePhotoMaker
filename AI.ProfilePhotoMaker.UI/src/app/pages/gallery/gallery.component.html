@@ -39,7 +39,7 @@
       </section>
 
       <!-- Photo Workspace Component -->
-      <section class="gallery-section" *ngIf="!isLoading" [class.downloading]="isDownloading">
+      <section class="gallery-section" *ngIf="!isLoading && galleryImages.length > 0" [class.downloading]="isDownloading">
         <app-photo-gallery
           #photoGallery
           [images]="galleryImages"

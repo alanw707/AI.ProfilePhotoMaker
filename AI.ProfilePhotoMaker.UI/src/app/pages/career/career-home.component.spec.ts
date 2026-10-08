@@ -64,6 +64,20 @@ describe('CareerHomeComponent', () => {
     expect(el.textContent).toContain('not set a goal');
     expect(el.querySelector('[data-next]')?.getAttribute('href')).toBe('/app/career/setup');
   });
+  it('names the target role before an occupation is confirmed', () => {
+    const el = render({
+      goal: {
+        version: 1,
+        occupationTitle: null,
+        targetRole: 'Senior data analyst',
+        location: 'Seattle, WA',
+      },
+      nextAction: { key: 'confirm_occupation' },
+    });
+    const goal = el.querySelector('[data-goal]');
+    expect(goal?.firstChild?.textContent?.trim()).toBe('Senior data analyst');
+    expect(el.textContent).not.toContain('Goal saved');
+  });
   it('renders nothing for an unknown action key', () => {
     expect(
       render({ nextAction: { key: 'javascript:alert(1)' } }).querySelector('[data-next]')

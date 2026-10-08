@@ -67,7 +67,7 @@
 
       &:focus
         outline: none
-        border-color: var(--accent-primary)
+        border-color: var(--link-color)
         box-shadow: 0 0 0 3px rgba(79, 209, 199, 0.12)
 
       &.is-invalid
@@ -126,10 +126,15 @@
       font-size: 13px
 
       input
-        margin-top: 3px
+        margin-top: 1px
+        width: 20px
+        height: 20px
+        flex: 0 0 20px
+        accent-color: var(--accent-text, #115e59)
+        cursor: pointer
 
       a
-        color: var(--accent-primary)
+        color: var(--link-color)
         text-decoration: underline
 
       .age-confirm-note
@@ -225,7 +230,7 @@
   .btn-link
     background: none
     border: none
-    color: #667eea
+    color: var(--link-color)
     cursor: pointer
     text-decoration: underline
     font-size: 14px

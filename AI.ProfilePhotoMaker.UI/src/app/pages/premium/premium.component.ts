@@ -69,9 +69,9 @@ import { NavigationService } from '../../services/navigation.service';
           <!-- Outcome Packages Section -->
           <section id="packages-section" class="packages-section">
             <div class="content-container">
-              <p class="text-center text-sm text-gray-600 mb-6">
+              <p class="text-center text-sm mb-6 refund-note">
                 14-day satisfaction guarantee —
-                <a routerLink="/legal/refund-policy" class="text-primary-600 hover:underline"
+                <a routerLink="/legal/refund-policy" class="refund-link"
                   >see Refund Policy</a
                 >
               </p>

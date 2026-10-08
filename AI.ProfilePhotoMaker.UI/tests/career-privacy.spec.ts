@@ -121,7 +121,7 @@ test('two distinct scopes; no request until DELETE is typed and confirmed', asyn
   await expect(raw).toBeVisible();
   await expect(all).toBeVisible();
   await expect(page.locator('[data-deletion]')).toContainText('photos, purchases and billing');
-  await expect(page.getByRole('link', { name: 'account settings' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Delete your whole account in account settings.' })).toHaveAttribute(
     'href',
     '/app/settings'
   );

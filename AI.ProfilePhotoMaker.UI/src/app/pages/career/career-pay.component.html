@@ -3,13 +3,13 @@
     <p><a routerLink="/app/career">Back to career workspace</a></p>
     <h1>Comparable pay analysis</h1>
     <p>
-      Published occupational wages for your confirmed occupation, and - only when a qualified source is available -
-      advertised pay from a real cohort.
+      See published wages for your confirmed occupation. When a qualified source is available, we also show advertised
+      pay from real job postings.
     </p>
     @if (occupationMissing()) {
       <div class="caution" role="status" data-occupation-required>
-        <p>Confirm your occupation first.</p>
-        <a routerLink="/app/career/occupation">Confirm your occupation</a>
+        <p>This page uses your confirmed occupation. Confirm it first, then come back here.</p>
+        <a class="primary" routerLink="/app/career/occupation">Confirm your occupation</a>
       </div>
     }
     @if (error()) {

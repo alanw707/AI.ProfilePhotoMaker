@@ -31,16 +31,16 @@
 @mixin btn-primary
   @include btn-base
   background: var(--primary)
-  color: #ffffff
+  color: var(--on-primary)
   border: 1px solid var(--primary)
   box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18)
 
   &:hover:not(:disabled)
     transform: translateY(-1px)
     box-shadow: 0 10px 18px rgba(15, 23, 42, 0.22)
-    background: var(--primary-dark)
-    border-color: var(--primary-dark)
-    color: #ffffff
+    background: var(--primary-hover)
+    border-color: var(--primary-hover)
+    color: var(--on-primary)
 
   &:active:not(:disabled)
     transform: translateY(0)

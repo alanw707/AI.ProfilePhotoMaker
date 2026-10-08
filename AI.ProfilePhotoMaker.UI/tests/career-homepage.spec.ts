@@ -89,24 +89,49 @@ for (const [w, h] of [
   [390, 844],
   [320, 640],
 ]) {
-  test(`axe and no overflow at ${w}`, async ({ page }) => {
-    test.skip(!existsSync(AXE_PATH), 'axe-core not installed');
-    await page.setViewportSize({ width: w, height: h });
-    await open(page, true);
-    await page.addScriptTag({ path: AXE_PATH });
-    const result = await page.evaluate(() =>
-      (window as any).axe.run('#career-entry', {
-        runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] },
-      })
-    );
-    expect(
-      result.violations.map((v: any) => [v.id, v.nodes.map((n: any) => n.target.join(' '))])
-    ).toEqual([]);
-    if (w === 320)
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-        true
+  for (const theme of ['light', 'dark'])
+    test(`axe, contrast and no overflow at ${w} ${theme}`, async ({ page }) => {
+      test.skip(!existsSync(AXE_PATH), 'axe-core not installed');
+      await page.setViewportSize({ width: w, height: h });
+      await page.addInitScript(t => localStorage.setItem('theme', t), theme);
+      await open(page, true);
+      await page.locator('#career-entry').scrollIntoViewIfNeeded();
+      // Regression: the section once had no styles and inherited the hero's white text on a light background.
+      const ratio = await page.evaluate(() => {
+        const rgb = (c: string) => (c.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+        const lum = (c: string) => {
+          const [r, g, b] = rgb(c).map(v => {
+            v /= 255;
+            return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        const section = document.querySelector('#career-entry') as HTMLElement;
+        const bg = lum(getComputedStyle(section).backgroundColor);
+        return ['h2', 'p', 'li', '[data-career-photos]'].map(sel => {
+          const el = section.querySelector(sel) as HTMLElement;
+          const [a, b] = [lum(getComputedStyle(el).color), bg].sort((x, y) => y - x);
+          return Number(((a + 0.05) / (b + 0.05)).toFixed(2));
+        });
+      });
+      for (const r of ratio) expect(r).toBeGreaterThanOrEqual(4.5);
+      await page.addScriptTag({ path: AXE_PATH });
+      const result = await page.evaluate(() =>
+        (window as any).axe.run('#career-entry', {
+          runOnly: {
+            type: 'tag',
+            values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'],
+          },
+        })
       );
-  });
+      expect(
+        result.violations.map((v: any) => [v.id, v.nodes.map((n: any) => n.target.join(' '))])
+      ).toEqual([]);
+      if (w === 320)
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+          true
+        );
+    });
 }
 
 test('flag-on 404 page does not show the career entry', async ({ page }) => {
