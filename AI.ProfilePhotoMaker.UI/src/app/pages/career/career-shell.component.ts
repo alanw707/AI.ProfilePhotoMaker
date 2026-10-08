@@ -76,6 +76,8 @@ const STEPS: StepDef[] = [
   },
 ];
 
+const OCCUPATION = STEPS.findIndex(s => s.id === 'occupation');
+
 export const CAREER_MORE_PAGES: { label: string; path: string }[] = [
   { label: 'Import from a resume', path: 'import' },
   { label: 'Profile summary', path: 'summary' },
@@ -123,7 +125,11 @@ export function careerSteps(j: CareerJourneyDto | null): { steps: CareerStep[]; 
       path: ROOT + path,
       fragment,
       state,
-      status: STATUS[state],
+      // Steps after Occupation cannot start until one is confirmed; say so in the rail.
+      status:
+        state === 'upcoming' && i > OCCUPATION && j?.goal && !j.goal.occupationCode
+          ? 'Needs occupation'
+          : STATUS[state],
     };
   });
 

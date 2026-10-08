@@ -33,6 +33,24 @@ describe('careerSteps', () => {
     ]);
     expect(s.summary).toBe('Step 5 of 7: Pay analysis');
   });
+  it('labels steps that need a confirmed occupation', () => {
+    const s = careerSteps(
+      journey({
+        goal: { version: 1, occupationCode: null, occupationTitle: null },
+        nextAction: { key: 'confirm_occupation' },
+      })
+    );
+    expect(s.steps.map(x => x.status)).toEqual([
+      'Done',
+      'Done',
+      'Next',
+      'Needs occupation',
+      'Needs occupation',
+      'Needs occupation',
+      'Needs occupation',
+    ]);
+    expect(careerSteps(journey()).steps[5].status).toBe('');
+  });
   it('treats "none" as every step done', () => {
     const s = careerSteps(journey({ nextAction: { key: 'none' } }));
     expect(s.steps.every(x => x.state === 'done')).toBeTrue();
