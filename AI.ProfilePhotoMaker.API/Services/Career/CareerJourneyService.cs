@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AI.ProfilePhotoMaker.API.Services.Career;
 
 public sealed record JourneyProfileDto(int Version, bool Confirmed);
-public sealed record JourneyGoalDto(int Version, string? OccupationCode, string? OccupationTitle, string? Location);
+public sealed record JourneyGoalDto(int Version, string? OccupationCode, string? OccupationTitle, string? Location, string? TargetRole = null);
 public sealed record JourneyNextActionDto(string Key, string Route);
 public sealed record JourneyLatestResultDto(string Kind, Guid Id, int? Version, DateTime CreatedAt);
 public sealed record JourneyActiveRunDto(Guid Id, string Task, string Status, DateTime StartedAt);
@@ -113,7 +113,7 @@ public sealed class CareerJourneyService : ICareerJourneyService
 
         return CareerOutcome<CareerJourneyDto>.Ok(new CareerJourneyDto(
             profileVersion == null ? null : new JourneyProfileDto(profileVersion.Value, true),
-            goal == null ? null : new JourneyGoalDto(goal.VersionNumber, goal.OccupationCode, goal.OccupationTitle, goal.TargetLocation),
+            goal == null ? null : new JourneyGoalDto(goal.VersionNumber, goal.OccupationCode, goal.OccupationTitle, goal.TargetLocation, goal.TargetRole),
             next,
             results.OrderByDescending(r => r.CreatedAt).FirstOrDefault(),
             runs.Select(r => new JourneyActiveRunDto(r.Id, r.Task, r.Status == CareerRunStatus.Failed ? "failed" : r.Status == CareerRunStatus.Queued ? "queued" : "running",

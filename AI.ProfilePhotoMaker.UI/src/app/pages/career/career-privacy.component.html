@@ -37,8 +37,8 @@
           <ul aria-labelledby="processors-heading" data-processors>
             @for (p of retention()!.processors; track p.name) {
               <li>
-                <strong>{{ p.name }}</strong>
-                : {{ p.purpose }}
+                <strong>{{ p.name }}:</strong>
+                {{ p.purpose }}
               </li>
             }
           </ul>
@@ -94,9 +94,8 @@
         </div>
       </fieldset>
       <p class="muted">
-        Your photos, purchases and billing records are not affected. To delete your account, use
-        <a routerLink="/app/settings">account settings</a>
-        .
+        Your photos, purchases and billing records are not affected.
+        <a routerLink="/app/settings">Delete your whole account in account settings.</a>
       </p>
       <button type="button" class="danger" (click)="ask()" [disabled]="!scope() || busy()">Delete…</button>
 
