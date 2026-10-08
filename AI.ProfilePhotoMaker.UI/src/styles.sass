@@ -293,11 +293,8 @@ h2
     margin: 32px 0 16px
     color: var(--text-primary)
     padding-bottom: 8px
-    border-bottom: 2px solid transparent
-    background: linear-gradient(var(--card-bg), var(--card-bg)) padding-box, var(--accent-gradient-1) border-box
-    background-size: 100% 100%, 30% 2px
-    background-position: 0 0, 0 100%
-    background-repeat: no-repeat
+    // Underline only: a solid fill here painted a band over the translucent card.
+    background: var(--accent-gradient-1) 0 100% / 30% 2px no-repeat
 
   h3
     font-size: 1.2rem
