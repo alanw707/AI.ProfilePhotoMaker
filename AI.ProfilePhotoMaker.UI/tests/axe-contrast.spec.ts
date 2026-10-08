@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, Page } from '@playwright/test';
 
-// CI contrast gate: axe color-contrast on public routes in both themes and both widths.
+// CI contrast gate: axe color-contrast on public and key signed-in routes in both themes and both widths.
 // Every API call is mocked so this runs against `ng serve` alone, with no backend.
 const ROUTES = [
   '/',
@@ -80,6 +80,75 @@ for (const theme of ['light', 'dark'] as const) {
           await page.waitForTimeout(40);
         }
         await page.waitForTimeout(600);
+        const result = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
+        for (const v of result.violations)
+          for (const n of v.nodes) failures.push(`${route} ${n.target.join(' ')}`);
+      }
+      expect(failures).toEqual([]);
+    });
+  }
+}
+
+// Key signed-in routes: the e2e auth bypass (non-production builds only) plus a mocked
+// signed-in API, with the career workspace flag on so its guard admits the pages.
+const APP_ROUTES = [
+  '/app/enhance',
+  '/app/gallery',
+  '/app/settings',
+  '/app/career',
+  '/app/career/setup',
+  '/app/career/profile',
+  '/app/career/materials',
+  '/app/career/privacy',
+];
+
+async function mockSignedInApi(page: Page) {
+  await page.route('**/*', route => {
+    const host = new URL(route.request().url()).hostname;
+    return host === 'localhost' || host === '127.0.0.1' ? route.continue() : route.abort();
+  });
+  await page.route('**/api/**', route => {
+    const url = new URL(route.request().url()).pathname;
+    const responses: Record<string, unknown> = {
+      '/config/client': { features: { careerWorkspace: true } },
+      '/auth/account-status': { emailConfirmed: true },
+      '/auth/user-roles': [],
+      '/credit/status': { credits: 3, lastCreditReset: '2026-01-01', nextResetDate: '2026-02-01' },
+      '/profile': { firstName: 'Test', lastName: 'User', email: 'test@example.com' },
+      '/image/images': { images: [], totalImages: 0 },
+      '/profilephotoworkflow/packages': PACKAGES,
+    };
+    const key = Object.keys(responses).find(k => url.endsWith(k));
+    return route.fulfill({
+      json: {
+        success: true,
+        isAuthenticated: true,
+        data: key ? responses[key] : null,
+        error: null,
+      },
+    });
+  });
+}
+
+for (const theme of ['light', 'dark'] as const) {
+  for (const width of [1280, 390]) {
+    test(`no color-contrast violations on signed-in app routes (${theme}, ${width})`, async ({
+      page,
+    }) => {
+      test.setTimeout(180_000);
+      await mockSignedInApi(page);
+      await page.addInitScript(t => {
+        localStorage.setItem('theme', t);
+        localStorage.setItem('e2eAuthBypass', 'true');
+      }, theme);
+      await page.setViewportSize({ width, height: 900 });
+      const failures: string[] = [];
+      for (const route of APP_ROUTES) {
+        await page.goto(route);
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(600);
+        // Guard against silently measuring a redirect (e.g. a guard bouncing to /auth/login).
+        expect(new URL(page.url()).pathname, `stayed on ${route}`).toBe(route);
         const result = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
         for (const v of result.violations)
           for (const n of v.nodes) failures.push(`${route} ${n.target.join(' ')}`);
