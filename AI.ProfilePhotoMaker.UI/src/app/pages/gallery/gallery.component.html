@@ -52,8 +52,19 @@
           (bulkDownload)="onBulkDownload($event)"></app-photo-gallery>
       </section>
 
+      <!-- Load error -->
+      <section class="empty-section" *ngIf="!isLoading && loadFailed && galleryImages.length === 0">
+        <div class="empty-state" role="alert" data-gallery-load-error>
+          <h3>We couldn't load your photos</h3>
+          <p>Your photos are safe. Check your connection and try again.</p>
+          <div class="empty-actions">
+            <button class="btn btn-primary" type="button" (click)="loadImages(true)">Try again</button>
+          </div>
+        </div>
+      </section>
+
       <!-- Empty State -->
-      <section class="empty-section" *ngIf="!isLoading && galleryImages.length === 0">
+      <section class="empty-section" *ngIf="!isLoading && !loadFailed && galleryImages.length === 0">
         <div class="empty-state">
           <div class="empty-icon">🖼️</div>
           <h3>No Photos Yet</h3>
