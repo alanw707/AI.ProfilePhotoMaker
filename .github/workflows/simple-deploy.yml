@@ -30,7 +30,7 @@ env:
   # Audience 'Allowlist' admits only the emails in the CAREER_WORKSPACE_ALLOWED_EMAILS
   # repository variable (kept out of git); 'Everyone' opens career to all signed-in users.
   CAREER_WORKSPACE_ENABLED: 'true'
-  CAREER_WORKSPACE_AUDIENCE: 'Allowlist'
+  CAREER_WORKSPACE_AUDIENCE: 'Everyone'
   CAREER_WORKSPACE_ALLOWED_EMAILS: ${{ vars.CAREER_WORKSPACE_ALLOWED_EMAILS }}
   # Career text model (ADR 0009): pinned snapshot and its published USD price per 1M tokens.
   CAREER_AGENT_MODEL: 'gpt-5-mini-2025-08-07'
