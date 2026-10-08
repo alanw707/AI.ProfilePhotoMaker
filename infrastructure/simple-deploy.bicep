@@ -65,6 +65,13 @@ param careerSettings object = {
 }
 
 @secure()
+@description('USAJOBS API key for career job observations (ADR 0015)')
+param usaJobsApiKey string
+
+@description('Email registered with USAJOBS; sent as the User-Agent')
+param usaJobsEmail string
+
+@secure()
 @description('OpenAI API key for DALL-E 3 image generation')
 param openAiApiKey string
 
@@ -408,6 +415,10 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
           value: stripeWebhookSecret
         }
         {
+          name: 'usajobs-api-key'
+          value: usaJobsApiKey
+        }
+        {
           name: 'openai-api-key'
           keyVaultUrl: '${keyVault.properties.vaultUri}secrets/OpenAiApiKey'
           identity: backendUserIdentity.id
@@ -551,6 +562,14 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'Features__CareerWorkspaceAllowedEmails'
               value: careerSettings.allowedEmails
+            }
+            {
+              name: 'USAJobs__ApiKey'
+              secretRef: 'usajobs-api-key'
+            }
+            {
+              name: 'USAJobs__Email'
+              value: usaJobsEmail
             }
             {
               name: 'Career__Agent__Model'
