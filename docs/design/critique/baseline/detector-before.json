@@ -1,0 +1,622 @@
+[
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/career/career-materials.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/career/career-materials.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "side-tab",
+  "name": "Side-tab accent border",
+  "description": "Thick colored border on one side of a card \u2014 the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/career/career.scss",
+  "line": 586,
+  "snippet": "border-left: 3px solid #8d7040"
+ },
+ {
+  "antipattern": "side-tab",
+  "name": "Side-tab accent border",
+  "description": "Thick colored border on one side of a card \u2014 the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/career/career.scss",
+  "line": 589,
+  "snippet": "border-left: 3px solid #557487"
+ },
+ {
+  "antipattern": "border-accent-on-rounded",
+  "name": "Border accent on rounded element",
+  "description": "Thick accent border on a rounded card \u2014 the border clashes with the rounded corners. Remove the border or the border-radius.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/gallery/gallery.component.sass",
+  "line": 52,
+  "snippet": "border-top: 4px solid"
+ },
+ {
+  "antipattern": "overused-font",
+  "name": "Overused font",
+  "description": "Inter, Roboto, Fraunces, Geist, Plus Jakarta Sans, and Space Grotesk are used on so many sites they no longer feel distinctive. Each new wave of AI-generated UIs converges on the same handful of faces. Choose a face that gives your interface personality.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/gallery/gallery.component.sass",
+  "line": 5,
+  "snippet": "font-family: 'Inter"
+ },
+ {
+  "antipattern": "gradient-text",
+  "name": "Gradient text",
+  "description": "Gradient text is decorative rather than meaningful \u2014 a common AI tell, especially on headings and metrics. Use solid colors for text.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/gallery/gallery.component.sass",
+  "line": 29,
+  "snippet": "background-clip: text + gradient"
+ },
+ {
+  "antipattern": "layout-transition",
+  "name": "Layout property animation",
+  "description": "Animating width, height, padding, or margin causes layout thrash and janky performance. Use transform and opacity instead, or grid-template-rows for height animations.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/gallery/gallery.component.sass",
+  "line": 139,
+  "snippet": "transition: width"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "border-accent-on-rounded",
+  "name": "Border accent on rounded element",
+  "description": "Thick accent border on a rounded card \u2014 the border clashes with the rounded corners. Remove the border or the border-radius.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 927,
+  "snippet": "border-top: 4px solid"
+ },
+ {
+  "antipattern": "gradient-text",
+  "name": "Gradient text",
+  "description": "Gradient text is decorative rather than meaningful \u2014 a common AI tell, especially on headings and metrics. Use solid colors for text.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 585,
+  "snippet": "background-clip: text + gradient"
+ },
+ {
+  "antipattern": "gradient-text",
+  "name": "Gradient text",
+  "description": "Gradient text is decorative rather than meaningful \u2014 a common AI tell, especially on headings and metrics. Use solid colors for text.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 1607,
+  "snippet": "background-clip: text + gradient"
+ },
+ {
+  "antipattern": "gradient-text",
+  "name": "Gradient text",
+  "description": "Gradient text is decorative rather than meaningful \u2014 a common AI tell, especially on headings and metrics. Use solid colors for text.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 2387,
+  "snippet": "background-clip: text + gradient"
+ },
+ {
+  "antipattern": "gradient-text",
+  "name": "Gradient text",
+  "description": "Gradient text is decorative rather than meaningful \u2014 a common AI tell, especially on headings and metrics. Use solid colors for text.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 3671,
+  "snippet": "background-clip: text + gradient"
+ },
+ {
+  "antipattern": "gradient-text",
+  "name": "Gradient text",
+  "description": "Gradient text is decorative rather than meaningful \u2014 a common AI tell, especially on headings and metrics. Use solid colors for text.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 4284,
+  "snippet": "background-clip: text + gradient"
+ },
+ {
+  "antipattern": "bounce-easing",
+  "name": "Bounce or elastic easing",
+  "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly \u2014 use exponential easing (ease-out-quart/quint/expo) instead.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 786,
+  "snippet": "animation: bounce-arrow"
+ },
+ {
+  "antipattern": "bounce-easing",
+  "name": "Bounce or elastic easing",
+  "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly \u2014 use exponential easing (ease-out-quart/quint/expo) instead.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 1832,
+  "snippet": "animation: badgeBounce"
+ },
+ {
+  "antipattern": "bounce-easing",
+  "name": "Bounce or elastic easing",
+  "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly \u2014 use exponential easing (ease-out-quart/quint/expo) instead.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 2027,
+  "snippet": "animation: scrollBounce"
+ },
+ {
+  "antipattern": "bounce-easing",
+  "name": "Bounce or elastic easing",
+  "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly \u2014 use exponential easing (ease-out-quart/quint/expo) instead.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 4529,
+  "snippet": "animation: arrow-bounce"
+ },
+ {
+  "antipattern": "bounce-easing",
+  "name": "Bounce or elastic easing",
+  "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly \u2014 use exponential easing (ease-out-quart/quint/expo) instead.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 4691,
+  "snippet": "animation: bounce-gentle"
+ },
+ {
+  "antipattern": "layout-transition",
+  "name": "Layout property animation",
+  "description": "Animating width, height, padding, or margin causes layout thrash and janky performance. Use transform and opacity instead, or grid-template-rows for height animations.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 137,
+  "snippet": "transition: max-height"
+ },
+ {
+  "antipattern": "layout-transition",
+  "name": "Layout property animation",
+  "description": "Animating width, height, padding, or margin causes layout thrash and janky performance. Use transform and opacity instead, or grid-template-rows for height animations.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 158,
+  "snippet": "transition: width, height"
+ },
+ {
+  "antipattern": "layout-transition",
+  "name": "Layout property animation",
+  "description": "Animating width, height, padding, or margin causes layout thrash and janky performance. Use transform and opacity instead, or grid-template-rows for height animations.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 2744,
+  "snippet": "transition: width, height"
+ },
+ {
+  "antipattern": "layout-transition",
+  "name": "Layout property animation",
+  "description": "Animating width, height, padding, or margin causes layout thrash and janky performance. Use transform and opacity instead, or grid-template-rows for height animations.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass",
+  "line": 2758,
+  "snippet": "transition: width, height"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/marketing/seo-page/seo-page.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/marketing/seo-page/seo-page.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/marketing/seo-page/seo-page.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "side-tab",
+  "name": "Side-tab accent border",
+  "description": "Thick colored border on one side of a card \u2014 the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/marketing/seo-page/seo-page.component.sass",
+  "line": 480,
+  "snippet": "border-left: 3px solid var(--accent-primary)"
+ },
+ {
+  "antipattern": "border-accent-on-rounded",
+  "name": "Border accent on rounded element",
+  "description": "Thick accent border on a rounded card \u2014 the border clashes with the rounded corners. Remove the border or the border-radius.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/pages/settings/settings.component.sass",
+  "line": 67,
+  "snippet": "border-top: 3px solid"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ },
+ {
+  "antipattern": "overused-font",
+  "name": "Overused font",
+  "description": "Inter, Roboto, Fraunces, Geist, Plus Jakarta Sans, and Space Grotesk are used on so many sites they no longer feel distinctive. Each new wave of AI-generated UIs converges on the same handful of faces. Choose a face that gives your interface personality.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.sass",
+  "line": 7,
+  "snippet": "font-family: 'Inter"
+ },
+ {
+  "antipattern": "layout-transition",
+  "name": "Layout property animation",
+  "description": "Animating width, height, padding, or margin causes layout thrash and janky performance. Use transform and opacity instead, or grid-template-rows for height animations.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.sass",
+  "line": 1712,
+  "snippet": "transition: width"
+ },
+ {
+  "antipattern": "overused-font",
+  "name": "Overused font",
+  "description": "Inter, Roboto, Fraunces, Geist, Plus Jakarta Sans, and Space Grotesk are used on so many sites they no longer feel distinctive. Each new wave of AI-generated UIs converges on the same handful of faces. Choose a face that gives your interface personality.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/photo-gallery/photo-gallery.component.sass",
+  "line": 268,
+  "snippet": "font-family: 'Inter"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/photo-gallery/photo-gallery.component.ts",
+  "line": 159,
+  "snippet": "<img [src]=\"image.thumbnailUrl || image.url\" [alt]=\"image.title\" />"
+ },
+ {
+  "antipattern": "side-tab",
+  "name": "Side-tab accent border",
+  "description": "Thick colored border on one side of a card \u2014 the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/shared/notification/notification.component.scss",
+  "line": 59,
+  "snippet": "border-left: 4px solid var(--accent-success)"
+ },
+ {
+  "antipattern": "side-tab",
+  "name": "Side-tab accent border",
+  "description": "Thick colored border on one side of a card \u2014 the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/shared/notification/notification.component.scss",
+  "line": 67,
+  "snippet": "border-left: 4px solid var(--accent-danger)"
+ },
+ {
+  "antipattern": "side-tab",
+  "name": "Side-tab accent border",
+  "description": "Thick colored border on one side of a card \u2014 the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/shared/notification/notification.component.scss",
+  "line": 75,
+  "snippet": "border-left: 4px solid var(--accent-warning)"
+ },
+ {
+  "antipattern": "side-tab",
+  "name": "Side-tab accent border",
+  "description": "Thick colored border on one side of a card \u2014 the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/components/shared/notification/notification.component.scss",
+  "line": 83,
+  "snippet": "border-left: 4px solid var(--accent-secondary)"
+ },
+ {
+  "antipattern": "overused-font",
+  "name": "Overused font",
+  "description": "Inter, Roboto, Fraunces, Geist, Plus Jakarta Sans, and Space Grotesk are used on so many sites they no longer feel distinctive. Each new wave of AI-generated UIs converges on the same handful of faces. Choose a face that gives your interface personality.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/shared/header-navigation/header-navigation.component.sass",
+  "line": 15,
+  "snippet": "font-family: 'Inter"
+ },
+ {
+  "antipattern": "overused-font",
+  "name": "Overused font",
+  "description": "Inter, Roboto, Fraunces, Geist, Plus Jakarta Sans, and Space Grotesk are used on so many sites they no longer feel distinctive. Each new wave of AI-generated UIs converges on the same handful of faces. Choose a face that gives your interface personality.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/shared/marketing-header/marketing-header.component.sass",
+  "line": 102,
+  "snippet": "font-family: 'Inter"
+ },
+ {
+  "antipattern": "overused-font",
+  "name": "Overused font",
+  "description": "Inter, Roboto, Fraunces, Geist, Plus Jakarta Sans, and Space Grotesk are used on so many sites they no longer feel distinctive. Each new wave of AI-generated UIs converges on the same handful of faces. Choose a face that gives your interface personality.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/shared/marketing-header/marketing-header.component.sass",
+  "line": 136,
+  "snippet": "font-family: 'Inter"
+ },
+ {
+  "antipattern": "border-accent-on-rounded",
+  "name": "Border accent on rounded element",
+  "description": "Thick accent border on a rounded card \u2014 the border clashes with the rounded corners. Remove the border or the border-radius.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/shared/styles/_mixins.sass",
+  "line": 302,
+  "snippet": "border-top: 3px solid"
+ },
+ {
+  "antipattern": "gradient-text",
+  "name": "Gradient text",
+  "description": "Gradient text is decorative rather than meaningful \u2014 a common AI tell, especially on headings and metrics. Use solid colors for text.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/shared/styles/_mixins.sass",
+  "line": 401,
+  "snippet": "background-clip: text + gradient"
+ },
+ {
+  "antipattern": "layout-transition",
+  "name": "Layout property animation",
+  "description": "Animating width, height, padding, or margin causes layout thrash and janky performance. Use transform and opacity instead, or grid-template-rows for height animations.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/shared/styles/_mixins.sass",
+  "line": 221,
+  "snippet": "transition: width"
+ },
+ {
+  "antipattern": "gradient-text",
+  "name": "Gradient text",
+  "description": "Gradient text is decorative rather than meaningful \u2014 a common AI tell, especially on headings and metrics. Use solid colors for text.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/shared/styles/_redesign-system.sass",
+  "line": 442,
+  "snippet": "background-clip: text + gradient"
+ },
+ {
+  "antipattern": "gradient-text",
+  "name": "Gradient text",
+  "description": "Gradient text is decorative rather than meaningful \u2014 a common AI tell, especially on headings and metrics. Use solid colors for text.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/shared/styles/_redesign-system.sass",
+  "line": 449,
+  "snippet": "background-clip: text + gradient"
+ },
+ {
+  "antipattern": "bounce-easing",
+  "name": "Bounce or elastic easing",
+  "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly \u2014 use exponential easing (ease-out-quart/quint/expo) instead.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/shared/styles/_redesign-system.sass",
+  "line": 427,
+  "snippet": "animate-bounce (Tailwind)"
+ },
+ {
+  "antipattern": "bounce-easing",
+  "name": "Bounce or elastic easing",
+  "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly \u2014 use exponential easing (ease-out-quart/quint/expo) instead.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/shared/styles/_redesign-system.sass",
+  "line": 493,
+  "snippet": "animate-bounce (Tailwind)"
+ },
+ {
+  "antipattern": "bounce-easing",
+  "name": "Bounce or elastic easing",
+  "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly \u2014 use exponential easing (ease-out-quart/quint/expo) instead.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/shared/styles/_redesign-system.sass",
+  "line": 428,
+  "snippet": "animation: bounce"
+ },
+ {
+  "antipattern": "bounce-easing",
+  "name": "Bounce or elastic easing",
+  "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly \u2014 use exponential easing (ease-out-quart/quint/expo) instead.",
+  "severity": "warning",
+  "category": "slop",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/shared/styles/_redesign-system.sass",
+  "line": 41,
+  "snippet": "cubic-bezier(0.68, -0.55, 0.265, 1.55)"
+ },
+ {
+  "antipattern": "broken-image",
+  "name": "Broken or placeholder image",
+  "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+  "severity": "warning",
+  "category": "quality",
+  "file": "AI.ProfilePhotoMaker.UI/src/app/auth/verify-email/verify-email.component.html",
+  "line": 0,
+  "snippet": "<img> with no src attribute"
+ }
+]
