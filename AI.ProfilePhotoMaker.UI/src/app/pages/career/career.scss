@@ -59,6 +59,12 @@
   .career-error-summary a:not(.primary) {
     color: #7a1f17 !important;
   }
+  // Same light field: the global dark rule brightens strong/li text, so restore the summary ink.
+  .career-error-summary strong,
+  .career-error-summary li,
+  .career-error-summary p {
+    color: #5c1a14 !important;
+  }
 }
 // The shell supplies the ground, header and gutters; a page is the working column.
 .career-page {
