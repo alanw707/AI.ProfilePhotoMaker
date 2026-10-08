@@ -5967,3 +5967,81 @@ header
     color: #1e3a8a !important
   &__note
     font-size: 0.875rem
+
+// =============================================================================
+// CAREER ENTRY (#394) — explicit theme-token colors so it never inherits the hero's white text
+// =============================================================================
+.career-entry
+  background: var(--features-bg, var(--bg-primary))
+  padding: 64px 24px
+  [data-theme="dark"] &
+    background: var(--bg-secondary)
+
+.career-entry__inner
+  max-width: 720px
+  margin: 0 auto
+  color: var(--text-secondary)
+  font-size: 1.0625rem
+  line-height: 1.6
+  p
+    color: var(--text-secondary) !important
+    margin: 0 0 12px
+
+.career-entry__eyebrow
+  font-size: 0.8125rem !important
+  font-weight: 600
+  letter-spacing: 0.06em
+  text-transform: uppercase
+  color: var(--text-tertiary) !important
+
+.career-entry__title
+  color: var(--text-primary) !important
+  text-shadow: none !important
+  font-size: clamp(1.75rem, 3vw, 2.25rem)
+  font-weight: 700
+  line-height: 1.2
+  margin: 0 0 16px
+
+.career-entry__list
+  list-style: disc
+  padding-left: 1.25rem
+  margin: 0 0 16px
+  color: var(--text-secondary)
+  li
+    margin: 4px 0
+
+.career-entry__actions
+  display: flex
+  flex-wrap: wrap
+  gap: 12px
+  margin: 24px 0 12px
+
+.career-entry__cta, .career-entry__secondary
+  display: inline-flex
+  align-items: center
+  min-height: 48px
+  padding: 0 20px
+  border-radius: 8px
+  font-weight: 600
+  text-decoration: none
+  transition: background-color 0.15s ease, border-color 0.15s ease
+  &:focus-visible
+    outline: 3px solid var(--accent-secondary)
+    outline-offset: 2px
+
+.career-entry__cta
+  background: #1d4ed8
+  color: #ffffff !important
+  &:hover
+    background: #1e40af
+
+.career-entry__secondary
+  border: 2px solid var(--text-primary) !important
+  color: var(--text-primary) !important
+  background: transparent !important
+  &:hover
+    background: var(--hover-bg)
+
+.career-entry__note
+  font-size: 0.875rem !important
+  color: var(--text-tertiary) !important
