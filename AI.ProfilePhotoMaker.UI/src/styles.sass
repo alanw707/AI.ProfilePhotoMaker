@@ -15,6 +15,14 @@
 
 // CSS Custom Properties for Theming
 :root
+  // Text-safe accent: the brand teal (#4fd1c7) is a fill color only; it fails AA as text on light surfaces.
+  --accent-text: #115e59
+  --link-color: #1d4ed8
+  // Ink for text placed on the brand teal fill (white on teal is 1.86:1).
+  --on-primary: #0f172a
+  // Danger text and fill that hold AA (fill carries white text).
+  --danger-text: #991b1b
+  --danger-fill: #b91c1c
   // Light Theme Variables - Enhanced sophisticated darker neutral color scheme
   --bg-primary: #e9ecef
   --bg-secondary: #dee2e6
@@ -97,6 +105,10 @@
 
 // Dark Theme Variables - Enhanced readability
 [data-theme="dark"]
+  --accent-text: #4fd1c7
+  --link-color: #93c5fd
+  --danger-text: #fca5a5
+  --danger-fill: #dc2626
   --bg-primary: #1a1d23
   --bg-secondary: #2c3e50
   --bg-tertiary: #34495e
@@ -144,7 +156,7 @@
   --text-danger: #ff6b6b
   
   --card-bg: rgba(44, 62, 80, 0.95) !important
-  --input-bg: rgba(255, 255, 255, 0.12) !important
+  --input-bg: #1e2530 !important
   // Solid color for autofill box-shadow trick (CSS vars don't work in box-shadow)
   --input-autofill-bg: #1e2530
   --header-bg: rgba(44, 62, 80, 0.95) !important
@@ -655,22 +667,19 @@ html[data-theme="dark"] .landing-page svg,
 html .btn-primary,
 html .bg-primary-600
   background: var(--primary) !important
-  color: #ffffff !important
+  color: var(--on-primary) !important
   border: 1px solid var(--primary) !important
   box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18) !important
-  
+
   &:hover
-    background: var(--primary-dark) !important
-    border-color: var(--primary-dark) !important
-    color: #ffffff !important
+    background: var(--primary-hover) !important
+    border-color: var(--primary-hover) !important
+    color: var(--on-primary) !important
     box-shadow: 0 10px 18px rgba(15, 23, 42, 0.22) !important
 
-html[data-theme="dark"] .btn-primary,
-[data-theme="dark"] .btn-primary
-  color: #ffffff !important
-
-  &:hover
-    color: #ffffff !important
+  // Child spans/icons must follow the button ink, not a theme-wide text color.
+  span, svg
+    color: inherit !important
 
 // LIGHT THEME - Ensure proper button visibility
 html:not([data-theme="dark"]) .btn-secondary,
@@ -735,16 +744,16 @@ input, textarea, select
     // and :autofill blocks below where it is actually needed.
 
     &::placeholder
-      color: rgba(148, 163, 184, 0.45) !important
+      color: #94a3b8 !important
       opacity: 1
 
     &::-webkit-input-placeholder
-      color: rgba(148, 163, 184, 0.45) !important
-      -webkit-text-fill-color: rgba(148, 163, 184, 0.45) !important
+      color: #94a3b8 !important
+      -webkit-text-fill-color: #94a3b8 !important
       opacity: 1
 
     &:placeholder-shown
-      -webkit-text-fill-color: rgba(148, 163, 184, 0.45) !important
+      -webkit-text-fill-color: #94a3b8 !important
 
     // Chrome/Edge (Chromium) autofill - needs high specificity
     &:-webkit-autofill,
@@ -834,3 +843,10 @@ body:has(.proof-studio)
   body:has(.mobile-fulfillment-action) .app-back-to-top,
   body:has(.mobile-fulfillment-action) .theme-toggle
     bottom: calc(76px + env(safe-area-inset-bottom)) !important
+
+// Refund note/link (pricing + packages): AA text and underlined link.
+.refund-note
+  color: var(--text-secondary) !important
+.refund-link
+  color: var(--link-color) !important
+  text-decoration: underline !important
