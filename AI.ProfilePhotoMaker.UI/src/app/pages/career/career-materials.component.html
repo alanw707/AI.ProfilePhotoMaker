@@ -97,9 +97,8 @@
         </button>
       }
 
-      <h3>Create a new photo</h3>
       <p>
-        <a routerLink="/app/enhance" [queryParams]="workspaceQuery()">Create a new photo</a>
+        <a class="secondary" routerLink="/app/enhance" [queryParams]="workspaceQuery()">Create a new photo</a>
       </p>
       @if (!goalId()) {
         <p class="muted">Save a goal first if you want a link back here.</p>

@@ -122,6 +122,15 @@ section {
 .career-page a:not(.primary):hover {
   color: var(--cw-teal-ink);
 }
+// Secondary action links take the outlined button shape instead of an underlined link.
+.career-page a.secondary {
+  justify-content: center;
+  padding: 9px 16px;
+  border: 2px solid var(--cw-teal);
+  border-radius: 9px;
+  background: var(--cw-surface);
+  text-decoration: none;
+}
 .field {
   margin: 0 0 18px;
   min-width: 0;
