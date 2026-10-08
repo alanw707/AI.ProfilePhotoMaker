@@ -1,5 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // Follow the app theme switch (html[data-theme]), not the OS colour scheme.
+  darkMode: ['selector', '[data-theme="dark"]'],
   content: [
     "./src/**/*.{html,ts}",
   ],
