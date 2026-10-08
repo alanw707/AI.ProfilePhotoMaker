@@ -575,10 +575,11 @@ $bp-xl: 1280px
 // RELATED LINKS - CLEAN
 // =============================================================================
 
-.related-card
+.related-card,
+a.related-card:not(.btn):not(.nav-link)
   padding: clamp(14px, 3vw, 20px)
   text-decoration: none
-  color: inherit
+  color: var(--text-primary)
   display: flex
   align-items: center
   justify-content: space-between

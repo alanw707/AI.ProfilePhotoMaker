@@ -43,16 +43,28 @@ for (const theme of ['light', 'dark']) {
     await expect(page.getByRole('heading', { name: 'We use cookies' })).toBeVisible();
     expect((await ratio(page, '.cookie-banner-title')).r).toBeGreaterThanOrEqual(4.5);
     const label = page.locator('.showcase-after .image-label').first();
-    if (await label.count()) {
-      await label.scrollIntoViewIfNeeded();
-      expect((await ratio(page, '.showcase-after .image-label')).r).toBeGreaterThanOrEqual(4.5);
-    }
+    await label.scrollIntoViewIfNeeded();
+    await expect(label).toBeVisible();
+    expect((await ratio(page, '.showcase-after .image-label')).r).toBeGreaterThanOrEqual(4.5);
     const verified = page.locator('.testimonial-verified').first();
-    if (await verified.count()) {
-      await verified.scrollIntoViewIfNeeded();
-      const v = await ratio(page, '.testimonial-verified');
-      expect(v.anim).toBe('none');
-      expect(v.r).toBeGreaterThanOrEqual(4.5);
-    }
+    await verified.scrollIntoViewIfNeeded();
+    await expect(verified).toBeVisible();
+    const v = await ratio(page, '.testimonial-verified');
+    expect(v.anim).toBe('none');
+    expect(v.opacity).toBe(1);
+    expect(v.r).toBeGreaterThanOrEqual(4.5);
+  });
+}
+
+for (const theme of ['light', 'dark']) {
+  test(`404 primary link button and legal links are readable (${theme})`, async ({ page }) => {
+    await page.addInitScript(t => localStorage.setItem('theme', t), theme);
+    await page.goto('/this-page-does-not-exist');
+    const cta = page.locator('a.btn-primary').first();
+    await expect(cta).toBeVisible();
+    expect((await ratio(page, 'a.btn-primary')).r).toBeGreaterThanOrEqual(4.5);
+    await page.goto('/legal/privacy');
+    await expect(page.locator('.legal-prose a').first()).toBeAttached();
+    expect((await ratio(page, '.legal-prose a')).r).toBeGreaterThanOrEqual(4.5);
   });
 }

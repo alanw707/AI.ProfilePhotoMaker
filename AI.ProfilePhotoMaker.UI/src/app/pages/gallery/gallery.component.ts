@@ -27,6 +27,8 @@ export class GalleryComponent implements OnDestroy, OnInit {
 
   galleryImages: GalleryImage[] = [];
   isLoading = false;
+  /** True when the last image load failed; shows an error with retry instead of the empty state. */
+  loadFailed = false;
   isDownloading = false;
   downloadProgress = 0;
   private _hasRunInitialRepair = false;
@@ -78,6 +80,7 @@ export class GalleryComponent implements OnDestroy, OnInit {
     });
 
     this.isLoading = true;
+    this.loadFailed = false;
     try {
       // UI-triggered repair removed to prevent unintended deletions.
 
@@ -220,8 +223,11 @@ export class GalleryComponent implements OnDestroy, OnInit {
 
         // Force change detection after processing images
         this._cdr.detectChanges();
+      } else {
+        this.loadFailed = true;
       }
     } catch (error) {
+      this.loadFailed = true;
       this._logger.error('Failed to load images', error);
     } finally {
       this.isLoading = false;

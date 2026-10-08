@@ -73,6 +73,15 @@ Regression spec: `AI.ProfilePhotoMaker.UI/tests/live-contrast-regressions.spec.t
 - [P1] Cookie banner title dark on gray-900 in light theme (1.08:1): **Fixed**, white title on the always-dark banner.
 - Live axe color-contrast after deploy: 0 on /, /pricing, /legal/privacy, /auth/register at 1280/390, light/dark.
 
+### Adversarial review follow-up (404 page added to scope)
+- [P1] 404 "See Example Headshots" (a.btn-primary without .btn) light-grey on teal in dark (1.51:1): **Fixed**; the dark link rule excludes primary buttons.
+- [P2] Legal-prose links and global light links #3b82f6 (~3.1:1): **Fixed**; they use `--accent-text` and `--link-color`.
+- [P2] SEO related-link cards inherited link blue (3.1:1): **Fixed**; they use body ink.
+- [P2] Cookie banner link on the always-dark banner: **Fixed**; light ink.
+- [P3] Gallery load failure showed "No Photos Yet": **Fixed**; error with Try again.
+- [P3] Register age checkbox lacked an error link: **Fixed** (aria-invalid, aria-describedby, role=alert).
+- [P2] Contrast gate now enforced in CI: `tests/axe-contrast.spec.ts` (11 public routes, 2 themes, 2 widths, mocked API).
+
 ## Gate and deploy record
 | Gate | Result |
 |---|---|

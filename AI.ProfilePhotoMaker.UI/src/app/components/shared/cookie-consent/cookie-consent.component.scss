@@ -4,3 +4,8 @@
 .cookie-banner-title {
   color: #fff !important;
 }
+
+// Links on the always-dark banner need light ink regardless of theme link colour.
+a.cookie-banner-link {
+  color: #e2e8f0 !important;
+}
