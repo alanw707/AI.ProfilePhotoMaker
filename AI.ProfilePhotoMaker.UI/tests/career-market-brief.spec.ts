@@ -469,7 +469,7 @@ test('an unresolved location explains itself and links to the next action', asyn
 test('a missing occupation asks to confirm it first', async ({ page }) => {
   await mockBackend(page, { goal: { ...goal, occupation: null } });
   await open(page);
-  await expect(page.getByText('Confirm your occupation first.')).toBeVisible();
+  await expect(page.getByText('This page uses your confirmed occupation.', { exact: false })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Confirm your occupation' })).toHaveAttribute(
     'href',
     '/app/career/occupation'
@@ -481,7 +481,7 @@ test('the occupationRequired start error shows the same message', async ({ page 
   await mockBackend(page, { startFailure: { status: 409, code: 'CareerOccupationRequired' } });
   await open(page);
   await page.getByRole('button', { name: 'Build my market brief' }).click();
-  await expect(page.getByText('Confirm your occupation first.')).toBeVisible();
+  await expect(page.getByText('This page uses your confirmed occupation.', { exact: false })).toBeVisible();
 });
 
 test('does not overflow horizontally at 320px', async ({ page }) => {

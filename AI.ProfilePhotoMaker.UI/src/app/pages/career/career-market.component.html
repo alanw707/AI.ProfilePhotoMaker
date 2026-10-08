@@ -9,8 +9,8 @@
 
     @if (occupationMissing()) {
       <div class="caution" role="status" data-occupation-required>
-        <p>Confirm your occupation first.</p>
-        <a routerLink="/app/career/occupation">Confirm your occupation</a>
+        <p>This page uses your confirmed occupation. Confirm it first, then come back here.</p>
+        <a class="primary" routerLink="/app/career/occupation">Confirm your occupation</a>
       </div>
     }
 

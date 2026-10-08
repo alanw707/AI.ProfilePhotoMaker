@@ -521,7 +521,7 @@ test.describe('desktop', () => {
   test('without a confirmed occupation the page links to the occupation step', async ({ page }) => {
     await mock(page, { noOccupation: true });
     await open(page);
-    await expect(page.getByText('Confirm your occupation first.')).toBeVisible();
+    await expect(page.getByText('This page uses your confirmed occupation.', { exact: false })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Confirm your occupation' })).toHaveAttribute(
       'href',
       '/app/career/occupation'
