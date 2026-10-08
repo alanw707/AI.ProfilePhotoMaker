@@ -3357,7 +3357,7 @@ header
   gap: 8px
   padding: 6px 12px
   border-radius: 20px
-  color: #22c55e
+  color: var(--success-text)
   font-size: 0.75rem
   font-weight: 600
   line-height: 1.2
@@ -3369,9 +3369,7 @@ header
   backdrop-filter: blur(12px)
   -webkit-backdrop-filter: blur(12px)
   border: 1px solid rgba(34, 197, 94, 0.3)
-  
-  // Subtle pulse animation
-  animation: pulse-glow 3s ease-in-out infinite
+  // No opacity pulse on text: it dropped the label below AA contrast.
 
 .testimonial-verified-icon
   color: var(--accent-success)
@@ -4780,6 +4778,7 @@ header
     
     .image-label
       background: var(--accent-primary)
+      color: var(--on-primary) !important
       
   .showcase-arrow
     display: flex
@@ -5910,14 +5909,11 @@ header
   display: flex
   align-items: center
   gap: 0.25rem
-  color: #16a34a
+  color: var(--success-text)
   font-size: 0.75rem
   font-weight: 500
   flex-shrink: 0
   margin-left: auto
-
-  [data-theme="dark"] &
-    color: #4ade80
 
 // =============================================================================
 // REDUCED MOTION - Disable animations for accessibility
