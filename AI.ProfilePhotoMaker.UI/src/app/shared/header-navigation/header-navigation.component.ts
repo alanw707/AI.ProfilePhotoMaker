@@ -10,7 +10,7 @@ import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
-import { ConfigService } from '../../services/config.service';
+import { CareerAccessService } from '../../services/career-access.service';
 import { UserCreditStatus } from '../../services/credit.service';
 import { SubscriptionStateService } from '../../services/subscription-state.service';
 import { Subscription } from 'rxjs';
@@ -30,11 +30,11 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   isMobileMenuOpen = false;
   isAuthenticated = false;
   isHeadshotContext = false;
-  private readonly _config = inject(ConfigService);
+  private readonly _careerAccess = inject(CareerAccessService);
 
-  /** The career link appears only for signed-in users while the career feature is on. */
+  /** The career link appears only for signed-in accounts with career access (flag plus rollout audience). */
   get showCareer(): boolean {
-    return this.isAuthenticated && this._config.isCareerWorkspaceEnabled === true;
+    return this.isAuthenticated && this._careerAccess.granted();
   }
   private _userSubscription?: Subscription;
   private _authSubscription?: Subscription;
@@ -62,6 +62,8 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
     this._authSubscription = this._authService.isAuthenticated$.subscribe(isAuth => {
       this.isAuthenticated = isAuth;
       this._cdr.markForCheck();
+      // The access service resets on every auth change; ask again for the current account.
+      void this._careerAccess.resolve().then(() => this._cdr.markForCheck());
     });
 
     this._userSubscription = this._authService.currentUser$.subscribe(user => {

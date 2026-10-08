@@ -294,6 +294,18 @@ public sealed class CareerAgentRunService : ICareerAgentRunService
             return CareerOutcome<CareerAgentRunDto>.Busy(
                 CareerAgentErrorCodes.CostCapReached, "The career assistant has reached its monthly capacity.", (int)(NextPeriod(period) - now).TotalSeconds);
         }
+        if (_usage.DailyModelCostCapUsd is { } dailyCap)
+        {
+            var dayStart = now.Date;
+            var dayCents = await _db.CareerUsageEvents.AsNoTracking()
+                .Where(e => e.CreatedAt >= dayStart).SumAsync(e => (long?)e.CostCents, ct) ?? 0;
+            if (dayCents + estimateCents > dailyCap * 100m)
+            {
+                return CareerOutcome<CareerAgentRunDto>.Busy(
+                    CareerAgentErrorCodes.DailyCostCapReached, "The career assistant has reached today's capacity. Try again tomorrow.",
+                    (int)Math.Ceiling((dayStart.AddDays(1) - now).TotalSeconds));
+            }
+        }
         return null;
     }
 

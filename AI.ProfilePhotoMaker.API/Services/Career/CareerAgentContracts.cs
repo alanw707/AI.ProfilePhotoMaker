@@ -69,6 +69,7 @@ public static class CareerAgentErrorCodes
     public const string RateLimited = "CareerRateLimited";
     public const string ConcurrencyLimit = "CareerConcurrencyLimit";
     public const string CostCapReached = "CareerCostCapReached";
+    public const string DailyCostCapReached = "CareerDailyCostCapReached";
     public const string UserCostCapReached = "CareerUserCostCapReached";
     public const string Abandoned = "CareerRunAbandoned";
     public const string ReferenceUnavailable = "CareerReferenceUnavailable";

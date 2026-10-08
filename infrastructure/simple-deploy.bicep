@@ -48,6 +48,22 @@ param stripePublishableKey string
 @description('Stripe webhook secret for payment event validation')
 param stripeWebhookSecret string
 
+@description('Career workspace rollout, model and usage caps (set in simple-deploy.yml env; all values are strings)')
+param careerSettings object = {
+  enabled: 'false'
+  audience: 'Allowlist'
+  allowedEmails: ''
+  model: ''
+  inputUsdPerMillion: ''
+  outputUsdPerMillion: ''
+  reasoningEffort: ''
+  policyVersion: '2026-10-provisional'
+  monthlyRunAllowance: '20'
+  dailyCostCapUsd: '2'
+  monthlyCostCapUsd: '25'
+  perUserMonthlyCostCapUsd: '1'
+}
+
 @secure()
 @description('OpenAI API key for DALL-E 3 image generation')
 param openAiApiKey string
@@ -526,7 +542,51 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'Features__CareerWorkspace'
-              value: 'false'
+              value: careerSettings.enabled
+            }
+            {
+              name: 'Features__CareerWorkspaceAudience'
+              value: careerSettings.audience
+            }
+            {
+              name: 'Features__CareerWorkspaceAllowedEmails'
+              value: careerSettings.allowedEmails
+            }
+            {
+              name: 'Career__Agent__Model'
+              value: careerSettings.model
+            }
+            {
+              name: 'Career__Agent__InputUsdPerMillionTokens'
+              value: careerSettings.inputUsdPerMillion
+            }
+            {
+              name: 'Career__Agent__OutputUsdPerMillionTokens'
+              value: careerSettings.outputUsdPerMillion
+            }
+            {
+              name: 'Career__Agent__ReasoningEffort'
+              value: careerSettings.reasoningEffort
+            }
+            {
+              name: 'Career__Usage__PolicyVersion'
+              value: careerSettings.policyVersion
+            }
+            {
+              name: 'Career__Usage__MonthlyRunAllowance'
+              value: careerSettings.monthlyRunAllowance
+            }
+            {
+              name: 'Career__Usage__DailyModelCostCapUsd'
+              value: careerSettings.dailyCostCapUsd
+            }
+            {
+              name: 'Career__Usage__MonthlyModelCostCapUsd'
+              value: careerSettings.monthlyCostCapUsd
+            }
+            {
+              name: 'Career__Usage__PerUserMonthlyModelCostCapUsd'
+              value: careerSettings.perUserMonthlyCostCapUsd
             }
             {
               name: 'CORS_ALLOWED_ORIGINS'

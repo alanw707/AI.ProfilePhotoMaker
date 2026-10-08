@@ -13,6 +13,8 @@ public class CareerFlagOffHostedServiceTests
     private sealed class Gate(bool on) : ICareerFeatureGate
     {
         public bool IsEnabled { get; set; } = on;
+        public bool IsOpenToEveryone => IsEnabled;
+        public bool IsEnabledFor(System.Security.Claims.ClaimsPrincipal user) => IsEnabled;
     }
 
     private static (Mock<IServiceScopeFactory> Factory, Mock<ICareerAgentRunner> Runner, Mock<ICareerReservationReaper> Reaper) Scopes()
