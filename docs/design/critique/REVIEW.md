@@ -81,6 +81,7 @@ Regression spec: `AI.ProfilePhotoMaker.UI/tests/live-contrast-regressions.spec.t
 - [P3] Gallery load failure showed "No Photos Yet": **Fixed**; error with Try again.
 - [P3] Register age checkbox lacked an error link: **Fixed** (aria-invalid, aria-describedby, role=alert).
 - [P2] Contrast gate now enforced in CI: `tests/axe-contrast.spec.ts` (11 public routes + 8 signed-in app routes incl. career, 2 themes, 2 widths, mocked API).
+- [P1] 404 card text near-invisible in app-dark on OS-light devices (Tailwind `dark:` followed the OS, 1.52:1): **Fixed**; `darkMode` selector `[data-theme="dark"]` in `tailwind.config.js`.
 - [P2] Career error-summary heading forced bright on its light field in dark (found by the signed-in axe gate): **Fixed** in `career.scss`.
 
 ## Gate and deploy record

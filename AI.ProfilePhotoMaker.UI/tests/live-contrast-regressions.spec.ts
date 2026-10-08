@@ -68,3 +68,18 @@ for (const theme of ['light', 'dark']) {
     expect((await ratio(page, '.legal-prose a')).r).toBeGreaterThanOrEqual(4.5);
   });
 }
+
+// Tailwind `dark:` variants must follow the app theme, not the OS: an OS-light visitor who picks
+// dark got a white 404 card with bright, near-invisible text.
+for (const theme of ['light', 'dark']) {
+  test(`404 card text follows the app theme on an OS-light device (${theme})`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.addInitScript(t => localStorage.setItem('theme', t), theme);
+    await page.goto('/this-page-does-not-exist');
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+    await page.waitForTimeout(800);
+    for (const sel of ['h1', 'h1 + p']) {
+      expect((await ratio(page, sel)).r, sel).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+}
