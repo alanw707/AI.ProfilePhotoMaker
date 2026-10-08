@@ -303,9 +303,11 @@ h2
     margin: 24px 0 10px
     color: var(--text-primary)
 
-  a
-    color: var(--accent-primary)
-    text-decoration: none
+  // Scoped above the global link rule; --accent-text is AA in both themes.
+  a, a:not(.btn):not(.nav-link)
+    color: var(--accent-text)
+    text-decoration: underline
+    text-underline-offset: 3px
     transition: color 0.2s ease
 
     &:hover
@@ -646,9 +648,9 @@ html[data-theme="dark"] .landing-page button:not(.btn):not(.nav-link),
   color: inherit !important
 
 // DARK THEME - Navigation links with improved contrast
-html[data-theme="dark"] a:not(.btn):not(.nav-link),
-html[data-theme="dark"] .landing-page a:not(.btn):not(.nav-link),
-[data-theme="dark"] a:not(.btn):not(.nav-link)
+html[data-theme="dark"] a:not(.btn):not(.nav-link):not(.btn-primary):not(.bg-primary-600),
+html[data-theme="dark"] .landing-page a:not(.btn):not(.nav-link):not(.btn-primary):not(.bg-primary-600),
+[data-theme="dark"] a:not(.btn):not(.nav-link):not(.btn-primary):not(.bg-primary-600)
   color: #e2e8f0 !important
   
   &:hover
