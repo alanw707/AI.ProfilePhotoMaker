@@ -39,6 +39,10 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
             new Claim(ClaimTypes.NameIdentifier, userId),
             new Claim(ClaimTypes.Name, "Test User")
         };
+        if (Request.Headers.TryGetValue("X-Test-Email", out var email))
+        {
+            claims.Add(new Claim(ClaimTypes.Email, email.ToString()));
+        }
         if (!Request.Headers.ContainsKey("X-Test-NoIat"))
         {
             claims.Add(new Claim("iat", DateTimeOffset.UtcNow.AddMinutes(-issuedAge).ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture)));

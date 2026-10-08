@@ -1,19 +1,23 @@
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
-import { ConfigService } from '../services/config.service';
+import { Router, UrlTree } from '@angular/router';
+import { CareerAccessService } from '../services/career-access.service';
 import { careerWorkspaceGuard } from './career-workspace.guard';
 
 describe('careerWorkspaceGuard', () => {
-  it('redirects to /app when disabled and allows enabled navigation', () => {
-    const config = { isCareerWorkspaceEnabled: false };
-    TestBed.configureTestingModule({ providers: [{ provide: ConfigService, useValue: config }] });
+  it('redirects to /app without access and allows navigation with it', async () => {
+    let allowed = false;
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: CareerAccessService, useValue: { resolve: () => Promise.resolve(allowed) } },
+      ],
+    });
     const router = TestBed.inject(Router);
-    expect(
-      TestBed.runInInjectionContext(() => careerWorkspaceGuard({} as never, {} as never))
-    ).toEqual(router.createUrlTree(['/app']));
-    config.isCareerWorkspaceEnabled = true;
-    expect(
-      TestBed.runInInjectionContext(() => careerWorkspaceGuard({} as never, {} as never))
-    ).toBeTrue();
+    const run = () =>
+      TestBed.runInInjectionContext(() =>
+        careerWorkspaceGuard({} as never, {} as never)
+      ) as Promise<boolean | UrlTree>;
+    expect(await run()).toEqual(router.createUrlTree(['/app']));
+    allowed = true;
+    expect(await run()).toBeTrue();
   });
 });

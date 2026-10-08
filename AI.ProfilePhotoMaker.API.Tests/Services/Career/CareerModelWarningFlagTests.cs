@@ -12,6 +12,8 @@ public class CareerModelWarningFlagTests
     private sealed class Gate(bool on) : ICareerFeatureGate
     {
         public bool IsEnabled => on;
+        public bool IsOpenToEveryone => IsEnabled;
+        public bool IsEnabledFor(System.Security.Claims.ClaimsPrincipal user) => IsEnabled;
     }
 
     [Theory]

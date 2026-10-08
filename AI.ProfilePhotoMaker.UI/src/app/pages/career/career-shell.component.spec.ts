@@ -1,3 +1,5 @@
+import { signal } from '@angular/core';
+import { CareerAccessService } from '../../services/career-access.service';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { BehaviorSubject, of } from 'rxjs';
@@ -73,6 +75,10 @@ describe('CareerShellComponent', () => {
           },
         },
         { provide: ConfigService, useValue: { isCareerWorkspaceEnabled: true } },
+        {
+          provide: CareerAccessService,
+          useValue: { granted: signal(true), resolve: () => Promise.resolve(true) },
+        },
         {
           provide: SubscriptionStateService,
           useValue: { state$: new BehaviorSubject({ userCreditStatus: null }) },

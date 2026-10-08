@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models.Career;
 using AI.ProfilePhotoMaker.API.Services.Career.Export;
@@ -10,15 +11,30 @@ using Microsoft.Extensions.Options;
 
 namespace AI.ProfilePhotoMaker.API.Services.Career;
 
-/// <summary>Reads <c>Features:CareerWorkspace</c>; off unless explicitly set to true.</summary>
+/// <summary>
+/// Reads <c>Features:CareerWorkspace</c> (off unless explicitly true) and the rollout audience.
+/// <see cref="IsEnabled"/> is the system switch: background work runs whenever it is on.
+/// <see cref="IsEnabledFor"/> decides one account: <c>Features:CareerWorkspaceAudience</c> is
+/// <c>Everyone</c> (the default) or <c>Allowlist</c>, which admits only the emails listed in
+/// <c>Features:CareerWorkspaceAllowedEmails</c> (separated by ';' or ','). Any other audience fails closed.
+/// </summary>
 public interface ICareerFeatureGate
 {
     bool IsEnabled { get; }
+
+    /// <summary>True when the public (signed-out) config may advertise career to everyone.</summary>
+    bool IsOpenToEveryone { get; }
+
+    bool IsEnabledFor(ClaimsPrincipal user);
 }
 
 public sealed class CareerFeatureGate : ICareerFeatureGate
 {
     public const string ConfigKey = "Features:CareerWorkspace";
+    public const string AudienceKey = "Features:CareerWorkspaceAudience";
+    public const string AllowedEmailsKey = "Features:CareerWorkspaceAllowedEmails";
+    public const string EveryoneAudience = "Everyone";
+    public const string AllowlistAudience = "Allowlist";
 
     private readonly IConfiguration _configuration;
 
@@ -29,6 +45,41 @@ public sealed class CareerFeatureGate : ICareerFeatureGate
 
     // Read per request so a configuration reload takes effect without a restart.
     public bool IsEnabled => _configuration.GetValue<bool?>(ConfigKey) ?? false;
+
+    private string Audience
+    {
+        get
+        {
+            var value = _configuration[AudienceKey];
+            return string.IsNullOrWhiteSpace(value) ? EveryoneAudience : value.Trim();
+        }
+    }
+
+    public bool IsOpenToEveryone => IsEnabled && string.Equals(Audience, EveryoneAudience, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsEnabledFor(ClaimsPrincipal user)
+    {
+        if (!IsEnabled)
+        {
+            return false;
+        }
+        if (string.Equals(Audience, EveryoneAudience, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        if (!string.Equals(Audience, AllowlistAudience, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        var email = user.FindFirstValue(ClaimTypes.Email)?.Trim();
+        if (string.IsNullOrEmpty(email))
+        {
+            return false;
+        }
+        var allowed = (_configuration[AllowedEmailsKey] ?? "")
+            .Split([';', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return allowed.Contains(email, StringComparer.OrdinalIgnoreCase);
+    }
 }
 
 /// <summary>
@@ -48,7 +99,7 @@ public sealed class RequireCareerWorkspaceFilter : IResourceFilter
 
     public void OnResourceExecuting(ResourceExecutingContext context)
     {
-        if (_gate.IsEnabled)
+        if (_gate.IsEnabledFor(context.HttpContext.User))
         {
             return;
         }

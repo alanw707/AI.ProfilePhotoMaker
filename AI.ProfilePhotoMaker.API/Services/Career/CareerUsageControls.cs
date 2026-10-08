@@ -22,6 +22,8 @@ public sealed class CareerUsagePolicy
     public int MaxQueuedRunsGlobal { get; set; } = 200;
     public decimal MonthlyModelCostCapUsd { get; set; } = 50m;
     public decimal PerUserMonthlyModelCostCapUsd { get; set; } = 2m;
+    /// <summary>Global model spend allowed per UTC day; null leaves only the monthly caps.</summary>
+    public decimal? DailyModelCostCapUsd { get; set; }
     /// <summary>Estimated model cost of one run per task, in USD; a task not listed is model-free and costs 0.</summary>
     public Dictionary<string, decimal> TaskCostEstimatesUsd { get; set; } = new() { [CareerAgentTasks.ProfileSummary] = 0.01m };
     public int ControlsCacheSeconds { get; set; } = 30;

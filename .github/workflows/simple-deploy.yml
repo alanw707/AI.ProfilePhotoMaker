@@ -25,6 +25,24 @@ env:
   RESOURCE_GROUP: aiprofilemaker-v1
   # Use a timestamped image tag for each deployment to avoid stale :latest
   IMAGE_TAG: ${{ github.run_number }}-${{ github.run_id }}
+  # Career workspace rollout (docs/testing/career/launch/REVIEW.md). Rollback: set
+  # CAREER_WORKSPACE_ENABLED to 'false' and push to main (or re-run this workflow).
+  # Audience 'Allowlist' admits only the emails in the CAREER_WORKSPACE_ALLOWED_EMAILS
+  # repository variable (kept out of git); 'Everyone' opens career to all signed-in users.
+  CAREER_WORKSPACE_ENABLED: 'true'
+  CAREER_WORKSPACE_AUDIENCE: 'Allowlist'
+  CAREER_WORKSPACE_ALLOWED_EMAILS: ${{ vars.CAREER_WORKSPACE_ALLOWED_EMAILS }}
+  # Career text model (ADR 0009): pinned snapshot and its published USD price per 1M tokens.
+  CAREER_AGENT_MODEL: 'gpt-5-mini-2025-08-07'
+  CAREER_AGENT_INPUT_USD_PER_MILLION: '0.25'
+  CAREER_AGENT_OUTPUT_USD_PER_MILLION: '2.00'
+  CAREER_AGENT_REASONING_EFFORT: 'minimal'
+  # Owner-approved launch caps (ADR 0022): 20 drafts per user a month, global spend ceilings.
+  CAREER_USAGE_POLICY_VERSION: '2026-10-launch'
+  CAREER_MONTHLY_RUN_ALLOWANCE: '20'
+  CAREER_DAILY_COST_CAP_USD: '2'
+  CAREER_MONTHLY_COST_CAP_USD: '25'
+  CAREER_PER_USER_MONTHLY_COST_CAP_USD: '1'
   
 permissions:
   id-token: write
@@ -618,6 +636,22 @@ jobs:
             "\$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
             "contentVersion": "1.0.0.0",
             "parameters": {
+              "careerSettings": {
+                "value": {
+                  "enabled": "${{ env.CAREER_WORKSPACE_ENABLED }}",
+                  "audience": "${{ env.CAREER_WORKSPACE_AUDIENCE }}",
+                  "allowedEmails": "${{ env.CAREER_WORKSPACE_ALLOWED_EMAILS }}",
+                  "model": "${{ env.CAREER_AGENT_MODEL }}",
+                  "inputUsdPerMillion": "${{ env.CAREER_AGENT_INPUT_USD_PER_MILLION }}",
+                  "outputUsdPerMillion": "${{ env.CAREER_AGENT_OUTPUT_USD_PER_MILLION }}",
+                  "reasoningEffort": "${{ env.CAREER_AGENT_REASONING_EFFORT }}",
+                  "policyVersion": "${{ env.CAREER_USAGE_POLICY_VERSION }}",
+                  "monthlyRunAllowance": "${{ env.CAREER_MONTHLY_RUN_ALLOWANCE }}",
+                  "dailyCostCapUsd": "${{ env.CAREER_DAILY_COST_CAP_USD }}",
+                  "monthlyCostCapUsd": "${{ env.CAREER_MONTHLY_COST_CAP_USD }}",
+                  "perUserMonthlyCostCapUsd": "${{ env.CAREER_PER_USER_MONTHLY_COST_CAP_USD }}"
+                }
+              },
               "sqlAdminPassword": {
                 "value": "${{ secrets.SQL_ADMIN_PASSWORD }}"
               },

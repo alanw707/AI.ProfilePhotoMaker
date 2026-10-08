@@ -22,6 +22,8 @@ public class OpenAICareerTextModelLiveTests
             Model = Environment.GetEnvironmentVariable("CAREER_AGENT_MODEL")!,
             InputUsdPerMillionTokens = 0,
             OutputUsdPerMillionTokens = 0,
+            // Reasoning models need an effort setting to stay inside the output limit (ADR 0009).
+            ReasoningEffort = Environment.GetEnvironmentVariable("CAREER_AGENT_REASONING_EFFORT"),
             RequestTimeout = CareerAgentOptions.ModelCallTimeoutFor(new CareerAgentOptions().LeaseSeconds)
         };
         var model = new OpenAICareerTextModel(new HttpClient(), options, NullLogger<OpenAICareerTextModel>.Instance);

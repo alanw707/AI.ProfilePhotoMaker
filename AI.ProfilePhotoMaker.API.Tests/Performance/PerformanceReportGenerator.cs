@@ -22,7 +22,8 @@ public class PerformanceReportGenerator
         _output.WriteLine("Generating comprehensive performance audit report...");
 
         // Create ClaudeDocs directory structure
-        var claudeDocsPath = "/home/alanw/projects/AI.ProfilePhotoMaker/ClaudeDocs/Analysis/Performance";
+        // Write under the test output folder so the report works on any machine (the old path was one developer's home).
+        var claudeDocsPath = Path.Combine(AppContext.BaseDirectory, "PerformanceReports");
         var metadataPath = Path.Combine(claudeDocsPath, "metadata");
 
         Directory.CreateDirectory(claudeDocsPath);

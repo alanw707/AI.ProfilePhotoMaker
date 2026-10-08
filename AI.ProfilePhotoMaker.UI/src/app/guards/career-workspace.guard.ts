@@ -1,6 +1,10 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { ConfigService } from '../services/config.service';
+import { CareerAccessService } from '../services/career-access.service';
 
-export const careerWorkspaceGuard: CanActivateFn = () =>
-  inject(ConfigService).isCareerWorkspaceEnabled ? true : inject(Router).createUrlTree(['/app']);
+export const careerWorkspaceGuard: CanActivateFn = () => {
+  const router = inject(Router);
+  return inject(CareerAccessService)
+    .resolve()
+    .then(allowed => allowed || router.createUrlTree(['/app']));
+};

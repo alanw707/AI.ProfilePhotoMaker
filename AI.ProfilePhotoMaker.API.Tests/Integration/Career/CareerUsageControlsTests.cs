@@ -721,3 +721,39 @@ public sealed class CareerConcurrentCreateTests : IDisposable
         (await CreateAsync(a, 20, 100, p => { Tune(p); p.TaskCostEstimatesUsd = new(); })).Should().Be(CareerOutcomeKind.Ok);
     }
 }
+
+public sealed class UsageDailyCostFactory : CareerUsageFactory
+{
+    // The fake model costs 1 cent a call: the global daily cap allows two calls per UTC day.
+    protected override Dictionary<string, string?> Policy => new() { ["Career:Usage:DailyModelCostCapUsd"] = "0.02" };
+}
+
+public class CareerDailyCostCapTests : IClassFixture<UsageDailyCostFactory>
+{
+    private readonly UsageDailyCostFactory _f;
+
+    public CareerDailyCostCapTests(UsageDailyCostFactory f) => _f = f;
+
+    [Fact]
+    public async Task GlobalDailyCapStopsNewRunsUntilTheNextUtcDay()
+    {
+        for (var i = 0; i < 2; i++)
+        {
+            await CareerClient.ReadDataAsync(await _f.StartAsync(await _f.UserAsync()), 202);
+            await _f.DrainWorkerAsync();
+        }
+        var response = await _f.StartAsync(await _f.UserAsync());
+        var cap = await CareerClient.ReadErrorAsync(response, 503);
+        cap.GetProperty("code").GetString().Should().Be("CareerDailyCostCapReached");
+        response.Headers.RetryAfter.Should().NotBeNull();
+
+        _f.Clock.Advance(TimeSpan.FromDays(1));
+        await CareerClient.ReadDataAsync(await _f.StartAsync(await _f.UserAsync()), 202);
+    }
+}
+
+public class CareerDailyCostCapDefaultTests
+{
+    [Fact]
+    public void DailyCapIsOffUnlessConfigured() => new CareerUsagePolicy().DailyModelCostCapUsd.Should().BeNull();
+}

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
+using AI.ProfilePhotoMaker.API.Services.Career;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
@@ -27,6 +28,15 @@ public class ConfigController : ControllerBase
         _environment = environment;
         _logger = logger;
     }
+
+    /// <summary>
+    /// Whether the signed-in account may use the career workspace (flag plus rollout audience).
+    /// The career endpoints enforce the same rule; this only lets the UI show or hide career.
+    /// </summary>
+    [Authorize]
+    [HttpGet("career-access")]
+    public IActionResult GetCareerAccess() =>
+        Ok(new { success = true, data = new { enabled = new CareerFeatureGate(_configuration).IsEnabledFor(User) } });
 
     /// <summary>
     /// Development-only: surface effective Replicate configuration (safe fields)
@@ -103,8 +113,9 @@ public class ConfigController : ControllerBase
                     creativeStylePackVisible = _configuration.GetValue<bool?>("Features:CreativeStylePackVisible") ?? true,
                     premiumAugmentationsVisible = _configuration.GetValue<bool?>("Features:PremiumAugmentationsVisible") ?? (_configuration.GetValue<bool?>("Features:ProfilePhotoWorkflowOverhaul") ?? (_configuration.GetValue<bool?>("Features:OpenAIHeadshotMvp") ?? !_environment.IsProduction())),
                     replicateTrainingFlowVisible = _configuration.GetValue<bool?>("Features:ReplicateTrainingFlowVisible") ?? true,
-                    // Server-enforced; off unless explicitly enabled (spec #376).
-                    careerWorkspace = _configuration.GetValue<bool?>("Features:CareerWorkspace") ?? false
+                    // Server-enforced; off unless explicitly enabled (spec #376). During an allowlist
+                    // rollout the public answer stays false; signed-in users ask /career-access.
+                    careerWorkspace = new CareerFeatureGate(_configuration).IsOpenToEveryone
                 },
                 oauth = new
                 {
