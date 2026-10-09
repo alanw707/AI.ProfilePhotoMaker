@@ -852,3 +852,8 @@ body:has(.proof-studio)
 .refund-link
   color: var(--link-color) !important
   text-decoration: underline !important
+
+// Header "Get started" (a.button.button-primary): white on deep teal in dark too; the global
+// dark link rule above would otherwise set #e2e8f0 (4.43:1).
+html[data-theme="dark"] a.button.button-primary:not(.btn):not(.nav-link):not(.btn-primary):not(.bg-primary-600)
+  color: #fff !important

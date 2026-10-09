@@ -124,7 +124,7 @@
   height: 32px
   border-radius: 50%
   background: var(--workspace-accent, #0f766e)
-  color: #fff
+  color: #fff !important
   font-size: .72rem
   font-weight: 800
 
@@ -191,7 +191,8 @@
     border-color: #86c5bf
     background: var(--workspace-accent-soft, #d9f1ee)
 
-.button-primary
+// Doubled class outranks the global dark/light link colour rules (a:not(.btn):not(.nav-link)).
+.button.button-primary, a.button.button-primary
   border-color: var(--workspace-accent, #0f766e)
   background: var(--workspace-accent, #0f766e)
   color: #fff

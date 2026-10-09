@@ -59,6 +59,11 @@
   .career-error-summary a:not(.primary) {
     color: #7a1f17 !important;
   }
+  // Heatmap tiles keep fixed ramp colours in both themes; their text follows the tile ink.
+  .tile:not(.unranked) .tile-text,
+  .tile:not(.unranked) .tile-text * {
+    color: var(--tile-ink) !important;
+  }
   // Same light field: the global dark rule brightens strong/li text, so restore the summary ink.
   .career-error-summary strong,
   .career-error-summary li,
@@ -685,22 +690,27 @@ button:disabled {
   .q1 {
     background: #0b3d4a;
     color: #ffffff;
+    --tile-ink: #ffffff;
   }
   .q2 {
     background: #2a6f7f;
     color: #ffffff;
+    --tile-ink: #ffffff;
   }
   .q3 {
     background: #7fb3bf;
     color: #1b2c31;
+    --tile-ink: #1b2c31;
   }
   .q4 {
     background: #bcd8de;
     color: #1b2c31;
+    --tile-ink: #1b2c31;
   }
   .q5 {
     background: #e4f0f2;
     color: #1b2c31;
+    --tile-ink: #1b2c31;
   }
   .unranked {
     background: repeating-linear-gradient(45deg, var(--cw-surface) 0 5px, #8d7a4c 5px 8px);
