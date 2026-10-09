@@ -84,6 +84,12 @@ Regression spec: `AI.ProfilePhotoMaker.UI/tests/live-contrast-regressions.spec.t
 - [P1] 404 card text near-invisible in app-dark on OS-light devices (Tailwind `dark:` followed the OS, 1.52:1): **Fixed**; `darkMode` selector `[data-theme="dark"]` in `tailwind.config.js`.
 - [P2] Career error-summary heading forced bright on its light field in dark (found by the signed-in axe gate): **Fixed** in `career.scss`.
 
+### Populated-state contrast gate
+- `tests/axe-contrast-populated.spec.ts`: 9 populated signed-in pages (gallery with photos, career home, profile, materials, roadmap, pay, market brief, market comparison, jobs), in 2 themes at 2 widths, using shared fixtures in `tests/fixtures/`.
+- [P1] Gallery "generated" badge: white text on #4fd1c7 measured 1.86:1. **Fixed**: deep teal background (#0f766e).
+- [P1] Market comparison heatmap tiles in dark mode: light text on light tiles measured 1.06–2.9:1. **Fixed**: each tile sets its own text colour (`--tile-ink`).
+- [P2] Header "Get started" in dark mode: #e2e8f0 on teal measured 4.43:1. **Fixed**: white text.
+
 ## Gate and deploy record
 | Gate | Result |
 |---|---|

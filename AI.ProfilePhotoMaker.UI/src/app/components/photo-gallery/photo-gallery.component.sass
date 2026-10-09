@@ -118,7 +118,9 @@
   @include shared.status-badge
 
   &.generated
-    background: var(--primary-color)
+    // White badge text needs a deep teal (5.5:1); --primary-color #4fd1c7 was 1.9:1.
+    background: #0f766e
+    color: #fff
 
   &.enhanced
     background: var(--success-color)

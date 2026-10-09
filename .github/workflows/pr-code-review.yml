@@ -95,7 +95,7 @@ jobs:
         working-directory: AI.ProfilePhotoMaker.UI
         run: |
           npx playwright install --with-deps chromium
-          npx playwright test tests/axe-contrast.spec.ts tests/live-contrast-regressions.spec.ts --reporter=line
+          npx playwright test tests/axe-contrast.spec.ts tests/axe-contrast-populated.spec.ts tests/live-contrast-regressions.spec.ts --reporter=line
 
   codeql:
     name: 🛡️ CodeQL (C# + JS)
