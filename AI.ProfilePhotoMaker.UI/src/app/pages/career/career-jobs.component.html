@@ -19,6 +19,15 @@
         <a class="primary" routerLink="/app/career/occupation">Confirm your occupation</a>
       </div>
     }
+    @if (roleSearch(); as role) {
+      <div class="caution" role="status" data-search-basis="target_role">
+        <p>
+          These postings match your target role, “{{ role }}”. Confirm your occupation for a closer match
+          and to use the wage and pay pages.
+        </p>
+        <a routerLink="/app/career/occupation">Confirm your occupation</a>
+      </div>
+    }
     @if (error()) {
       <p role="alert" class="caution" data-error>{{ error() }}</p>
     }

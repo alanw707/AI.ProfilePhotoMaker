@@ -469,8 +469,14 @@ export interface JobObservation {
   sourceUrl?: string | null;
   sourceId: string;
 }
+export interface JobSearch {
+  /** What the source was searched with: the confirmed occupation, or the goal's target role until then. */
+  basis: 'occupation' | 'target_role';
+  keyword: string;
+}
 export interface JobObservations {
-  occupation: { code: string; title: string };
+  occupation: { code: string; title: string } | null;
+  search?: JobSearch | null;
   area: { input: string | null; resolution: string; code: string | null; title: string | null };
   coverage: JobCoverage;
   preferences: { areaCode: string | null; stalePreference: boolean; note: string | null };

@@ -72,6 +72,13 @@ public sealed class JobObservationService : IJobObservationService
             ? version.OccupationTitle
             : code == null ? null : _reference.Oews?.Crosswalk(code) is { } cw ? _reference.Oews.OccupationTitle(cw.Code) : null;
 
+        // Until an occupation is confirmed, search by the goal's own target role so the page is not a dead end.
+        var targetRole = string.IsNullOrWhiteSpace(version?.TargetRole) ? null : version!.TargetRole.Trim();
+        JobSearchDto? search = code != null && !string.IsNullOrWhiteSpace(title)
+            ? new JobSearchDto(JobSearchBasis.Occupation, title!)
+            : code == null && targetRole != null ? new JobSearchDto(JobSearchBasis.TargetRole, targetRole) : null;
+        var keyword = search?.Keyword ?? title;
+
         var preferredCode = version?.PreferredAreaCode;
         var stale = preferredCode != null && requested != null && resolved.Local?.Code != preferredCode;
         var staleNote = stale
@@ -79,7 +86,7 @@ public sealed class JobObservationService : IJobObservationService
             : null;
 
         var query = new JobObservationQuery(
-            code, title, resolved.Local?.Code, resolved.Local?.Title, resolved.Resolution, resolved.Input,
+            code, keyword, resolved.Local?.Code, resolved.Local?.Title, resolved.Resolution, resolved.Input,
             eligibleOnly, remote, q?.Trim());
         var now = _clock.GetUtcNow();
         var info = _source.Info;
@@ -90,7 +97,7 @@ public sealed class JobObservationService : IJobObservationService
         {
             reason = JobSourceReasons.NotConfigured;
         }
-        else if (code == null)
+        else if (search == null && code == null)
         {
             reason = JobSourceReasons.OccupationRequired;
         }
@@ -132,7 +139,8 @@ public sealed class JobObservationService : IJobObservationService
         var areaDto = new JobAreaDto(resolved.Input, resolved.Resolution, resolved.Local?.Code, resolved.Local?.Title);
         return CareerOutcome<JobObservationResult>.Ok(new JobObservationResult(
             code == null ? null : new JobOccupationDto(code, title), areaDto, coverage,
-            new JobPreferencesDto(preferredCode, stale, staleNote), normalized.Observations, normalized.Truncated, Note));
+            new JobPreferencesDto(preferredCode, stale, staleNote), normalized.Observations, normalized.Truncated, Note,
+            reason == JobSourceReasons.OccupationRequired ? null : search));
     }
 
     private static MarketLocationDto ResolveArea(string? input, IReadOnlyList<MarketArea> areas)

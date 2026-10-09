@@ -126,17 +126,44 @@ public class CareerJobObservationApiTests : IClassFixture<CareerJobFactory>
     }
 
     [Fact]
-    public async Task NoOccupationStillReturnsTheCoverageBlockWithAnEmptyListAndDoesNotCallTheSource()
+    public async Task NoOccupationSearchesByTheTargetRoleAndSaysSo()
     {
         _factory.Source.Raw.Add(Job("1"));
 
         var data = await Get(await UserAsync(occupation: false));
 
-        data.GetProperty("coverage").GetProperty("sourceId").GetString().Should().Be("usajobs");
+        data.GetProperty("coverage").GetProperty("available").GetBoolean().Should().BeTrue();
+        data.GetProperty("coverage").GetProperty("reason").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+        data.GetProperty("occupation").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+        data.GetProperty("search").GetProperty("basis").GetString().Should().Be("target_role");
+        data.GetProperty("search").GetProperty("keyword").GetString().Should().Be("Software developer");
+        data.GetProperty("observations").GetArrayLength().Should().Be(1);
+        _factory.Source.LastQuery!.OccupationCode.Should().BeNull();
+        _factory.Source.LastQuery.OccupationTitle.Should().Be("Software developer");
+    }
+
+    [Fact]
+    public async Task AConfirmedOccupationSearchesByTheOccupation()
+    {
+        _factory.Source.Raw.Add(Job("1"));
+
+        var data = await Get(await UserAsync());
+
+        data.GetProperty("search").GetProperty("basis").GetString().Should().Be("occupation");
+        data.GetProperty("search").GetProperty("keyword").GetString().Should().Be("Software Developers");
+    }
+
+    [Fact]
+    public async Task NoGoalAtAllIsOccupationRequiredAndDoesNotCallTheSource()
+    {
+        _factory.Source.Raw.Add(Job("1"));
+
+        var data = await Get(new CareerClient(_factory));
+
         data.GetProperty("coverage").GetProperty("available").GetBoolean().Should().BeFalse();
         data.GetProperty("coverage").GetProperty("reason").GetString().Should().Be("occupation_required");
+        data.GetProperty("search").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
         data.GetProperty("observations").GetArrayLength().Should().Be(0);
-        data.GetProperty("occupation").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
         _factory.Source.LastQuery.Should().BeNull();
     }
 

@@ -87,6 +87,16 @@ public sealed record JobObservationResult(
     JobPreferencesDto Preferences,
     IReadOnlyList<JobObservationDto> Observations,
     bool Truncated,
-    string Note);
+    string Note,
+    JobSearchDto? Search = null);
+
+/// <summary>What the source was searched with: the confirmed occupation, or the goal's target role until one is confirmed.</summary>
+public sealed record JobSearchDto(string Basis, string Keyword);
+
+public static class JobSearchBasis
+{
+    public const string Occupation = "occupation";
+    public const string TargetRole = "target_role";
+}
 
 public sealed record JobSourceDto(string SourceId, string Name, bool Configured, string Coverage, string Attribution, string SourceUrl);
