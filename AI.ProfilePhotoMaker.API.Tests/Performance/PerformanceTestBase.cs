@@ -196,13 +196,15 @@ public abstract class PerformanceTestBase : IDisposable
         GC.WaitForPendingFinalizers();
         GC.Collect();
 
-        var memoryBefore = GC.GetTotalMemory(false);
+        // Allocated bytes only ever grow, so a GC during the operation cannot hide (or invert) its cost,
+        // as a heap-size delta from GC.GetTotalMemory could.
+        var memoryBefore = GC.GetTotalAllocatedBytes(precise: true);
         var stopwatch = Stopwatch.StartNew();
 
         var result = await operation();
 
         stopwatch.Stop();
-        var memoryAfter = GC.GetTotalMemory(false);
+        var memoryAfter = GC.GetTotalAllocatedBytes(precise: true);
 
         return (result, stopwatch.Elapsed, memoryBefore, memoryAfter);
     }
