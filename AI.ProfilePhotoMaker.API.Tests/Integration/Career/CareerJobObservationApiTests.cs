@@ -39,6 +39,8 @@ public class CareerJobObservationApiTests : IClassFixture<CareerJobFactory>
         factory.Source.LastQuery = null;
         factory.Source.ProviderTotal = null;
         factory.Source.IsConfigured = true;
+        factory.Source.Queries.Clear();
+        factory.Source.Answers = null;
     }
 
     private static DateOnly Today => DateOnly.FromDateTime(DateTime.UtcNow);
@@ -47,12 +49,12 @@ public class CareerJobObservationApiTests : IClassFixture<CareerJobFactory>
         new(id, $"IT Specialist {id}", "Department of Veterans Affairs", new[] { new RawJobLocation(city, state) }, 98500, 128000,
             "usd_per_year", "annual", Today.AddDays(-2), Today.AddDays(10), remote, null, "2210", "GS-12", $"https://www.usajobs.gov/job/{id}");
 
-    private async Task<CareerClient> UserAsync(bool occupation = true, bool preferDenver = false)
+    private async Task<CareerClient> UserAsync(bool occupation = true, bool preferDenver = false, string role = "Software developer")
     {
         var user = new CareerClient(_factory);
         await CareerClient.ReadDataAsync(await user.PostGoalAsync(new
         {
-            targetRole = "Software developer", targetLocation = "Denver, CO", workArrangement = "hybrid",
+            targetRole = role, targetLocation = "Denver, CO", workArrangement = "hybrid",
             desiredPayMin = 120000, desiredPayMax = 160000, weeklyEffortHours = 5, confirmed = true
         }), 201);
         using var scope = _factory.Services.CreateScope();
@@ -140,6 +142,60 @@ public class CareerJobObservationApiTests : IClassFixture<CareerJobFactory>
         data.GetProperty("observations").GetArrayLength().Should().Be(1);
         _factory.Source.LastQuery!.OccupationCode.Should().BeNull();
         _factory.Source.LastQuery.OccupationTitle.Should().Be("Software developer");
+    }
+
+    [Fact]
+    public async Task NoMatchesRetriesWithoutSeniorityWordsAndSaysSo()
+    {
+        _factory.Source.Raw.Add(Job("1"));
+        _factory.Source.Answers = q => q.OccupationTitle == "data analyst";
+
+        var data = await Get(await UserAsync(occupation: false, role: "Senior Data Analyst"));
+
+        _factory.Source.Queries.Select(q => q.OccupationTitle).Should().Equal("Senior Data Analyst", "data analyst");
+        data.GetProperty("observations").GetArrayLength().Should().Be(1);
+        var search = data.GetProperty("search");
+        search.GetProperty("keyword").GetString().Should().Be("data analyst");
+        search.GetProperty("broadened").EnumerateArray().Select(e => e.GetString()).Should().Equal("keyword");
+    }
+
+    [Fact]
+    public async Task StillNoMatchesRetriesStatewideAndSaysSo()
+    {
+        _factory.Source.Raw.Add(Job("1", city: "Fort Collins"));
+        _factory.Source.Answers = q => q.AreaResolution == "state";
+
+        var data = await Get(await UserAsync(occupation: false, role: "Senior Data Analyst"));
+
+        _factory.Source.Queries.Should().HaveCount(3);
+        var last = _factory.Source.Queries[^1];
+        (last.OccupationTitle, last.AreaResolution).Should().Be(("data analyst", "state"));
+        data.GetProperty("observations").GetArrayLength().Should().Be(1);
+        var search = data.GetProperty("search");
+        search.GetProperty("areaTitle").GetString().Should().Be(last.AreaTitle);
+        search.GetProperty("broadened").EnumerateArray().Select(e => e.GetString()).Should().Equal("keyword", "area");
+    }
+
+    [Fact]
+    public async Task MatchesOnTheFirstSearchDoNotBroaden()
+    {
+        _factory.Source.Raw.Add(Job("1"));
+
+        var data = await Get(await UserAsync());
+
+        _factory.Source.Queries.Should().HaveCount(1);
+        data.GetProperty("search").GetProperty("broadened").GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task AUserTextFilterIsNeverBroadened()
+    {
+        _factory.Source.Raw.Add(Job("1"));
+        _factory.Source.Answers = _ => false;
+
+        await Get(await UserAsync(occupation: false, role: "Senior Data Analyst"), "?q=nurse");
+
+        _factory.Source.Queries.Should().HaveCount(1);
     }
 
     [Fact]

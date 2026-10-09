@@ -473,6 +473,10 @@ export interface JobSearch {
   /** What the source was searched with: the confirmed occupation, or the goal's target role until then. */
   basis: 'occupation' | 'target_role';
   keyword: string;
+  /** Area searched last; differs from the page area when the search went statewide. */
+  areaTitle?: string | null;
+  /** What was widened after the first search found nothing. */
+  broadened?: ('keyword' | 'area')[] | null;
 }
 export interface JobObservations {
   occupation: { code: string; title: string } | null;

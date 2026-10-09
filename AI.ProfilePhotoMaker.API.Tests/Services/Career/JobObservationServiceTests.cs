@@ -18,15 +18,22 @@ public sealed class FakeJobObservationSource : IJobObservationSource
     public Exception? Failure { get; set; }
     public JobObservationQuery? LastQuery { get; set; }
     public int? ProviderTotal { get; set; }
+    /// <summary>Every query sent, in order.</summary>
+    public List<JobObservationQuery> Queries { get; } = new();
+    /// <summary>When set, only queries it accepts get <see cref="Raw"/>; others get an empty page.</summary>
+    public Func<JobObservationQuery, bool>? Answers { get; set; }
 
     public Task<JobSourcePage> FetchAsync(JobObservationQuery query, CancellationToken ct)
     {
         LastQuery = query;
+        Queries.Add(query);
         if (Failure != null)
         {
             throw Failure;
         }
-        return Task.FromResult(new JobSourcePage(Raw.ToList(), ProviderTotal));
+        return Task.FromResult(Answers == null || Answers(query)
+            ? new JobSourcePage(Raw.ToList(), ProviderTotal)
+            : new JobSourcePage(new List<RawJobObservation>(), 0));
     }
 }
 

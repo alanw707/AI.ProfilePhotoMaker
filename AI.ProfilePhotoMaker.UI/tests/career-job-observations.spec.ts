@@ -220,3 +220,19 @@ test('without a confirmed occupation, postings are searched by the target role a
     '/app/career/occupation'
   );
 });
+
+test('a widened search says what was widened', async ({ page }) => {
+  await mock(page, { broadened: { keyword: 'data analyst', areaTitle: 'Colorado' } });
+  await open(page);
+  await expect(page.locator('[data-observation]').first()).toBeVisible();
+  const note = page.locator('[data-search-broadened]');
+  await expect(note).toContainText('“data analyst”');
+  await expect(note).toContainText('Colorado');
+});
+
+test('an unwidened search shows no widening note', async ({ page }) => {
+  await mock(page);
+  await open(page);
+  await expect(page.locator('[data-observation]').first()).toBeVisible();
+  await expect(page.locator('[data-search-broadened]')).toHaveCount(0);
+});

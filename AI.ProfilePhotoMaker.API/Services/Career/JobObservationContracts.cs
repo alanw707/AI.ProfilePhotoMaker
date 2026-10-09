@@ -91,7 +91,29 @@ public sealed record JobObservationResult(
     JobSearchDto? Search = null);
 
 /// <summary>What the source was searched with: the confirmed occupation, or the goal's target role until one is confirmed.</summary>
-public sealed record JobSearchDto(string Basis, string Keyword);
+public sealed record JobSearchDto(string Basis, string Keyword, string? AreaTitle = null, IReadOnlyList<string>? Broadened = null);
+
+/// <summary>Which parts of the search were widened after the first one found nothing.</summary>
+public static class JobSearchBroadening
+{
+    public const string Keyword = "keyword";
+    public const string Area = "area";
+
+    private static readonly HashSet<string> Seniority = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "senior", "sr", "sr.", "junior", "jr", "jr.", "lead", "principal", "staff", "chief", "head",
+        "associate", "entry-level", "entry", "level", "i", "ii", "iii", "iv", "v"
+    };
+
+    /// <summary>The keyword without seniority words, lower-cased; null when nothing would change or nothing is left.</summary>
+    public static string? Simplify(string keyword)
+    {
+        var words = keyword.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var kept = words.Where(w => !Seniority.Contains(w.Trim(',', '-'))).ToList();
+        if (kept.Count == 0 || kept.Count == words.Length) return null;
+        return string.Join(' ', kept).ToLowerInvariant();
+    }
+}
 
 public static class JobSearchBasis
 {
