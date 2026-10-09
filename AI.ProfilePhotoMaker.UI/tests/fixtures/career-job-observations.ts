@@ -43,7 +43,9 @@ export const unknownRemote = observation('3', {
 export const all = [observation('1', { title: 'Remote developer' }), multi, unknownRemote];
 
 export interface Options {
-  reason?: 'source_not_configured' | 'source_unavailable';
+  reason?: 'source_not_configured' | 'source_unavailable' | 'occupation_required';
+  /** No confirmed occupation: the API searched by the goal's target role. */
+  byTargetRole?: string;
   stale?: boolean;
   titles?: string[];
 }
@@ -58,8 +60,14 @@ export function payload(url: URL, options: Options): JobObservations {
   if (eligibleOnly) list = list.filter(o => o.remoteEligibility === 'eligible');
   const available = !options.reason;
   const shown = available ? list : [];
+  const noOccupation = !!options.byTargetRole || options.reason === 'occupation_required';
   return {
-    occupation: { code: '15-1252.00', title: 'Software Developers' },
+    occupation: noOccupation ? null : { code: '15-1252.00', title: 'Software Developers' },
+    search: options.byTargetRole
+      ? { basis: 'target_role', keyword: options.byTargetRole }
+      : noOccupation
+        ? null
+        : { basis: 'occupation', keyword: 'Software Developers' },
     area: {
       input: url.searchParams.get('area') ?? 'Denver, CO',
       resolution: 'metro',

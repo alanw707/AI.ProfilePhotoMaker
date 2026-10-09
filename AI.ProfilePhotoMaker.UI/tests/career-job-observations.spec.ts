@@ -195,3 +195,28 @@ test.describe('accessibility', () => {
     });
   }
 });
+
+test('occupation_required shows the confirm-occupation link, not a dead end', async ({ page }) => {
+  await mock(page, { reason: 'occupation_required' });
+  await open(page);
+  const box = page.locator('[data-occupation-required]');
+  await expect(box).toBeVisible();
+  await expect(box.getByRole('link', { name: 'Confirm your occupation' })).toHaveAttribute(
+    'href',
+    '/app/career/occupation'
+  );
+});
+
+test('without a confirmed occupation, postings are searched by the target role and say so', async ({
+  page,
+}) => {
+  await mock(page, { byTargetRole: 'Senior data analyst' });
+  await open(page);
+  await expect(page.locator('[data-observation]').first()).toBeVisible();
+  const note = page.locator('[data-search-basis="target_role"]');
+  await expect(note).toContainText('Senior data analyst');
+  await expect(note.getByRole('link', { name: 'Confirm your occupation' })).toHaveAttribute(
+    'href',
+    '/app/career/occupation'
+  );
+});

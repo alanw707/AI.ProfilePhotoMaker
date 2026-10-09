@@ -68,6 +68,11 @@ export class CareerJobsComponent implements OnInit {
   q = signal('');
 
   coverage = computed(() => this.result()?.coverage ?? null);
+  /** Set when no occupation is confirmed and the source was searched by the goal's target role. */
+  roleSearch = computed(() => {
+    const search = this.result()?.search;
+    return search?.basis === 'target_role' ? search.keyword : null;
+  });
   unavailableText = computed(() => REASON_COPY[this.coverage()?.reason ?? ''] ?? REASON_FALLBACK);
   exclusions = computed(() => {
     const counts = this.coverage()?.counts;
@@ -142,6 +147,8 @@ export class CareerJobsComponent implements OnInit {
         this.loading.set(false);
         if (result) {
           this.result.set(result);
+          // A 200 can still say no search was possible; show the way forward, not a dead end.
+          this.occupationMissing.set(result.coverage?.reason === 'occupation_required');
         }
       });
   }
