@@ -28,6 +28,9 @@
         <a routerLink="/app/career/occupation">Confirm your occupation</a>
       </div>
     }
+    @if (broadenedNote(); as broadened) {
+      <p class="caution" role="status" data-search-broadened>{{ broadened }}</p>
+    }
     @if (error()) {
       <p role="alert" class="caution" data-error>{{ error() }}</p>
     }

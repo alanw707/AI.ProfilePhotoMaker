@@ -46,6 +46,8 @@ export interface Options {
   reason?: 'source_not_configured' | 'source_unavailable' | 'occupation_required';
   /** No confirmed occupation: the API searched by the goal's target role. */
   byTargetRole?: string;
+  /** The API widened the search: keyword without seniority words, then statewide. */
+  broadened?: { keyword: string; areaTitle?: string };
   stale?: boolean;
   titles?: string[];
 }
@@ -60,14 +62,22 @@ export function payload(url: URL, options: Options): JobObservations {
   if (eligibleOnly) list = list.filter(o => o.remoteEligibility === 'eligible');
   const available = !options.reason;
   const shown = available ? list : [];
-  const noOccupation = !!options.byTargetRole || options.reason === 'occupation_required';
+  const noOccupation =
+    !!options.byTargetRole || !!options.broadened || options.reason === 'occupation_required';
   return {
     occupation: noOccupation ? null : { code: '15-1252.00', title: 'Software Developers' },
-    search: options.byTargetRole
-      ? { basis: 'target_role', keyword: options.byTargetRole }
-      : noOccupation
-        ? null
-        : { basis: 'occupation', keyword: 'Software Developers' },
+    search: options.broadened
+      ? {
+          basis: 'target_role',
+          keyword: options.broadened.keyword,
+          areaTitle: options.broadened.areaTitle ?? 'Denver-Aurora-Centennial, CO',
+          broadened: options.broadened.areaTitle ? ['keyword', 'area'] : ['keyword'],
+        }
+      : options.byTargetRole
+        ? { basis: 'target_role', keyword: options.byTargetRole }
+        : noOccupation
+          ? null
+          : { basis: 'occupation', keyword: 'Software Developers' },
     area: {
       input: url.searchParams.get('area') ?? 'Denver, CO',
       resolution: 'metro',

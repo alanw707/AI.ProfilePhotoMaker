@@ -107,29 +107,64 @@ public sealed class JobObservationService : IJobObservationService
         }
         else
         {
-            var startedAt = System.Diagnostics.Stopwatch.GetTimestamp();
-            var outcome = Models.Career.CareerUsageOutcomes.Ok;
-            try
+            var userArea = resolved.Local == null ? null : areas.FirstOrDefault(a => a.Code == resolved.Local.Code);
+            // Attempts, in order: as asked; without seniority words; then statewide. A user's own text filter
+            // is never widened. At most three source calls, each with its own ledger row.
+            var attempts = new List<(JobObservationQuery Query, MarketArea? Area, string[] Broadened)> { (query, userArea, Array.Empty<string>()) };
+            if (search != null && string.IsNullOrWhiteSpace(q))
             {
-                var page = await _source.FetchAsync(query, ct);
-                var userArea = resolved.Local == null ? null : areas.FirstOrDefault(a => a.Code == resolved.Local.Code);
-                normalized = JobObservationNormalizer.Normalize(page.Items, page.ProviderTotal, query, info, now, areas, userArea);
+                var simpler = JobSearchBroadening.Simplify(search.Keyword);
+                var current = query;
+                var steps = new List<string>();
+                if (simpler != null)
+                {
+                    current = current with { OccupationTitle = simpler };
+                    steps.Add(JobSearchBroadening.Keyword);
+                    attempts.Add((current, userArea, steps.ToArray()));
+                }
+                var stateArea = userArea?.Type == "metro"
+                    ? areas.FirstOrDefault(a => a.Type == "state" && a.State.Equals(userArea.State, StringComparison.OrdinalIgnoreCase))
+                    : null;
+                if (stateArea != null)
+                {
+                    steps.Add(JobSearchBroadening.Area);
+                    attempts.Add((current with { AreaCode = stateArea.Code, AreaTitle = stateArea.Title, AreaResolution = MarketResolutions.State },
+                        stateArea, steps.ToArray()));
+                }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+
+            foreach (var (attemptQuery, attemptArea, broadened) in attempts)
             {
-                // Any mapping or provider failure is the honest unavailable state, never a 500.
-                _logger.LogWarning(ex, "Job source {Source} is unavailable", info.SourceId);
-                reason = JobSourceReasons.Unavailable;
-                normalized = JobObservationNormalizer.Empty;
-                outcome = Models.Career.CareerUsageOutcomes.Failed;
-            }
-            finally
-            {
-                // One ledger row per external source call; counts and timing only.
-                _db.CareerUsageEvents.Add(CareerUsage.Event(
-                    ownerId, null, Models.Career.CareerUsageActions.JobSource, outcome, now.UtcDateTime,
-                    (int)System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds));
-                try { await _db.SaveChangesAsync(CancellationToken.None); } catch (DbUpdateException) { _db.ChangeTracker.Clear(); }
+                var startedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+                var outcome = Models.Career.CareerUsageOutcomes.Ok;
+                try
+                {
+                    var page = await _source.FetchAsync(attemptQuery, ct);
+                    normalized = JobObservationNormalizer.Normalize(page.Items, page.ProviderTotal, attemptQuery, info, now, areas, attemptArea);
+                    search = search == null ? null : search with
+                    {
+                        Keyword = attemptQuery.OccupationTitle ?? search.Keyword,
+                        AreaTitle = attemptQuery.AreaTitle,
+                        Broadened = broadened
+                    };
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                {
+                    // Any mapping or provider failure is the honest unavailable state, never a 500.
+                    _logger.LogWarning(ex, "Job source {Source} is unavailable", info.SourceId);
+                    reason = JobSourceReasons.Unavailable;
+                    normalized = JobObservationNormalizer.Empty;
+                    outcome = Models.Career.CareerUsageOutcomes.Failed;
+                }
+                finally
+                {
+                    // One ledger row per external source call; counts and timing only.
+                    _db.CareerUsageEvents.Add(CareerUsage.Event(
+                        ownerId, null, Models.Career.CareerUsageActions.JobSource, outcome, now.UtcDateTime,
+                        (int)System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds));
+                    try { await _db.SaveChangesAsync(CancellationToken.None); } catch (DbUpdateException) { _db.ChangeTracker.Clear(); }
+                }
+                if (reason != null || normalized.Counts.Shown > 0) break;
             }
         }
 
