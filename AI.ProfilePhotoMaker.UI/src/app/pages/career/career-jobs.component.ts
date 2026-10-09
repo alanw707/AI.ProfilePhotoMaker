@@ -72,10 +72,10 @@ export class CareerJobsComponent implements OnInit {
   broadenedNote = computed(() => {
     const search = this.result()?.search;
     const steps = search?.broadened ?? [];
-    if (!search || steps.length === 0) return null;
+    if (!search || steps.length === 0) {return null;}
     const parts: string[] = [];
-    if (steps.includes('keyword')) parts.push(`searched for “${search.keyword}” instead`);
-    if (steps.includes('area') && search.areaTitle) parts.push(`across ${search.areaTitle}`);
+    if (steps.includes('keyword')) {parts.push(`searched for “${search.keyword}” instead`);}
+    if (steps.includes('area') && search.areaTitle) {parts.push(`across ${search.areaTitle}`);}
     return `Nothing matched the first search, so we ${parts.join(' ')}.`;
   });
   /** Set when no occupation is confirmed and the source was searched by the goal's target role. */
