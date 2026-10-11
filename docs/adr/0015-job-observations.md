@@ -23,3 +23,16 @@ Status: accepted (2026-10-05, ticket #386, spec #376). Uses the #383 provider qu
 
 - Enabling the feature is an operator decision (a USAJOBS key; free, but a key request) and a config change, not a code change.
 - A licensed commercial feed later replaces the adapter and adds a persistence/retention decision; the payload shape and the honesty rules stay.
+
+## Feature flag (2026-10-11)
+
+The Jobs page is hidden by default. `Career:Jobs:Enabled` (environment variable `Career__Jobs__Enabled`,
+default `false`) switches it on. While it is off:
+
+- `GET /api/career/jobs/observations` and `GET /api/career/jobs/source` answer `404` with error code
+  `CareerJobsDisabled`, and the source is never called.
+- `/api/config/client` reports `features.careerJobs: false`; the UI hides the "Open postings" link and
+  sends `/app/career/jobs` to the career home.
+
+The USAJOBS source, its settings and its secrets stay in place so the page can be switched back on
+(for example once a private-sector source is added) without a rebuild.

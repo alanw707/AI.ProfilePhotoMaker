@@ -236,3 +236,21 @@ test('an unwidened search shows no widening note', async ({ page }) => {
   await expect(page.locator('[data-observation]').first()).toBeVisible();
   await expect(page.locator('[data-search-broadened]')).toHaveCount(0);
 });
+
+test.describe('Jobs page flag (features.careerJobs)', () => {
+  test('off: the Jobs URL goes to the career home and nothing links to it', async ({ page }) => {
+    const requests = await mock(page, { jobsOff: true });
+    await page.goto('/app/career/jobs?e2eAuthBypass=1');
+    await expect(page).toHaveURL(/\/app\/career(\?|$)/);
+    await expect(page.locator('#career-more-heading')).toBeAttached();
+    await expect(page.locator('a[href*="/app/career/jobs"]')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Open postings' })).toHaveCount(0);
+    expect(requests).toEqual([]);
+  });
+
+  test('on: the career shell links to the Jobs page', async ({ page }) => {
+    await mock(page);
+    await open(page);
+    await expect(page.locator('a[href="/app/career/jobs"]')).toHaveCount(1);
+  });
+});

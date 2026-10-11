@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { EMPTY, Subject, catchError, filter, switchMap } from 'rxjs';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { CareerJourneyDto, CareerProfileService } from '../../services/career-profile.service';
+import { ConfigService } from '../../services/config.service';
 
 export type CareerStepState = 'done' | 'current' | 'review' | 'upcoming';
 
@@ -88,6 +89,11 @@ export const CAREER_MORE_PAGES: { label: string; path: string }[] = [
   { label: 'Privacy and your data', path: 'privacy' },
 ];
 
+/** The pages listed under "More pages"; Jobs is left out while its flag is off. */
+export function careerMorePages(jobsEnabled: boolean): { label: string; path: string }[] {
+  return CAREER_MORE_PAGES.filter(p => p.path !== 'jobs' || jobsEnabled);
+}
+
 const STATUS: Record<CareerStepState, string> = {
   done: 'Done',
   current: 'Next',
@@ -153,7 +159,7 @@ export class CareerShellComponent implements OnInit {
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
 
-  readonly more = CAREER_MORE_PAGES;
+  readonly more = careerMorePages(inject(ConfigService).isCareerJobsEnabled);
   readonly journey = signal<CareerJourneyDto | null>(null);
   readonly rail = computed(() => careerSteps(this.journey()));
   /** Narrow screens only: the step list is always shown on wide screens. */

@@ -9,6 +9,7 @@ export const environment = {
   },
   features: {
     careerWorkspace: false,
+    careerJobs: false,
     debugMode: true,
     useProxy: true,
     cors: true,

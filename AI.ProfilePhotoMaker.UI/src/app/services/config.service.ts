@@ -3,6 +3,7 @@ import { environment } from '../../environments/environment';
 
 interface RuntimeClientFeatures {
   careerWorkspace?: boolean;
+  careerJobs?: boolean;
   openAIHeadshotMvp?: boolean;
   profilePhotoWorkflowOverhaul?: boolean;
   outcomePackagesVisible?: boolean;
@@ -320,6 +321,11 @@ export class ConfigService {
 
   get isCareerWorkspaceEnabled(): boolean {
     return this.getFeatureFlag('careerWorkspace', false);
+  }
+
+  /** The Jobs page (open postings); hidden unless the server switches it on. */
+  get isCareerJobsEnabled(): boolean {
+    return this.getFeatureFlag('careerJobs', false);
   }
 
   get isOpenAIHeadshotMvpEnabled(): boolean {

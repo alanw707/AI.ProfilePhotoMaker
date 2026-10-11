@@ -7,7 +7,7 @@ import { AuthService } from '../../services/auth.service';
 import { CareerJourneyDto, CareerProfileService } from '../../services/career-profile.service';
 import { ConfigService } from '../../services/config.service';
 import { SubscriptionStateService } from '../../services/subscription-state.service';
-import { CareerShellComponent, careerSteps } from './career-shell.component';
+import { CareerShellComponent, careerMorePages, careerSteps } from './career-shell.component';
 
 const journey = (over: Partial<CareerJourneyDto> = {}): CareerJourneyDto => ({
   profile: { version: 1, confirmed: true },
@@ -126,5 +126,13 @@ describe('CareerShellComponent', () => {
     toggle?.click();
     f.detectChanges();
     expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+  });
+});
+
+describe('careerMorePages', () => {
+  it('leaves Jobs out while its flag is off and lists it when on', () => {
+    expect(careerMorePages(false).map(p => p.path)).not.toContain('jobs');
+    expect(careerMorePages(true).map(p => p.path)).toContain('jobs');
+    expect(careerMorePages(false).length).toBe(careerMorePages(true).length - 1);
   });
 });

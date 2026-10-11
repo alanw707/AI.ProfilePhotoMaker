@@ -83,6 +83,47 @@ public sealed class CareerFeatureGate : ICareerFeatureGate
 }
 
 /// <summary>
+/// The Jobs page (open postings) is hidden unless <c>Career:Jobs:Enabled</c> is true. The source code and
+/// its credentials stay in place so it can be switched back on without a rebuild.
+/// </summary>
+public static class CareerJobsFeature
+{
+    public const string ConfigKey = "Career:Jobs:Enabled";
+
+    // Read per request so a configuration reload takes effect without a restart.
+    public static bool IsEnabled(IConfiguration configuration) => configuration.GetValue<bool?>(ConfigKey) ?? false;
+}
+
+/// <summary>Answers 404 for a jobs endpoint while the Jobs page is switched off; nothing downstream runs.</summary>
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
+public sealed class RequireCareerJobsAttribute : Attribute, IResourceFilter
+{
+    public void OnResourceExecuting(ResourceExecutingContext context)
+    {
+        if (CareerJobsFeature.IsEnabled(context.HttpContext.RequestServices.GetRequiredService<IConfiguration>()))
+        {
+            return;
+        }
+
+        context.Result = new ObjectResult(new
+        {
+            success = false,
+            error = new
+            {
+                code = CareerErrorCodes.JobsDisabled,
+                message = "Open postings are not available.",
+                correlationId = context.HttpContext.TraceIdentifier
+            }
+        })
+        { StatusCode = StatusCodes.Status404NotFound };
+    }
+
+    public void OnResourceExecuted(ResourceExecutedContext context)
+    {
+    }
+}
+
+/// <summary>
 /// Refuses career endpoints when the flag is off. A resource filter runs after
 /// authentication/authorization but before model binding and validation, so a
 /// disabled workspace always answers 403 <c>CareerWorkspaceDisabled</c> (spec

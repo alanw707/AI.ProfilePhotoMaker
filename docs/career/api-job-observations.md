@@ -62,3 +62,16 @@ Same envelope, auth, flag (403 `CareerWorkspaceDisabled`) and error shape as `ap
 ## Reference
 
 `GET /api/career/jobs/source` → `{ "sourceId": "usajobs", "name": "USAJOBS", "configured": false, "coverage": "…", "attribution": "…", "sourceUrl": "…" }` — the page uses this to explain the unavailable state without a second request to the provider.
+
+## Feature flag (2026-10-11)
+
+The Jobs page is hidden by default. `Career:Jobs:Enabled` (environment variable `Career__Jobs__Enabled`,
+default `false`) switches it on. While it is off:
+
+- `GET /api/career/jobs/observations` and `GET /api/career/jobs/source` answer `404` with error code
+  `CareerJobsDisabled`, and the source is never called.
+- `/api/config/client` reports `features.careerJobs: false`; the UI hides the "Open postings" link and
+  sends `/app/career/jobs` to the career home.
+
+The USAJOBS source, its settings and its secrets stay in place so the page can be switched back on
+(for example once a private-sector source is added) without a rebuild.

@@ -46,6 +46,8 @@ export interface Options {
   reason?: 'source_not_configured' | 'source_unavailable' | 'occupation_required';
   /** No confirmed occupation: the API searched by the goal's target role. */
   byTargetRole?: string;
+  /** The Jobs page flag (features.careerJobs) is off, as it is by default in production. */
+  jobsOff?: boolean;
   /** The API widened the search: keyword without seniority words, then statewide. */
   broadened?: { keyword: string; areaTitle?: string };
   stale?: boolean;
@@ -124,7 +126,8 @@ export async function mock(page: Page, options: Options = {}) {
     const url = new URL(route.request().url());
     const send = (data: unknown) =>
       route.fulfill({ status: 200, json: { success: true, isAuthenticated: true, data } });
-    if (url.pathname === '/api/config/client') return send({ features: { careerWorkspace: true } });
+    if (url.pathname === '/api/config/client')
+      return send({ features: { careerWorkspace: true, careerJobs: !options.jobsOff } });
     if (url.pathname === '/api/career/goals')
       return send({
         id: 'goal-1',
