@@ -76,7 +76,7 @@ export const sparsePay = {
   createdAt: at,
 };
 
-export async function mock(page: Page, journeys: unknown[]) {
+export async function mock(page: Page, journeys: unknown[], careerJobs = false) {
   const calls = { writes: [] as string[], idx: 0, journeyGets: 0 };
   await page.addInitScript(() => localStorage.setItem('e2eAuthBypass', 'true'));
   await page.route('**/api/**', route => {
@@ -85,7 +85,8 @@ export async function mock(page: Page, journeys: unknown[]) {
     const send = (data: unknown) =>
       route.fulfill({ json: { success: true, isAuthenticated: true, data } });
     if (!['GET', 'HEAD'].includes(req.method())) calls.writes.push(`${req.method()} ${path}`);
-    if (path === '/api/config/client') return send({ features: { careerWorkspace: true } });
+    if (path === '/api/config/client')
+      return send({ features: { careerWorkspace: true, careerJobs } });
     if (path === '/api/career/journey') {
       calls.journeyGets++;
       return send(journeys[Math.min(calls.idx, journeys.length - 1)]);

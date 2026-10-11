@@ -134,21 +134,28 @@ test('malicious context is text; no dialog, no writes', async ({ page }) => {
   expect(calls.writes).toEqual([]);
 });
 
-test('every career page link resolves', async ({ page }) => {
-  await mock(page, [J()]);
-  await open(page);
-  const hrefs = await page
-    .locator('nav[aria-label="Career steps"] a')
-    .evaluateAll(as => as.map(a => a.getAttribute('href') as string));
-  // workspace home + 7 journey steps + 7 more pages, all distinct
-  expect(new Set(hrefs).size).toBe(15);
-  for (const href of hrefs) {
-    await page.goto(`${href}?e2eAuthBypass=1`);
-    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
-    await expect(page.locator('body')).not.toContainText(/page not found|404/i);
-    await expect(page.locator('body')).not.toContainText(/later release|coming soon/i);
-  }
-});
+// Jobs is hidden unless features.careerJobs is on (default off), so the link count differs by one.
+for (const [jobs, count] of [
+  [false, 14],
+  [true, 15],
+] as const) {
+  test(`every career page link resolves (Jobs flag ${jobs ? 'on' : 'off'})`, async ({ page }) => {
+    await mock(page, [J()], jobs);
+    await open(page);
+    const hrefs = await page
+      .locator('nav[aria-label="Career steps"] a')
+      .evaluateAll(as => as.map(a => a.getAttribute('href') as string));
+    // workspace home + 7 journey steps + the "More pages" list (7 with Jobs, 6 without), all distinct
+    expect(new Set(hrefs).size).toBe(count);
+    expect(hrefs.includes('/app/career/jobs')).toBe(jobs);
+    for (const href of hrefs) {
+      await page.goto(`${href}?e2eAuthBypass=1`);
+      await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+      await expect(page.locator('body')).not.toContainText(/page not found|404/i);
+      await expect(page.locator('body')).not.toContainText(/later release|coming soon/i);
+    }
+  });
+}
 
 for (const [w, h] of [
   [1280, 800],
