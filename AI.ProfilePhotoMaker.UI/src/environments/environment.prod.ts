@@ -9,6 +9,7 @@ export const environment = {
   },
   features: {
     careerWorkspace: false,
+    careerJobs: false,
     debugMode: false,
     useProxy: false,
     cors: true, // Enable CORS for cross-origin requests to Azure API

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Services.Career;
 using AI.ProfilePhotoMaker.API.Tests.Services.Career;
@@ -14,6 +15,9 @@ public class CareerJobFactory : CareerAgentFactory
 {
     public FakeJobObservationSource Source { get; } = new();
 
+    /// <summary>The Jobs page flag (Career:Jobs:Enabled); these suites exercise the feature, so it is on.</summary>
+    protected virtual bool JobsEnabled => true;
+
     public CareerJobFactory()
     {
         RegisterModel = false;
@@ -22,8 +26,76 @@ public class CareerJobFactory : CareerAgentFactory
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
+        builder.ConfigureAppConfiguration(config => config.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Career:Jobs:Enabled"] = JobsEnabled ? "true" : "false"
+        }));
         builder.ConfigureTestServices(services => services.AddSingleton<IJobObservationSource>(Source));
     }
+}
+
+/// <summary>The career workspace is on but the Jobs page flag is explicitly off.</summary>
+public sealed class CareerJobsOffFactory : CareerJobFactory
+{
+    protected override bool JobsEnabled => false;
+}
+
+/// <summary>With Career:Jobs:Enabled off (the default) the jobs endpoints do not exist and the source is never called.</summary>
+public class CareerJobsFlagTests : IClassFixture<CareerJobsOffFactory>, IClassFixture<CareerJobFactory>, IClassFixture<CareerWorkspaceEnabledFactory>
+{
+    private readonly CareerJobsOffFactory _off;
+    private readonly CareerJobFactory _on;
+    private readonly CareerWorkspaceEnabledFactory _unset;
+
+    public CareerJobsFlagTests(CareerJobsOffFactory off, CareerJobFactory on, CareerWorkspaceEnabledFactory unset)
+    {
+        _off = off;
+        _on = on;
+        _unset = unset;
+    }
+
+    private static async Task<bool> PublicFlag(CustomWebApplicationFactory f)
+    {
+        var json = System.Text.Json.JsonDocument.Parse(await f.CreateClient().GetStringAsync("/api/config/client"));
+        return json.RootElement.GetProperty("data").GetProperty("features").GetProperty("careerJobs").GetBoolean();
+    }
+
+    [Theory]
+    [InlineData("/api/career/jobs/observations")]
+    [InlineData("/api/career/jobs/source")]
+    public async Task JobsEndpointsAre404WhenTheFlagIsOffAndTheSourceIsNotCalled(string path)
+    {
+        _off.Source.Queries.Clear();
+        _off.Source.Raw.Add(new RawJobObservation("1", "IT Specialist", "VA", new[] { new RawJobLocation("Denver", "CO") }, null, null,
+            null, null, null, null, JobRemoteStatus.Unknown, null, null, null, null));
+
+        var response = await new CareerClient(_off).GetAsync(path);
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+        _off.Source.Queries.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("/api/career/jobs/observations")]
+    [InlineData("/api/career/jobs/source")]
+    public async Task JobsEndpointsAre404WhenTheFlagIsUnset(string path) =>
+        (await new CareerClient(_unset).GetAsync(path)).StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+
+    [Fact]
+    public async Task TheRestOfTheCareerWorkspaceStillAnswersWhenJobsIsOff() =>
+        (await new CareerClient(_off).GetAsync("/api/career/markets/metrics")).StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+
+    [Fact]
+    public async Task ClientConfigReportsTheJobsFlag()
+    {
+        (await PublicFlag(_off)).Should().BeFalse();
+        (await PublicFlag(_unset)).Should().BeFalse();
+        (await PublicFlag(_on)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task JobsEndpointsAnswerWhenTheFlagIsOn() =>
+        (await new CareerClient(_on).GetAsync("/api/career/jobs/source")).StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 }
 
 /// <summary>Job observations end to end (#386, ADR 0015).</summary>

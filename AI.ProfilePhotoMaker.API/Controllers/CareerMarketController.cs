@@ -41,12 +41,14 @@ public sealed class CareerMarketController : CareerControllerBase
         await Respond(owner => _comparison.SavePreferenceAsync(owner, request ?? new MarketPreferenceRequest(), ReadIfMatch("goal"), ct), g => g.Etag);
 
     /// <summary>Job observations (ticket #386). Contract: docs/career/api-job-observations.md; design: ADR 0015.</summary>
+    [RequireCareerJobs]
     [HttpGet("jobs/observations")]
     public async Task<IActionResult> JobObservations(
         [FromQuery] string? area, [FromQuery] bool eligibleOnly, [FromQuery] string? remote, [FromQuery] string? q,
         [FromQuery] string? occupation, CancellationToken ct) =>
         await Respond(owner => _jobs.GetObservationsAsync(owner, area, eligibleOnly, remote, q, occupation, ct));
 
+    [RequireCareerJobs]
     [HttpGet("jobs/source")]
     public async Task<IActionResult> JobSource() =>
         await Respond(owner => Task.FromResult(_jobs.GetSource()));

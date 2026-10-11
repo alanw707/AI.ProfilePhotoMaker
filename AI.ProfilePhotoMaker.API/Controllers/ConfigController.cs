@@ -115,7 +115,9 @@ public class ConfigController : ControllerBase
                     replicateTrainingFlowVisible = _configuration.GetValue<bool?>("Features:ReplicateTrainingFlowVisible") ?? true,
                     // Server-enforced; off unless explicitly enabled (spec #376). During an allowlist
                     // rollout the public answer stays false; signed-in users ask /career-access.
-                    careerWorkspace = new CareerFeatureGate(_configuration).IsOpenToEveryone
+                    careerWorkspace = new CareerFeatureGate(_configuration).IsOpenToEveryone,
+                    // The Jobs page (open postings) is hidden unless explicitly switched on.
+                    careerJobs = CareerJobsFeature.IsEnabled(_configuration)
                 },
                 oauth = new
                 {

@@ -181,6 +181,7 @@ public static class CareerErrorCodes
     public const string VersionConflict = "CareerVersionConflict";
     public const string ProfileNotFound = "CareerProfileNotFound";
     public const string GoalNotFound = "CareerGoalNotFound";
+    public const string JobsDisabled = "CareerJobsDisabled";
     public const string VersionNotFound = "CareerVersionNotFound";
     public const string GoalAlreadyExists = "CareerGoalAlreadyExists";
     public const string ResumeNotFound = "CareerResumeNotFound";

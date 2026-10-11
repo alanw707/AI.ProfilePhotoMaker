@@ -3,6 +3,7 @@ import { Router, Routes } from '@angular/router';
 import { LoginComponent } from './auth/login/login.component';
 import { RegisterComponent } from './auth/register/register.component';
 import { guestGuard } from './guards/guest.guard';
+import { careerJobsGuard } from './guards/career-jobs.guard';
 import { careerWorkspaceGuard } from './guards/career-workspace.guard';
 import { AppGuard } from './guards/app.guard';
 import { AdminGuard } from './guards/admin.guard';
@@ -195,6 +196,7 @@ export const routes: Routes = [
           },
           {
             path: 'jobs',
+            canActivate: [careerJobsGuard],
             loadComponent: () =>
               import('./pages/career/career-jobs.component').then(m => m.CareerJobsComponent),
             title: 'Open Job Observations - AI Profile Photo Maker',
@@ -227,7 +229,9 @@ export const routes: Routes = [
           {
             path: 'materials',
             loadComponent: () =>
-              import('./pages/career/career-materials.component').then(m => m.CareerMaterialsComponent),
+              import('./pages/career/career-materials.component').then(
+                m => m.CareerMaterialsComponent
+              ),
             title: 'Career Materials - AI Profile Photo Maker',
           },
           {
