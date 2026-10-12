@@ -1,8 +1,8 @@
 # Jobs page flag (PR #450) — review
 
-Reviewed 2026-10-11, after merge (commit 05ea1c8d). The delegated reviewer could not be started
-(the delegation tool closed the connection twice), so this is a self-review by the author of the
-change, not an independent one. Treat it accordingly.
+Reviewed 2026-10-11, after merge (commit 05ea1c8d). Two delegated read-only reviews (separate
+model sessions, static reading, no tests run) plus the author's own checks. Both reviewers reported
+no blockers and agreed on the four questions below.
 
 ## What the change does
 
@@ -34,6 +34,23 @@ The USAJOBS source, settings and secrets are untouched.
    back (with a private-sector source) by the next feature review, delete it rather than carry it.
 5. **Open, low — 404 vs 403.** Other "switched off" career answers use 403 `Disabled`; Jobs uses 404 so
    the endpoint looks absent. This is deliberate and documented in `docs/career/api-job-observations.md`.
+
+### Raised by the delegated reviewers (all low or info; none fixed yet)
+
+6. **Test gap — filter order is not pinned.** `CareerJobsFlagTests` has no unauthenticated case
+   (expected 401, not 404) and no workspace-off-with-jobs-on case (expected 403). A change in filter
+   order would not be caught. Live, unauthenticated did return 401.
+7. **The "unset" test is really "default false".** `CareerWorkspaceEnabledFactory` loads
+   `appsettings.json`, which sets the key to `false`, so the `?? false` fallback is never exercised.
+8. **Permissive flag parsing (suspected).** `GetValue<bool?>` throws on a value such as `"yes"`. A typo
+   in the deploy value would break the jobs endpoints and the public `/api/config/client`, which the
+   app loads at startup. Safer: `bool.TryParse`. Not reproduced.
+9. **The deploy value is a literal** (`CAREER_JOBS_ENABLED: 'false'`), so switching Jobs on needs a
+   commit, like the other `CAREER_*` settings. A repository variable would avoid that.
+10. **Other callers of the bicep file were not searched.** A caller passing a `careerSettings` object
+    without `jobsEnabled` would fail. The deploy workflow passes it.
+11. **`careerMorePages` is computed once** per shell instance, and the controller still constructs the
+    jobs service for unrelated market endpoints. Both harmless today.
 
 ## Gates at merge
 

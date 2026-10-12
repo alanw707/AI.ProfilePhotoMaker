@@ -91,6 +91,26 @@ measure of whether career users go on to buy photos.
 
 - It is based on reading the code and configuration, not on user data, revenue figures or traffic,
   none of which were available.
-- The feature inventory was done by one reviewer; a second, independent pass was attempted and the
-  delegation tool failed.
+- Two delegated read-only inventories were run alongside the author's own reading. They agree on the
+  table above. Their extra observations are listed below and were **not** independently re-checked.
 - Line and file counts are approximate (simple text searches).
+
+## Reported by the delegated inventories (unverified)
+
+- `Features:ReplicateTrainingFlowVisible` is not set in the deploy files and defaults to `true` in
+  production, while `PRODUCT.md` calls the flow hidden. The UI getter for it has no consumer, so the
+  flag appears to do nothing; the Replicate API endpoints remain live.
+- `simple-deploy.yml` reads the Turnstile secret as `TURNSITE_SECRET_KEY` in one place, which looks
+  like a typo against the other reference. If the repository secret is really named that way it works;
+  check before renaming.
+- `README.md` still describes the Replicate train-a-model flow and credits, and mentions neither
+  OpenAI, outcome packages nor the career workspace.
+- A third legacy credit pack (Studio, $39.99) has no outcome-package counterpart, and the legacy credit
+  ledger and `CreditController` are still live beside package entitlements.
+- `environment.prod.ts` hardcodes some photo flags to `false` while the API reports `true`; the runtime
+  config wins when it loads, so a failed config request would hide those features.
+- `/app/career/analytics` redirects to `market` with a comment saying comparison "arrives with #385",
+  although `/app/career/markets` already exists.
+- `DiagnosticController` (raw `ALTER TABLE` SQL), `DeploymentController` and a model-status debug
+  endpoint exist in the API; their production exposure was not checked and should be.
+
