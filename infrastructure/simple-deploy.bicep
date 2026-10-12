@@ -53,6 +53,7 @@ param careerSettings object = {
   enabled: 'false'
   audience: 'Allowlist'
   allowedEmails: ''
+  jobsEnabled: 'false'
   model: ''
   inputUsdPerMillion: ''
   outputUsdPerMillion: ''
@@ -562,6 +563,10 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'Features__CareerWorkspaceAllowedEmails'
               value: careerSettings.allowedEmails
+            }
+            {
+              name: 'Career__Jobs__Enabled'
+              value: careerSettings.jobsEnabled
             }
             {
               name: 'USAJobs__ApiKey'
