@@ -68,3 +68,19 @@ Promote only after #377.
 - About 1 day of data, against thresholds defined over days.
 - All of the decisive metrics (spend, failures, cap hits) are private and unmeasured here.
 - Rollback and the kill switch are ready (launch REVIEW § Rollback), so there is no risk in waiting.
+
+## Update 2026-10-11
+
+- Tried to fill the usage rows through the owner's signed-in browser session (read-only GETs). The
+  session had expired: the site redirected to sign-in and both admin endpoints answered 401. **The
+  private metrics are still a gap.** Nothing was changed.
+- The decision date is unchanged: on or after 2026-10-15, once there are 7 days of data.
+- The Jobs page was hidden on 2026-10-11 (`Career:Jobs:Enabled` off), so USAJOBS source calls stop
+  contributing to usage from that date.
+- The independent user test (#377) has a ready-to-run kit at `docs/testing/career/377/USER-TEST-KIT.md`.
+  It has not been run; promotion stays blocked on it.
+
+To finish this report: sign in at aiprofilephotomaker.com with the admin account, then either run
+`scripts/career/stage3-usage.sh` with the session cookie, or open `/admin/career-usage` and copy the
+figures into the gap table above.
+

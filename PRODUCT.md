@@ -35,6 +35,7 @@ Users upload one source photo, review its quality score, select a professional p
 - Journey: profile (manual or resume import) → goal → occupation match → market brief → pay analysis → market comparison → job observations → roadmap and tracking → targeted resume and summary → export → optional photo handoff.
 - The assistant runs on a monthly drafting allowance (currently 20 runs, provisional policy). Saved work stays readable, editable and exportable when the allowance is used up.
 - Profile and goal are versioned; a change marks dependent analysis stale rather than silently rewriting it.
+- Job observations (open postings from USAJOBS, federal jobs only) are built but hidden behind `Career:Jobs:Enabled` (off since 2026-10-11): a federal-only list read as "all jobs". Do not link to or promise job listings while it is off.
 - Evidence comes from O*NET, BLS (OEWS and projections) and USAJOBS snapshots. Personalized advertised-pay estimates are not approved and must show as unavailable.
 - Users can export and delete all career data; deletion survives backup restores.
 - No mass applications, no screenshot of third-party user data, no financial advice, no photo-based career scoring.
