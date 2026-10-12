@@ -34,7 +34,7 @@ public class ProfilePhotoScoreService : IProfilePhotoScoreService
         var imageBytes = buffered.ToArray();
         buffered.Position = 0;
 
-        using var image = await Image.LoadAsync<Rgba32>(buffered, cancellationToken);
+        using var image = await Image.LoadAsync<Rgba32>(UploadedImageFormats.DecoderOptions, buffered, cancellationToken);
         var resolutionScore = ScoreResolution(image.Width, image.Height);
         var framingScore = ScoreFraming(image.Width, image.Height);
         var lightingScore = ScoreLighting(image);

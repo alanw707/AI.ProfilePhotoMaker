@@ -14,6 +14,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
+[Authorize(Roles = "Admin")] // Reports configuration, security and infrastructure state: admins only.
 public class DeploymentController : ControllerBase
 {
     private readonly IDeploymentValidationService _deploymentValidation;
@@ -509,7 +510,6 @@ public class DeploymentController : ControllerBase
     /// <response code="200">Baseline reset successfully</response>
     /// <response code="500">Baseline reset failed</response>
     [HttpPost("monitor/reset-baseline")]
-    [Authorize] // Require authentication for this operation
     [ProducesResponseType(typeof(object), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(object), (int)HttpStatusCode.InternalServerError)]
     public async Task<ActionResult<object>> ResetConfigurationBaselineAsync()

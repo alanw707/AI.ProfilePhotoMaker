@@ -16,7 +16,7 @@ licence terms or paying, which an agent must not do on the owner's behalf.
 | GHSA-j3p4-wp97-rph4 | high | `HistogramEqualization` unchecked index | No: the processor is not used anywhere |
 | GHSA-j9gm-c75j-xc9q | high | TIFF CCITT T4 **encoder** overflow | No: the app never writes TIFF |
 | GHSA-jjfr-hcj7-qf5w | high | TIFF CCITT T6 **encoder** overflow | No: the app never writes TIFF |
-| GHSA-wmxv-xphr-5c9g | medium | BigTIFF decoder can loop without progress | Possibly: seven `Image.Load` sites use the default configuration, which includes the TIFF decoder |
+| GHSA-wmxv-xphr-5c9g | medium | BigTIFF decoder can loop without progress | **Was reachable** by any signed-in user through the photo score upload, which checked size only. Closed for that path on 2026-10-12 (see the correction below); six other load sites still use the default decoders |
 | GHSA-gwg2-r3hj-4w44 | medium | ICC profile parsing allocates from unvalidated sizes | Possibly: depends on whether a profile is parsed on load; not confirmed either way |
 
 So the three "high" items are not reachable from this code. The two "medium" items are
@@ -26,7 +26,7 @@ that every path into the seven load sites is covered.
 
 ## How much of the app uses it
 
-Nine files: load, auto-orient, resize, composite (`DrawImage`), JPEG/PNG save, and per-pixel reads
+Six API source files (plus tests): load, auto-orient, resize, composite (`DrawImage`), JPEG/PNG save, and per-pixel reads
 (`Rgba32`) for the photo score. Main sites: `OpenAIImageGenerationService`, `HeadshotGenerationService`,
 `PlatformExportService`, `ProfilePhotoScoreService`, `UploadStylePreviewsService`, `CareerExportService`.
 These sit on the paid photo path, so any change needs the full photo test suites and a visual check.
@@ -50,3 +50,18 @@ These sit on the paid photo path, so any change needs the full photo test suites
 ## What is needed from the owner
 
 One answer: is a Six Labors licence acceptable (free tier if eligible, or paid)? Yes → A. No → B.
+
+## Correction and partial fix, 2026-10-12
+
+An independent review found this brief understated the risk: `POST /api/ProfilePhotoWorkflow/score`
+checked only file size, so a signed-in user could send a TIFF straight to the default decoders.
+
+Fixed for that path: the endpoint now rejects anything that does not start like a JPEG, PNG or WebP
+(`UnsupportedImageFormat`), and `ProfilePhotoScoreService` decodes with JPEG/PNG/WebP decoders only
+(`UploadedImageFormats`). This is option C applied to one of the seven load sites.
+
+Still open: the other six load sites use the default decoders. Their inputs are stored uploads that
+passed `ImageController.IsValidImageFile`, model output, or local files, so they are lower risk, but
+that check accepts any `RIFF` file named `.webp`. Moving them to `UploadedImageFormats.DecoderOptions`
+is the rest of option C. The licence question (A or B) is unchanged.
+

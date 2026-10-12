@@ -315,7 +315,8 @@ public class HeadshotGenerationEndpointIntegrationTests : IClassFixture<CustomWe
         client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
 
         using var scoreContent = new MultipartFormDataContent();
-        scoreContent.Add(new ByteArrayContent([1, 2, 3]), "image", "source.png");
+        // The scorer is faked in this host; the upload still has to look like a PNG to pass the format check.
+        scoreContent.Add(new ByteArrayContent([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0]), "image", "source.png");
         var scoreResponse = await client.PostAsync("/api/ProfilePhotoWorkflow/score", scoreContent);
         scoreResponse.EnsureSuccessStatusCode();
 
