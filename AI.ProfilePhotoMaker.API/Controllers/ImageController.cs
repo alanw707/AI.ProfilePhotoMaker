@@ -1172,16 +1172,18 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// Diagnostic endpoint to show database records vs storage files for generated photos
         /// </summary>
         [HttpGet("diagnostic")]
-        [AllowAnonymous] // Allow unauthenticated access for debugging
         public async Task<IActionResult> DiagnosticInfo([FromQuery] string? userId = null)
         {
-            // For debugging - allow bypassing auth if userId provided, otherwise require auth
-            if (string.IsNullOrEmpty(userId))
+            var authCheck = ValidateAuthentication();
+            if (authCheck != null) return authCheck;
+
+            // A caller reads their own records; only an admin may name another user.
+            var callerId = GetCurrentUserId()!;
+            if (!string.IsNullOrEmpty(userId) && userId != callerId && !User.IsInRole("Admin"))
             {
-                var authCheck = ValidateAuthentication();
-                if (authCheck != null) return authCheck;
-                userId = GetCurrentUserId()!;
+                return ErrorResponse("Forbidden", "You can only view your own image records.", 403);
             }
+            userId = string.IsNullOrEmpty(userId) ? callerId : userId;
 
             try
             {

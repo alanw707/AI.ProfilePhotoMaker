@@ -13,6 +13,19 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services;
 public class ProfilePhotoScoreServiceTests
 {
     [Fact]
+    public async Task ScoreAsync_DoesNotDecodeFormatsOtherThanJpegPngWebp()
+    {
+        // A valid BMP: decodable with the default decoders, refused by the upload decoder set.
+        using var bmp = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(64, 64);
+        using var stream = new MemoryStream();
+        await SixLabors.ImageSharp.ImageExtensions.SaveAsBmpAsync(bmp, stream);
+        stream.Position = 0;
+
+        await Assert.ThrowsAsync<SixLabors.ImageSharp.UnknownImageFormatException>(
+            () => new ProfilePhotoScoreService().ScoreAsync(stream, "photo.bmp"));
+    }
+
+    [Fact]
     public async Task ScoreAsync_BlocksVeryLowResolutionUpload()
     {
         await using var stream = new MemoryStream();

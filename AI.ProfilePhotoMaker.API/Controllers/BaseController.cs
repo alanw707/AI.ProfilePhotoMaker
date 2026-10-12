@@ -72,6 +72,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 401 => Unauthorized(response),
                 402 => StatusCode(402, response),
+                403 => StatusCode(403, response),
                 404 => NotFound(response),
                 500 => StatusCode(500, response),
                 _ => BadRequest(response)

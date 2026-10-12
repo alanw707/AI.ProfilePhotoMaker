@@ -77,6 +77,11 @@ public class ProfilePhotoWorkflowController : BaseController
         }
 
         await using var stream = image.OpenReadStream();
+        if (!await UploadedImageFormats.IsSupportedAsync(stream, cancellationToken))
+        {
+            return ErrorResponse("UnsupportedImageFormat", "Upload a JPEG, PNG or WebP image.");
+        }
+
         var score = await _scoreService.ScoreAsync(stream, image.FileName, cancellationToken);
         return SuccessResponse(score);
     }
