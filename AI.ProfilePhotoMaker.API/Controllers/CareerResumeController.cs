@@ -54,6 +54,11 @@ public sealed class CareerResumeController : CareerControllerBase
         return await Respond(owner => _resumes.UploadAsync(owner, bytes, file?.FileName, consented, consentVersion, ct));
     }
 
+    /// <summary>Whether file upload can work at all (a scanner is registered). The paste route never depends on it.</summary>
+    [HttpGet("resumes/upload-status")]
+    public async Task<IActionResult> UploadStatus() =>
+        await Respond(owner => Task.FromResult(CareerOutcome<ResumeUploadStatusDto>.Ok(new ResumeUploadStatusDto(_resumes.UploadAvailable))));
+
     [HttpGet("resumes")]
     public async Task<IActionResult> List(CancellationToken ct) =>
         await Respond(owner => _resumes.ListAsync(owner, ct));

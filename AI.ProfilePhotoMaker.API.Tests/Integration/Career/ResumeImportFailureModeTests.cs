@@ -46,6 +46,18 @@ public class ResumeImportFailureModeTests
         factory.Storage.Count.Should().Be(0);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UploadStatusSaysWhetherFilesCanBeCheckedSoTheUiNeverOffersADeadUpload(bool scanner)
+    {
+        using var factory = new ResumeImportFactory { RegisterScanner = scanner };
+
+        var data = await CareerClient.ReadDataAsync(await new CareerClient(factory).GetAsync("/api/career/resumes/upload-status"), 200);
+
+        data.GetProperty("available").GetBoolean().Should().Be(scanner);
+    }
+
     [Fact]
     public async Task NoRegisteredScannerFailsClosed()
     {

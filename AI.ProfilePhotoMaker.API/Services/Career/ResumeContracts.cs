@@ -188,3 +188,6 @@ public static class ResumeFacts
                 : l.FactIds.Any(f => Resolve(profile, f) == null))
             .Select(l => l.Id).ToList();
 }
+
+/// <summary>Whether resume file upload is available; when false the UI offers pasted text only.</summary>
+public sealed record ResumeUploadStatusDto(bool Available);

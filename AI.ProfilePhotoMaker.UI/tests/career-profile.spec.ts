@@ -80,3 +80,17 @@ test('profile fits a 320px viewport', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Your professional profile' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 });
+
+test('a new user starts setup with every field empty and no example text', async ({ page }) => {
+  fakeBackend(page);
+  await page.goto('/app/career/setup?e2eAuthBypass=1');
+  await expect(page.getByLabel('Current title')).toBeVisible();
+  const fields = page.locator(
+    'form input:not([type=checkbox]):not([type=file]), form textarea, form select'
+  );
+  expect(await fields.count()).toBeGreaterThanOrEqual(6);
+  for (const field of await fields.all()) {
+    await expect(field).toHaveValue('');
+    expect(await field.getAttribute('placeholder')).toBeNull();
+  }
+});

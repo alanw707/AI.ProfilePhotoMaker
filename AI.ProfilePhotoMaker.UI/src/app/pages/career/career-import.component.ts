@@ -98,15 +98,22 @@ export class CareerImportComponent implements OnInit, OnDestroy {
   selectedCount = computed(() => this.selected().size);
   /** An assistant draft opened from the summary page is not a resume import. */
   isAgentDraft = computed(() => this.proposal()?.source === 'agent');
+  /** False when the server cannot check files; the upload form is then replaced by paste. */
+  uploadAvailable = signal(true);
   showPaste = computed(() => {
     const result = this.result();
-    return !this.proposal() && !!result && result.state !== 'ready';
+    return !this.proposal() && (!this.uploadAvailable() || (!!result && result.state !== 'ready'));
   });
 
   ngOnInit() {
     // Loads the current profile so its ETag is known before accepting.
     this.api.getProfile().subscribe({ error: e => this.redirectIfDisabled(e) });
     this.loadResumes();
+    // If this check itself fails, keep offering upload; the upload reports its own errors.
+    this.api.getResumeUploadStatus().subscribe({
+      next: status => this.uploadAvailable.set(status.available),
+      error: () => undefined,
+    });
     const proposalId = this.route.snapshot.queryParamMap.get('proposal');
     if (proposalId) {
       this.openProposal(proposalId);
