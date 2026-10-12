@@ -158,7 +158,12 @@ export interface CareerPhotoSelection {
   selectedAt: string;
 }
 export type CareerRunStatus =
-  'queued' | 'working' | 'needs_input' | 'completed' | 'failed' | 'cancelled';
+  | 'queued'
+  | 'working'
+  | 'needs_input'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
 export interface CareerRunStep {
   ordinal: number;
   kind: string;
@@ -705,7 +710,12 @@ export interface PayRecomputeResult {
   sections: PaySection[];
 }
 export type ResumeSectionKey =
-  'headline' | 'summary' | 'experience_highlights' | 'skills' | 'short' | 'long';
+  | 'headline'
+  | 'summary'
+  | 'experience_highlights'
+  | 'skills'
+  | 'short'
+  | 'long';
 export type MaterialKind = 'resume' | 'summary';
 export type ExportFormat = 'pdf' | 'docx';
 export interface CareerExportDto {
@@ -1104,6 +1114,10 @@ export class CareerProfileService {
     form.append('consent', String(consent));
     form.append('consentVersion', RESUME_CONSENT_VERSION);
     return this.request<ResumeDocumentDto>('POST', 'resumes', form);
+  }
+  /** Whether file upload can work at all; when false only pasted text is offered. */
+  getResumeUploadStatus() {
+    return this.request<{ available: boolean }>('GET', 'resumes/upload-status');
   }
   listResumes() {
     return this.request<ResumeDocumentDto[]>('GET', 'resumes');

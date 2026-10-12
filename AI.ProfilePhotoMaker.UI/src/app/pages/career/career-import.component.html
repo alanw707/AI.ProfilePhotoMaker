@@ -50,46 +50,56 @@
     }
 
     @if (!proposal()) {
-      <section aria-labelledby="upload-heading">
-        <h2 id="upload-heading">Upload your resume</h2>
-        <p class="notice" id="import-notice">
-          Your file is stored privately, used only to suggest profile facts, and deleted automatically after 30 days or
-          when you remove it. Nothing is added to your profile until you accept it.
-        </p>
-        <div class="check field">
-          <input
-            id="import-consent"
-            type="checkbox"
-            [checked]="consent()"
-            (change)="onConsent($any($event.target).checked)"
-            [attr.aria-invalid]="!!fieldErrors().consent"
-            aria-describedby="import-notice import-consent-error" />
-          <label for="import-consent">I understand and agree</label>
-          <span id="import-consent-error" class="field-error">{{ fieldErrors().consent }}</span>
-        </div>
-        <div class="field">
-          <label for="import-file">Resume file (PDF or DOCX)</label>
-          <input
-            #fileInput
-            id="import-file"
-            type="file"
-            accept=".pdf,.docx"
-            (change)="onFile(fileInput)"
-            [attr.aria-invalid]="!!fieldErrors().file"
-            aria-describedby="import-file-help import-file-error" />
-          <span id="import-file-help" class="muted">Up to 10 MB and 25 pages. Scanned pages are not read.</span>
-          <span id="import-file-error" class="field-error">{{ fieldErrors().file }}</span>
-        </div>
-        <button type="button" class="primary" [disabled]="phase() === 'uploading'" (click)="upload()">
-          {{ phase() === 'uploading' ? 'Working…' : 'Upload and read resume' }}
-        </button>
-        @if (phase() === 'uploading') {
-          <p class="progress" aria-hidden="true">
-            <span class="progress-bar"></span>
-            {{ progress() }}
+      @if (uploadAvailable()) {
+        <section aria-labelledby="upload-heading">
+          <h2 id="upload-heading">Upload your resume</h2>
+          <p class="notice" id="import-notice">
+            Your file is stored privately, used only to suggest profile facts, and deleted automatically after 30 days
+            or when you remove it. Nothing is added to your profile until you accept it.
           </p>
-        }
-      </section>
+          <div class="check field">
+            <input
+              id="import-consent"
+              type="checkbox"
+              [checked]="consent()"
+              (change)="onConsent($any($event.target).checked)"
+              [attr.aria-invalid]="!!fieldErrors().consent"
+              aria-describedby="import-notice import-consent-error" />
+            <label for="import-consent">I understand and agree</label>
+            <span id="import-consent-error" class="field-error">{{ fieldErrors().consent }}</span>
+          </div>
+          <div class="field">
+            <label for="import-file">Resume file (PDF or DOCX)</label>
+            <input
+              #fileInput
+              id="import-file"
+              type="file"
+              accept=".pdf,.docx"
+              (change)="onFile(fileInput)"
+              [attr.aria-invalid]="!!fieldErrors().file"
+              aria-describedby="import-file-help import-file-error" />
+            <span id="import-file-help" class="muted">Up to 10 MB and 25 pages. Scanned pages are not read.</span>
+            <span id="import-file-error" class="field-error">{{ fieldErrors().file }}</span>
+          </div>
+          <button type="button" class="primary" [disabled]="phase() === 'uploading'" (click)="upload()">
+            {{ phase() === 'uploading' ? 'Working…' : 'Upload and read resume' }}
+          </button>
+          @if (phase() === 'uploading') {
+            <p class="progress" aria-hidden="true">
+              <span class="progress-bar"></span>
+              {{ progress() }}
+            </p>
+          }
+        </section>
+      } @else {
+        <section aria-labelledby="upload-off-heading" data-upload-unavailable>
+          <h2 id="upload-off-heading">Add your resume</h2>
+          <p class="notice">
+            File upload is not available yet. Paste your resume text below and we will suggest profile facts from it.
+            Nothing is added to your profile until you accept it.
+          </p>
+        </section>
+      }
 
       @if (result(); as r) {
         @if (r.state === 'unreadable') {
@@ -115,7 +125,7 @@
 
       @if (showPaste()) {
         <section aria-labelledby="paste-heading">
-          <h2 id="paste-heading">Paste instead</h2>
+          <h2 id="paste-heading">{{ uploadAvailable() ? 'Paste instead' : 'Paste your resume text' }}</h2>
           <div class="field">
             <label for="import-paste">Resume text</label>
             <textarea

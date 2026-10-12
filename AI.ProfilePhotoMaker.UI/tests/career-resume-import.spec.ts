@@ -46,6 +46,7 @@ function fakeBackend(page: Page) {
     facts: { currentTitle: 'Operations lead', skills: [], highlights: [] },
     provenance: { source: 'manual', confirmedAt: new Date().toISOString() },
   };
+  let uploadAvailable = true;
   let uploadBody = '';
   let acceptedIds: string[] = [];
   const send = (route: any, data: unknown, status = 200, etag?: string) =>
@@ -79,6 +80,7 @@ function fakeBackend(page: Page) {
       if (path === 'profile' && method === 'GET') return send(route, profile, 200, profile.etag);
       if (path === 'goals') return fail(route, 404, 'CareerGoalNotFound');
       if (path === 'profile/versions') return send(route, []);
+      if (path === 'resumes/upload-status') return send(route, { available: uploadAvailable });
       if (path === 'resumes' && method === 'GET') return send(route, resumes);
       if (path === 'resumes' && method === 'POST') {
         uploadBody = route.request().postData() ?? '';
@@ -150,6 +152,7 @@ function fakeBackend(page: Page) {
   });
   return {
     mode: (value: Mode) => (mode = value),
+    uploadUnavailable: () => (uploadAvailable = false),
     stale: () => (staleNext = true),
     uploadBody: () => uploadBody,
     acceptedIds: () => acceptedIds,
@@ -239,7 +242,7 @@ test('unreadable file offers the paste fallback', async ({ page }) => {
   ).toBeVisible();
   await page.getByRole('button', { name: 'Get suggestions from pasted text' }).click();
   await expect(page.locator('[role=alert]')).toContainText('Paste some resume text first.');
-  await page.getByLabel('Resume text').fill('Jane Doe\nSenior Operations Lead');
+  await page.locator('#import-paste').fill('Jane Doe\nSenior Operations Lead');
   await page.getByRole('button', { name: 'Get suggestions from pasted text' }).click();
   await expect(page.getByRole('heading', { name: 'Review suggestions' })).toBeVisible();
   await expect(page.getByText('from the text you pasted')).toBeVisible();
@@ -300,4 +303,27 @@ test('import and review fit a 320px viewport', async ({ page }) => {
   await upload(page);
   await expect(page.getByRole('heading', { name: 'Review suggestions' })).toBeVisible();
   expect(await width()).toBeLessThanOrEqual(320);
+});
+
+test('when files cannot be checked, the page offers paste and no dead upload form', async ({
+  page,
+}) => {
+  const backend = fakeBackend(page);
+  backend.uploadUnavailable();
+  await open(page);
+  await expect(page.locator('[data-upload-unavailable]')).toContainText(
+    'File upload is not available yet'
+  );
+  await expect(page.getByRole('button', { name: 'Upload and read resume' })).toHaveCount(0);
+  await expect(page.getByLabel(/Resume file/)).toHaveCount(0);
+  await page.locator('#import-paste').fill('Senior Operations Lead, Regional Health Services');
+  await page.getByRole('button', { name: 'Get suggestions from pasted text' }).click();
+  await expect(page.getByRole('button', { name: /Accept selected/ })).toBeVisible();
+});
+
+test('when files can be checked, the upload form is offered', async ({ page }) => {
+  fakeBackend(page);
+  await open(page);
+  await expect(page.getByRole('button', { name: 'Upload and read resume' })).toBeVisible();
+  await expect(page.locator('[data-upload-unavailable]')).toHaveCount(0);
 });

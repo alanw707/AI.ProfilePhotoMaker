@@ -11,6 +11,8 @@ namespace AI.ProfilePhotoMaker.API.Services.Career;
 public interface IResumeImportService
 {
     Task<CareerOutcome<ResumeDocumentDto>> UploadAsync(string ownerId, byte[]? content, string? fileName, bool consent, string? consentVersion, CancellationToken ct = default);
+    /// <summary>False while no malware scanner is registered: uploads would fail closed, so the UI offers paste instead.</summary>
+    bool UploadAvailable { get; }
     Task<CareerOutcome<IReadOnlyList<ResumeDocumentDto>>> ListAsync(string ownerId, CancellationToken ct = default);
     Task<CareerOutcome<ResumeDocumentDto>> GetAsync(string ownerId, Guid id, CancellationToken ct = default);
     Task<CareerOutcome<ResumeFileResult>> GetFileAsync(string ownerId, Guid id, CancellationToken ct = default);
@@ -66,6 +68,8 @@ public sealed class ResumeImportService : IResumeImportService
         _clock = clock;
         _logger = logger;
     }
+
+    public bool UploadAvailable => _scanner != null;
 
     public async Task<CareerOutcome<ResumeDocumentDto>> UploadAsync(
         string ownerId, byte[]? content, string? fileName, bool consent, string? consentVersion, CancellationToken ct = default)
