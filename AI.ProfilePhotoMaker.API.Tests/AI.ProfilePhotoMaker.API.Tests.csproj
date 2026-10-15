@@ -29,6 +29,10 @@
     <!-- Performance testing packages -->
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="10.0.0" />
     <PackageReference Include="BenchmarkDotNet" Version="0.13.12" />
+    <!-- Transitive pin (via the API's DataProtection) to the 2026-10-13 .NET security fix:
+         GHSA-7hqp-7c5m-4vq6, GHSA-c399-9853-6jmj, GHSA-r955-8q5j-3h83. This project is not a Web SDK project,
+         so the package is not supplied by the shared framework. Remove once DataProtection depends on 10.0.13+. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.13" />
   </ItemGroup>
 
   <ItemGroup>

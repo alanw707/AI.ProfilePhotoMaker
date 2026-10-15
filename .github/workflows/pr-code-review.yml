@@ -56,8 +56,11 @@ jobs:
 
       - name: 🔍 .NET Analyzers (bugs/best practices/perf)
         run: |
+          # --no-incremental: the reviewdog step above already compiled, so an incremental build would skip the
+          # compiler and report 0 warnings without checking anything.
           dotnet build AI.ProfilePhotoMaker.sln \
             --no-restore \
+            --no-incremental \
             -c Release \
             -warnaserror \
             -p:EnableNETAnalyzers=true \
