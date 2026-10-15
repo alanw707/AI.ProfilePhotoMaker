@@ -202,6 +202,7 @@ public static class CareerWorkspaceServiceCollectionExtensions
         services.AddSingleton<ICareerOperatorControls, CareerOperatorControls>();
         services.AddScoped<ICareerReservationReaper, CareerReservationReaper>();
         services.AddScoped<ICareerUsageReportService, CareerUsageReportService>();
+        services.AddScoped<ICareerFunnelReportService, CareerFunnelReportService>();
         // Built by hand because the model is optional: occupation matching runs without one.
         services.AddScoped<ICareerAgentRunner>(sp => new CareerAgentRunner(
             sp.GetRequiredService<ApplicationDbContext>(),

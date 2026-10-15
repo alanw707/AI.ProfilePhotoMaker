@@ -3,7 +3,7 @@
     <div>
       <p class="admin-kicker">Career</p>
       <h1>Career usage</h1>
-      <p class="admin-subtitle">Run counts, cost and speed. No personal details are shown.</p>
+      <p class="admin-subtitle">How far people get, plus run counts, cost and speed. No personal details are shown.</p>
     </div>
   </header>
 
@@ -53,6 +53,52 @@
       }
     }
   </section>
+
+  @if (funnel(); as f) {
+    <section class="admin-panel" aria-labelledby="funnel-heading" data-funnel>
+      <h2 id="funnel-heading">Journey funnel</h2>
+      <p>
+        {{ f.started }} {{ f.started === 1 ? 'person' : 'people' }} started the workspace between
+        {{ f.from | date: 'mediumDate' }} and {{ f.to | date: 'mediumDate' }}. Each row counts how many of them had
+        reached that step by {{ f.measuredAt | date: 'medium' }}.
+      </p>
+      <div class="table-wrap" role="region" aria-label="Journey funnel table" tabindex="0">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Step</th>
+              <th scope="col">People</th>
+              <th scope="col">Share of starters</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of f.steps; track s.step) {
+              <tr data-funnel-row>
+                <th scope="row">{{ stepLabel(s.step) }}</th>
+                <td>{{ s.users }}</td>
+                <td>{{ share(s.users, f.started) | percent: '1.0-0' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <h3>Coming back</h3>
+      <dl data-funnel-returns>
+        <dt>Worked on two or more days</dt>
+        <dd>{{ f.returns.activeOnTwoOrMoreDays }}</dd>
+        <dt>Worked again a week or more after starting</dt>
+        <dd>{{ f.returns.activeSevenOrMoreDaysAfterStart }}</dd>
+        <dt>Median active days per person</dt>
+        <dd>{{ f.returns.activeDaysP50 }}</dd>
+        <dt>Most active days by one person</dt>
+        <dd>{{ f.returns.activeDaysMax }}</dd>
+      </dl>
+      <p>
+        An active day is a day with a saved change, a draft or an export. Visits that only read are not counted, and
+        deleted career data drops out of every row.
+      </p>
+    </section>
+  }
 
   @if (usage(); as u) {
     <section class="admin-panel" aria-labelledby="usage-heading">

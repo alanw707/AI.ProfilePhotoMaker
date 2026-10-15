@@ -42,6 +42,24 @@ const usage = {
   },
   totalCostUsd: 1.5,
 };
+const funnel = {
+  from: '2026-09-15T00:00:00Z',
+  to: '2026-10-15T00:00:00Z',
+  measuredAt: '2026-10-15T00:00:00Z',
+  started: 8,
+  steps: [
+    { step: 'profile_saved', users: 8 },
+    { step: 'goal_saved', users: 6 },
+    { step: 'occupation_confirmed', users: 4 },
+    { step: 'photo_package_bought', users: 1 },
+  ],
+  returns: {
+    activeOnTwoOrMoreDays: 3,
+    activeSevenOrMoreDaysAfterStart: 2,
+    activeDaysP50: 1,
+    activeDaysMax: 5,
+  },
+};
 
 async function mock(page: Page, opts: { allowance?: object; runStatus?: number; code?: string }) {
   const calls = { puts: [] as unknown[] };
@@ -63,6 +81,7 @@ async function mock(page: Page, opts: { allowance?: object; runStatus?: number; 
       });
     }
     if (path === '/api/admin/career/usage') return send(usage);
+    if (path === '/api/admin/career/funnel') return send(funnel);
     if (path === '/api/admin/career/controls') {
       if (req.method() === 'PUT') {
         calls.puts.push(req.postDataJSON());
@@ -140,6 +159,24 @@ test('admin page shows usage and toggles only after confirmation', async ({ page
   await expect(page.getByText('Saved.')).toBeVisible();
   expect(calls.puts).toEqual([{ generationDisabled: true, sourcesDisabled: false }]);
   await expect(page.getByText('Last changed Oct 5, 2026')).toBeVisible();
+});
+
+test('admin page shows the journey funnel with readable steps and shares', async ({ page }) => {
+  await mock(page, {});
+  await open(page, '/admin/career-usage?e2eAuthBypass=1', 'Career usage');
+  const panel = page.locator('[data-funnel]');
+  await expect(panel).toContainText('8 people started the workspace');
+  const rows = page.locator('[data-funnel-row]');
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(1)).toContainText('Set a goal');
+  await expect(rows.nth(1)).toContainText('75%');
+  await expect(rows.nth(3)).toContainText('Bought a photo package after starting');
+  await expect(rows.nth(3)).toContainText('13%');
+  await expect(panel).not.toContainText('goal_saved');
+  const returns = page.locator('[data-funnel-returns]');
+  await expect(returns).toContainText('Worked on two or more days');
+  await expect(returns).toContainText('3');
+  await expect(returns).toContainText('5');
 });
 
 for (const [w, h] of [
