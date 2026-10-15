@@ -56,8 +56,11 @@ jobs:
 
       - name: 🔍 .NET Analyzers (bugs/best practices/perf)
         run: |
+          # --no-incremental: the reviewdog step above already compiled, so an incremental build would skip the
+          # compiler and report 0 warnings without checking anything.
           dotnet build AI.ProfilePhotoMaker.sln \
             --no-restore \
+            --no-incremental \
             -c Release \
             -warnaserror \
             -p:EnableNETAnalyzers=true \
@@ -96,6 +99,57 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           npx playwright test tests/axe-contrast.spec.ts tests/axe-contrast-populated.spec.ts tests/live-contrast-regressions.spec.ts --reporter=line
+
+  # Unit tests used to run only in Simple Deploy, after the merge to main. Running them here blocks the merge instead.
+  # Integration tests run too (in-memory/SQLite, no external services). Performance tests stay out: their timing
+  # and allocation targets are noisy on shared runners (#446).
+  tests:
+    name: 🧪 Tests (API + UI)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v5
+
+      - name: ⚙️ Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: 🧪 API tests (unit + integration)
+        run: |
+          dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj \
+            -c Release \
+            --filter "FullyQualifiedName!~Performance" \
+            --logger "trx;LogFileName=api-tests.trx" \
+            --results-directory TestResults
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: AI.ProfilePhotoMaker.UI/package-lock.json
+
+      - name: 📦 Install UI Dependencies
+        working-directory: AI.ProfilePhotoMaker.UI
+        env:
+          HUSKY: 0
+        run: npm ci --no-audit --no-fund
+
+      - name: 🧪 UI unit tests (Karma, headless Chrome)
+        working-directory: AI.ProfilePhotoMaker.UI
+        env:
+          CI: true
+        run: npm run test -- --watch=false --browsers=ChromeHeadless
+
+      - name: 📤 Upload API test results
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results
+          path: TestResults/
+          retention-days: 7
 
   codeql:
     name: 🛡️ CodeQL (C# + JS)

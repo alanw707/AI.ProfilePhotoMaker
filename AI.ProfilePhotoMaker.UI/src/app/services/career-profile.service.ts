@@ -885,6 +885,20 @@ export interface CareerUsageDto {
   };
   totalCostUsd: number;
 }
+/** Admin funnel: people who started the workspace in [from, to) and how far they have got. Counts only. */
+export interface CareerFunnelDto {
+  from: string;
+  to: string;
+  measuredAt: string;
+  started: number;
+  steps: { step: string; users: number }[];
+  returns: {
+    activeOnTwoOrMoreDays: number;
+    activeSevenOrMoreDaysAfterStart: number;
+    activeDaysP50: number;
+    activeDaysMax: number;
+  };
+}
 export interface CareerControlsDto {
   generationDisabled: boolean;
   sourcesDisabled: boolean;
@@ -1180,6 +1194,12 @@ export class CareerProfileService {
       .filter(Boolean)
       .join('&');
     return this.request<CareerUsageDto>('GET', `/admin/career/usage${q ? '?' + q : ''}`);
+  }
+  getAdminFunnel(from?: string, to?: string) {
+    const q = [from && `from=${encodeURIComponent(from)}`, to && `to=${encodeURIComponent(to)}`]
+      .filter(Boolean)
+      .join('&');
+    return this.request<CareerFunnelDto>('GET', `/admin/career/funnel${q ? '?' + q : ''}`);
   }
   getAdminControls() {
     return this.request<CareerControlsDto>('GET', '/admin/career/controls');

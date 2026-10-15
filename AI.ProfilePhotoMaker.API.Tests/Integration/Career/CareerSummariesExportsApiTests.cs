@@ -109,7 +109,7 @@ public class CareerSummariesExportsApiTests
     {
         using var stream = new MemoryStream(bytes);
         using var doc = WordprocessingDocument.Open(stream, false);
-        return string.Join("\n", doc.MainDocumentPart!.Document.Body!.Elements<Paragraph>().Select(p => p.InnerText));
+        return string.Join("\n", doc.MainDocumentPart!.Document!.Body!.Elements<Paragraph>().Select(p => p.InnerText));
     }
 
     // ---- Summary run ---------------------------------------------------------------
@@ -247,7 +247,7 @@ public class CareerSummariesExportsApiTests
         pdf.NumberOfPages.Should().Be(1);
         pdf.GetPage(1).GetImages().Should().BeEmpty();
         pdf.TryGetBookmarks(out var bookmarks).Should().BeTrue();
-        bookmarks.GetNodes().Select(n => n.Title).Should().Contain(new[] { "Ada Lovelace", "Summary", "Experience highlights", "Skills" });
+        bookmarks!.GetNodes().Select(n => n.Title).Should().Contain(new[] { "Ada Lovelace", "Summary", "Experience highlights", "Skills" });
         pdf.Information.Title.Should().NotBeNullOrEmpty();
     }
 
@@ -270,10 +270,10 @@ public class CareerSummariesExportsApiTests
             var letters = page.Letters.Where(l => !string.IsNullOrWhiteSpace(l.Value)).ToList();
             letters.Should().NotBeEmpty();
             // Every glyph, hence every line, sits wholly inside the margins: nothing is cut by a page edge.
-            letters.Min(l => l.GlyphRectangle.Bottom).Should().BeGreaterThanOrEqualTo(margin - 4);
-            letters.Max(l => l.GlyphRectangle.Top).Should().BeLessThanOrEqualTo(page.Height - margin + 4);
-            letters.Min(l => l.GlyphRectangle.Left).Should().BeGreaterThanOrEqualTo(margin - 2);
-            letters.Max(l => l.GlyphRectangle.Right).Should().BeLessThanOrEqualTo(page.Width - margin + 2);
+            letters.Min(l => l.BoundingBox.Bottom).Should().BeGreaterThanOrEqualTo(margin - 4);
+            letters.Max(l => l.BoundingBox.Top).Should().BeLessThanOrEqualTo(page.Height - margin + 4);
+            letters.Min(l => l.BoundingBox.Left).Should().BeGreaterThanOrEqualTo(margin - 2);
+            letters.Max(l => l.BoundingBox.Right).Should().BeLessThanOrEqualTo(page.Width - margin + 2);
         }
         // Every highlight is present, whole and in order.
         var all = Squash(PdfText(bytes));
@@ -502,7 +502,7 @@ public class CareerSummariesExportsApiTests
         meta.GetProperty("fileName").GetString().Should().EndWith(".docx");
         using var stream = new MemoryStream(bytes);
         using var doc = WordprocessingDocument.Open(stream, false);
-        var body = doc.MainDocumentPart!.Document.Body!;
+        var body = doc.MainDocumentPart!.Document!.Body!;
         var styleOf = (Paragraph p) => p.ParagraphProperties?.ParagraphStyleId?.Val?.Value;
         body.Elements<Paragraph>().Where(p => styleOf(p) == "Heading1").Select(p => p.InnerText).Should().Equal("Ada Lovelace");
         body.Elements<Paragraph>().Where(p => styleOf(p) == "Heading2").Select(p => p.InnerText)
