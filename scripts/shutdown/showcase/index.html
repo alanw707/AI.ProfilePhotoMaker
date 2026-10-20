@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Profile Photo Maker: project archive</title>
+<meta name="description" content="AI Profile Photo Maker (2025–2026): an AI headshot and career-planning web app, built and run by Alan Wang. The service has closed.">
+<meta name="robots" content="index, follow">
+<style>
+  :root { --ink:#1d2327; --muted:#5b6670; --line:#e3e6e8; --accent:#14615e; --bg:#fafaf8; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:17px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:var(--bg); }
+  main { max-width:760px; margin:0 auto; padding:56px 24px 72px; }
+  h1 { font-size:2.1rem; line-height:1.2; margin:0 0 6px; }
+  h2 { font-size:1.15rem; margin:40px 0 10px; }
+  .meta { color:var(--muted); margin:0 0 24px; }
+  ul { padding-left:1.2em; } li { margin:4px 0; }
+  figure { margin:28px 0; } img { width:100%; height:auto; border:1px solid var(--line); border-radius:8px; }
+  figcaption { color:var(--muted); font-size:.9rem; margin-top:6px; }
+  a { color:var(--accent); }
+  .button { display:inline-block; padding:10px 16px; border-radius:6px; background:var(--accent); color:#fff; text-decoration:none; font-weight:600; }
+  .closed { margin-top:48px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:.95rem; }
+</style>
+</head>
+<body>
+<main>
+  <!-- EDIT ME: this page is a draft. Change anything that doesn't sound like you before deploying. -->
+  <h1>AI Profile Photo Maker</h1>
+  <p class="meta">Built and run by Alan Wang · May 2025 – October 2026</p>
+
+  <p>A web app that turned a few selfies into professional headshots by training a personal AI image model for each user. In 2026 it grew a career workspace: people confirmed their own profile and goal, then got a labor-market brief, pay analysis and roadmap based on sourced public data (O*NET, BLS).</p>
+
+  <p><a class="button" href="https://github.com/alanw707/AI.ProfilePhotoMaker">View the source on GitHub</a></p>
+
+  <figure>
+    <img src="career.jpg" alt="The career workspace: a step list on the left (profile, goal, occupation, market brief, pay analysis, roadmap, resume) and the user's saved goal with a next step." width="640" height="456">
+    <figcaption>The career workspace, shown with a synthetic test user.</figcaption>
+  </figure>
+
+  <h2>What I built</h2>
+  <ul>
+    <li><strong>Per-user model training:</strong> uploads were checked for quality, packaged and sent to Replicate for FLUX fine-tuning, with async webhooks driving the job status.</li>
+    <li><strong>Payments:</strong> Stripe checkout for credit packages, with idempotent webhook handling.</li>
+    <li><strong>AI with a budget:</strong> OpenAI-drafted career material with daily, monthly and per-user cost caps.</li>
+    <li><strong>Privacy by design:</strong> biometric consent, 30-day automatic deletion of photos, and self-serve data export and deletion.</li>
+    <li><strong>Operations:</strong> infrastructure as code (Bicep) on Azure Container Apps, deployed by GitHub Actions; architecture decisions recorded as ADRs.</li>
+  </ul>
+
+  <h2>Stack</h2>
+  <p>Angular · ASP.NET Core (.NET) · SQL Server · Azure Container Apps, Blob Storage, Key Vault · Replicate (FLUX) · OpenAI · Stripe · Postmark · Cloudflare</p>
+
+  <h2>Why it closed</h2>
+  <p>Free general-purpose AI tools caught up on headshots, and I built far more than I tested with paying customers. The biggest lesson: put a price in front of real people before writing the next feature.</p>
+
+  <p class="closed">The service closed in October 2026. All user photos, trained models and account data have been deleted. Questions: <a href="mailto:privacy@aiprofilephotomaker.com">privacy@aiprofilephotomaker.com</a></p>
+</main>
+</body>
+</html>
