@@ -2,11 +2,11 @@
 
 Goal: stop the roughly $100/month spend, close the site cleanly, and handle user data properly. The repo stays.
 
-**Automated:** `scripts/shutdown/shutdown-wizard.sh` walks through every step below. It runs the API work itself (GitHub, Azure, Stripe, Replicate, Cloudflare, Postmark), opens the right page for each manual step, and asks before anything that deletes data. Try `DRY_RUN=1 scripts/shutdown/shutdown-wizard.sh` first. Needs Docker (the Azure CLI runs in a container), `gh`, `jq`, `gpg` and `npx`. State and the encrypted backup go to `~/.local/state/aipm-shutdown/`, never the repo. The project page it publishes is `scripts/shutdown/showcase/index.html`.
+**Automated:** `scripts/shutdown/shutdown-wizard.sh` walks through every step below. It runs the API work itself (GitHub, Azure, Stripe, Replicate, Cloudflare, Postmark), opens the right page for each manual step, and asks before anything that deletes data. Try `DRY_RUN=1 scripts/shutdown/shutdown-wizard.sh` first. Needs the Azure CLI (falls back to a Docker container if it isn't installed), Docker (for the database queries), `gh`, `jq`, `gpg` and `npx`. State and the encrypted backup go to `~/.local/state/aipm-shutdown/`, never the repo. The project page it publishes is `scripts/shutdown/showcase/index.html`.
 
 Work top to bottom. Order matters: step 1 stops the deploy pipeline from recreating everything, and step 5 has to happen before step 7.
 
-Run `az` commands in **Azure Cloud Shell** (portal, top bar `>_`). The Azure CLI isn't installed on this machine.
+Run `az` commands locally (Azure CLI is installed via `mise use -g azure-cli`) or in **Azure Cloud Shell** (portal, top bar `>_`).
 
 What's running (from `infrastructure/simple-deploy.bicep`), all in resource group **`aiprofilemaker-v1`**:
 

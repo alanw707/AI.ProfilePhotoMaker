@@ -238,6 +238,8 @@ act() {
 # az runs the Azure CLI. Uses a local install if present, otherwise the
 # official Docker image with its login kept in $AZ_CFG.
 AZ_NATIVE="$(type -P az || true)"
+# Where az writes downloads: the real dir natively, the mounted /backup in Docker.
+if [[ -n "$AZ_NATIVE" ]]; then AZ_BACKUP_DIR="$BACKUP_DIR"; else AZ_BACKUP_DIR="/backup"; fi
 az() {
   if [[ -n "$AZ_NATIVE" ]]; then "$AZ_NATIVE" "$@"; return; fi
   local tty=(-i); [[ -t 0 && -t 1 ]] && tty=(-it)
@@ -287,7 +289,8 @@ s_preflight() {
   if (( ${#missing[@]} )); then fail "Missing tools: ${missing[*]}. Install them and re-run."; exit 1; fi
   docker info >/dev/null 2>&1 || { fail "Docker isn't running. Start it (sudo systemctl start docker) and re-run."; exit 1; }
   gh auth status >/dev/null 2>&1 || { fail "GitHub CLI isn't signed in. Run: gh auth login"; exit 1; }
-  ok "Tools ready (Azure CLI runs in Docker; first pull takes a minute)."
+  if [[ -n "$AZ_NATIVE" ]]; then ok "Tools ready (Azure CLI: $AZ_NATIVE)."
+  else ok "Tools ready (Azure CLI runs in Docker; first pull takes a minute)."; fi
   [[ "$DRY_RUN" == 1 ]] && warn "DRY RUN: nothing will be changed or deleted."
 
   say "Signing in to Azure. A code appears below: open the link, paste it, and sign in"
@@ -487,7 +490,7 @@ s_backup() {
     --admin-user sqladmin --admin-password "$SQL_PASS" \
     --storage-key-type StorageAccessKey --storage-key "$key" \
     --storage-uri "https://$STORAGE_ACCOUNT.blob.core.windows.net/backup/$name" -o none
-  act "download $name" az storage blob download -c backup -n "$name" -f "/backup/$name" \
+  act "download $name" az storage blob download -c backup -n "$name" -f "$AZ_BACKUP_DIR/$name" \
     --account-name "$STORAGE_ACCOUNT" --account-key "$key" -o none
   [[ "$DRY_RUN" == 1 ]] && return
   [[ -s "$BACKUP_DIR/$name" ]] || { fail "Download is missing or empty."; todo "DB backup"; return; }
