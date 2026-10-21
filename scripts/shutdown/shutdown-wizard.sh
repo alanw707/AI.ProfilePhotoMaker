@@ -315,7 +315,7 @@ s_preflight() {
 s_pipeline() {
   say "The deploy workflow runs on every push to main and recreates the Azure"
   say "resource group if it's missing. Disabling it first stops that."
-  local state; state=$(gh workflow view simple-deploy.yml -R "$REPO" --json state -q .state 2>/dev/null || echo unknown)
+  local state; state=$(gh api "repos/$REPO/actions/workflows/simple-deploy.yml" -q .state 2>/dev/null || echo unknown)
   note "Current state: $state"
   if [[ "$state" == "disabled_manually" ]]; then ok "Already disabled."; return; fi
   act "disable workflow simple-deploy.yml" gh workflow disable simple-deploy.yml -R "$REPO"
