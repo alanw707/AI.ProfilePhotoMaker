@@ -9,7 +9,7 @@ The backend is deleted, so nothing uses these any more.
 - [ ] **OpenAI**: https://platform.openai.com/api-keys → delete the key used by the app.
 - [ ] **Replicate**: https://replicate.com/account/api-tokens → revoke the app's token. (All four app-created models are already gone.)
 - [ ] **Stripe**: https://dashboard.stripe.com/apikeys → roll the live secret key. Keep the account for future projects. Webhooks are already deleted, and there are no active subscriptions or products.
-- [ ] **Google Cloud**: https://console.cloud.google.com/apis/credentials → delete the OAuth client for `aiprofilephotomaker.com`.
+- [ ] **Google Cloud — do this first**: https://console.cloud.google.com/apis/credentials → delete **both** OAuth clients (client IDs starting `1169…` and `3319…`). Their client secrets (`GOCSPX-…`) are in the public git history and Google still accepted them on 2026-10-22. Deleting the clients is the fix; rewriting git history wouldn't help, because the repo is already public.
 - [ ] **Postmark**: https://account.postmarkapp.com/servers → pause or delete the server. No closing email was sent (decided 2026-10-21).
 - [ ] **Cloudflare Turnstile**: Cloudflare dashboard → Turnstile → delete the widget.
 - [ ] **USAJOBS** (optional): the API key was only used by the hidden Jobs page.
@@ -38,15 +38,19 @@ The privacy policy and legal pages listed `privacy@`, `support@`, `legal@` and `
 
 ## 6. Watch the bill (2 min now, 1 min in 3 days)
 
-- [ ] Azure portal → Cost Management → Budgets → Add: $5/month on the subscription, alert at 100% actual. Note that `walfordgroup-rg` (about $40/month) shares this subscription, so either scope the budget to resource group `aiprofilemaker-v1` or set the amount above the walfordgroup baseline.
+- [x] Budget `aipm-shutdown-watch`: $5/month on resource group `aiprofilemaker-v1` from 2026-11-01, emailing alanw707@hotmail.com at 80% actual, 100% actual and 100% forecast (set 2026-10-22).
 - [ ] In 2–3 days, Cost analysis grouped by resource group should show about $0/day for `aiprofilemaker-v1`.
 
 ## 7. Data you're holding
 
-- [ ] `~/.local/state/aipm-shutdown/backup/aipmdb-2026-10-21.bacpac` (unencrypted, mode 600) has user emails and payment records. Keep it off the repo and off shared drives. Decide on a deletion date, for example 2027-10, unless tax records require longer.
-- [ ] `~/.local/state/aipm-shutdown/user-emails.txt` is no longer needed (no closing email was sent): `shred -u ~/.local/state/aipm-shutdown/user-emails.txt`.
+- [ ] `~/.local/state/aipm-shutdown/backup/aipmdb-2026-10-21.bacpac` (unencrypted, mode 600, folder mode 700) has user emails and payment records. It's the only copy: put a second copy somewhere private (password manager attachment or encrypted cloud folder). Delete by 2027-10-31 unless tax records require longer (noted in `backup/README.txt`).
+- [x] `user-emails.txt` shredded (2026-10-22).
 
-## 8. Repo (optional)
+## 8. Repo
 
-- [ ] The repo is public and the project page links to it. Scan history for old leaks: `docker run --rm -v "$PWD":/r zricethezav/gitleaks detect -s /r`. Revoking the keys in step 1 makes any old leak harmless.
-- [ ] PR #454 (funnel report) can be closed. The deploy workflow is disabled and no secrets remain, so nothing would deploy anyway.
+- [x] Shutdown branch merged to `main` (PR #455). PRs #454 and #397 closed (2026-10-22).
+- [x] History scanned with gitleaks (2,148 public commits, 145 hits, 2026-10-22). Results:
+  - **Still valid:** the 2 Google OAuth client secrets. See step 1.
+  - **Already dead:** the Replicate token (Replicate returns 401). The storage account key, SQL passwords, JWT and data-protection keys all belonged to deleted Azure resources. The JWTs had expired by 2024.
+  - **Not secrets:** Stripe `pk_live` publishable key and the Turnstile site key (public by design), plus test and placeholder values.
+  - If any of the old SQL passwords in history (for example the one starting `Vg7pK`) was reused anywhere else, change it there.
