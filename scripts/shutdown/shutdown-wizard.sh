@@ -199,7 +199,7 @@ RG="aiprofilemaker-v1"
 API_APP="aipm-api-v1"
 DOMAIN="aiprofilephotomaker.com"
 REPLICATE_OWNER="alanw707"
-PAGES_PROJECT="aiprofilephotomaker"
+WEB_APP="aipm-web-v1"
 DRY_RUN="${DRY_RUN:-0}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -213,7 +213,7 @@ BACKUP_DIR="$STATE_DIR/backup"
 mkdir -p "$BACKUP_DIR"
 
 # Secrets: memory only, filled from the Azure app (stage 3) or asked on demand.
-STRIPE_KEY=""; REPLICATE_TOKEN=""; POSTMARK_TOKEN=""; SQL_CONN=""; CF_TOKEN=""
+STRIPE_KEY=""; REPLICATE_TOKEN=""; POSTMARK_TOKEN=""; SQL_CONN=""
 SQL_SERVER_FQDN=""; SQL_SERVER=""; SQL_DB="aipmdb"; SQL_PASS=""; STORAGE_ACCOUNT=""
 DONE_NOW=(); PARTIAL=0
 
@@ -254,7 +254,6 @@ need() { [[ -n "${!1}" ]] || ask_secret "$1" "$2"; }
 
 stripe() { curl -gsS -u "$STRIPE_KEY:" "https://api.stripe.com/v1/$1" "${@:2}"; }
 replicate() { curl -gsS -H "Authorization: Bearer $REPLICATE_TOKEN" "https://api.replicate.com/v1/$1" "${@:2}"; }
-cf() { curl -gsS -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" "https://api.cloudflare.com/client/v4/$1" "${@:2}"; }
 
 sqlq() { # sqlq "SQL" → rows separated by |
   docker run --rm -e SQLCMDPASSWORD="$SQL_PASS" mcr.microsoft.com/mssql-tools \
@@ -285,7 +284,7 @@ run_stage() { # run_stage KEY "Title" function
 
 s_preflight() {
   local missing=()
-  for t in docker gh jq curl gpg npx; do command -v "$t" >/dev/null || missing+=("$t"); done
+  for t in docker gh jq curl gpg; do command -v "$t" >/dev/null || missing+=("$t"); done
   if (( ${#missing[@]} )); then fail "Missing tools: ${missing[*]}. Install them and re-run."; exit 1; fi
   docker info >/dev/null 2>&1 || { fail "Docker isn't running. Start it (sudo systemctl start docker) and re-run."; exit 1; }
   gh auth status >/dev/null 2>&1 || { fail "GitHub CLI isn't signed in. Run: gh auth login"; exit 1; }
@@ -537,56 +536,17 @@ s_replicate() {
 
 s_site() {
   [[ -f "$SITE_DIR/index.html" ]] || { fail "No page at $SITE_DIR/index.html"; todo "Showcase page"; return; }
-  say "This replaces the live app at $DOMAIN with the project page in scripts/shutdown/showcase/."
+  rg_exists || { fail "Resource group $RG is gone; the web app that serves the page no longer exists."; todo "Showcase page"; return; }
+  say "The existing web app ($WEB_APP) will serve the project page in scripts/shutdown/showcase/."
+  say "Its custom domain, managed certificate and Cloudflare DNS stay exactly as they are."
   say "Previewing it in your browser; edit index.html first if anything doesn't sound like you."
   open_url "file://$SITE_DIR/index.html"
   pause "Press Enter when the page is ready to publish"
-
-  say "Cloudflare API token needed. Create one with: Zone → DNS → Edit and"
-  say "Account → Cloudflare Pages → Edit, limited to $DOMAIN."
-  open_url "https://dash.cloudflare.com/profile/api-tokens"
-  need CF_TOKEN "Cloudflare API token:"
-  local zone acct
-  zone=$(cf "zones?name=$DOMAIN" | jq -r '.result[0].id // empty')
-  acct=$(cf "zones?name=$DOMAIN" | jq -r '.result[0].account.id // empty')
-  [[ -n "$zone" && -n "$acct" ]] || { fail "Token can't see the $DOMAIN zone."; todo "Showcase page + DNS"; return; }
-
-  local proj sub
-  proj=$(cf "accounts/$acct/pages/projects/$PAGES_PROJECT")
-  if [[ "$(jq -r .success <<<"$proj")" != true ]]; then
-    act "create Pages project" cf "accounts/$acct/pages/projects" -X POST \
-      -d "{\"name\":\"$PAGES_PROJECT\",\"production_branch\":\"main\"}" -o /dev/null
-    proj=$(cf "accounts/$acct/pages/projects/$PAGES_PROJECT")
-  fi
-  sub=$(jq -r '.result.subdomain // empty' <<<"$proj"); sub="${sub:-$PAGES_PROJECT.pages.dev}"
-  act "deploy showcase to Pages" env CLOUDFLARE_API_TOKEN="$CF_TOKEN" CLOUDFLARE_ACCOUNT_ID="$acct" \
-    npx --yes wrangler@4 pages deploy "$SITE_DIR" --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true
-  ok "Published at https://$sub — check it before the DNS switch."
-  open_url "https://$sub"
-  pause "Press Enter if it looks right"
-
-  local recs plan
-  recs=$(cf "zones/$zone/dns_records?per_page=500")
-  plan=$(jq -r --arg d "$DOMAIN" '.result[] | select(
-      (.name=="api."+$d) or (.name|startswith("asuid.")) or
-      (.content|tostring|test("azurecontainerapps\\.io|azurewebsites\\.net")) or
-      ((.name==$d or .name=="www."+$d) and (.type=="A" or .type=="AAAA" or .type=="CNAME"))
-    ) | "\(.id)\t\(.type)\t\(.name)\t\(.content)"' <<<"$recs")
-  say "DNS records that point at the old app (to delete):"
-  if [[ -n "$plan" ]]; then printf '%s\n' "$plan" | cut -f2- | sed 's/^/    /'; else note "    none"; fi
-  say "Then add: $DOMAIN and www.$DOMAIN → $sub (proxied). Email records are left alone."
-  confirm "Switch DNS now? (the old app stops being reachable by name)" || { todo "Switch DNS to showcase"; return; }
-  while IFS=$'\t' read -r id _; do
-    [[ -n "$id" ]] && act "delete DNS $id" cf "zones/$zone/dns_records/$id" -X DELETE -o /dev/null
-  done <<<"$plan"
-  local h
-  for h in "$DOMAIN" "www.$DOMAIN"; do
-    act "add Pages domain $h" cf "accounts/$acct/pages/projects/$PAGES_PROJECT/domains" -X POST -d "{\"name\":\"$h\"}" -o /dev/null
-    act "CNAME $h → $sub" cf "zones/$zone/dns_records" -X POST \
-      -d "{\"type\":\"CNAME\",\"name\":\"$h\",\"content\":\"$sub\",\"proxied\":true}" -o /dev/null
-  done
-  ok "DNS switched. The page can take a few minutes to show at https://$DOMAIN (certificate issuing)."
-  write_env CF_ZONE "$zone" >/dev/null; write_env CF_ACCOUNT "$acct" >/dev/null
+  if [[ "$DRY_RUN" == 1 ]]; then DRY_RUN=1 "$SCRIPT_DIR/publish-showcase.sh"; return 0; fi
+  confirm "Replace the live app on $DOMAIN with the project page now?" || { todo "Publish showcase"; return; }
+  if "$SCRIPT_DIR/publish-showcase.sh"; then ok "Project page live at https://$DOMAIN"
+  else fail "Publishing didn't verify; see the output above."; todo "Publish showcase"; fi
+  return 0
 }
 
 s_domain() {
@@ -615,36 +575,59 @@ s_azure_delete() {
   local missing=()
   [[ -n "$(_existing BACKUP_FILE || true)" ]] || missing+=("database backup (stage 7)")
   [[ -n "$(_existing DONE_REPLICATE || true)" ]] || missing+=("Replicate cleanup (stage 8)")
-  [[ -n "$(_existing DONE_SITE || true)" ]] || missing+=("showcase page + DNS (stage 9)")
+  [[ -n "$(_existing DONE_SITE || true)" ]] || missing+=("project page (stage 9)")
   if (( ${#missing[@]} )); then
     warn "Not done yet: ${missing[*]}"
-    confirm "Delete Azure anyway?" || { todo "Delete Azure"; return; }
+    confirm "Delete the Azure resources anyway?" || { todo "Delete Azure"; return; }
   fi
-  az resource list -g "$RG" --query '[].{name:name, type:type}' -o table 2>/dev/null | sed 's/^/    /'
-  warn "This permanently deletes everything above: the app, database, all user photos and logs."
+  # Everything except the web app, its environment and the apex domain's certificate.
+  local keep="Microsoft.App/managedEnvironments|Microsoft.App/containerApps/$WEB_APP|managedCertificates/.*$DOMAIN-"
+  local doomed; doomed=$(azq resource list -g "$RG" --query '[].id' -o tsv | grep -viE "/containerApps/$WEB_APP\$" \
+    | grep -viE '/managedEnvironments/[^/]+$' | grep -viE "/managedCertificates/$DOMAIN-" || true)
+  note "Kept: $keep"
+  [[ -n "$doomed" ]] || { ok "Nothing left to delete."; return; }
+  say "To delete:"
+  # shellcheck disable=SC2001  # multi-line input
+  sed 's#.*/providers/#    #' <<<"$doomed"
+  warn "This permanently deletes the API, database, all user photos, registry, Key Vault and logs."
   local typed; ask typed "Type the resource group name ($RG) to confirm:"
   [[ "$typed" == "$RG" ]] || { note "Name didn't match; nothing deleted."; todo "Delete Azure"; return; }
-  say "Deleting. This takes 5–15 minutes; leave it running."
-  act "delete resource group $RG" az group delete -n "$RG" --yes
-  [[ "$DRY_RUN" == 1 ]] || { rg_exists && { fail "Group still exists."; todo "Delete Azure"; return; }; ok "Resource group deleted."; }
 
+  local env; env=$(azq containerapp env list -g "$RG" --query '[0].name' -o tsv)
+  act "detach logs from $env" az containerapp env update -g "$RG" -n "$env" --logs-destination none -o none
+  local id
+  # Container apps/jobs and the api certificate first (they depend on the rest), then the others.
+  while IFS= read -r id; do
+    case "$id" in */containerApps/*|*/jobs/*|*/managedCertificates/*) ;; *) continue ;; esac
+    if [[ "$id" == */managedCertificates/* ]]; then
+      act "delete certificate ${id##*/}" az containerapp env certificate delete -g "$RG" -n "$env" --certificate "${id##*/}" --yes
+    else act "delete ${id##*/providers/}" az resource delete --ids "$id"; fi
+  done <<<"$doomed"
+  while IFS= read -r id; do
+    case "$id" in */containerApps/*|*/jobs/*|*/managedCertificates/*|*/databases/*) continue ;; esac
+    if [[ "$id" == */Microsoft.OperationalInsights/workspaces/* ]]; then
+      act "delete ${id##*/} (no soft delete)" az monitor log-analytics workspace delete -g "$RG" -n "${id##*/}" --force true --yes
+    else act "delete ${id##*/providers/}" az resource delete --ids "$id"; fi
+  done <<<"$doomed"
   local kv
   for kv in $(azq keyvault list-deleted --query "[?starts_with(name,'aipm-kv')].name" -o tsv); do
     act "purge Key Vault $kv" az keyvault purge -n "$kv" && ok "purged Key Vault $kv"
   done
-  say "Other resource groups in this subscription (delete only what belongs to this app):"
-  az group list --query '[].{name:name, location:location}' -o table 2>/dev/null | sed 's/^/    /'
+  say "Left in $RG:"; az resource list -g "$RG" --query '[].[type,name]' -o tsv 2>/dev/null | sed 's/^/    /'
 
-  say "App registrations you own (one is the GitHub deploy login):"
-  local apps; apps=$(azq ad app list --show-mine --query '[].[appId, displayName]' -o tsv)
-  if [[ -n "$apps" ]]; then
-    nl -w3 -s'  ' <<<"$apps" | sed 's/^/  /'
-    local pick; ask pick "Number(s) to delete (space-separated), or Enter to keep all:"
-    for i in $pick; do
-      local id; id=$(sed -n "${i}p" <<<"$apps" | cut -f1)
-      [[ -n "$id" ]] && act "delete app $id" az ad app delete --id "$id" && ok "deleted app $id"
-    done
-  else note "    none found"; fi
+  say "GitHub deploy login (Entra app registration):"
+  local app; app=$(azq ad app list --display-name ai-profile-photo-maker-deploy --query '[0].appId' -o tsv)
+  if [[ -z "$app" ]]; then ok "    already gone"; return 0; fi
+  local subs; subs=$(azq ad app federated-credential list --id "$app" --query '[].subject' -o tsv)
+  note "    federated credentials: $(paste -sd' ' <<<"$subs")"
+  if grep -qv "^repo:$REPO:" <<<"$subs"; then
+    warn "    It trusts something besides $REPO; leaving it alone."; todo "Review app registration $app"; return 0
+  fi
+  az role assignment list --assignee "$app" --all --query '[].[roleDefinitionName,scope]' -o tsv 2>/dev/null | sed 's/^/    role: /'
+  if confirm "Remove its role assignments and delete it?"; then
+    for id in $(azq role assignment list --assignee "$app" --all --query '[].id' -o tsv); do act "remove role $id" az role assignment delete --ids "$id"; done
+    act "delete app $app" az ad app delete --id "$app" && ok "deleted app registration"
+  else todo "Delete app registration $app"; fi
   return 0
 }
 
@@ -656,7 +639,7 @@ s_revoke() {
   open_url "https://console.cloud.google.com/apis/credentials"; step "Google Cloud: delete the OAuth client for $DOMAIN."; pause
   open_url "https://account.postmarkapp.com/servers"; step "Postmark: delete or pause the server (the closing email has gone out)."; pause
   open_url "https://dash.cloudflare.com/?to=/:account/turnstile"; step "Cloudflare Turnstile: delete the widget."; pause
-  open_url "https://dash.cloudflare.com/profile/api-tokens"; step "Cloudflare: delete the API token you made for stage 9."; pause
+  note "Then remove the api.$DOMAIN DNS record at Cloudflare (it points at the deleted API app)."
 }
 
 s_gh_secrets() {
@@ -679,7 +662,9 @@ s_verify() {
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "https://$DOMAIN" || true)
   if curl -s --max-time 15 "https://$DOMAIN" | grep -q "project archive"; then ok "$DOMAIN shows the project page."; else warn "$DOMAIN: HTTP $code, not the project page yet (DNS/certificates can take a while)."; fi
   if getent hosts "api.$DOMAIN" >/dev/null; then warn "api.$DOMAIN still resolves."; else ok "api.$DOMAIN no longer resolves."; fi
-  if rg_exists; then warn "Azure resource group $RG still exists."; else ok "Azure resource group gone."; fi
+  local left; left=$(azq resource list -g "$RG" --query 'length(@)' -o tsv || echo '?')
+  if [[ "$left" == 3 ]]; then ok "Azure: only the web app, its environment and the domain certificate remain."
+  else warn "Azure: $left resource(s) in $RG (expected 3)."; fi
   say "Last: set a \$5/month budget alert so anything recreated by mistake gets noticed."
   open_url "https://portal.azure.com/#view/Microsoft_Azure_CostManagement/Menu/~/budgets"
   step "Add → Amount 5 → Alert at 100% actual → your email → Create."
@@ -702,9 +687,9 @@ run_stage STRIPE       "Stripe: refunds, subscriptions, webhooks"   s_stripe
 run_stage NOTIFY       "Email users about the closure"              s_notify
 run_stage BACKUP       "Back up the database (encrypted)"           s_backup
 run_stage REPLICATE    "Delete trained face models at Replicate"    s_replicate
-run_stage SITE         "Publish the project page and switch DNS"    s_site
+run_stage SITE         "Serve the project page from the web app"    s_site
 run_stage DOMAIN       "Keep the domain, forward its email"         s_domain
-run_stage AZURE_DELETE "Delete the Azure resources (irreversible)"  s_azure_delete
+run_stage AZURE_DELETE "Delete the rest of Azure (irreversible)"    s_azure_delete
 run_stage REVOKE       "Revoke the remaining API keys"              s_revoke
 run_stage GH_SECRETS   "Remove GitHub Actions secrets"              s_gh_secrets
 run_stage VERIFY       "Verify, and add a budget alert"             s_verify

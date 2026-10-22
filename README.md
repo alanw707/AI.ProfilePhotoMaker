@@ -1,5 +1,7 @@
 # AI Profile Photo Maker
 
+> **Closed October 2026. Kept for reference.** The service is shut down and all user photos, trained models and account data were deleted. [aiprofilephotomaker.com](https://aiprofilephotomaker.com) now shows a project page. See [`docs/operations/SHUTDOWN-CHECKLIST.md`](docs/operations/SHUTDOWN-CHECKLIST.md).
+
 A full-stack SaaS platform that generates professional headshots from user-uploaded selfies using AI model training and style-based image generation. Built with .NET 8 and Angular 19, deployed to Azure Container Apps with a fully automated CI/CD pipeline.
 
 ## How It Works

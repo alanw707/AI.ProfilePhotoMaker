@@ -1,10 +1,14 @@
 # Shutdown checklist: AI Profile Photo Maker
 
-Goal: stop the roughly $100/month spend, close the site cleanly, and handle user data properly. The repo stays.
+Goal: stop the spend, close the site cleanly, and handle user data properly. The domain keeps serving a static project page (it's linked from LinkedIn), and the repo stays.
 
-**Automated:** `scripts/shutdown/shutdown-wizard.sh` walks through every step below. It runs the API work itself (GitHub, Azure, Stripe, Replicate, Cloudflare, Postmark), opens the right page for each manual step, and asks before anything that deletes data. Try `DRY_RUN=1 scripts/shutdown/shutdown-wizard.sh` first. Needs the Azure CLI (falls back to a Docker container if it isn't installed), Docker (for the database queries), `gh`, `jq`, `gpg` and `npx`. State and the encrypted backup go to `~/.local/state/aipm-shutdown/`, never the repo. The project page it publishes is `scripts/shutdown/showcase/index.html`.
+> **Status, 2026-10-21: done.** Steps 0–7 were carried out. The database backup is at `~/.local/state/aipm-shutdown/backup/` (unencrypted, mode 600, by choice). The 4 Replicate models were already deleted by the app's retention job. `aiprofilephotomaker.com` now serves `scripts/shutdown/showcase/` from the web Container App (step 6). Nothing else in `aiprofilemaker-v1` remains. The manual leftovers are in [`SHUTDOWN-FOLLOWUPS.md`](SHUTDOWN-FOLLOWUPS.md).
+>
+> Measured spend before the shutdown (30 days to 2026-10-21): about $41 for this app, plus about $40 for an unrelated VM in `walfordgroup-rg`, which was left alone. Expected spend after: about $0–1/month (the web app scales to zero).
 
-Work top to bottom. Order matters: step 1 stops the deploy pipeline from recreating everything, and step 5 has to happen before step 7.
+**Automated:** `scripts/shutdown/shutdown-wizard.sh` walks through every step below. It runs the API work itself (GitHub, Azure, Stripe, Replicate, Cloudflare, Postmark), opens the right page for each manual step, and asks before anything that deletes data. Try `DRY_RUN=1 scripts/shutdown/shutdown-wizard.sh` first. Needs the Azure CLI (falls back to a Docker container if it isn't installed), Docker (for the database queries), `gh`, `jq` and `gpg`. State and the backup go to `~/.local/state/aipm-shutdown/`, never the repo. The project page is `scripts/shutdown/showcase/index.html`, published by `scripts/shutdown/publish-showcase.sh`.
+
+Work top to bottom. Order matters: step 1 stops the deploy pipeline from recreating everything, and steps 4–6 have to happen before step 7.
 
 Run `az` commands locally (Azure CLI is installed via `mise use -g azure-cli`) or in **Azure Cloud Shell** (portal, top bar `>_`).
 
@@ -75,42 +79,45 @@ Each user's training creates a model at Replicate under your account (`CreateMod
 - [ ] Replicate → **Account → API tokens**: revoke the token the app used.
 - [ ] Remove any saved payment method or spending limit you don't need any more.
 
-## 6. Turn the domain into a project showcase page and update DNS (30 min)
+## 6. Keep the domain: serve the project page from the existing web app (10 min)
 
-DNS is on Cloudflare. The registrar is GoDaddy, and the domain is paid through 2027-05-19 (RDAP lookup, 2026-10-20). The domain is linked from LinkedIn, so it should show a project page, not a bare "closed" notice.
+DNS is on Cloudflare, and the registrar is GoDaddy (paid through 2027-05-19, per an RDAP lookup on 2026-10-20). The domain is linked from LinkedIn, so it shows a project page instead of a bare "closed" notice.
 
-- [ ] Create a one-page site on **Cloudflare Pages** (free) at `aiprofilephotomaker.com` (and `www` if used). It needs:
-  - what the app did, plus 3–4 screenshots,
-  - the tech stack and the hard parts you solved,
-  - dates ("built and ran 2025–2026") and what you learned,
-  - a link to the GitHub repo,
-  - one short line saying the service is closed and all user photos and data have been deleted, with a contact email.
-- [ ] Make sure the page has no sign-in or upload buttons and no prices, so nobody thinks the service still runs.
-- [ ] Delete the DNS record for `api.aiprofilephotomaker.com` and any Azure validation records (`asuid.*` TXT).
-- [ ] Keep the Postmark DKIM/SPF records only until the closing email in step 2 has gone out, then remove them.
-- [ ] **Keep the domain and set it to auto-renew** (about $10–25/year). If it lapses, someone else can buy it, and then your LinkedIn link points to their site.
-- [ ] Optional: move registration to Cloudflare Registrar, which charges at cost (about $10/year) and keeps DNS and billing in one place.
-- [ ] Set up **Cloudflare Email Routing** (free) to forward `privacy@`, `support@`, `legal@` and `security@` to your own inbox for at least 12 months. Former users may still send data requests to these addresses.
-- [ ] On LinkedIn, change the entry to past tense with an end date (for example a Projects entry: "AI Profile Photo Maker, 2025–2026"). The link can stay as it is.
+The page is served by the **existing** `aipm-web-v1` Container App, so the `aiprofilephotomaker.com` custom domain, its Azure-managed certificate (which auto-renews) and the Cloudflare DNS records all stay as they are. No DNS change is needed.
 
-## 7. Delete the Azure resources (5 min + waiting) — can't be undone
+- [ ] Edit `scripts/shutdown/showcase/index.html` if needed. Rules: no sign-in or upload buttons and no prices, so nobody thinks the service still runs.
+- [ ] Preview it: `LOCAL=1 scripts/shutdown/publish-showcase.sh` (serves on http://localhost:18080).
+- [ ] Publish it: `scripts/shutdown/publish-showcase.sh`. This rewrites `aipm-web-v1` to run Microsoft's public nginx image (`mcr.microsoft.com/azurelinux/base/nginx:1.25`) with the site files mounted from Container App secrets: no registry, no env vars, 0.25 vCPU, scale to zero. Then it checks `https://aiprofilephotomaker.com` and every image. Re-run it after any page edit.
+- [ ] Domain renewal, email forwarding and LinkedIn: see [`SHUTDOWN-FOLLOWUPS.md`](SHUTDOWN-FOLLOWUPS.md).
 
-Check that step 4 (backup downloaded) and step 5 (Replicate cleaned) are done first.
+Why not a custom image on GHCR? The available GitHub token can't publish packages, and GHCR has no API for making a package public. Mounting the files as secrets avoids any registry and any runtime dependency besides MCR.
+
+## 7. Delete everything else in Azure (10 min + waiting) — can't be undone
+
+Check that step 4 (backup downloaded), step 5 (Replicate cleaned) and step 6 (page live) are done first. Don't delete the resource group: the web app, its environment and the domain certificate stay.
 
 ```bash
-# Look first
-az resource list -g aiprofilemaker-v1 -o table
+RG=aiprofilemaker-v1; ENV=aipm-env-v1-6j74jubocuukg
+az containerapp env update -g $RG -n $ENV --logs-destination none   # detach Log Analytics first
+az containerapp delete -g $RG -n aipm-api-v1 --yes
+az containerapp job delete -g $RG -n aipm-migration-job --yes
+az containerapp env certificate delete -g $RG -n $ENV --certificate mc-aiprofilemaker-api-aiprofilepho-8101 --yes
+az sql server delete -g $RG -n aipm-sql-v1-6j74jubocuukg --yes
+az storage account delete -g $RG -n aipmstv16j74jubocuukg --yes      # user photos go with it
+az acr delete -g $RG -n aipmcrv16j74jubocuukg --yes
+az keyvault delete -g $RG -n aipm-kv-v1-6j74jubocuukg && az keyvault purge -n aipm-kv-v1-6j74jubocuukg
+az resource delete -g $RG -n aipm-ai-v1 --resource-type Microsoft.Insights/components
+az monitor log-analytics workspace delete -g $RG -n aipm-logs-v1 --force true --yes
+# action group, activity-log alert, dashboard, managed identity (names can contain spaces):
+az resource list -g $RG --query "[?type=='microsoft.insights/actiongroups' || type=='Microsoft.Insights/activityLogAlerts' || type=='Microsoft.Portal/dashboards' || type=='Microsoft.ManagedIdentity/userAssignedIdentities'].id" -o tsv \
+  | while IFS= read -r id; do az resource delete --ids "$id"; done
 
-# Delete everything in the group
-az group delete -n aiprofilemaker-v1 --yes
-
-# Confirm it's gone (should say ResourceGroupNotFound)
-az group show -n aiprofilemaker-v1
+# Expect only: managedEnvironments, containerApps (aipm-web-v1), managedCertificates (aiprofilephotomaker.com)
+az resource list -g $RG --query '[].[type,name]' -o tsv
 ```
 
-- [ ] Key Vault: soft-deleted for 7 days and then purged automatically, at no cost. To purge now: `az keyvault list-deleted -o table`, then `az keyvault purge -n <name>`.
-- [ ] Look for anything outside that group: `az group list -o table`. A leftover `NetworkWatcherRG` is free. Delete anything else that belongs to this app.
-- [ ] Delete the app registration GitHub used to sign in (OIDC): **Entra ID → App registrations** → the one whose client ID matches the `AZURE_CLIENT_ID` GitHub secret.
+- [ ] Delete the Entra app registration GitHub used to deploy (OIDC), **`ai-profile-photo-maker-deploy`**. First check that its federated credentials only reference `repo:alanw707/AI.ProfilePhotoMaker:…`. It held Contributor and User Access Administrator on the whole subscription, so remove those role assignments too: `az role assignment list --assignee <appId> --all`.
+- [ ] Leave every other resource group alone (`walfordgroup-rg` is a separate, still-used project; `NetworkWatcherRG` is free).
 
 ## 8. Revoke the remaining keys (10 min)
 
@@ -121,16 +128,16 @@ The services are gone now, so these are just cleanup.
 - [ ] **Google Cloud**: delete the OAuth client (APIs & Services → Credentials).
 - [ ] **Postmark**: pause or delete the server after the closing email.
 - [ ] **Cloudflare Turnstile**: delete the widget.
-- [ ] **GitHub**: remove the Actions secrets (`AZURE_*`, Stripe, OpenAI, Replicate and so on) under repo → Settings → Secrets and variables.
+- [ ] **GitHub**: remove all Actions secrets and variables (`gh secret list` / `gh variable list`, then `delete`), including any on the `staging` environment.
 
 ## 9. Confirm the spend stopped (2–3 days later)
 
 - [ ] Azure Cost Management: daily cost should be $0. If the subscription isn't used for anything else, also set a **$5 budget alert** so you'd notice anything that gets recreated.
 - [ ] OpenAI, Replicate: usage pages show no new spend.
-- [ ] `https://aiprofilephotomaker.com` shows the closed page; `https://api.aiprofilephotomaker.com` doesn't resolve.
+- [ ] `https://aiprofilephotomaker.com` shows the project page; `https://api.aiprofilephotomaker.com` no longer serves the app (remove its DNS record, see follow-ups).
 
 ## 10. Keep the repo
 
 - [ ] Leave it as is. Reusable parts for the next project include sign-in (Google OAuth + JWT), Stripe checkout and webhooks with idempotency, the OpenAI integration with cost caps, the Bicep and GitHub Actions deploy, and the accessibility and test setup.
-- [ ] Add a line to `README.md`: "Closed <date>. Kept for reference."
+- [x] Add a line to `README.md`: "Closed October 2026. Kept for reference."
 - [ ] The repo is **already public**, and the showcase page links to it. Scan the git history for leaked secrets (for example `gitleaks detect`). Revoking every key in step 8 makes any old leak harmless either way.
